@@ -38,10 +38,10 @@ def my_function(input_arg = 'standard_input' ):
 
 ### Capstone Team
 
-**Devolder, Rainier:      <devolde2@msu.edu>**
-Seeger, Ben:                <seegerbe@msu.edu>,
-Whitacre, Taylor R.:     <whitacr5@msu.edu>,
-Shu, Lianghao:             <shulian1@msu.edu>,
+**Devolder, Rainier:      <devolde2@msu.edu>**;
+Seeger, Ben:                <seegerbe@msu.edu>;
+Whitacre, Taylor R.:     <whitacr5@msu.edu>;
+Shu, Lianghao:             <shulian1@msu.edu>;
 Marderosian, Merryn:  <mardero6@msu.edu>
 
 
