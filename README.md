@@ -58,7 +58,9 @@ Shu, Lianghao:             <shulian1@msu.edu>;
 Marderosian, Merryn:  <mardero6@msu.edu>
 
 
+### Other Resources:
 
+* [Audio and Video Streaming Using a Pi](https://kamranicus.com/guides/raspberry-pi-3-baby-monitor)
 
 
 
