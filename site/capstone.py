@@ -5,7 +5,7 @@ from flask_mysqldb import MySQL
 
 app = Flask(__name__, template_folder='templates')
 
-socketio = SocketIO(app)
+#socketio = SocketIO(app)
 
 #------------------------------------------
 # Configure the database connection
