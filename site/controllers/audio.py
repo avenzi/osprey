@@ -2,6 +2,7 @@
 
 Implements server-side audio recording.
 """
+"""
 import os
 import uuid
 import wave
@@ -35,3 +36,4 @@ def end_recording():
     session['wavefile'].close()
     del session['wavefile']
     del session['wavename']
+"""
