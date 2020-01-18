@@ -7,7 +7,7 @@ import uuid
 import wave
 from flask import Blueprint, current_app, session, url_for, render_template
 from flask_socketio import emit
-from main import socketio
+from capstone import socketio
 
 @socketio.on('start-recording', namespace='/audio')
 def start_recording(options):
