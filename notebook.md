@@ -10,9 +10,10 @@ Please provide a one paragraph update to the notebook in advance of our weekly m
 
 **Jan 23th, 2019:**
 
-* xxx
-* yyy
-* zzz
+This week we added audio collection to the proof of concept web application.
+We set up identical developement environments on OVH.
+We presented our status report to the class.
+We worked on our project plan document to outline the system design and risks associated with its development.
 
 **Jan 16th, 2019:**
 
@@ -24,10 +25,3 @@ We decided on and installed technologies for the web application based on the re
     web server: Nginx
 We secured a rack-mounted server in the Capstone laboratory which will serve as the production server.
 We developed a "Hello World" prototype and began experimenting with streaming audio to the web application.
-
-**Jan 9th, 2019:**
-
-* xxx
-* yyy
-* zzz
-
