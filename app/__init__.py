@@ -1,15 +1,11 @@
 from flask import Flask
+from config import Config
 from flask_mysqldb import MySQL
 
 app = Flask(__name__)
 
-#------------------------------------------
-# Configure the database connection
-#------------------------------------------
-app.config['MYSQL_HOST'] = 'localhost'
-app.config['MYSQL_USER'] = 'CapstoneMySQLUser'
-app.config['MYSQL_PASSWORD'] = 'CapstoneMySQLUserDbPw'
-app.config['MYSQL_DB'] = 'CapstoneData'
+# Updating Flask configuration using created Config class
+app.config.from_object(Config)
 
 # Establish connection to the database
 mysql = MySQL(app)
