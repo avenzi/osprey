@@ -4,9 +4,10 @@ Please provide a one paragraph update to the notebook in advance of our weekly m
 
 **Jan 30th, 2019:**
 
-* xxx
-* yyy
-* zzz
+Video sensor has been connected to Raspberry Pi and is able to stream. 
+Initial mockups of the website design and system architecture have been completed. 
+Completed Project Plan for Dr. Dyksen.
+Began initial implementation of website front-end.
 
 **Jan 23th, 2019:**
 
