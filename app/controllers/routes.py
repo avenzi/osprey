@@ -10,10 +10,10 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
-    #-----------------
+    #-------------------------------------------------------------------------------------------
     # The validate_on_submit() method does all form processing work and returns true when a form
     # is submitted and the browser sends a POST request indicating data is ready to be processed
-    #---------------
+    #-------------------------------------------------------------------------------------------
     if form.validate_on_submit():
         # A template in the application is used to render flashed messages that Flask stores
         flash('Login requested for user {}, remember_me={}'.format(
