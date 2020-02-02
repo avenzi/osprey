@@ -4,6 +4,7 @@
 {% block styles %}
     {{super()}}
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="{{url_for('static', filename='stylesheets/styles.css')}}">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 {% endblock %}
 
@@ -12,7 +13,7 @@
 {% endblock %}
 
 {% block navbar %}
-    <nav class="navbar navbar-default">       
+    <nav class="navbar bg-light navbar-light">       
         <a class="navbar-brand" href="#">Data Hub</a>
         <a href="{{url_for('index')}}">Index</a>
         <a href="{{url_for('login')}}">Login</a>
@@ -23,7 +24,7 @@
 {% endblock %}
 
 {% block content %}
-    <div class="container">
+    <div class="container-fluid baseContainerBody p-0">
         {% with messages = get_flashed_messages() %}
         {% if messages %}
             {% for message in messages %}
@@ -43,3 +44,4 @@
         {{super()}}
     {% endblock %}
 {% endblock %}
+
