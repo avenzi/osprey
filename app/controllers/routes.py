@@ -18,7 +18,7 @@ def login():
         # A template in the application is used to render flashed messages that Flask stores
         flash('Login requested for user {}, remember_me={}'.format(
             form.username.data, form.remember_me.data))
-        return redirect(url_for('index'))
+        return redirect(url_for('livefeed'))
     return render_template('login.html', title='Sign In', form=form)
 
 @app.route('/home')
