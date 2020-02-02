@@ -16,13 +16,20 @@ def login():
     #-------------------------------------------------------------------------------------------
     if form.validate_on_submit():
         # A template in the application is used to render flashed messages that Flask stores
-        flash('Login requested for user {}, remember_me={}'.format(
-            form.username.data, form.remember_me.data))
-        return redirect(url_for('livefeed'))
+        flash('Login requested for user {}, remember_me={}, password_input={}'.format(
+            form.username.data, form.remember_me.data, form.password.data))
+
+        temp_user = 'Lianghao'
+        temp_password = '123'
+        flash("login")
+        if form.username.data == temp_user and form.password.data == temp_password:
+            flash("login password work")
+            return redirect(url_for('livefeed'))
     return render_template('login.html', title='Sign In', form=form)
 
 @app.route('/home')
 def home():
+
     return render_template('home.html')
 
 @app.route('/livefeed')
