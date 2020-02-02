@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 {% extends "base.html" %}
+{% import 'bootstrap/wtf.html' as wtf %}
 
+<<<<<<< HEAD
 {% block content %}
     <h1>{{ "login" }}</h1>
     <form action="" method="post" novalidate>
@@ -22,4 +24,12 @@
         <p>{{ form.remember_me() }} {{ form.remember_me.label }}</p>
         <p>{{ form.submit() }}<a href="">   Create Account</a></p>
     </form>
+{% block app_content %}
+    <h1>Register</h1>
+    <div class="row">
+        <div class="col-md-4">
+            {{ wtf.quick_form(form) }}
+        </div>
+    </div>
+>>>>>>> 0dde35298bbfb9a0ae4c059e2c9bbac00a6ccaf3
 {% endblock %}

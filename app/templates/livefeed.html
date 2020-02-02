@@ -1,4 +1,57 @@
 <!DOCTYPE html>
 {% extends "base.html" %}
 
-{% block content %}{% endblock %}
+{% block app_content %}
+
+    <div class="container-fluid">
+
+        <div class="row justify-content-start">
+
+            <div class="col-6 m-1 border border-dark">
+                Audio Data
+            </div>
+
+            <div class="col m-1">
+
+                <div class="row mb-1 border border-dark">
+                    Temperature Data
+                </div>
+
+                <div class="row mt-1 border border-dark">
+                    Audio Data
+                </div>
+
+            </div>
+
+            <div class="col m-1">
+
+                <div class="row mb-1 border border-dark">
+                    Sensor Controls
+                </div>
+
+                <div class="row mt-1 border border-dark">
+                    Trigger Settings
+                </div>
+
+            </div> 
+
+        </div>
+
+
+        <div class="row justify-content-start">
+
+            <div class="col-6 m-1 border border-dark">
+                Event Log
+            </div> 
+
+            <div class="col m-1"></div>
+
+            <div class="col m-1 border border-dark">
+                Trigger Watch
+            </div> 
+
+        </div>
+
+    </div>
+
+{% endblock %}

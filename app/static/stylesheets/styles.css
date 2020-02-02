@@ -1,0 +1,8 @@
+html, body {
+    height: 100%;
+}
+
+.baseContainerBody {
+    height: 100%;
+    background-image: linear-gradient(to bottom right, #18453b, white);
+}
