@@ -51,12 +51,11 @@ def my_function(input_arg = 'standard_input' ):
 
 ### Capstone Team
 
-**Devolder, Rainier:      <devolde2@msu.edu>**;
-Seger, Ben:                <seegerbe@msu.edu>;
-Whitacre, Taylor R.:     <whitacr5@msu.edu>;
-Shu, Lianghao:             <shulian1@msu.edu>;
-Marderosian, Merryn (KEY):  <mardero6@msu.edu>
-Rainier (KEY)
+Devolder, Rainier (KEY):      <devolde2@msu.edu>;
+Seeger, Ben (KEY):                <seegerbe@msu.edu>;
+Whitacre, Taylor R. (KEY):     <whitacr5@msu.edu>;
+Shu, Lianghao (KEY):             <shulian1@msu.edu>;
+Marderosian, Merryn (KEY):  <mardero6@msu.edu>;
 
 ### Other Resources:
 
