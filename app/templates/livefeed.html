@@ -3,35 +3,171 @@
 
 {% block app_content %}
 
-    <div class="container-fluid">
+    <div class="container">
+
+        <div class="row justify-content-center">
+            <div class="col-2 mt-1 border border-dark rounded">
+                Elapsed Time: 
+            </div>
+        </div>
 
         <div class="row justify-content-start">
 
-            <div class="col-6 m-1 border border-dark">
+            <div class="col-6 m-1 border border-dark rounded">
                 Audio Data
+
+
+
+
+
+                <div class="accordion" id="accordion2">
+                    <div class="accordion-group">
+                      <div class="accordion-heading">
+                        <a class="accordion-toggle" data-toggle="collapse" href="#collapseOne">
+                          Collapsible Group Item #1
+                        </a>
+                  
+                      </div>
+                      <div id="collapseOne" class="accordion-body collapse in">
+                        <div class="accordion-inner">Item 1 Body</div>
+                      </div>
+                    </div>
+                    <div class="accordion-group">
+                      <div class="accordion-heading"> 
+                        <a class="accordion-toggle" data-toggle="collapse" href="#collapseTwo">
+                          Collapsible Group Item #2
+                        </a>
+                      </div>
+                      <div id="collapseTwo" class="accordion-body collapse">
+                        <div class="accordion-inner">Item 2 Body</div>
+                      </div>
+                    </div>
+                  </div>
+
+                
+
+
+
             </div>
 
             <div class="col m-1">
 
-                <div class="row mb-1 border border-dark">
-                    Temperature Data
+                <div class="row justify-content-center mb-1 bg-light rounded">
+                    
+                    <div class="card w-100">
+                        <div class="card-header p-0 text-center">
+                            Temperature Data
+                        </div>
+                        <div class="card-body p-1">
+                            <div class="row">
+                                <div class="col-8">
+                                    Room Temperature:
+                                </div>
+                                <div class="col-4 text-right">
+                                    72.3
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-8">
+                                    Skin Temperature (Subject 1):
+                                </div>
+                                <div class="col-4 text-right">
+                                    72.3
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-8">
+                                    Skin Temperature (Subject 2):
+                                </div>
+                                <div class="col-4 text-right">
+                                    72.3
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
 
-                <div class="row mt-1 border border-dark">
-                    Audio Data
+                <div class="row mt-1 bg-light rounded">
+                    <div class="card w-100">
+                        <div class="card-header p-0 text-center">
+                            Audio Data
+                        </div>
+                        <div class="card-body p-1">
+
+                        </div>
+                    </div>
                 </div>
 
             </div>
 
             <div class="col m-1">
 
-                <div class="row mb-1 border border-dark">
-                    Sensor Controls
+                <div class="row mb-1 bg-light rounded">
+                    <div class="card w-100">
+                        <div class="card-header p-0 text-center">
+                            Sensor Controls
+                        </div>
+                        <div class="card-body p-1">
+
+                        </div>
+                    </div>
                 </div>
 
-                <div class="row mt-1 border border-dark">
-                    Trigger Settings
+                <div class="row mt-1 bg-light rounded">
+                    <div class="card w-100">
+                        <div class="card-header p-0 text-center">
+                            Trigger Settings
+                        </div>
+                        <div class="card-body p-1">
+
+
+
+
+                            <div class="row">
+                                <div class="col-8">
+                                    Average Pixel Intensity:
+                                </div>
+                                <div class="col-4 text-right">
+                                    72.3
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-8">
+                                    Audio (dB):
+                                </div>
+                                <div class="col-4 text-right">
+                                    72.3
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-8">
+                                    Temperature (&#8457):
+                                </div>
+                                <div class="col-4 text-right">
+                                    72.3
+                                </div>
+                            </div>
+
+
+
+
+
+
+                        </div>
+                    </div>
                 </div>
+
+                <div class="row mt-1 bg-light rounded">
+                    <div class="card w-100">
+                        <div class="card-header p-0 text-center">
+                            Trigger Watch
+                        </div>
+                        <div class="card-body p-1">
+
+                        </div>
+                    </div>
+                </div> 
 
             </div> 
 
@@ -40,14 +176,17 @@
 
         <div class="row justify-content-start">
 
-            <div class="col-6 m-1 border border-dark">
-                Event Log
-            </div> 
+            <div class="col-6 m-1 p-0 bg-light rounded">
+                
+                <div class="card w-100">
+                    <div class="card-header p-0 text-center">
+                        Event Log
+                    </div>
+                    <div class="card-body p-1">
 
-            <div class="col m-1"></div>
+                    </div>
+                </div>
 
-            <div class="col m-1 border border-dark">
-                Trigger Watch
             </div> 
 
         </div>
