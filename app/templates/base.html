@@ -25,7 +25,7 @@
 {% endblock %}
 
 {% block content %}
-    <div class="container-fluid baseContainerBody p-0">
+    <div class="container-fluid baseContainerBody">
         {% with messages = get_flashed_messages() %}
         {% if messages %}
             {% for message in messages %}
@@ -45,4 +45,3 @@
         {{super()}}
     {% endblock %}
 {% endblock %}
-
