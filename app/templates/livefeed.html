@@ -3,191 +3,235 @@
 
 {% block app_content %}
 
-    <div class="container">
-
-        <div class="row justify-content-center">
-            <div class="col-2 mt-1 border border-dark rounded">
-                Elapsed Time: 
-            </div>
+    <div class="row justify-content-center">
+        <div class="col-2 mt-1 border border-dark rounded">
+            Elapsed Time: 
         </div>
+    </div>
 
-        <div class="row justify-content-start">
+    <div class="row justify-content-start">
 
-            <div class="col-6 m-1 border border-dark rounded">
-                Audio Data
+        <div class="col-6 m-1">
+            
+            <div class="row">
 
-
-
-
-
-                <div class="accordion" id="accordion2">
-                    <div class="accordion-group">
-                      <div class="accordion-heading">
-                        <a class="accordion-toggle" data-toggle="collapse" href="#collapseOne">
-                          Collapsible Group Item #1
-                        </a>
-                  
-                      </div>
-                      <div id="collapseOne" class="accordion-body collapse in">
-                        <div class="accordion-inner">Item 1 Body</div>
-                      </div>
+                <div class="card w-100">
+                    <div class="card-header p-0 text-center">
+                        Video
                     </div>
-                    <div class="accordion-group">
-                      <div class="accordion-heading"> 
-                        <a class="accordion-toggle" data-toggle="collapse" href="#collapseTwo">
-                          Collapsible Group Item #2
-                        </a>
-                      </div>
-                      <div id="collapseTwo" class="accordion-body collapse">
-                        <div class="accordion-inner">Item 2 Body</div>
-                      </div>
-                    </div>
-                  </div>
-
-                
-
-
-
-            </div>
-
-            <div class="col m-1">
-
-                <div class="row justify-content-center mb-1 bg-light rounded">
-                    
-                    <div class="card w-100">
-                        <div class="card-header p-0 text-center">
-                            Temperature Data
-                        </div>
-                        <div class="card-body p-1">
-                            <div class="row">
-                                <div class="col-8">
-                                    Room Temperature:
-                                </div>
-                                <div class="col-4 text-right">
-                                    72.3
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-8">
-                                    Skin Temperature (Subject 1):
-                                </div>
-                                <div class="col-4 text-right">
-                                    72.3
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-8">
-                                    Skin Temperature (Subject 2):
-                                </div>
-                                <div class="col-4 text-right">
-                                    72.3
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-
-                <div class="row mt-1 bg-light rounded">
-                    <div class="card w-100">
-                        <div class="card-header p-0 text-center">
-                            Video
-                        </div>
-                        <img src="{{ url_for('video_feed') }}">
-                    </div>
+                    <img src="{{ url_for('video_feed') }}">
                 </div>
 
             </div>
-
-            <div class="col m-1">
-
-                <div class="row mb-1 bg-light rounded">
-                    <div class="card w-100">
-                        <div class="card-header p-0 text-center">
-                            Sensor Controls
-                        </div>
-                        <div class="card-body p-1">
-
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row mt-1 bg-light rounded">
-                    <div class="card w-100">
-                        <div class="card-header p-0 text-center">
-                            Trigger Settings
-                        </div>
-                        <div class="card-body p-1">
-
-
-
-
-                            <div class="row">
-                                <div class="col-8">
-                                    Average Pixel Intensity:
-                                </div>
-                                <div class="col-4 text-right">
-                                    72.3
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-8">
-                                    Audio (dB):
-                                </div>
-                                <div class="col-4 text-right">
-                                    72.3
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-8">
-                                    Temperature (&#8457):
-                                </div>
-                                <div class="col-4 text-right">
-                                    72.3
-                                </div>
-                            </div>
-
-
-
-
-
-
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row mt-1 bg-light rounded">
-                    <div class="card w-100">
-                        <div class="card-header p-0 text-center">
-                            Trigger Watch
-                        </div>
-                        <div class="card-body p-1">
-
-                        </div>
-                    </div>
-                </div> 
-
-            </div> 
 
         </div>
 
+        <div class="col m-1">
 
-        <div class="row justify-content-start">
-
-            <div class="col-6 m-1 p-0 bg-light rounded">
+            <div class="row justify-content-center mb-1">
                 
                 <div class="card w-100">
                     <div class="card-header p-0 text-center">
-                        Event Log
+                        Temperature Data
                     </div>
                     <div class="card-body p-1">
+                        <div class="row">
+                            <div class="col-8">
+                                Room Temperature:
+                            </div>
+                            <div class="col-4 text-right">
+                                72.3
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-8">
+                                Skin Temperature (Subject 1):
+                            </div>
+                            <div class="col-4 text-right">
+                                72.3
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-8">
+                                Skin Temperature (Subject 2):
+                            </div>
+                            <div class="col-4 text-right">
+                                72.3
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
+            </div>
+
+            <div class="row mt-1">
+
+                <div class="card w-100">
+                    <div class="card-header p-0 text-center">
+                        Audio Data
+                    </div>
+                    <div class="card-body p-1">
+                        <div class="row">
+                            <div class="col">
+                                Streaming Audio
+                            </div>
+                        </div>
+                        <div class="row justify-content-end">
+                            <div class="col text-right">
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input" id="currentDbCheck">
+                                    <label class="custom-control-label" for="currentDbCheck">Current dB</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col m-1">
+
+            <div class="row mb-1">
+
+                <div class="card w-100">
+                    <div class="card-header p-0 text-center">
+                        Sensor Controls
+                    </div>
+                    <div class="card-body p-1">
+                        <div class="row">
+                            <div class="col">
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="customSwitch1">
+                                    <label class="custom-control-label" for="customSwitch1">Audio 1</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="customSwitch2">
+                                    <label class="custom-control-label" for="customSwitch2">Audio 2</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="customSwitch3">
+                                    <label class="custom-control-label" for="customSwitch3">Video 1</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="customSwitch4">
+                                    <label class="custom-control-label" for="customSwitch4">Video 2</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+
+            <div class="row mt-1">
+
+                <div class="card w-100">
+                    <div class="card-header p-0 text-center">
+                        Trigger Settings
+                    </div>
+                    <div class="card-body p-1">
+                        <div class="row">
+                            <div class="col-8">
+                                Average Pixel Intensity:
+                            </div>
+                            <div class="col-4 text-right">
+                                72.3
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-8">
+                                Audio (dB):
+                            </div>
+                            <div class="col-4 text-right">
+                                72.3
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-8">
+                                Temperature (&#8457):
+                            </div>
+                            <div class="col-4 text-right">
+                                72.3
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="row mt-1">
+
+                <div class="card w-100">
+                    <div class="card-header p-0 text-center">
+                        Trigger Watch
+                    </div>
+                    <div class="card-body p-1">
+                        <div class="row">
+                            <div class="col">
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input" id="customCheck1">
+                                    <label class="custom-control-label" for="customCheck1">All</label>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input" id="customCheck2">
+                                    <label class="custom-control-label" for="customCheck2">Video</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input" id="customCheck3">
+                                    <label class="custom-control-label" for="customCheck3">Audio</label>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input" id="customCheck4">
+                                    <label class="custom-control-label" for="customCheck4">Temperature</label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
             </div> 
 
-        </div>
+        </div> 
+
+    </div>
+
+
+    <div class="row justify-content-start">
+
+        <div class="col-6 m-1 p-0">
+            
+            <div class="card w-100">
+                <div class="card-header p-0 text-center">
+                    Event Log
+                </div>
+                <div class="card-body p-1">
+
+                </div>
+            </div>
+
+        </div> 
 
     </div>
 
