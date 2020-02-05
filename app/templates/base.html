@@ -13,7 +13,16 @@
 {% endblock %}
 
 {% block navbar %}
-    <nav class="navbar bg-light navbar-light">       
+    <nav class="navbar bg-light navbar-light"> 
+        <div class="container-fluid">
+
+            <button type="button" id="sidebarCollapse" class="btn btn-info">
+                <i class="fas fa-align-left"></i>
+                <span>Toggle Sidebar</span>
+            </button>
+
+        </div>
+
         <a class="navbar-brand" href="#">Data Hub</a>
         <a href="{{url_for('index')}}">Index</a>
         <a href="{{url_for('login')}}">Login</a>
@@ -21,6 +30,33 @@
         <a href="{{url_for('livefeed')}}">Live Feed</a>
         <a href="{{url_for('archives')}}">Archives</a>
     </nav>
+
+    {# 
+        the code below is for the collapsible menu
+    #}
+    <nav id = "sidebar">
+        <div class="sidebar-header">
+            <h3>Menu</h3>
+        </div>
+        <ul class="list-unstyled components">
+            <li>
+                <a href="{{url_for('home')}}">Home</a>
+            </li>
+            <li>
+                <a href="{{url_for('login')}}">Login</a>
+            </li>
+            <li>
+                <a href="{{url_for('livefeed')}}">Live Feed</a>
+            </li>
+            <li>
+                <a href="{{url_for('archives')}}">Archives</a>
+            </li>
+            <li>
+                <a href="{{url_for('index')}}">Index</a>
+            </li>
+        </ul>
+    </nav>
+
 {% endblock %}
 
 {% block content %}
@@ -41,7 +77,9 @@
         <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
         <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+        <script src="../static/JS/menu.js"></script>
         {{super()}}
     {% endblock %}
 {% endblock %}
+</div>
 
