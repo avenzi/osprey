@@ -3,37 +3,122 @@
 
 {% block app_content %}
 
-    <div class = "container-fluid">
-        <div class = "row justify-content-start">
-            <div class = "col m-1 border border-dark">
-                Date Selection
-            </div>
-            <div class = "col-6 m-1 border border-dark">
-                Video Data
-            </div>
-            <div class = "col m-1 border border-dark">
-                Sensor Selection
+    <div class = "row p-2 justify-content-start ">
+
+        <div class="col-3">
+            <div class = "card w-100 bg-light rounded">
+                <div class = "card-header p-0 text-center">
+                    Date Selection
+                </div>
+                <div class = "card-body p-1 text-center">
+                    <a href="{{url_for('archives')}}">January 22, 2020 @ 14:35.04</a>
+                    <a href="{{url_for('archives')}}">January 20, 2020 @ 09:01.15</a>
+                    <a href="{{url_for('archives')}}">January 15, 2020 @ 09:30.58</a>
+                    <a href="{{url_for('archives')}}">January 14, 2020 @ 12:47.23</a>
+                </div>
             </div>
         </div>
 
-        <div class = "row justify-content-start">
-            <div class = "col m-1"></div>
-            <div class = "col-6 m-1 border border-dark">
-                Event Log
+        <div class="col-6">
+            <div class = "card w-100 bg-light rounded">
+                <div class = "card-header p-0 text-center">
+                    Video Data
+                </div>
+                <div class = "card-body p-1"></div>
             </div>
-            <div class = "col m-1 border border-dark">
-                Audio Data
-            </div>
-        </div>
-
-        <div class = "row justify-content-start">
-            <div class = "col-6 m-1"></div>
-            <div class = "col m-1"></div>
-            <div class = "col m-1 border border-dark">
-                Temperature Data
+            <div class = "col mt-1 border border-dark rounded">
+                <div class = "card-header text-left">
+                    Elapsed Time:
+                </div>
             </div>
         </div>
+        
+        <div class="col-3">
+            <div class = "card w-100 bg-light rounded">
+                <div class = "card-header p-0 text-center">
+                    Sensor Selection
+                </div>
 
+                <div class = "card-body p-1">
+                    <div class = "row">
+                        <div class = "col">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" id="defaultChecked">
+                                <label class="custom-control-label" for="defaultChecked">All</label>
+                            </div>
+                        </div>
+
+                        <div class = "col">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" id="defaultUnchecked">
+                                <label class="custom-control-label" for="defaultUnchecked">Video</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class = "col">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" id="defaultUnchecked">
+                                <label class="custom-control-label" for="defaultUnchecked">Audio</label>
+                            </div>
+                        </div>
+
+                        <div class = "col">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" id="defaultUnchecked">
+                                <label class="custom-control-label" for="defaultUnchecked">Temperature</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class = "card w-100 mt-1 bg-light rounded">
+                <div class = "card-header p-0 text-center">
+                    Audio Data
+                </div>
+
+                <div class = "card-body p-1">
+                    Audio Stream
+                </div>
+            </div>
+
+            <div class = "card w-100 mt-1 bg-light rounded">
+                <div class = "card-header p-0 text-center">
+                    Temperature Data
+                </div>
+
+                <div class = "card-body p-1">
+                    <div class="row">
+                        <div class="col-9">
+                            Room Temp:
+                        </div>
+                        <div class="col-3 text-right">
+                            72.3
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-9">
+                            Skin Temp (Subject 1):
+                        </div>
+                        <div class="col-3 text-right">
+                            72.3
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-9">
+                            Skin Temp (Subject 2):
+                        </div>
+                        <div class="col-3 text-right">
+                            72.3
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
     </div>
-
 {% endblock %}
