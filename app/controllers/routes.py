@@ -14,14 +14,41 @@ def login():
     #-------------------------------------------------------------------------------------------
     if form.validate_on_submit():
         # A template in the application is used to render flashed messages that Flask stores
-        flash('Login requested for user {}, remember_me={}'.format(
-            form.username.data, form.remember_me.data))
-        return redirect(url_for('livefeed'))
+        flash('Login requested for user {}, remember_me={}, password_input={}'.format(
+            form.username.data, form.remember_me.data, form.password.data))
+
+        temp_user = 'Lianghao'
+        temp_password = '123'
+        flash("login")
+        if form.username.data == temp_user and form.password.data == temp_password:
+            flash("login password work")
+            return redirect(url_for('livefeed'))
     return render_template('login.html', title='Sign In', form=form)
 
 @app.route('/home')
 def home():
+
     return render_template('home.html')
+
+@app.route('/registration', methods=['GET', 'POST'])
+def registration():
+    form = LoginForm()
+    #-------------------------------------------------------------------------------------------
+    # The validate_on_submit() method does all form processing work and returns true when a form
+    # is submitted and the browser sends a POST request indicating data is ready to be processed
+    #-------------------------------------------------------------------------------------------
+    if form.validate_on_submit():
+        # A template in the application is used to render flashed messages that Flask stores
+        flash('registration requested for user {}, remember_me={}, password_input={}'.format(
+            form.username.data, form.remember_me.data, form.password.data))
+
+            # password hashing
+
+            #saving to database
+        
+
+        return redirect(url_for('login'))
+    return render_template('registration.html', title='Registration', form=form)
 
 @app.route('/livefeed')
 def livefeed():
