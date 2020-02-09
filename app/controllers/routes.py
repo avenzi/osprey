@@ -1,12 +1,10 @@
-from flask import render_template, flash, redirect, url_for
+from flask import render_template, flash, redirect, url_for, Response
 from app import app
 from app.controllers.forms import LoginForm
+from app.controllers.video import *
+
 
 @app.route('/')
-@app.route('/')
-def index():
-    return render_template('index.html')
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
@@ -39,3 +37,9 @@ def livefeed():
 @app.route('/archives')
 def archives():
     return render_template('archives.html')
+
+@app.route('/video_feed')
+def video_feed():
+    """Video streaming route. Put this in the src attribute of an img tag."""
+    return Response(gen(Camera()),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
