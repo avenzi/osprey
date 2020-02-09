@@ -56,6 +56,9 @@ def registration():
 
         database_cursor = mysql.connection.cursor()
         database_cursor.execute('''CREATE TABLE IF NOT EXISTS user (id INTEGER, username VARCHAR(20), hashed_pw VARCHAR(20))''')
+
+        # https://www.w3schools.com/python/python_mysql_select.asp
+
         mysql.connection.commit()
 
 
