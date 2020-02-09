@@ -2,6 +2,8 @@ from flask import render_template, flash, redirect, url_for, Response
 from app import app
 from app.controllers.forms import LoginForm
 from app.controllers.video import *
+from app import mysql
+from app import bcrypt
 
 
 @app.route('/')
@@ -16,6 +18,11 @@ def login():
         # A template in the application is used to render flashed messages that Flask stores
         flash('Login requested for user {}, remember_me={}, password_input={}'.format(
             form.username.data, form.remember_me.data, form.password.data))
+        
+        # 1. check DB for user .. if not user in DB, return error
+        #hashed_pw_from_db = get_via_sql
+        #user_input_pw = form.password.data
+        #correct_password = bcrypt.check_password_hash(hashed_pw_from_db, user_input_pw))
 
         temp_user = 'Lianghao'
         temp_password = '123'
@@ -42,10 +49,18 @@ def registration():
         flash('registration requested for user {}, remember_me={}, password_input={}'.format(
             form.username.data, form.remember_me.data, form.password.data))
 
-            # password hashing
+        # password hashing
+        inputted_password = form.password.data
+        pw_hash = bcrypt.generate_password_hash(inputted_password)
+        flash("works?: {}".format(bcrypt.check_password_hash(pw_hash, inputted_password))) # returns True
 
-            #saving to database
-        
+        database_cursor = mysql.connection.cursor()
+        database_cursor.execute('''CREATE TABLE IF NOT EXISTS user (id INTEGER, username VARCHAR(20), hashed_pw VARCHAR(20))''')
+        mysql.connection.commit()
+
+
+        #saving to database
+        # write user, pw_hash to database
 
         return redirect(url_for('login'))
     return render_template('registration.html', title='Registration', form=form)
