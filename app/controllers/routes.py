@@ -55,7 +55,7 @@ def registration():
         flash("works?: {}".format(bcrypt.check_password_hash(pw_hash, inputted_password))) # returns True
 
         database_cursor = mysql.connection.cursor()
-        database_cursor.execute('''CREATE TABLE IF NOT EXISTS user (id INTEGER, username VARCHAR(20), hashed_pw VARCHAR(20))''')
+        database_cursor.execute('''CREATE TABLE IF NOT EXISTS user (id INTEGER PRIMARY KEY, username VARCHAR(20), hashed_pw VARCHAR(20))''')
 
         # https://www.w3schools.com/python/python_mysql_select.asp
 
