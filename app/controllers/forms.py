@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField
-from wtforms.validators import DataRequired
+from wtforms import StringField, PasswordField, BooleanField, SubmitField, IntegerField, DecimalField
+from wtforms.validators import DataRequired, Optional
 
 class LoginForm(FlaskForm):
     # DataRequired() validator method checks that fields are not submitted empty
@@ -8,5 +8,10 @@ class LoginForm(FlaskForm):
     password = PasswordField('Password', validators=[DataRequired()])
     remember_me = BooleanField('Remember Me')
     submit = SubmitField('Sign In')
+
+class TriggerSettingsForm(FlaskForm):
+    audio = IntegerField('Audio (dB):')
+    temperature = DecimalField('Temperature (&#8457):', places=1)
+    submit = SubmitField('OK')
 
     
