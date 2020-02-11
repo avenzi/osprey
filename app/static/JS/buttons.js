@@ -43,4 +43,43 @@ $(document).ready(function () {
         e.stopImmediatePropagation();
     });
 
+
+    $('#videoCheck').click(function(e) {
+        if ($(this).is(':checked')) {
+            alert('Checked')
+        }
+        else {
+            alert('Unchecked')
+        }
+        e.stopImmediatePropagation();
+    });   
+    
+    
+    $('#audioCheck').click(function(e) {
+        if ($(this).is(':checked')) {
+            alert('Checked')
+        }
+        else {
+            alert('Unchecked')
+        }
+        e.stopImmediatePropagation();
+    });
+
+
+    $('#temperatureCheck').click(function(e) {
+        if ($(this).is(':checked')) {
+            alert('Checked')
+        }
+        else {
+            alert('Unchecked')
+        }
+        e.stopImmediatePropagation();
+    });
+
+
+    $('#collapseExample').click(function(e) {
+        alert('Hello');
+        e.stopImmediatePropagation();
+    });
+
 });
