@@ -11,10 +11,20 @@
                     Date Selection
                 </div>
                 <div class = "card-body p-1 text-center">
-                    <a href="{{url_for('archives')}}">January 22, 2020 @ 14:35.04</a>
-                    <a href="{{url_for('archives')}}">January 20, 2020 @ 09:01.15</a>
-                    <a href="{{url_for('archives')}}">January 15, 2020 @ 09:30.58</a>
-                    <a href="{{url_for('archives')}}">January 14, 2020 @ 12:47.23</a>
+                    <p><a href="{{url_for('archives')}}">January 22, 2020 @ 14:35.04</a></p>
+                    <p><a href="{{url_for('archives')}}">January 20, 2020 @ 09:01.15</a></p>
+                    <p><a href="{{url_for('archives')}}">January 15, 2020 @ 09:30.58</a></p>
+                    <p><a href="{{url_for('archives')}}">January 14, 2020 @ 12:47.23</a></p>
+                    <p><a href="{{url_for('archives')}}">January 12, 2020 @ 18:34.10</a></p>
+                    <p><a href="{{url_for('archives')}}">January 11, 2020 @ 12:22.01</a></p>
+                    <p><a href="{{url_for('archives')}}">January 8, 2020 @ 10:23.18</a></p>
+                    <p><a href="{{url_for('archives')}}">January 5, 2020 @ 08:46.12</a></p>
+                    <p><a href="{{url_for('archives')}}">January 4, 2020 @ 11:56.49</a></p>
+                    <p><a href="{{url_for('archives')}}">January 3, 2020 @ 13:40.57</a></p>
+                    <p><a href="{{url_for('archives')}}">December 28, 2019 @ 12:07.41</a></p>
+                    <p><a href="{{url_for('archives')}}">December 27, 2019 @ 15:21.03</a></p>
+                    <p><a href="{{url_for('archives')}}">December 20, 2019 @ 16:37.09</a></p>
+                    <p><a href="{{url_for('archives')}}">December 18, 2019 @ 12:03.23</a></p>
                 </div>
             </div>
         </div>
@@ -28,9 +38,9 @@
                     <img src="../static/images/mock_vid.png" width = "100%">
                 </div>
             </div>
-            <div class = "col mt-1 border border-dark rounded">
-                <div class = "card-header text-left">
-                    Elapsed Time:
+            <div class = "col mt-1 border border-dark rounded bg-white">
+                <div class = "card-header text-left bg-white">
+                    Elapsed Time: 00:34:27
                 </div>
             </div>
         </div>
@@ -52,8 +62,8 @@
 
                         <div class = "col">
                             <div class="custom-control custom-checkbox">
-                                <input type="checkbox" class="custom-control-input" id="defaultUnchecked">
-                                <label class="custom-control-label" for="defaultUnchecked">Video</label>
+                                <input type="checkbox" class="custom-control-input" id="defaultChecked1">
+                                <label class="custom-control-label" for="defaultChecked1">Video</label>
                             </div>
                         </div>
                     </div>
@@ -61,15 +71,15 @@
                     <div class="row">
                         <div class = "col">
                             <div class="custom-control custom-checkbox">
-                                <input type="checkbox" class="custom-control-input" id="defaultUnchecked">
-                                <label class="custom-control-label" for="defaultUnchecked">Audio</label>
+                                <input type="checkbox" class="custom-control-input" id="defaultChecked2">
+                                <label class="custom-control-label" for="defaultChecked2">Audio</label>
                             </div>
                         </div>
 
                         <div class = "col">
                             <div class="custom-control custom-checkbox">
-                                <input type="checkbox" class="custom-control-input" id="defaultUnchecked">
-                                <label class="custom-control-label" for="defaultUnchecked">Temperature</label>
+                                <input type="checkbox" class="custom-control-input" id="defaultChecked3">
+                                <label class="custom-control-label" for="defaultChecked3">Temperature</label>
                             </div>
                         </div>
                     </div>
@@ -81,8 +91,17 @@
                     Audio Data
                 </div>
 
-                <div class = "card-body p-1">
-                    Audio Stream
+                <div class="card-body p-1">
+                    <div class="row">
+                        <div class="col">
+                            Streaming Audio
+                        </div>
+                    </div>
+                    <div class="row justify-content-end">
+                        <div class="col text-right">
+                            Current dB: 60 dB
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -106,7 +125,7 @@
                             Skin Temp (Subject 1):
                         </div>
                         <div class="col-3 text-right">
-                            72.3
+                            93.1
                         </div>
                     </div>
 
@@ -115,7 +134,7 @@
                             Skin Temp (Subject 2):
                         </div>
                         <div class="col-3 text-right">
-                            72.3
+                            95.4
                         </div>
                     </div>
                     

@@ -30,3 +30,7 @@ html, body {
         margin-left: 0;
     }
 }
+
+img.logo {
+    max-width: 60%;
+}
