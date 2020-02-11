@@ -1,6 +1,6 @@
 from flask import render_template, flash, redirect, url_for, Response
 from app import app
-from app.controllers.forms import LoginForm
+from app.controllers.forms import LoginForm, TriggerSettingsForm
 from app.controllers.video import *
 from app import mysql
 from app import bcrypt
@@ -68,9 +68,12 @@ def registration():
         return redirect(url_for('login'))
     return render_template('registration.html', title='Registration', form=form)
 
-@app.route('/livefeed')
+@app.route('/livefeed', methods=['GET', 'POST'])
 def livefeed():
-    return render_template('livefeed.html')
+    form = TriggerSettingsForm()
+    if form.validate_on_submit():
+        return 'Success!'
+    return render_template('livefeed.html', form=form)
 
 @app.route('/archives')
 def archives():
