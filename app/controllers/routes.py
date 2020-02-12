@@ -2,6 +2,7 @@ from flask import render_template, flash, redirect, url_for, Response
 from app import app
 from app.controllers.forms import LoginForm, TriggerSettingsForm
 from app.controllers.video import *
+from app.controllers.receiver import *
 from app import mysql
 from app import bcrypt
 
@@ -84,3 +85,9 @@ def video_feed():
     """Video streaming route. Put this in the src attribute of an img tag."""
     return Response(gen(Camera()),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
+
+"""Reveiver route is used to start the live stream"""
+@app.route('/receiver')
+def receiver():
+    receiver = Receiver();
+    return Response(receiver.StartReceiving())
