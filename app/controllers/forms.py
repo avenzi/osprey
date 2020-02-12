@@ -14,4 +14,11 @@ class TriggerSettingsForm(FlaskForm):
     temperature = DecimalField('Temperature (&#8457):', places=1)
     submit = SubmitField('OK')
 
+
+class RegistrationForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    password_confirm = PasswordField('Password Confirmation', validators=[DataRequired()])
+    submit = SubmitField('Submit')
+
     
