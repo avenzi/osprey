@@ -1,6 +1,6 @@
 from flask import render_template, flash, redirect, url_for, Response
 from app import app
-from app.controllers.forms import LoginForm, TriggerSettingsForm
+from app.controllers.forms import LoginForm, TriggerSettingsForm, RegistrationForm
 from app.controllers.video import *
 from app import mysql
 from app import bcrypt
@@ -20,43 +20,55 @@ def login():
             form.username.data, form.remember_me.data, form.password.data))
         
         # 1. check DB for user .. if not user in DB, return error
-        #hashed_pw_from_db = get_via_sql
-        #user_input_pw = form.password.data
-        #correct_password = bcrypt.check_password_hash(hashed_pw_from_db, user_input_pw))
-
-        temp_user = 'Lianghao'
-        temp_password = '123'
-        flash("login")
-        if form.username.data == temp_user and form.password.data == temp_password:
+        database_cursor = mysql.connection.cursor()
+        database_cursor.execute("SELECT * FROM user where username = "+"'"+form.username.data+"'")
+        myresult = database_cursor.fetchone()
+        hashed_pw_from_db = myresult[2]
+        user_input_pw = form.password.data
+        correction_password = bcrypt.check_password_hash(hashed_pw_from_db, user_input_pw)
+        if correction_password == False:
+            flash("Wrong password")
+            redirect(request.url)
+       #     return redirect(url_for('livefeed'))
+        else:
             flash("login password work")
             return redirect(url_for('livefeed'))
     return render_template('login.html', title='Sign In', form=form)
 
 @app.route('/home')
 def home():
-
+    
     return render_template('home.html')
 
 @app.route('/registration', methods=['GET', 'POST'])
 def registration():
-    form = LoginForm()
+    form = RegistrationForm()
     #-------------------------------------------------------------------------------------------
     # The validate_on_submit() method does all form processing work and returns true when a form
     # is submitted and the browser sends a POST request indicating data is ready to be processed
     #-------------------------------------------------------------------------------------------
     if form.validate_on_submit():
         # A template in the application is used to render flashed messages that Flask stores
-        flash('registration requested for user {}, remember_me={}, password_input={}'.format(
-            form.username.data, form.remember_me.data, form.password.data))
+        flash('registration requested for user {}, password={}, password_confirm={}'.format(
+            form.username.data, form.password.data, form.password_confirm.data))
+
+        if form.password.data != form.password_confirm.data:
+            flash("Password confirmation and password need to be the same")
+            return redirect(url_for('registration'))
 
         # password hashing
         inputted_password = form.password.data
-        pw_hash = bcrypt.generate_password_hash(inputted_password)
-        flash("works?: {}".format(bcrypt.check_password_hash(pw_hash, inputted_password))) # returns True
+        pw_hash = bcrypt.generate_password_hash(inputted_password).decode('utf-8')
+
+        username = form.username.data
 
         database_cursor = mysql.connection.cursor()
-        database_cursor.execute('''CREATE TABLE IF NOT EXISTS user (id INTEGER PRIMARY KEY AUTO_INCREMENT, username VARCHAR(20), hashed_pw VARCHAR(20))''')
+        database_cursor.execute('''CREATE TABLE IF NOT EXISTS user (id INTEGER UNSIGNED AUTO_INCREMENT PRIMARY KEY , username VARCHAR(60), hashed_pw VARCHAR(64))''')
+        database_cursor.execute(" INSERT INTO user (username,hashed_pw) VALUES ("+ '"'+ username +'"' + ","+ '"'+pw_hash +'"' +")")
 
+
+        #INSERT INTO Persons (FirstName,LastName)
+        #VALUES ('Lars','Monsn');
         # https://www.w3schools.com/python/python_mysql_select.asp
 
         mysql.connection.commit()
