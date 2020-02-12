@@ -1,4 +1,4 @@
-from flask import render_template, flash, redirect, url_for, Response
+from flask import render_template, flash, redirect, url_for, Response, session
 from app import app
 from app.controllers.forms import LoginForm, TriggerSettingsForm, RegistrationForm
 from app.controllers.video import *
@@ -6,9 +6,11 @@ from app import mysql
 from app import bcrypt
 
 
-@app.route('/')
+
+@app.route('/', methods = ['GET','POST'])
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    
     form = LoginForm()
     #-------------------------------------------------------------------------------------------
     # The validate_on_submit() method does all form processing work and returns true when a form
@@ -28,16 +30,16 @@ def login():
         correction_password = bcrypt.check_password_hash(hashed_pw_from_db, user_input_pw)
         if correction_password == False:
             flash("Wrong password")
-            redirect(request.url)
+            redirect(url_for('login'))
        #     return redirect(url_for('livefeed'))
         else:
             flash("login password work")
+            session['user'] = form.username.data
             return redirect(url_for('livefeed'))
     return render_template('login.html', title='Sign In', form=form)
 
 @app.route('/home')
 def home():
-    
     return render_template('home.html')
 
 @app.route('/registration', methods=['GET', 'POST'])
@@ -82,6 +84,9 @@ def registration():
 
 @app.route('/livefeed', methods=['GET', 'POST'])
 def livefeed():
+    if session.get('user') == True:
+        return redirect(url_for('login'))
+
     form = TriggerSettingsForm()
     if form.validate_on_submit():
         return 'Success!'
@@ -89,6 +94,8 @@ def livefeed():
 
 @app.route('/archives')
 def archives():
+    if session.get('user') == True:
+        return redirect(url_for('login'))
     return render_template('archives.html')
 
 @app.route('/video_feed')
