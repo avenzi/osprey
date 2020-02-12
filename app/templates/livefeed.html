@@ -1,11 +1,12 @@
-<!DOCTYPE html>
+<!doctype html>
 {% extends "base.html" %}
+{% import 'bootstrap/wtf.html' as wtf %}
 
 {% block app_content %}
 
     <div class="row justify-content-center">
-        <div class="col-2 mt-1 border border-dark rounded">
-            Elapsed Time: 
+        <div class="col-2 mt-1 bg-white border border-dark rounded">
+            Elapsed Time: 01:32:17
         </div>
     </div>
 
@@ -19,7 +20,7 @@
                     <div class="card-header p-0 text-center">
                         Video
                     </div>
-                    <img src="{{ url_for('video_feed') }}">
+                    <img src="../static/images/mock_vid2.png">
                 </div>
 
             </div>
@@ -48,7 +49,7 @@
                                 Skin Temperature (Subject 1):
                             </div>
                             <div class="col-4 text-right">
-                                72.3
+                                93.2
                             </div>
                         </div>
                         <div class="row">
@@ -56,7 +57,7 @@
                                 Skin Temperature (Subject 2):
                             </div>
                             <div class="col-4 text-right">
-                                72.3
+                                94.1
                             </div>
                         </div>
                     </div>
@@ -78,10 +79,7 @@
                         </div>
                         <div class="row justify-content-end">
                             <div class="col text-right">
-                                <div class="custom-control custom-checkbox">
-                                    <input type="checkbox" class="custom-control-input" id="currentDbCheck">
-                                    <label class="custom-control-label" for="currentDbCheck">Current dB</label>
-                                </div>
+                                Current dB: 60 dB
                             </div>
                         </div>
                     </div>
@@ -103,22 +101,6 @@
                         <div class="row">
                             <div class="col">
                                 <div class="custom-control custom-switch">
-                                    <input type="checkbox" class="custom-control-input" id="audioSwitch1">
-                                    <label class="custom-control-label" for="audioSwitch1">Audio 1</label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col">
-                                <div class="custom-control custom-switch">
-                                    <input type="checkbox" class="custom-control-input" id="audioSwitch2">
-                                    <label class="custom-control-label" for="audioSwitch2">Audio 2</label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col">
-                                <div class="custom-control custom-switch">
                                     <input type="checkbox" class="custom-control-input" id="videoSwitch1">
                                     <label class="custom-control-label" for="videoSwitch1">Video 1</label>
                                 </div>
@@ -127,8 +109,16 @@
                         <div class="row">
                             <div class="col">
                                 <div class="custom-control custom-switch">
-                                    <input type="checkbox" class="custom-control-input" id="videoSwitch2">
-                                    <label class="custom-control-label" for="videoSwitch2">Video 2</label>
+                                    <input type="checkbox" class="custom-control-input" id="audioSwitch1">
+                                    <label class="custom-control-label" for="audioSwitch1">Audio 1</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="senseSwitch1">
+                                    <label class="custom-control-label" for="senseSwitch1">Sense 1</label>
                                 </div>
                             </div>
                         </div>
@@ -144,14 +134,8 @@
                         Trigger Settings
                     </div>
                     <div class="card-body p-1">
-                        <div class="row">
-                            <div class="col-8">
-                                Average Pixel Intensity:
-                            </div>
-                            <div class="col-4 text-right">
-                                72.3
-                            </div>
-                        </div>
+
+                        {#
                         <div class="row">
                             <div class="col-8">
                                 Audio (dB):
@@ -168,6 +152,58 @@
                                 72.3
                             </div>
                         </div>
+                        #}
+
+
+
+
+                        <div class="row">
+                            <div class="col">
+                                
+
+                                <form action="" method="post" novalidate>
+                                    {{ form.hidden_tag() }}
+                                    <p>
+                                        {{ form.audio.label }}
+                                        {{ form.audio(size=5) }}
+                                    </p>
+                                    <p>
+                                        {{ form.temperature.label }} 
+                                        {{ form.temperature(size=5) }}
+                                    </p>
+                                    <p>
+                                        {{ form.submit() }}
+                                    </p>
+                                
+                                </form>
+
+
+
+
+
+
+                            <p>
+
+  <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">
+    Button with data-target
+  </button>
+</p>
+<div class="collapse" id="collapseExample">
+  <div class="card card-body">
+    Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. Nihil anim keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident.
+  </div>
+</div>
+
+
+
+
+
+
+                            </div>
+                        </div>
+
+
+
                     </div>
                 </div>
 
@@ -183,28 +219,22 @@
                         <div class="row">
                             <div class="col">
                                 <div class="custom-control custom-checkbox">
-                                    <input type="checkbox" class="custom-control-input" id="customCheck1">
-                                    <label class="custom-control-label" for="customCheck1">All</label>
+                                    <input type="checkbox" class="custom-control-input" id="videoCheck">
+                                    <label class="custom-control-label" for="videoCheck">Video</label>
                                 </div>
                             </div>
                             <div class="col">
                                 <div class="custom-control custom-checkbox">
-                                    <input type="checkbox" class="custom-control-input" id="customCheck2">
-                                    <label class="custom-control-label" for="customCheck2">Video</label>
+                                    <input type="checkbox" class="custom-control-input" id="temperatureCheck">
+                                    <label class="custom-control-label" for="temperatureCheck">Temperature</label>
                                 </div>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col">
                                 <div class="custom-control custom-checkbox">
-                                    <input type="checkbox" class="custom-control-input" id="customCheck3">
-                                    <label class="custom-control-label" for="customCheck3">Audio</label>
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="custom-control custom-checkbox">
-                                    <input type="checkbox" class="custom-control-input" id="customCheck4">
-                                    <label class="custom-control-label" for="customCheck4">Temperature</label>
+                                    <input type="checkbox" class="custom-control-input" id="audioCheck">
+                                    <label class="custom-control-label" for="audioCheck">Audio</label>
                                 </div>
                             </div>
                         </div>
@@ -227,7 +257,7 @@
                     Event Log
                 </div>
                 <div class="card-body p-1">
-
+                    Audio Trigger 1: 90 dB exceeded @ 13:56:21 01/03/2020
                 </div>
             </div>
 
