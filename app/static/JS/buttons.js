@@ -3,7 +3,7 @@ $(document).ready(function () {
     $('#videoSwitch1').click(function() {
         if ($(this).is(':checked')) {
             var httpRequest = new XMLHttpRequest();
-            httpRequest.open('GET', 'receiver', true);
+            httpRequest.open('GET', 'start', true);
             httpRequest.onreadystatechange = function(e) {
                 if (httpRequest.readyState == 4) {
                     if (httpRequest.status == 200) {
@@ -15,7 +15,17 @@ $(document).ready(function () {
             httpRequest.send();
         }
         else {
-            alert('Unchecked')
+            var httpRequest = new XMLHttpRequest();
+            httpRequest.open('GET', 'stop', true);
+            httpRequest.onreadystatechange = function(e) {
+                if (httpRequest.readyState == 4) {
+                    if (httpRequest.status == 200) {
+                        console.log('SUCCESS');
+                    }
+                    else console.log('HTTP ERROR');
+                }
+            }
+            httpRequest.send();
         }
         e.stopImmediatePropagation();
     });

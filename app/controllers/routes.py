@@ -2,9 +2,10 @@ from flask import render_template, flash, redirect, url_for, Response, session
 from app import app
 from app.controllers.forms import LoginForm, TriggerSettingsForm, RegistrationForm
 from app.controllers.video import *
-from app.controllers.receiver import *
+#from app.controllers.receiver import *
 from app import mysql
 from app import bcrypt
+from datetime import datetime
 
 
 
@@ -95,18 +96,71 @@ def livefeed():
 
 @app.route('/archives')
 def archives():
+    return archive(None)
+
+@app.route('/archive/<int:archive_id>')
+def archive(archive_id):    
+    if archive_id == None:
+        print("Archive id is None")
+    else:
+        print("archive_id: ", archive_id)
+
     if session.get('user') == True:
         return redirect(url_for('login'))
-    return render_template('archives.html')
+    
+    # what are the recent recorded sessions
+    database_cursor = mysql.connection.cursor()
+    database_cursor.execute("""SELECT id, StartDate FROM Session ORDER BY StartDate DESC LIMIT 5;""")
+    db_result = database_cursor.fetchall()
+
+    template_data = []
+    if db_result != None:
+        for session_data in db_result:
+            template_data.append(dict(
+                id = session_data[0],
+                time = session_data[1].strftime("%m/%d/%Y @ %H:%M:%S")
+            ))
+    
+    print("Template data:")
+    print(template_data)
+
+    return render_template('archives.html', 
+        sessions=template_data,
+        session_id= (archive_id if archive_id != None else -1))
 
 @app.route('/video_feed')
 def video_feed():
     """Video streaming route. Put this in the src attribute of an img tag."""
-    return Response(gen(Camera()),
+    return Response(gen(Camera(-1, False)),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
-"""Reveiver route is used to start the live stream"""
-@app.route('/receiver')
-def receiver():
-    receiver = Receiver();
-    return Response(receiver.StartReceiving())
+@app.route('/session_feed/<int:session_id>')
+def session_feed(session_id):
+    """Video streaming route. Put this in the src attribute of an img tag."""
+    return Response(gen(Camera(session_id, True)),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
+
+"""route is used to start the live stream"""
+@app.route('/start')
+def start():
+    write_token("START")
+    print("pressed Start")
+    return {}
+
+"""route is used to stop the live stream"""
+@app.route('/stop')
+def stop():
+    print("pressed Stop")
+    write_token("STOP")
+    return {}
+
+def write_token(token_value):
+    database_cursor = mysql.connection.cursor()
+    database_cursor.execute("""CREATE TABLE IF NOT EXISTS `Token` (id int(11) NOT NULL AUTO_INCREMENT, Value TEXT NOT NULL, PRIMARY KEY (id));""")
+    mysql.connection.commit()
+
+    # insert new token
+    sql = "INSERT INTO `Token` (`Value`) VALUES (%s)"
+    database_cursor.execute(sql, (token_value,))
+    mysql.connection.commit()
+

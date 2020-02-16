@@ -1,5 +1,10 @@
 import time
 import threading
+from app import app
+from app import mysql
+
+rewind = False
+
 try:
     from greenlet import getcurrent as get_ident
 except ImportError:
@@ -57,14 +62,14 @@ class BaseCamera(object):
     last_access = 0  # time of last client access to the camera
     event = CameraEvent()
 
-    def __init__(self):
+    def initialize_base_camera(self):
         """Start the background camera thread if it isn't running yet."""
-        if BaseCamera.thread is None:
-            BaseCamera.last_access = time.time()
+        if self.thread is None:
+            self.last_access = time.time()
 
             # start background frame thread
-            BaseCamera.thread = threading.Thread(target=self._thread)
-            BaseCamera.thread.start()
+            self.thread = threading.Thread(target=self._thread)
+            self.thread.start()
 
             # wait until frames are available
             while self.get_frame() is None:
@@ -72,66 +77,126 @@ class BaseCamera(object):
 
     def get_frame(self):
         """Return the current camera frame."""
-        BaseCamera.last_access = time.time()
+        self.last_access = time.time()
 
         # wait for a signal from the camera thread
-        BaseCamera.event.wait()
-        BaseCamera.event.clear()
+        self.event.wait()
+        self.event.clear()
 
-        return BaseCamera.frame
+        return self.frame
 
-    @staticmethod
-    def frames():
+    def frames(self):
         """"Generator that returns frames from the camera."""
         raise RuntimeError('Must be implemented by subclasses.')
 
-    @classmethod
-    def _thread(cls):
+    def _thread(self):
         """Camera background thread."""
-        print('Starting camera thread.')
-        frames_iterator = cls.frames()
+        #print('Starting a camera thread.')
+        frames_iterator = self.frames()
         for frame in frames_iterator:
-            BaseCamera.frame = frame
-            BaseCamera.event.set()  # send signal to clients
+            self.frame = frame
+            self.event.set()  # send signal to clients
             time.sleep(0)
 
             # if there hasn't been any clients asking for frames in
             # the last 10 seconds then stop the thread
-            if time.time() - BaseCamera.last_access > 10:
+            if time.time() - self.last_access > 1000:
                 frames_iterator.close()
                 print('Stopping camera thread due to inactivity.')
                 break
-        BaseCamera.thread = None
+        self.thread = None
 
 
 class Camera(BaseCamera):
+    def __init__(self, session_id, rewinding):
+        print("Created Camera with session_id: ", session_id)
+        self.session_id = session_id
+        self.rewinding = rewinding
+        self.initialize_base_camera()
+
     """An emulated camera implementation that streams a repeated sequence of
     files 1.jpg, 2.jpg and 3.jpg at a rate of one frame per second."""
     #imgs = [open("/root/capstone-site/site/static/video/" + str(f) + '.jpg', 'rb').read() for f in range(1000)]
-    @staticmethod
-    def frames():
-        index = 1
-        max_index = 500
+    
+    def frames(self):
+        self.rewind_index = 1
+        if self.rewinding == True:
+            with app.app_context():
+                database_cursor = mysql.connection.cursor()
+                print("sd: ", self.session_id)
+                database_cursor.execute("""SELECT Frame FROM VideoFrame WHERE SessionId = %s ORDER BY FRAME DESC LIMIT 1""",
+                    (str(self.session_id),))
+                result = database_cursor.fetchone()
+                self.max_rewind_index = result[0]
+        
+        last_sent = -1
+
         while True:
-            time.sleep(0.0333) # 30 FPS
+            time.sleep(0.05) # 30 FPS
+
+            print("Camera.session_id: ", self.session_id)
 
             successful_read = False
             while (not successful_read):
-                try:
-                    image = open("/root/capstone-site/app/static/video/" + str(index) + '.jpg', 'rb').read()
-                    successful_read = True
-                except Exception as e:
-                    print("Exception caught: ", e)
+                with app.app_context():
+                    database_cursor = mysql.connection.cursor()
+                    # Get the latest Frame from the latest Session id
+                    if self.rewinding == False:
+                        if self.session_id != -1: # for now, -1 is live streaming (change later)
+                            database_cursor.execute("""SELECT id, Path FROM VideoFrame WHERE SessionId = %s ORDER BY Frame DESC LIMIT 10, 1;""",
+                                (str(self.session_id),))
+                        else:
+                            # live feed page
+                            print("Live feeding")
+                            database_cursor.execute("""SELECT id, Path FROM VideoFrame WHERE SessionId = (SELECT MAX(Session.id) FROM Session) ORDER BY Frame DESC LIMIT 10, 1;""")
+                    else: # Rewinding
+                        database_cursor.execute("SELECT id, Path FROM VideoFrame WHERE SessionId = %s AND Frame = %s LIMIT 1",
+                            (str(self.session_id), str(self.rewind_index)))
+                    result = database_cursor.fetchone()
+                    print(result)
+                    if result != None:
+                        filepath = result[1]
+                        id = result[0]
+                        #print("filepath: ", filepath)
+
+                        if last_sent == id:
+                            time.sleep(0.1)
+                            continue
+
+                        try:
+                            image = open(filepath, 'rb').read()
+                            last_sent = id
+                            successful_read = True
+                        except Exception as e:
+                            print("Exception caught: ", e)
+                            time.sleep(0.25)
+                    else:
+                        time.sleep(0.10)
+                        print("DB result is NULL")
+
+                        #database_cursor.execute()
+
+                    # https://www.w3schools.com/python/python_mysql_select.asp
+
+                    #mysql.connection.commit()
+
+                    #try:
+                    #    image = open("/root/capstone-site/app/static/video/" + str(index) + '.jpg', 'rb').read()
+                    #    successful_read = True
+                    #except Exception as e:
+                    #    print("Exception caught: ", e)
 
             yield image
-            
-            index = index + 1
-            if index > max_index:
-                index = 1
+
+            if self.rewinding == True:
+                self.rewind_index = self.rewind_index + 1
+                if self.rewind_index > self.max_rewind_index:
+                    self.rewind_index = 1
 
 def gen(camera):
     """Video streaming generator function."""
     while True:
+        print("Retrieving frame")
         frame = camera.get_frame()
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
