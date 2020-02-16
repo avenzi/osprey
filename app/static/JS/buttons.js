@@ -33,12 +33,24 @@ $(document).ready(function () {
 
 
     $('#senseSwitch1').click(function(e) {
-        if ($(this).is(':checked')) {
-            alert('Checked')
-        }
-        else {
-            alert('Unchecked')
-        }
+        (function doPoll() {
+            req = $.get('update_sense', function(data){
+                $('#roomTemperature').text(data.roomTemperature);
+                $('#skinTemperatureSub1').text(data.skinTemperatureSub1);
+                $('#skinTemperatureSub2').text(data.skinTemperatureSub2);
+            })
+            if ($('#senseSwitch1').is(':checked')) {
+                req.always(function(){
+                    setTimeout(doPoll, 5000);
+                });
+            }
+            else {
+                $('#roomTemperature').text('--.-');
+                $('#skinTemperatureSub1').text('--.-');
+                $('#skinTemperatureSub2').text('--.-');
+                req.abort();
+            }
+        }());
         e.stopImmediatePropagation();
     });
 

@@ -1,11 +1,15 @@
-from flask import render_template, flash, redirect, url_for, Response, session
+from flask import render_template, flash, redirect, url_for, Response, session, jsonify
 from app import app
 from app.controllers.forms import LoginForm, TriggerSettingsForm, RegistrationForm
 from app.controllers.video import *
 from app.controllers.receiver import *
+from app.controllers.data import *
 from app import mysql
 from app import bcrypt
+from random import seed
+from random import randint
 
+seed(1)
 
 
 @app.route('/', methods = ['GET','POST'])
@@ -89,9 +93,11 @@ def livefeed():
         return redirect(url_for('login'))
 
     form = TriggerSettingsForm()
+    # new temperature data object
+    temperatureData = Temperature()    
     if form.validate_on_submit():
         return 'Success!'
-    return render_template('livefeed.html', form=form)
+    return render_template('livefeed.html', form=form, temperatureData = temperatureData)
 
 @app.route('/archives')
 def archives():
@@ -110,3 +116,16 @@ def video_feed():
 def receiver():
     receiver = Receiver();
     return Response(receiver.StartReceiving())
+
+@app.route('/update_sense', methods=['GET'])
+def update_sense():
+    temperatureData = Temperature()
+
+    for _ in range(10):
+        value = randint(0, 97)
+        temperatureData.roomTemperature = str(value) + ".0"
+        temperatureData.skinTemperatureSub1 = str(value+1) + '.0'
+        temperatureData.skinTemperatureSub2 = str(value+2) + '.0'
+
+    return jsonify({'result' : 'success', 'roomTemperature' : temperatureData.roomTemperature, 'skinTemperatureSub1' : temperatureData.skinTemperatureSub1, 
+        'skinTemperatureSub2' : temperatureData.skinTemperatureSub2})

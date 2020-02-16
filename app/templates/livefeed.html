@@ -41,24 +41,25 @@
                             <div class="col-8">
                                 Room Temperature:
                             </div>
-                            <div class="col-4 text-right">
-                                72.3
+                            <div class="col-4 text-right" id='roomTemperature'>
+                                {{ temperatureData.roomTemperature }}
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-8">
                                 Skin Temperature (Subject 1):
                             </div>
-                            <div class="col-4 text-right">
-                                93.2
+                            <div class="col-4 text-right" id='skinTemperatureSub1'>
+                                {{ temperatureData.skinTemperatureSub1 }}
+
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-8">
                                 Skin Temperature (Subject 2):
                             </div>
-                            <div class="col-4 text-right">
-                                94.1
+                            <div class="col-4 text-right" id='skinTemperatureSub2'>
+                                {{ temperatureData.skinTemperatureSub2 }}
                             </div>
                         </div>
                     </div>
@@ -135,29 +136,6 @@
                         Trigger Settings
                     </div>
                     <div class="card-body p-1">
-
-                        {#
-                        <div class="row">
-                            <div class="col-8">
-                                Audio (dB):
-                            </div>
-                            <div class="col-4 text-right">
-                                72.3
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-8">
-                                Temperature (&#8457):
-                            </div>
-                            <div class="col-4 text-right">
-                                72.3
-                            </div>
-                        </div>
-                        #}
-
-
-
-
                         <div class="row">
                             <div class="col">
                                 
@@ -174,14 +152,9 @@
                                     <p>
                                         {{ form.submit() }}
                                     </p>
-                                
                                 </form>
-
                             </div>
                         </div>
-
-
-
                     </div>
                 </div>
 
