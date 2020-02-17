@@ -40,12 +40,13 @@ def login():
         user_input_pw = form.password.data
         correction_password = bcrypt.check_password_hash(hashed_pw_from_db, user_input_pw)
         if correction_password == False:
-            flash("Wrong password")
+          #  flash("Wrong password")
             redirect(url_for('login'))
        #     return redirect(url_for('livefeed'))
         else:
-            flash("login password work")
+           # flash("login password work")
             session['user'] = form.username.data
+            global loggined
             loggined = True
             return redirect(url_for('livefeed'))
     return render_template('login.html', title='Sign In', form=form)
@@ -63,8 +64,8 @@ def registration():
     #-------------------------------------------------------------------------------------------
     if form.validate_on_submit():
         # A template in the application is used to render flashed messages that Flask stores
-        flash('registration requested for user {}, password={}, password_confirm={}'.format(
-            form.username.data, form.password.data, form.password_confirm.data))
+        #flash('registration requested for user {}, password={}, password_confirm={}'.format(
+         #   form.username.data, form.password.data, form.password_confirm.data))
 
         if form.password.data != form.password_confirm.data:
             flash("Password confirmation and password need to be the same")
@@ -77,7 +78,7 @@ def registration():
         username = form.username.data
 
         database_cursor = mysql.connection.cursor()
-        database_cursor.execute('''CREATE TABLE IF NOT EXISTS user (id INTEGER UNSIGNED AUTO_INCREMENT PRIMARY KEY , username VARCHAR(60), hashed_pw VARCHAR(64))''')
+        database_cursor.execute('''CREATE TABLE IF NOT EXISTS user (id INTEGER UNSIGNED AUTO_INCREMENT PRIMARY KEY , username VARCHAR(60), hashed_pw Text)''')
         database_cursor.execute(" INSERT INTO user (username,hashed_pw) VALUES ("+ '"'+ username +'"' + ","+ '"'+pw_hash +'"' +")")
 
 
