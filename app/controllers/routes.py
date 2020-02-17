@@ -13,6 +13,10 @@ from random import randint
 
 seed(1)
 
+global loggined
+
+loggined = False
+
 
 @app.route('/', methods = ['GET','POST'])
 @app.route('/login', methods=['GET', 'POST'])
@@ -42,6 +46,7 @@ def login():
         else:
             flash("login password work")
             session['user'] = form.username.data
+            loggined = True
             return redirect(url_for('livefeed'))
     return render_template('login.html', title='Sign In', form=form)
 
@@ -94,6 +99,9 @@ def livefeed():
     if session.get('user') == True:
         return redirect(url_for('login'))
 
+    if loggined != True:
+        return redirect(url_for('login'))
+
     form = TriggerSettingsForm()
     # new temperature data object
     temperatureData = Temperature()    
@@ -106,7 +114,9 @@ def archives():
     return archive(None)
 
 @app.route('/archive/<int:archive_id>')
-def archive(archive_id):    
+def archive(archive_id):
+    if loggined != True:
+        return redirect(url_for('login'))
     if archive_id == None:
         print("Archive id is None")
     else:
