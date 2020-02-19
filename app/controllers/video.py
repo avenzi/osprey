@@ -132,9 +132,9 @@ class Camera(BaseCamera):
         last_sent = -1
 
         while True:
-            time.sleep(0.05) # 30 FPS
+            time.sleep(0.035) # 30 FPS
 
-            print("Camera.session_id: ", self.session_id)
+            #print("Camera.session_id: ", self.session_id)
 
             successful_read = False
             while (not successful_read):
@@ -147,13 +147,13 @@ class Camera(BaseCamera):
                                 (str(self.session_id),))
                         else:
                             # live feed page
-                            print("Live feeding")
+                            #print("Live feeding")
                             database_cursor.execute("""SELECT id, Path FROM VideoFrame WHERE SessionId = (SELECT MAX(Session.id) FROM Session) ORDER BY Frame DESC LIMIT 10, 1;""")
                     else: # Rewinding
                         database_cursor.execute("SELECT id, Path FROM VideoFrame WHERE SessionId = %s AND Frame = %s LIMIT 1",
                             (str(self.session_id), str(self.rewind_index)))
                     result = database_cursor.fetchone()
-                    print(result)
+                    #print(result)
                     if result != None:
                         filepath = result[1]
                         id = result[0]
@@ -196,7 +196,7 @@ class Camera(BaseCamera):
 def gen(camera):
     """Video streaming generator function."""
     while True:
-        print("Retrieving frame")
+        #print("Retrieving frame")
         frame = camera.get_frame()
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
