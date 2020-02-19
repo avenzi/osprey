@@ -48,7 +48,7 @@ class Receiver():
             sql = "SELECT * FROM `users` WHERE `email`=%s"
             cursor.execute(sql, ('devolde2@msu.edu',))
             result = cursor.fetchone()
-            print(result)
+            #print(result)
 
             # connection is not autocommit by default. So you must commit to save your changes:
             #db_connection.commit()
