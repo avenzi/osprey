@@ -58,3 +58,10 @@ img.logo {
     height: fit-content;
     overflow-y: scroll;
   }
+
+  #login-container {
+    margin-left: auto;
+    margin-right: auto;
+    padding-top: 8em;
+    max-width: 550px;
+  }

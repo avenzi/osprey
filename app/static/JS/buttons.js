@@ -92,12 +92,15 @@ $(document).ready(function () {
 
     $('#audioCheck').click(function(e) {
         (function doPoll() {
-            req = $.get('update_eventlog', function(data){
-                $('#eventLog').append(data);
-            })
+
             if ($('#audioCheck').is(':checked')) {
-                req.always(function(){
-                    setTimeout(doPoll, 5000);
+
+                req = $.get('update_eventlog', function(data){
+                    $('#eventLog').append(data);
+                })
+                .done()
+                .always(function(){
+                    setTimeout(doPoll, 6000);
                 });
             }
             else {
@@ -110,12 +113,14 @@ $(document).ready(function () {
 
     $('#temperatureCheck').click(function(e) {
         (function doPoll() {
-            req = $.get('update_eventlog', function(data){
-                $('#eventLog').append(data);
-            })
+
             if ($('#temperatureCheck').is(':checked')) {
-                req.always(function(){
-                    setTimeout(doPoll, 5000);
+                req = $.get('update_eventlog', function(data){
+                    $('#eventLog').append(data);
+                })
+                .done()
+                .always(function(){
+                    setTimeout(doPoll, 6000);
                 });
             }
             else {

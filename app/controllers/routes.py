@@ -196,6 +196,8 @@ def write_token(token_value):
     mysql.connection.commit()
 
 
+
+
 """route is used to update sensor values in the live stream page"""
 @app.route('/update_sense', methods=['GET', 'POST'])
 def update_sense():
@@ -218,37 +220,8 @@ def update_sense():
         'skinTemperatureSub2' : temperatureData.skinTemperatureSub2})
 
 
-@app.route('/update_triggersettings', methods=['POST'])
-def update_triggersettings():
-    triggerSettingsFormData.audio = request.form['audio_input']
-    triggerSettingsFormData.temperature = request.form['temperature_input']
-    return jsonify({'result' : 'success', 'audio_input' : triggerSettingsFormData.audio, 'temperature_input' : triggerSettingsFormData.temperature})
 
 
-@app.route('/update_eventlog', methods=['GET'])
-def update_eventlog():
-    messages.clear()
-
-    if (audioData.status == 'ON') and (audioData.decibels > triggerSettingsFormData.audio):
-        #message = "Audio Trigger: Audio exceeded " + triggerSettingsFormData.audio + " dB @ " + audioData.date
-        messages.append("Audio Trigger: Audio exceeded " + triggerSettingsFormData.audio + " dB @ " + audioData.date)
-
-    if (temperatureData.status == 'ON') and (temperatureData.roomTemperature > triggerSettingsFormData.temperature):
-        #message = "Temperature Trigger: Room temperature exceeded " + triggerSettingsFormData.temperature + " &#8457; @ " + temperatureData.date
-        messages.append("Temperature Trigger: Room temperature exceeded " + triggerSettingsFormData.temperature + " F @ " + temperatureData.date)
-
-    if (temperatureData.status == 'ON') and (temperatureData.skinTemperatureSub1 > triggerSettingsFormData.temperature):
-        #message = "Temperature Trigger: Subject 1 skin temperature exceeded " + triggerSettingsFormData.temperature + " &#8457; @ " + temperatureData.date
-        messages.append("Temperature Trigger: Subject 1 skin temperature exceeded " + triggerSettingsFormData.temperature + " F @ " + temperatureData.date)
-
-    if (temperatureData.status == 'ON') and (temperatureData.skinTemperatureSub2 > triggerSettingsFormData.temperature):
-        #message = "Temperature Trigger: Subject 2 skin temperature exceeded " + triggerSettingsFormData.temperature + " &#8457; @ " + temperatureData.date
-        messages.append("Temperature Trigger: Subject 2 skin temperature exceeded " + triggerSettingsFormData.temperature + " F @ " + temperatureData.date)
-
-
-
-    #if message != "":
-    return render_template('section.html', messages = messages)
 
 
 @app.route('/update_audio', methods=['GET', 'POST'])
@@ -260,8 +233,56 @@ def update_audio():
     audioData.status = request.form['status']
     audioData.date = request.form['date']
 
-
     return jsonify({'result' : 'success', 'status' : audioData.status, 'date' : audioData.date, 'decibels' : audioData.decibels})
+
+
+
+
+
+
+@app.route('/update_triggersettings', methods=['POST'])
+def update_triggersettings():
+    triggerSettingsFormData.audio = request.form['audio_input']
+    triggerSettingsFormData.temperature = request.form['temperature_input']
+    return jsonify({'result' : 'success', 'audio_input' : triggerSettingsFormData.audio, 'temperature_input' : triggerSettingsFormData.temperature})
+
+
+
+
+
+
+@app.route('/update_eventlog', methods=['GET'])
+def update_eventlog():
+    messages.clear()
+
+    if (audioData.status == 'ON') and (audioData.decibels > triggerSettingsFormData.audio):
+        #message = "Audio Trigger: Audio exceeded " + triggerSettingsFormData.audio + " dB @ " + audioData.date
+        messages.append("Audio Trigger: Audio exceeded " + triggerSettingsFormData.audio + " dB @ " + audioData.date)
+        audioData.decibels = '--'
+
+    elif (temperatureData.status == 'ON') and (temperatureData.roomTemperature > triggerSettingsFormData.temperature):
+        #message = "Temperature Trigger: Room temperature exceeded " + triggerSettingsFormData.temperature + " &#8457; @ " + temperatureData.date
+        messages.append("Temperature Trigger: Room temperature exceeded " + triggerSettingsFormData.temperature + " F @ " + temperatureData.date)
+        temperatureData.roomTemperature = '--.-'
+
+    elif (temperatureData.status == 'ON') and (temperatureData.skinTemperatureSub1 > triggerSettingsFormData.temperature):
+        #message = "Temperature Trigger: Subject 1 skin temperature exceeded " + triggerSettingsFormData.temperature + " &#8457; @ " + temperatureData.date
+        messages.append("Temperature Trigger: Subject 1 skin temperature exceeded " + triggerSettingsFormData.temperature + " F @ " + temperatureData.date)
+        temperatureData.skinTemperatureSub1 = '--.-'
+
+    elif (temperatureData.status == 'ON') and (temperatureData.skinTemperatureSub2 > triggerSettingsFormData.temperature):
+        #message = "Temperature Trigger: Subject 2 skin temperature exceeded " + triggerSettingsFormData.temperature + " &#8457; @ " + temperatureData.date
+        messages.append("Temperature Trigger: Subject 2 skin temperature exceeded " + triggerSettingsFormData.temperature + " F @ " + temperatureData.date)
+        temperatureData.skinTemperatureSub2 = '--.-'
+
+    #if message != "":
+    return render_template('section.html', messages = messages)
+
+
+
+
+
+
 
 
 #def pixelIntensity(frame):
