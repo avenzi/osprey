@@ -51,3 +51,10 @@ img.logo {
     .sidenav {padding-top: 15px;}
     .sidenav a {font-size: 18px;}
   }
+
+  #eventLog
+  {
+    position: relative;
+    height: fit-content;
+    overflow-y: scroll;
+  }
