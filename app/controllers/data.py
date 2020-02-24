@@ -14,6 +14,11 @@ class Audio:
         self.status = ''
         self.date = ''
 
+class EventLog:
+    def __init__(self):
+        self.temperatureStatus = ''
+        self.audioStatus = ''
+
 class TriggerSettingsFormData:
     def __init__(self):
         self.audio = 0

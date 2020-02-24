@@ -52,16 +52,13 @@ img.logo {
     .sidenav a {font-size: 18px;}
   }
 
-  #eventLog
-  {
-    position: relative;
-    height: fit-content;
-    overflow-y: scroll;
-  }
-
   #login-container {
     margin-left: auto;
     margin-right: auto;
     padding-top: 8em;
     max-width: 550px;
+  }
+
+  #eventLog{
+    overflow-y: scroll;
   }

@@ -2,34 +2,31 @@ from flask import render_template, flash, redirect, url_for, Response, session, 
 from app import app
 from app.controllers.forms import LoginForm, TriggerSettingsForm, RegistrationForm
 from app.controllers.video import *
-#from app.controllers.receiver import *
 from app.controllers.data import *
 from app import mysql
 from app import bcrypt
 from datetime import datetime
+from random import seed, randint
 
-from random import seed
-from random import randint
-
-import numpy as np
-from PIL import Image
-
+# Seed used to for random number generation
 seed(1)
 
 global loggined
-
 loggined = False
 
+# Data structure for handling audio data
 audioData = Audio()
+# Data structure for handling temperature data
 temperatureData = Temperature()
+# Data structure for handling event log data
+eventLogData = EventLog()
+# Data structure for handling trigger settings form data
 triggerSettingsFormData = TriggerSettingsFormData()
-messages = []
     
 
 @app.route('/', methods = ['GET','POST'])
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    
     form = LoginForm()
     #-------------------------------------------------------------------------------------------
     # The validate_on_submit() method does all form processing work and returns true when a form
@@ -48,11 +45,11 @@ def login():
         user_input_pw = form.password.data
         correction_password = bcrypt.check_password_hash(hashed_pw_from_db, user_input_pw)
         if correction_password == False:
-          #  flash("Wrong password")
+            # flash("Wrong password")
             redirect(url_for('login'))
-       #     return redirect(url_for('livefeed'))
+            # return redirect(url_for('livefeed'))
         else:
-            #flash("login password work")
+            # flash("login password work")
             session['user'] = form.username.data
             global loggined
             loggined = True
@@ -74,14 +71,14 @@ def registration():
     #-------------------------------------------------------------------------------------------
     if form.validate_on_submit():
         # A template in the application is used to render flashed messages that Flask stores
-        #flash('registration requested for user {}, password={}, password_confirm={}'.format(
+        # flash('registration requested for user {}, password={}, password_confirm={}'.format(
         #    form.username.data, form.password.data, form.password_confirm.data))
 
         if form.password.data != form.password_confirm.data:
             flash("Password confirmation and password need to be the same")
             return redirect(url_for('registration'))
 
-        # password hashing
+        # Password Hashing
         inputted_password = form.password.data
         pw_hash = bcrypt.generate_password_hash(inputted_password).decode('utf-8')
 
@@ -91,16 +88,11 @@ def registration():
         database_cursor.execute('''CREATE TABLE IF NOT EXISTS user (id INTEGER UNSIGNED AUTO_INCREMENT PRIMARY KEY , username VARCHAR(60), hashed_pw TEXT)''')
         database_cursor.execute(" INSERT INTO user (username,hashed_pw) VALUES ("+ '"'+ username +'"' + ","+ '"'+pw_hash +'"' +")")
 
-
         #INSERT INTO Persons (FirstName,LastName)
         #VALUES ('Lars','Monsn');
         # https://www.w3schools.com/python/python_mysql_select.asp
 
         mysql.connection.commit()
-
-
-        #saving to database
-        # write user, pw_hash to database
 
         return redirect(url_for('login'))
     return render_template('registration.html', title='Registration', form=form)
@@ -196,9 +188,7 @@ def write_token(token_value):
     mysql.connection.commit()
 
 
-
-
-"""route is used to update sensor values in the live stream page"""
+"""route is used to update temperature values in the live stream page"""
 @app.route('/update_sense', methods=['GET', 'POST'])
 def update_sense():
     for _ in range(10):
@@ -220,10 +210,7 @@ def update_sense():
         'skinTemperatureSub2' : temperatureData.skinTemperatureSub2})
 
 
-
-
-
-
+"""route is used to update audio values in the live stream page"""
 @app.route('/update_audio', methods=['GET', 'POST'])
 def update_audio():
     for _ in range(10):
@@ -236,57 +223,46 @@ def update_audio():
     return jsonify({'result' : 'success', 'status' : audioData.status, 'date' : audioData.date, 'decibels' : audioData.decibels})
 
 
-
-
-
-
+"""route is used to collect trigger settings from the live stream page"""
 @app.route('/update_triggersettings', methods=['POST'])
 def update_triggersettings():
     triggerSettingsFormData.audio = request.form['audio_input']
     triggerSettingsFormData.temperature = request.form['temperature_input']
+
     return jsonify({'result' : 'success', 'audio_input' : triggerSettingsFormData.audio, 'temperature_input' : triggerSettingsFormData.temperature})
 
 
+"""route is used to update the event log with temperature data"""
+@app.route('/update_eventlog_temperature', methods=['GET', 'POST'])
+def update_eventlog_temperature():
+    alerts = []
+
+    eventLogData.temperatureStatus = request.form['status']
+
+    if (eventLogData.temperatureStatus == 'ON' and temperatureData.status == 'ON'):
+        #print('ALL TEMPERATURE ON')
+        if (temperatureData.roomTemperature > triggerSettingsFormData.temperature):
+            alerts.append("Temperature Trigger: Room temperature exceeded " + triggerSettingsFormData.temperature + " ℉ @ " + temperatureData.date)
+
+        if (temperatureData.skinTemperatureSub1 > triggerSettingsFormData.temperature):
+            alerts.append("Temperature Trigger: Subject 1 skin temperature exceeded " + triggerSettingsFormData.temperature + " ℉ @ " + temperatureData.date)
+
+        if (temperatureData.skinTemperatureSub2 > triggerSettingsFormData.temperature):
+            alerts.append("Temperature Trigger: Subject 2 skin temperature exceeded " + triggerSettingsFormData.temperature + " ℉ @ " + temperatureData.date)
+
+    return render_template('section.html', messages = alerts)
 
 
+"""route is used to update the event log with audio data"""
+@app.route('/update_eventlog_audio', methods=['GET', 'POST'])
+def update_eventlog_audio():
+    alerts = []
 
+    eventLogData.audioStatus = request.form['status']
 
-@app.route('/update_eventlog', methods=['GET'])
-def update_eventlog():
-    messages.clear()
+    if (eventLogData.audioStatus == 'ON' and audioData.status == 'ON'):
+        #print('ALL AUDIO ON')
+        if (audioData.decibels > triggerSettingsFormData.audio):
+            alerts.append("Audio Trigger: Audio exceeded " + triggerSettingsFormData.audio + " dB @ " + audioData.date)
 
-    if (audioData.status == 'ON') and (audioData.decibels > triggerSettingsFormData.audio):
-        #message = "Audio Trigger: Audio exceeded " + triggerSettingsFormData.audio + " dB @ " + audioData.date
-        messages.append("Audio Trigger: Audio exceeded " + triggerSettingsFormData.audio + " dB @ " + audioData.date)
-        audioData.decibels = '--'
-
-    elif (temperatureData.status == 'ON') and (temperatureData.roomTemperature > triggerSettingsFormData.temperature):
-        #message = "Temperature Trigger: Room temperature exceeded " + triggerSettingsFormData.temperature + " &#8457; @ " + temperatureData.date
-        messages.append("Temperature Trigger: Room temperature exceeded " + triggerSettingsFormData.temperature + " F @ " + temperatureData.date)
-        temperatureData.roomTemperature = '--.-'
-
-    elif (temperatureData.status == 'ON') and (temperatureData.skinTemperatureSub1 > triggerSettingsFormData.temperature):
-        #message = "Temperature Trigger: Subject 1 skin temperature exceeded " + triggerSettingsFormData.temperature + " &#8457; @ " + temperatureData.date
-        messages.append("Temperature Trigger: Subject 1 skin temperature exceeded " + triggerSettingsFormData.temperature + " F @ " + temperatureData.date)
-        temperatureData.skinTemperatureSub1 = '--.-'
-
-    elif (temperatureData.status == 'ON') and (temperatureData.skinTemperatureSub2 > triggerSettingsFormData.temperature):
-        #message = "Temperature Trigger: Subject 2 skin temperature exceeded " + triggerSettingsFormData.temperature + " &#8457; @ " + temperatureData.date
-        messages.append("Temperature Trigger: Subject 2 skin temperature exceeded " + triggerSettingsFormData.temperature + " F @ " + temperatureData.date)
-        temperatureData.skinTemperatureSub2 = '--.-'
-
-    #if message != "":
-    return render_template('section.html', messages = messages)
-
-
-
-
-
-
-
-
-#def pixelIntensity(frame):
-#    im = Image.open('../static/images/white.jpg')
-#    pic = np.array(im)
-#    print(pic.mean())
-
+    return render_template('section.html', messages = alerts)

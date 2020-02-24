@@ -34,19 +34,19 @@ $(document).ready(function () {
     $('#audioSwitch1').click(function(e) {
         (function doPoll() {
             date = new Date();
-            req2 = $.post('update_audio', {status : 'ON', date : date}, function(data){
+            req1 = $.post('update_audio', {status : 'ON', date : date}, function(data){
                 $('#decibels').text("Current dB: " + data.decibels);
             })
             if ($('#audioSwitch1').is(':checked')) {
-                req2.always(function(){
+                req1.always(function(){
                     setTimeout(doPoll, 5000);
                 });
             }
             else {
                 date = new Date();
-                req3 = $.post('update_audio', {status : 'OFF', date : date});
+                req2 = $.post('update_audio', {status : 'OFF', date : date});
                 $('#decibels').text('Current dB: --');
-                req2.abort();
+                req1.abort();
             }
         }());
         e.stopImmediatePropagation();
@@ -56,23 +56,23 @@ $(document).ready(function () {
     $('#senseSwitch1').click(function(e) {
         (function doPoll() {
             date = new Date();
-            req2 = $.post('update_sense', {status : 'ON', date : date}, function(data){
+            req1 = $.post('update_sense', {status : 'ON', date : date}, function(data){
                 $('#roomTemperature').text(data.roomTemperature);
                 $('#skinTemperatureSub1').text(data.skinTemperatureSub1);
                 $('#skinTemperatureSub2').text(data.skinTemperatureSub2);
             })
             if ($('#senseSwitch1').is(':checked')) {
-                req2.always(function(){
+                req1.always(function(){
                     setTimeout(doPoll, 5000);
                 });
             }
             else {
                 date = new Date();
-                req3 = $.post('update_sense', {status : 'OFF', date : date});
+                req2 = $.post('update_sense', {status : 'OFF', date : date});
                 $('#roomTemperature').text('--.-');
                 $('#skinTemperatureSub1').text('--.-');
                 $('#skinTemperatureSub2').text('--.-');
-                req2.abort();
+                req1.abort();
             }
         }());
         e.stopImmediatePropagation();
@@ -95,7 +95,7 @@ $(document).ready(function () {
 
             if ($('#audioCheck').is(':checked')) {
 
-                req = $.get('update_eventlog', function(data){
+                req1 = $.post('update_eventlog_audio', {status : 'ON'}, function(data){
                     $('#eventLog').append(data);
                 })
                 .done()
@@ -104,7 +104,8 @@ $(document).ready(function () {
                 });
             }
             else {
-                req.abort();
+                req2 = $.post('update_eventlog_audio', {status : 'OFF'});
+                req1.abort();
             }
         }());
         e.stopImmediatePropagation();
@@ -115,7 +116,7 @@ $(document).ready(function () {
         (function doPoll() {
 
             if ($('#temperatureCheck').is(':checked')) {
-                req = $.get('update_eventlog', function(data){
+                req1 = $.post('update_eventlog_temperature', {status : 'ON'}, function(data){
                     $('#eventLog').append(data);
                 })
                 .done()
@@ -124,7 +125,8 @@ $(document).ready(function () {
                 });
             }
             else {
-                req.abort();
+                req2 = $.post('update_eventlog_temperature', {status : 'OFF'});
+                req1.abort();
             }
         }());
         e.stopImmediatePropagation();
