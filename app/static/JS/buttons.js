@@ -141,8 +141,27 @@ $(document).ready(function () {
     });
 
 
-    $('#collapseExample').click(function(e) {
-        //alert('Hello');
+    $('#algorithmModalButton').click(function(e) {
+        $.get('file_upload', function(data){
+            $('#availableAlgorithms').html(data);
+        });
+        // e.stopImmediatePropagation();
+    });
+
+
+    $('#uploadFileSubmit').click(function(e) {
+        formData = new FormData();
+        for (file of document.getElementById('uploadFileInput').files) {
+            formData.append('file', file);
+        }
+        $.ajaxSetup({
+            // Preventing TypeError : Illegal Invocation from jQuery trying to transform the FormData object into a string
+            processData: false,
+            contentType: false
+        });
+        $.post('file_upload', formData, function(data){
+            $('#availableAlgorithms').html(data);
+        });
         e.stopImmediatePropagation();
     });
 

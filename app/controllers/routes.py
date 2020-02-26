@@ -1,3 +1,5 @@
+import os
+import urllib.request
 from flask import render_template, flash, redirect, url_for, Response, session, jsonify, request
 from app import app
 from app.controllers.forms import LoginForm, TriggerSettingsForm, RegistrationForm
@@ -7,6 +9,9 @@ from app import mysql
 from app import bcrypt
 from datetime import datetime
 from random import seed, randint
+from werkzeug.utils import secure_filename
+
+ALLOWED_EXTENSIONS = set(['py'])
 
 # Seed used to for random number generation
 seed(1)
@@ -250,7 +255,7 @@ def update_eventlog_temperature():
         if (temperatureData.skinTemperatureSub2 > triggerSettingsFormData.temperature):
             alerts.append("Temperature Trigger: Subject 2 skin temperature exceeded " + triggerSettingsFormData.temperature + " ℉ @ " + temperatureData.date)
 
-    return render_template('section.html', messages = alerts)
+    return render_template('snippets/eventlog_snippet.html', messages = alerts)
 
 
 """route is used to update the event log with audio data"""
@@ -265,4 +270,42 @@ def update_eventlog_audio():
         if (audioData.decibels > triggerSettingsFormData.audio):
             alerts.append("Audio Trigger: Audio exceeded " + triggerSettingsFormData.audio + " dB @ " + audioData.date)
 
-    return render_template('section.html', messages = alerts)
+    return render_template('snippets/eventlog_snippet.html', messages = alerts)
+
+
+"""route is used to upload files"""
+@app.route("/file_upload", methods=['GET', 'POST'])
+def file_upload():
+    files = []
+
+    if request.method == 'POST':
+        # Checking that the post request has the file part
+        if 'file' not in request.files:
+            return jsonify({'result' : 'No File Part'})
+
+        file = request.files['file']
+
+        # Checking that a file was selected
+        if file.filename == '':
+            return jsonify({'result' : 'No File Selected'})
+
+        # Ensuring that the file name has an extension that is allowed
+        if file and ('.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS):
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOADS_FOLDER'], filename))
+            # Getting a list of all files in the uploads directory
+            with os.scandir(app.config['UPLOADS_FOLDER']) as entries:
+                for entry in entries:
+                    if entry.is_file():
+                        files.append(entry.name)
+            return render_template('snippets/uploads_list_snippet.html', files = files)
+
+        return jsonify({'result' : 'File Extension Not Allowed'})
+
+    if request.method == 'GET':
+        # Getting a list of all files in the uploads directory
+        with os.scandir(app.config['UPLOADS_FOLDER']) as entries:
+            for entry in entries:
+                if entry.is_file():
+                    files.append(entry.name)
+        return render_template('snippets/uploads_list_snippet.html', files = files)
