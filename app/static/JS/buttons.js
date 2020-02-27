@@ -141,14 +141,16 @@ $(document).ready(function () {
     });
 
 
+    // Gets the uploads menu within the modal 
     $('#algorithmModalButton').click(function(e) {
         $.get('file_upload', function(data){
-            $('#availableAlgorithms').html(data);
+            $('#algorithmModalBody').html(data);
         });
         // e.stopImmediatePropagation();
     });
 
 
+    // Posts a file to be uploaded and displays the updated uploads menu within the modal
     $('#uploadFileSubmit').click(function(e) {
         formData = new FormData();
         for (file of document.getElementById('uploadFileInput').files) {
@@ -160,8 +162,36 @@ $(document).ready(function () {
             contentType: false
         });
         $.post('file_upload', formData, function(data){
-            $('#availableAlgorithms').html(data);
+            $('#algorithmModalBody').html(data);
         });
+        e.stopImmediatePropagation();
+    });
+
+    
+    // Select button for an uploaded algorithm
+    $('.availableAlgorithmsSelectButton').click(function(e) {
+        console.log(this.id)
+        e.stopImmediatePropagation();
+    });
+
+
+    // View button for an uploaded algorithm
+    $('.availableAlgorithmsViewButton').click(function(e) {
+        console.log(this.id)
+        e.stopImmediatePropagation();
+    });
+
+
+    // Edit button for an uploaded algorithm
+    $('.availableAlgorithmsEditButton').click(function(e) {
+        console.log(this.id)
+        e.stopImmediatePropagation();
+    });
+
+
+    // Delete button for an uploaded algorithm 
+    $('.availableAlgorithmsDeleteButton').click(function(e) {
+        console.log(this.id)
         e.stopImmediatePropagation();
     });
 
