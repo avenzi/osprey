@@ -10,5 +10,4 @@ class Config(object):
     MYSQL_USER = os.environ.get('MYSQL_USER') or 'CapstoneMySQLUser'
     MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD') or 'CapstoneMySQLUserDbPw'
     MYSQL_DB = os.environ.get('MYSQL_DB') or 'CapstoneData'
-
-
+    UPLOADS_FOLDER = os.environ.get('UPLOADS_FOLDER') or '/root/capstone-site/app/static/uploads/'

@@ -4,7 +4,7 @@
 
 {# 
 {% block content %}
-    <h1>{{ "login" }}</h1>
+<h1>{{ "login" }}</h1>
     <form action="" method="post" novalidate>
         {{ form.hidden_tag() }}
         <p>
@@ -28,10 +28,8 @@
 
 
 {% block app_content %}
+<div id="login-container">
     <h1>Login</h1>
-    <div class="row">
-        <div class="col-md-4">
-            {{ wtf.quick_form(form) }}
-        </div>
-    </div>
+    {{ wtf.quick_form(form) }}
+</div>
 {% endblock %}
