@@ -1,3 +1,20 @@
-{% for file in files %}
-    <li class="list-group-item">{{ file }}</li>
-{% endfor %}
+<h5>Available Algorithms</h5>
+<ul class="list-group" id="availableAlgorithms">
+    {% for file in files %}
+        <li class="list-group-item">
+            {{ file }}
+            <button type="button" class="btn btn-primary availableAlgorithmsSelectButton" id="{{file.split('.')[0]}}">Select</button>
+            <button type="button" class="btn btn-primary availableAlgorithmsViewButton" id="{{file.split('.')[0]}}">View</button>
+            <button type="button" class="btn btn-primary availableAlgorithmsEditButton" id="{{file.split('.')[0]}}">Edit</button>
+            <button type="button" class="btn btn-primary availableAlgorithmsDeleteButton" id="{{file.split('.')[0]}}">Delete</button>
+        </li>
+    {% endfor %}
+</ul>
+<br>
+<h5>Add Algorithm</h5>
+<div class="form-group">
+    <input type="file" class="form-control-file mb-1" id="uploadFileInput">
+    <button type="submit" class="btn btn-primary" id="uploadFileSubmit">OK</button>
+</div>
+
+<script src="../static/JS/buttons.js"></script>
