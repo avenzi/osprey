@@ -2,6 +2,31 @@
 
 Please provide a one paragraph update to the notebook in advance of our weekly meeting. 
 
+**Feb 27th, 2020:**
+
+This week we fixed UI issues such as the navigation bar.
+We worked on trigger alerts updating the live stream website.
+We installed Raspbian and updated all software/ installed our software on all new Pis.
+We got Sense HAT data streaming to the data ingestion engine.
+We got headless operation of the Raspberry Pis fully operational.
+We added functionality to upload code to the server from the website.
+We worked on more security functionality.
+We began work on converting the video stream from motion JPEG to MP4.
+
+**Feb 20th, 2020:**
+
+This week we implemented live updates on the website to allow for accurate data display.
+We continued implementing users and sessions on the website.
+We continued work on the current iteration of video streaming.
+
+**Feb 13th, 2020:**
+
+This week we connected the data ingestion layer to our database.
+We also added JQuery to the website and used it to create a handler to activate the stream.
+We fixed an issue connecting to the Raspberry Pis remotely.
+We decided to stick with MySQL for the database.
+We continued work on the login functionality.
+
 **Feb 6th, 2020:**
 
 This week we created a full-cycle real-time video streaming prototype.
