@@ -1,7 +1,6 @@
 import os
 import urllib.request
-import time
-from flask import render_template, flash, redirect, url_for, Response, session, jsonify, request,Flask, session
+from flask import render_template, flash, redirect, url_for, Response, session, jsonify, request
 from app import app
 from app.controllers.forms import LoginForm, TriggerSettingsForm, RegistrationForm
 from app.controllers.video import *
@@ -12,13 +11,13 @@ from datetime import datetime
 from random import seed, randint
 from werkzeug.utils import secure_filename
 
-
-
 ALLOWED_EXTENSIONS = set(['py'])
 
 # Seed used to for random number generation
 seed(1)
 
+global loggined
+loggined = False
 
 # Data structure for handling audio data
 audioData = Audio()
@@ -28,62 +27,13 @@ temperatureData = Temperature()
 eventLogData = EventLog()
 # Data structure for handling trigger settings form data
 triggerSettingsFormData = TriggerSettingsFormData()
-
-#check for if user has login into the website
-
-# MySQL Insertion example
-#cursor = db_connection.cursor()
-#sql = "INSERT INTO `users` (`email`, `password`) VALUES (%s, %s)"
-#cursor.execute(sql, ('devolde2@msu.edu', 'very-secret'))
-#db_connection.commit()
-
-#limit_visit_for one session
-visit_limit = 15
-
+# Files that have been uploaded
+    
 
 @app.route('/', methods = ['GET','POST'])
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    database_cursor = mysql.connection.cursor()
-    database_cursor.execute('''CREATE TABLE IF NOT EXISTS visitor (id INTEGER UNSIGNED AUTO_INCREMENT PRIMARY KEY , ip VARCHAR(60),browser VARCHAR(60), time TEXT, page VARCHAR(60))''')
-    database_cursor.execute('''CREATE TABLE IF NOT EXISTS bannedip (id INTEGER UNSIGNED AUTO_INCREMENT PRIMARY KEY , ip VARCHAR(60))''')
-    database_cursor.execute('''CREATE TABLE IF NOT EXISTS visitortime (id INTEGER UNSIGNED AUTO_INCREMENT PRIMARY KEY , ip VARCHAR(60), visittime INT)''')
     form = LoginForm()
-    print('ip: {}'.format(request.remote_addr))
-    print('browser:{}'.format(request.user_agent.browser))
-    print('date:{}'.format(time.strftime('%A %B, %d %Y %H:%M:%S')))
-
-    ip = request.remote_addr
-    browser = request.user_agent.browser
-    date = time.strftime('%A %B, %d %Y %H:%M:%S')
-    #check for visit
-    visit_time_this_session = "SELECT * FROM visitortime where ip = %s"
-    database_cursor.execute(visit_time_this_session,[ip])
-    visit_result = database_cursor.fetchone()
-    check_banned = "SELECT * FROM bannedip where ip = %s"
-    database_cursor.execute(check_banned,[ip])
-    banned_result= database_cursor.fetchone()
-    if banned_result != None:
-        return("You are banned by the website for too many request")
-    if visit_result == None:
-        new_visitor = "INSERT INTO visitortime (ip, visittime) VALUES (%s,%s)"
-        database_cursor.execute(new_visitor,(ip,1))
-    else:
-        if visit_result[2] > visit_limit:
-            banned_sql = "INSERT INTO bannedip (ip) VALUES (%s)"
-            database_cursor.execute(banned_sql,[ip])
-            return("You are banned by the website for too many request")
-        else:
-            timevisit = visit_result[2] + 1
-            update_sql = "UPDATE visitortime SET visittime = %s WHERE ip = %s"
-            database_cursor.execute(update_sql,(timevisit,ip))
-            
-   # print("visit_time_session:{}".format(visit_result))
-    sql = "INSERT INTO `visitor` (ip,browser, time,page) VALUES (%s, %s, %s,%s)"
-    database_cursor.execute(sql, (ip, browser, date, 'login'))
-    
-    mysql.connection.commit()
-
     #-------------------------------------------------------------------------------------------
     # The validate_on_submit() method does all form processing work and returns true when a form
     # is submitted and the browser sends a POST request indicating data is ready to be processed
@@ -97,95 +47,29 @@ def login():
         database_cursor = mysql.connection.cursor()
         database_cursor.execute("SELECT * FROM user where username = "+"'"+form.username.data+"'")
         myresult = database_cursor.fetchone()
-        print(myresult)
-        if myresult == None:
-            flash("UserName does not exist")
-            redirect(url_for('login'))
-            return render_template('login.html', title='Sign In', form=form)
-
-        print("fadfasfs")
         hashed_pw_from_db = myresult[2]
-        print("hashed data: {}".format(hashed_pw_from_db))
         user_input_pw = form.password.data
         correction_password = bcrypt.check_password_hash(hashed_pw_from_db, user_input_pw)
-        print(correction_password)
-       # print(session['user'])
         if correction_password == False:
-            flash("Wrong password")
+            # flash("Wrong password")
             redirect(url_for('login'))
             # return redirect(url_for('livefeed'))
         else:
             # flash("login password work")
             session['user'] = form.username.data
+            global loggined
+            loggined = True
             return redirect(url_for('livefeed'))
     return render_template('login.html', title='Sign In', form=form)
 
-@app.route('/logout')
-def logout():
-    # remove the username from the session if it is there
-   try:session.pop('user', None)
-   except:
-       return redirect(url_for('login'))
-   return redirect(url_for('login'))
-
-@app.route('/banned')
-def banned():
-    # remove the username from the session if it is there
-   return render_template('banned.html')
 
 @app.route('/home')
 def home():
-    database_cursor = mysql.connection.cursor()
-    ip = request.remote_addr
-    browser = request.user_agent.browser
-    date = time.strftime('%A %B, %d %Y %H:%M:%S')
-        #check for visit
-    visit_time_this_session = "SELECT * FROM visitortime where ip = %s"
-    database_cursor.execute(visit_time_this_session,[ip])
-    visit_result = database_cursor.fetchone()
-    if visit_result == None:
-        new_visitor = "INSERT INTO visitortime (ip, visittime) VALUES (%s,%s)"
-        database_cursor.execute(new_visitor,(ip,1))
-    else:
-        if visit_result[2] > visit_limit:
-            banned_sql = "INSERT INTO bannedip (ip) VALUES (%s)"
-            database_cursor.execute(banned_sql,[ip])
-            return("You are Banned from website for too many visit!")
-        else:
-            timevisit = visit_result[2] + 1
-            update_sql = "UPDATE visitortime SET visittime = %s WHERE ip = %s"
-            database_cursor.execute(update_sql,(timevisit,ip))
-    sql = "INSERT INTO `visitor` (ip,browser, time,page) VALUES (%s, %s, %s,%s)"
-    database_cursor.execute(sql, (ip, browser, date, 'home'))
-    mysql.connection.commit()
     return render_template('home.html')
 
 
 @app.route('/registration', methods=['GET', 'POST'])
 def registration():
-    database_cursor = mysql.connection.cursor()
-    ip = request.remote_addr
-    browser = request.user_agent.browser
-    date = time.strftime('%A %B, %d %Y %H:%M:%S')
-        #check for visit
-    visit_time_this_session = "SELECT * FROM visitortime where ip = %s"
-    database_cursor.execute(visit_time_this_session,[ip])
-    visit_result = database_cursor.fetchone()
-    if visit_result == None:
-        new_visitor = "INSERT INTO visitortime (ip, visittime) VALUES (%s,%s)"
-        database_cursor.execute(new_visitor,(ip,1))
-    else:
-        if visit_result[2] > visit_limit:
-            banned_sql = "INSERT INTO bannedip (ip) VALUES (%s)"
-            database_cursor.execute(banned_sql,[ip])
-            return("You are Banned from website for too many visit!")
-        else:
-            timevisit = visit_result[2] + 1
-            update_sql = "UPDATE visitortime SET visittime = %s WHERE ip = %s"
-            database_cursor.execute(update_sql,(timevisit,ip))
-    sql = "INSERT INTO `visitor` (ip,browser, time,page) VALUES (%s, %s, %s,%s)"
-    database_cursor.execute(sql, (ip, browser, date, 'registration'))
-    mysql.connection.commit()
     form = RegistrationForm()
     #-------------------------------------------------------------------------------------------
     # The validate_on_submit() method does all form processing work and returns true when a form
@@ -207,17 +91,8 @@ def registration():
         username = form.username.data
 
         database_cursor = mysql.connection.cursor()
-
-        sql_checking_existance = "SELECT * FROM user WHERE username = %s"
         database_cursor.execute('''CREATE TABLE IF NOT EXISTS user (id INTEGER UNSIGNED AUTO_INCREMENT PRIMARY KEY , username VARCHAR(60), hashed_pw TEXT)''')
-        database_cursor.execute(sql_checking_existance,[username])
-        result = database_cursor.fetchall()
-        print(result)
-        if len(result) == 0:
-            database_cursor.execute(" INSERT INTO user (username,hashed_pw) VALUES ("+ '"'+ username +'"' + ","+ '"'+pw_hash +'"' +")")
-        else:
-            flash("username has already been used")
-            return render_template('registration.html', title='Registration', form=form)
+        database_cursor.execute(" INSERT INTO user (username,hashed_pw) VALUES ("+ '"'+ username +'"' + ","+ '"'+pw_hash +'"' +")")
 
         #INSERT INTO Persons (FirstName,LastName)
         #VALUES ('Lars','Monsn');
@@ -231,80 +106,31 @@ def registration():
 
 @app.route('/livefeed', methods=['GET', 'POST'])
 def livefeed():
-
-    if session.get('user') == None:
+    if session.get('user') == True:
         return redirect(url_for('login'))
-    else:
-        flash("welcome! " + session.get('user'))
-    database_cursor = mysql.connection.cursor()
-    ip = request.remote_addr
-    browser = request.user_agent.browser
-    date = time.strftime('%A %B, %d %Y %H:%M:%S')
-    #check for visit
-    visit_time_this_session = "SELECT * FROM visitortime where ip = %s"
-    database_cursor.execute(visit_time_this_session,[ip])
-    visit_result = database_cursor.fetchone()
-    if visit_result == None:
-        new_visitor = "INSERT INTO visitortime (ip, visittime) VALUES (%s,%s)"
-        database_cursor.execute(new_visitor,(ip,1))
-    else:
-        if visit_result[2] > visit_limit:
-            banned_sql = "INSERT INTO bannedip (ip) VALUES (%s)"
-            database_cursor.execute(banned_sql,[ip])
-            return("You are Banned from website for too many visit!")
-        else:
-            timevisit = visit_result[2] + 1
-            update_sql = "UPDATE visitortime SET visittime = %s WHERE ip = %s"
-            database_cursor.execute(update_sql,(timevisit,ip))
-    sql = "INSERT INTO `visitor` (ip,browser, time,page) VALUES (%s, %s, %s,%s)"
-    database_cursor.execute(sql, (ip, browser, date, 'livefeed'))
-    mysql.connection.commit()
+
+    if loggined != True:
+        return redirect(url_for('login'))
 
     return render_template('livefeed.html', temperatureData = temperatureData, audioData = audioData)
 
 
 @app.route('/archives')
 def archives():
-
-    #checking for user loggin
-    if session.get('user') == None:
-        return redirect(url_for('login'))
-    database_cursor = mysql.connection.cursor()
-    ip = request.remote_addr
-    browser = request.user_agent.browser
-    date = time.strftime('%A %B, %d %Y %H:%M:%S')
-        #check for visit
-    visit_time_this_session = "SELECT * FROM visitortime where ip = %s"
-    database_cursor.execute(visit_time_this_session,[ip])
-    visit_result = database_cursor.fetchone()
-    if visit_result == None:
-        new_visitor = "INSERT INTO visitortime (ip, visittime) VALUES (%s,%s)"
-        database_cursor.execute(new_visitor,(ip,1))
-    else:
-        if visit_result[2] > visit_limit:
-            banned_sql = "INSERT INTO bannedip (ip) VALUES (%s)"
-            database_cursor.execute(banned_sql,[ip])
-            return("You are Banned from website for too many visit!")
-        else:
-            timevisit = visit_result[2] + 1
-            update_sql = "UPDATE visitortime SET visittime = %s WHERE ip = %s"
-            database_cursor.execute(update_sql,(timevisit,ip))
-    sql = "INSERT INTO `visitor` (ip,browser, time,page) VALUES (%s, %s, %s,%s)"
-    database_cursor.execute(sql, (ip, browser, date, 'archives'))
-    mysql.connection.commit()
     return archive(None)
 
 
 @app.route('/archive/<int:archive_id>')
 def archive(archive_id):
-    #checking for user login
-    if session.get('user') == None:
+    if loggined != True:
         return redirect(url_for('login'))
     if archive_id == None:
         print("Archive id is None")
     else:
         print("archive_id: ", archive_id)
 
+    if session.get('user') == True:
+        return redirect(url_for('login'))
     
     # what are the recent recorded sessions
     database_cursor = mysql.connection.cursor()
@@ -448,12 +274,11 @@ def update_eventlog_audio():
     return render_template('snippets/eventlog_snippet.html', messages = alerts)
 
 
-"""route is used to upload files"""
-@app.route("/file_upload", methods=['GET', 'POST'])
-def file_upload():
-    files = []
-
+"""route is used to upload algorithms"""
+@app.route("/algorithm_upload", methods=['GET', 'POST'])
+def algorithm_upload():
     if request.method == 'POST':
+        files = []
         # Checking that the post request has the file part
         if 'file' not in request.files:
             return jsonify({'result' : 'No File Part'})
@@ -478,9 +303,40 @@ def file_upload():
         return jsonify({'result' : 'File Extension Not Allowed'})
 
     if request.method == 'GET':
+        files = []
         # Getting a list of all files in the uploads directory
         with os.scandir(app.config['UPLOADS_FOLDER']) as entries:
             for entry in entries:
                 if entry.is_file():
                     files.append(entry.name)
         return render_template('snippets/uploads_list_snippet.html', files = files)
+
+
+"""route is used to handle uploaded algorithms"""
+@app.route('/algorithm_handler', methods=['POST'])
+def algorithm_handler():
+    files = []
+    filename = request.form['filename'] + ".py"
+    buttonPressed = request.form['button']
+
+    if buttonPressed == "select":
+        pass
+
+    if buttonPressed == "view":
+        return render_template('snippets/uploads_view_snippet.html')
+
+
+    elif buttonPressed == "delete":
+        with os.scandir(app.config['UPLOADS_FOLDER']) as entries:
+            for entry in entries:
+                if entry.is_file() and (entry.name == filename):
+                    os.remove(os.path.join(app.config['UPLOADS_FOLDER'], filename))
+                else:
+                    files.append(entry.name)  
+
+        return render_template('snippets/uploads_list_snippet.html', files = files)
+
+
+
+    
+    return jsonify({'result' : 'Button Not Handled'})

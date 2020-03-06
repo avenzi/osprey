@@ -141,12 +141,12 @@ $(document).ready(function () {
     });
 
 
-    // Gets the uploads menu within the modal 
-    $('#algorithmModalButton').click(function(e) {
-        $.get('file_upload', function(data){
+    // Gets the uploads menu within the modal. The off function is removing the event handler attached to the element so it 
+    // does not get called more than once
+    $('#algorithmModalButton').off().click( function(e) {
+        $.get('algorithm_upload', function(data){
             $('#algorithmModalBody').html(data);
         });
-        // e.stopImmediatePropagation();
     });
 
 
@@ -161,7 +161,13 @@ $(document).ready(function () {
             processData: false,
             contentType: false
         });
-        $.post('file_upload', formData, function(data){
+        $.post('algorithm_upload', formData, function(data){
+            $.ajaxSetup({
+                // Setting variables back to default to allow for JSON parsing
+                processData: true,
+                contentType: 'application/x-www-form-urlencoded; charset=UTF-8'
+            });
+
             $('#algorithmModalBody').html(data);
         });
         e.stopImmediatePropagation();
@@ -170,28 +176,25 @@ $(document).ready(function () {
     
     // Select button for an uploaded algorithm
     $('.availableAlgorithmsSelectButton').click(function(e) {
-        console.log(this.id)
+        // console.log(this.id);
         e.stopImmediatePropagation();
     });
 
 
     // View button for an uploaded algorithm
     $('.availableAlgorithmsViewButton').click(function(e) {
-        console.log(this.id)
-        e.stopImmediatePropagation();
-    });
-
-
-    // Edit button for an uploaded algorithm
-    $('.availableAlgorithmsEditButton').click(function(e) {
-        console.log(this.id)
+        $.post('algorithm_handler', {'button' : 'view', 'filename' : this.id}, function(data) {
+            $('#algorithmModalBody').html(data);
+        });
         e.stopImmediatePropagation();
     });
 
 
     // Delete button for an uploaded algorithm 
     $('.availableAlgorithmsDeleteButton').click(function(e) {
-        console.log(this.id)
+        $.post('algorithm_handler', {'button' : 'delete', 'filename' : this.id}, function(data) {
+            $('#algorithmModalBody').html(data);
+        });
         e.stopImmediatePropagation();
     });
 
