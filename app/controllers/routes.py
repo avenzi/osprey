@@ -1,3 +1,5 @@
+import os
+import urllib.request
 from flask import render_template, flash, redirect, url_for, Response, session, jsonify, request
 from app import app
 from app.controllers.forms import LoginForm, TriggerSettingsForm, RegistrationForm
@@ -13,10 +15,15 @@ import re
 import os
 import sys
 import time
+from werkzeug.utils import secure_filename
 
 # BUFF_SIZE is the size of the number of bytes in each mp4 video chunk response
 MB = 1 << 20
 BUFF_SIZE = 1 * MB  # send 1 MB at a time
+ALLOWED_EXTENSIONS = set(['py'])
+from werkzeug.utils import secure_filename
+
+ALLOWED_EXTENSIONS = set(['py'])
 
 # Seed used to for random number generation
 seed(1)
@@ -33,6 +40,7 @@ temperatureData = Temperature()
 eventLogData = EventLog()
 # Data structure for handling trigger settings form data
 triggerSettingsFormData = TriggerSettingsFormData()
+# Files that have been uploaded
     
 
 @app.route('/', methods = ['GET','POST'])
@@ -271,7 +279,7 @@ def update_eventlog_temperature():
         if (temperatureData.skinTemperatureSub2 > triggerSettingsFormData.temperature):
             alerts.append("Temperature Trigger: Subject 2 skin temperature exceeded " + triggerSettingsFormData.temperature + " ℉ @ " + temperatureData.date)
 
-    return render_template('section.html', messages = alerts)
+    return render_template('snippets/eventlog_snippet.html', messages = alerts)
 
 
 """route is used to update the event log with audio data"""
@@ -286,7 +294,8 @@ def update_eventlog_audio():
         if (audioData.decibels > triggerSettingsFormData.audio):
             alerts.append("Audio Trigger: Audio exceeded " + triggerSettingsFormData.audio + " dB @ " + audioData.date)
 
-    return render_template('section.html', messages = alerts)
+    return render_template('snippets/eventlog_snippet.html', messages = alerts)
+    #return render_template('section.html', messages = alerts)
 
 
 
@@ -396,3 +405,71 @@ def partial_response(path, start, buff_size, end=None):
     LOG.info('Response: %s', response)
     LOG.info('Response: %s', response.headers)
     return response
+
+
+"""route is used to upload algorithms"""
+@app.route("/algorithm_upload", methods=['GET', 'POST'])
+def algorithm_upload():
+    if request.method == 'POST':
+        files = []
+        # Checking that the post request has the file part
+        if 'file' not in request.files:
+            return jsonify({'result' : 'No File Part'})
+
+        file = request.files['file']
+
+        # Checking that a file was selected
+        if file.filename == '':
+            return jsonify({'result' : 'No File Selected'})
+
+        # Ensuring that the file name has an extension that is allowed
+        if file and ('.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS):
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOADS_FOLDER'], filename))
+            # Getting a list of all files in the uploads directory
+            with os.scandir(app.config['UPLOADS_FOLDER']) as entries:
+                for entry in entries:
+                    if entry.is_file():
+                        files.append(entry.name)
+            return render_template('snippets/uploads_list_snippet.html', files = files)
+
+        return jsonify({'result' : 'File Extension Not Allowed'})
+
+    if request.method == 'GET':
+        files = []
+        # Getting a list of all files in the uploads directory
+        with os.scandir(app.config['UPLOADS_FOLDER']) as entries:
+            for entry in entries:
+                if entry.is_file():
+                    files.append(entry.name)
+        return render_template('snippets/uploads_list_snippet.html', files = files)
+
+
+"""route is used to handle uploaded algorithms"""
+@app.route('/algorithm_handler', methods=['POST'])
+def algorithm_handler():
+    files = []
+    filename = request.form['filename'] + ".py"
+    buttonPressed = request.form['button']
+
+    if buttonPressed == "select":
+        pass
+
+    if buttonPressed == "view":
+        return render_template('snippets/uploads_view_snippet.html')
+
+
+    elif buttonPressed == "delete":
+        with os.scandir(app.config['UPLOADS_FOLDER']) as entries:
+            for entry in entries:
+                if entry.is_file() and (entry.name == filename):
+                    os.remove(os.path.join(app.config['UPLOADS_FOLDER'], filename))
+                else:
+                    files.append(entry.name)  
+
+        return render_template('snippets/uploads_list_snippet.html', files = files)
+
+
+
+    
+    return jsonify({'result' : 'Button Not Handled'})
