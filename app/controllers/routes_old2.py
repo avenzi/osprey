@@ -14,6 +14,8 @@ import os
 import sys
 import time
 
+logging.basicConfig(level=logging.INFO)
+
 # BUFF_SIZE is the size of the number of bytes in each mp4 video chunk response
 MB = 1 << 20
 BUFF_SIZE = 1 * MB  # send 1 MB at a time
@@ -312,31 +314,13 @@ bytes_so_far = 0
 def test():
     return render_template('test.html')
 
-@app.route('/testshaka', methods=['GET'])
-def testshaka():
-    return render_template('test-shaka.html')
-
-@app.route("/dashvideo", methods=['GET'])
-def dashvideo():
-    path = "/var/www/html/video3/output-dash.mpd"
-    return partial_response(path, 0, BUFF_SIZE, None)
-
-# .mpd, then init.mp4, then .m4s segments after that
-@app.route('/filefetch/<filename>')
-def filefetch(filename):
-    print("filename requested: " + filename)
-
-    # could construct a master.mpd here if this is an archive viewing (or just make it during livestream)
-    path = "/var/www/html/audio/" + filename
-    return partial_response(path, 0, os.path.getsize(path), None)
-
 @app.route('/fetchvideo', methods=['GET'])
 def fetchvideo():
     print("FETCHING VIDEO")
-    path = "/root/capstone-site/site/static/video/107-6.mp4"
-    #start, end = get_range(request)
+    path = "/root/capstone-site/site/static/video/109-4.mp4"
+    start, end = get_range(request)
     #return partial_response(path, start, end)
-    return partial_response(path, 0, BUFF_SIZE, None)
+    return partial_response(path, start, None)
 
 def get_range(request):
     range = request.headers.get('Range')
@@ -353,16 +337,15 @@ def get_range(request):
         return 0, None
 
 
-def partial_response(path, start, buff_size, end=None):
+def partial_response(path, start, end=None):
     LOG.info('Requested: %s, %s', start, end)
     file_size = os.path.getsize(path)
 
     # Determine (end, length)
     if end is None:
-        end = start + buff_size - 1
+        end = start + BUFF_SIZE - 1
     end = min(end, file_size - 1)
-    end = min(end, start + buff_size - 1)
-    end = file_size - 1
+    end = min(end, start + BUFF_SIZE - 1)
     length = end - start + 1
 
     # start is the bytes number requested by the browser
@@ -371,28 +354,42 @@ def partial_response(path, start, buff_size, end=None):
         fd.seek(start)
         bytes = fd.read(length)
         print("len(bytes): " + str(len(bytes)))
-        print(buff_size)
+        print(BUFF_SIZE)
     assert len(bytes) == length
 
-    if len(bytes) < buff_size: # if last read on an image
-        # send the first chunk of the next image
+    if len(bytes) < BUFF_SIZE: # if last read on an image, read into the next image
         pass
+        print("Sending next segment in its entirety")
+        # send the first chunk of the next image
+        next_path = "/root/capstone-site/site/static/video/107-2.mp4"
+        #start, end = get_range(request)
+        with open(next_path, 'rb') as f:
+            f.seek(0)
+            num_to_read = os.path.getsize(next_path) #min(os.path.getsize(next_path) - 1, BUFF_SIZE - 1)
+            next_bytes = f.read(BUFF_SIZE)
+        return video_response(next_bytes, start, start + BUFF_SIZE, file_size + BUFF_SIZE, path)
+    else:
+        return video_response(bytes, start, end, file_size, path)
+    
 
+
+def video_response(bytes, start_byte, end_byte, file_size, path):
     response = Response(
         bytes,
-        200,
+        206,
         mimetype=mimetypes.guess_type(path)[0],
         direct_passthrough=True,
     )
     response.headers.add(
         'Content-Range', 'bytes {0}-{1}/{2}'.format(
             #start, end, file_size,
-            start, end, file_size,
+            start_byte, end_byte, file_size,
         ),
     )
     response.headers.add(
         'Accept-Ranges', 'bytes'
     )
-    LOG.info('Response: %s', response)
+    #LOG.info('Response: %s', response)
     LOG.info('Response: %s', response.headers)
     return response
+

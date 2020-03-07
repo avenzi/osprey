@@ -1,0 +1,116 @@
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Video Test</title>
+    <script src="https://gpac.github.io/mp4box.js/dist/mp4box.all.js"></script>
+  </head>
+  <body>
+    <!--
+        <video id="my-video" src="{{url_for('fetchvideo')}}" width="640px" height="360px" controls>
+    -->
+    <video id="my-video" width="640px" height="360px" controls></video>
+
+    <script>
+    // self executing function here
+    
+    (async function() {
+        // your page initialization code here
+        // the DOM will be available here
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }       
+        
+        const video = document.getElementById("my-video");
+        const mp4boxfile = MP4Box.createFile();
+
+        const myMediaSource = new MediaSource();
+        const url = URL.createObjectURL(myMediaSource);
+        video.src = url;
+        await sleep(3000);
+
+        var sourceBuffer = myMediaSource.addSourceBuffer('video/mp4; codecs="avc1.640028"');
+
+        mp4boxfile.onReady = function (info) {
+
+            // when a segment is ready
+            mp4boxfile.onSegment = function (id, user, buffer, sampleNum, is_last) {
+                console.log("onSegment entered");
+                var sb = user;
+                sb.segmentIndex++;
+                sb.pendingAppends.push({ id: id, buffer: buffer, sampleNum: sampleNum, is_last: is_last });
+                Log.info("Application","Received new segment for track "+id+" up to sample #"+sampleNum+", segments pending append: "+sb.pendingAppends.length);
+                onUpdateEnd.call(sb, true, false);
+            }
+
+            // actually segment
+            mp4boxfile.setSegmentOptions(info.tracks[0].id, sourceBuffer, options);  
+            var initSegs = mp4boxfile.initializeSegmentation();  
+            mp4boxfile.start(); // execute the segmentation
+        }
+        
+        
+
+        // -- Create a MediaSource and attach it to the video (We already learned about that) --
+      
+        /*
+        const videoTag = document.getElementById("my-video");
+        const myMediaSource = new MediaSource();
+        const url = URL.createObjectURL(myMediaSource);
+        videoTag.src = url;
+
+        await sleep(3000);
+        console.log(myMediaSource.readyState);
+
+        const videoSourceBuffer = myMediaSource.addSourceBuffer('video/mp4; codecs="avc1.640028"');
+        
+        fetch("{{url_for('fetchvideo')}}").then(function(response) {
+            // The data has to be a JavaScript ArrayBuffer
+            //console.log(response.arrayBuffer());
+            return response.arrayBuffer();
+            console.log("RESPONSE:");
+            console.log(response);
+        }).then(function(videoData) {
+            videoSourceBuffer.appendBuffer(videoData);
+            console.log("Video Data:");
+            console.log(videoData);
+            console.log(videoTag);
+            //videoTag.play()
+        });
+
+        await sleep(5000);
+        videoTag.play();
+        */
+
+        // 1. add source buffers
+
+        //const audioSourceBuffer = myMediaSource
+        //    .addSourceBuffer('audio/mp4; codecs="mp4a.40.2"');
+        //const videoSourceBuffer = myMediaSource
+        //    .addSourceBuffer('video/mp4; codecs="avc1.64001e"');
+
+        // 2. download and add our audio/video to the SourceBuffers
+
+        // for the audio SourceBuffer
+        /*
+        fetch("http://server.com/audio.mp4").then(function(response) {
+            // The data has to be a JavaScript ArrayBuffer
+            return response.arrayBuffer();
+        }).then(function(audioData) {
+            audioSourceBuffer.appendBuffer(audioData);
+        });
+        */
+
+        /*
+        // the same for the video SourceBuffer
+        fetch("192.99.151.151:5000/video-fetch").then(function(response) {
+            // The data has to be a JavaScript ArrayBuffer
+            return response.arrayBuffer();
+        }).then(function(videoData) {
+            videoSourceBuffer.appendBuffer(videoData);
+        });
+        */
+    })();
+    </script>
+
+  </body>
+</html>
