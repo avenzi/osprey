@@ -325,6 +325,10 @@ def test():
 def testshaka():
     return render_template('test-shaka.html')
 
+@app.route('/testvideo', methods=['GET'])
+def testvideo():
+    return render_template('test-video.html')
+
 @app.route("/dashvideo", methods=['GET'])
 def dashvideo():
     path = "/var/www/html/video3/output-dash.mpd"
@@ -337,6 +341,14 @@ def filefetch(filename):
 
     # could construct a master.mpd here if this is an archive viewing (or just make it during livestream)
     path = "/var/www/html/audio/" + filename
+    return partial_response(path, 0, os.path.getsize(path), None)
+
+@app.route('/filefetchvideo/<filename>')
+def filefetchvideo(filename):
+    print("filename requested: " + filename)
+
+    # could construct a master.mpd here if this is an archive viewing (or just make it during livestream)
+    path = "/var/www/html/video/dash-segments/" + filename
     return partial_response(path, 0, os.path.getsize(path), None)
 
 @app.route('/fetchvideo', methods=['GET'])
