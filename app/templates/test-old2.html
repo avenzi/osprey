@@ -1,0 +1,130 @@
+<html>
+    <head>
+        <title>WebSocket and MSE test</title>
+        <script src="https://gpac.github.io/mp4box.js/dist/mp4box.all.js"></script>
+        <script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
+        <style>
+          video {
+             width: 640px;
+             height: 360px;
+          }
+      </style>
+    </head>
+
+    <body>
+        <video id="livestream" width="640" height="480" controls />
+    </body>
+
+    <script>
+        var ws;                     // websocket
+        var mp4box;                 // fragmentation
+        var ms;                     // media source
+        var sb;                     // source buffer
+        var nextBufferStart = 0;
+        var forceStart = true;
+        var queue = [];
+
+        function startVideo() {
+          Log.setLogLevel(Log["debug"]);
+
+          mp4box = MP4Box.createFile();
+
+          mp4box.onError = function(e) {
+            console.log("mp4box failed to parse data.");
+          };
+
+          mp4box.onMoovStart = function () {
+            console.log("Starting to receive File Information");
+          };
+
+          mp4box.onReady = function(info) {
+            console.log(info.mime);
+
+            mp4box.onSegment = function (id, user, buffer, sampleNum) {
+              console.log("Received segment on track "+id+" for object "+user+" with a length of "+buffer.byteLength+",sampleNum="+sampleNum);
+              mp4box_onSegment(buffer);
+            }
+
+            var options = { nbSamples: 200 };
+            mp4box.setSegmentOptions(info.tracks[0].id, null, options); // I don't need user object this time
+            var initSegs = mp4box.initializeSegmentation();
+            mp4box.start();
+          };
+
+
+          ms = new MediaSource();
+
+          ms.addEventListener('sourceopen', ms_SourceOpened, false);
+
+          var livestream = document.getElementById('livestream');
+          livestream.src = window.URL.createObjectURL(ms);
+        } 
+
+        function ms_SourceOpened() {
+            sb = ms.addSourceBuffer('video/mp4; codecs="avc1.640028"');
+            sb.addEventListener("updateend", sb_UpdateEnd);
+
+            //ws = new WebSocket("ws://a_websocket_server_which_serves_h264_file");
+            //ws.binaryType = "arraybuffer";
+            //ws.onmessage = function (event) {
+            //    event.data.fileStart = nextBufferStart; //tried also with event.data.byteOffset, but resulted error.
+            //    nextBufferStart = mp4box.appendBuffer(event.data);
+            //    mp4box.flush(); //tried commenting out - unclear documentation!
+            //};
+
+            fetch("{{url_for('fetchvideo')}}").then(function(response) {
+                // The data has to be a JavaScript ArrayBuffer
+                //console.log(response.arrayBuffer());
+                return response.arrayBuffer();
+                console.log("RESPONSE:");
+                console.log(response);
+            }).then(function(videoData) {
+                //videoSourceBuffer.appendBuffer(videoData);
+                console.log(videoData);
+                videoData.fileStart = 0;
+                nextBufferStart = mp4box.appendBuffer(videoData);
+                //videoTag.play()
+            });
+        }
+
+        function sb_UpdateEnd() { // called when sourceBuffer is ready for more
+          if (!sb.updating) { // really, really ready
+
+            if (queue.length > 0) {
+              data = queue.shift();
+              console.log("queue PULL:", queue.length);
+
+              var view = new Uint8Array(data);
+              console.log("     writing buffer with", view[0], view[1], view[2], view[3], view[4]);
+
+              sb.appendBuffer(data);
+            }
+            else { 
+              forceStart = true;
+            }
+          }
+        }
+
+        function mp4box_onSegment(buffer) {
+          var view = new Uint8Array(buffer);
+          console.log("got", buffer.byteLength, "bytes.  Values=", view[0], view[1], view[2], view[3], view[4]);
+
+          if (forceStart && !sb.updating) {
+            console.log("Streaming started with", view[0], view[1], view[2], view[3], view[4]);
+            sb.appendBuffer(buffer);
+            forceStart = false;
+            return;
+          }
+
+          queue.push(buffer);
+          console.log("queue push:", queue.length);
+        }
+
+        window.onload = function() {
+          startVideo();
+        }
+    </script>
+</html>
+
+
+

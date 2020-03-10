@@ -1,10 +1,4 @@
-import os
-import urllib.request
-import subprocess
-import time
-import threading
-import pickle
-from flask import render_template, flash, redirect, url_for, Response, session, jsonify, request, send_file, send_from_directory
+from flask import render_template, flash, redirect, url_for, Response, session, jsonify, request
 from app import app
 from app.controllers.forms import LoginForm, TriggerSettingsForm, RegistrationForm
 from app.controllers.video import *
@@ -19,15 +13,12 @@ import re
 import os
 import sys
 import time
-from werkzeug.utils import secure_filename
+
+logging.basicConfig(level=logging.INFO)
 
 # BUFF_SIZE is the size of the number of bytes in each mp4 video chunk response
 MB = 1 << 20
 BUFF_SIZE = 1 * MB  # send 1 MB at a time
-ALLOWED_EXTENSIONS = set(['py'])
-from werkzeug.utils import secure_filename
-
-ALLOWED_EXTENSIONS = set(['py'])
 
 # Seed used to for random number generation
 seed(1)
@@ -44,8 +35,6 @@ temperatureData = Temperature()
 eventLogData = EventLog()
 # Data structure for handling trigger settings form data
 triggerSettingsFormData = TriggerSettingsFormData()
-# Algorithms that are currently running
-runningAlgorithms = []
     
 
 @app.route('/', methods = ['GET','POST'])
@@ -284,7 +273,7 @@ def update_eventlog_temperature():
         if (temperatureData.skinTemperatureSub2 > triggerSettingsFormData.temperature):
             alerts.append("Temperature Trigger: Subject 2 skin temperature exceeded " + triggerSettingsFormData.temperature + " ℉ @ " + temperatureData.date)
 
-    return render_template('snippets/eventlog_snippet.html', messages = alerts)
+    return render_template('section.html', messages = alerts)
 
 
 """route is used to update the event log with audio data"""
@@ -299,8 +288,7 @@ def update_eventlog_audio():
         if (audioData.decibels > triggerSettingsFormData.audio):
             alerts.append("Audio Trigger: Audio exceeded " + triggerSettingsFormData.audio + " dB @ " + audioData.date)
 
-    return render_template('snippets/eventlog_snippet.html', messages = alerts)
-    #return render_template('section.html', messages = alerts)
+    return render_template('section.html', messages = alerts)
 
 
 
@@ -326,43 +314,13 @@ bytes_so_far = 0
 def test():
     return render_template('test.html')
 
-@app.route('/testshaka', methods=['GET'])
-def testshaka():
-    return render_template('test-shaka.html')
-
-@app.route('/testvideo', methods=['GET'])
-def testvideo():
-    return render_template('test-video.html')
-
-@app.route("/dashvideo", methods=['GET'])
-def dashvideo():
-    path = "/var/www/html/video3/output-dash.mpd"
-    return partial_response(path, 0, BUFF_SIZE, None)
-
-# .mpd, then init.mp4, then .m4s segments after that
-@app.route('/filefetch/<filename>')
-def filefetch(filename):
-    print("filename requested: " + filename)
-
-    # could construct a master.mpd here if this is an archive viewing (or just make it during livestream)
-    path = "/var/www/html/audio/" + filename
-    return partial_response(path, 0, os.path.getsize(path), None)
-
-@app.route('/filefetchvideo/<filename>')
-def filefetchvideo(filename):
-    print("filename requested: " + filename)
-
-    # could construct a master.mpd here if this is an archive viewing (or just make it during livestream)
-    path = "/var/www/html/video/dash-segments/" + filename
-    return partial_response(path, 0, os.path.getsize(path), None)
-
 @app.route('/fetchvideo', methods=['GET'])
 def fetchvideo():
     print("FETCHING VIDEO")
-    path = "/root/capstone-site/site/static/video/107-6.mp4"
-    #start, end = get_range(request)
+    path = "/root/capstone-site/site/static/video/109-4.mp4"
+    start, end = get_range(request)
     #return partial_response(path, start, end)
-    return partial_response(path, 0, BUFF_SIZE, None)
+    return partial_response(path, start, None)
 
 def get_range(request):
     range = request.headers.get('Range')
@@ -379,16 +337,15 @@ def get_range(request):
         return 0, None
 
 
-def partial_response(path, start, buff_size, end=None):
+def partial_response(path, start, end=None):
     LOG.info('Requested: %s, %s', start, end)
     file_size = os.path.getsize(path)
 
     # Determine (end, length)
     if end is None:
-        end = start + buff_size - 1
+        end = start + BUFF_SIZE - 1
     end = min(end, file_size - 1)
-    end = min(end, start + buff_size - 1)
-    end = file_size - 1
+    end = min(end, start + BUFF_SIZE - 1)
     length = end - start + 1
 
     # start is the bytes number requested by the browser
@@ -397,144 +354,42 @@ def partial_response(path, start, buff_size, end=None):
         fd.seek(start)
         bytes = fd.read(length)
         print("len(bytes): " + str(len(bytes)))
-        print(buff_size)
+        print(BUFF_SIZE)
     assert len(bytes) == length
 
-    if len(bytes) < buff_size: # if last read on an image
-        # send the first chunk of the next image
+    if len(bytes) < BUFF_SIZE: # if last read on an image, read into the next image
         pass
+        print("Sending next segment in its entirety")
+        # send the first chunk of the next image
+        next_path = "/root/capstone-site/site/static/video/107-2.mp4"
+        #start, end = get_range(request)
+        with open(next_path, 'rb') as f:
+            f.seek(0)
+            num_to_read = os.path.getsize(next_path) #min(os.path.getsize(next_path) - 1, BUFF_SIZE - 1)
+            next_bytes = f.read(BUFF_SIZE)
+        return video_response(next_bytes, start, start + BUFF_SIZE, file_size + BUFF_SIZE, path)
+    else:
+        return video_response(bytes, start, end, file_size, path)
+    
 
+
+def video_response(bytes, start_byte, end_byte, file_size, path):
     response = Response(
         bytes,
-        200,
+        206,
         mimetype=mimetypes.guess_type(path)[0],
         direct_passthrough=True,
     )
     response.headers.add(
         'Content-Range', 'bytes {0}-{1}/{2}'.format(
             #start, end, file_size,
-            start, end, file_size,
+            start_byte, end_byte, file_size,
         ),
     )
     response.headers.add(
         'Accept-Ranges', 'bytes'
     )
-    LOG.info('Response: %s', response)
+    #LOG.info('Response: %s', response)
     LOG.info('Response: %s', response.headers)
     return response
 
-
-"""route is used to upload algorithms"""
-@app.route("/algorithm_upload", methods=['GET', 'POST'])
-def algorithm_upload():
-    if request.method == 'POST':
-        files = []
-        # Checking that the post request has the file part
-        if 'file' not in request.files:
-            return jsonify({'result' : 'No File Part'})
-
-        file = request.files['file']
-
-        # Checking that a file was selected
-        if file.filename == '':
-            return jsonify({'result' : 'No File Selected'})
-
-        # Ensuring that the file name has an extension that is allowed
-        if file and ('.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS):
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOADS_FOLDER'], filename))
-            # Getting a list of all files in the uploads directory
-            with os.scandir(app.config['UPLOADS_FOLDER']) as entries:
-                for entry in entries:
-                    if entry.is_file():
-                        files.append(entry.name)
-            return render_template('snippets/uploads_list_snippet.html', files = files)
-
-        return jsonify({'result' : 'File Extension Not Allowed'})
-
-    if request.method == 'GET':
-        files = []
-        # Getting a list of all files in the uploads directory
-        with os.scandir(app.config['UPLOADS_FOLDER']) as entries:
-            for entry in entries:
-                if entry.is_file():
-                    files.append(entry.name)
-        return render_template('snippets/uploads_list_snippet.html', files = files)
-
-
-"""Creates a child process for a selected python file"""
-def program_run(filename):
-
-    # Creating a child process for a selected python file. If sending data to the child process' stdin, you must create the Popen object with stdin=PIPE.
-    # Similarly, to get anything other than None in the result tuple, you need to use stdout=PIPE and/or stderr=PIPE
-    process = subprocess.Popen(['python3', os.path.join(app.config['UPLOADS_FOLDER'], filename)], 
-        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-    # Polling to check if the child process has been terminated
-    while process.poll() is None:
-
-        print(filename + " is running...")
-
-        # The dataString is contains all temperatureData, audioData, and eventLogData, delimited by /
-        dataString = (temperatureData.roomTemperature + "/" + temperatureData.skinTemperatureSub1 + "/" + temperatureData.skinTemperatureSub2 + "/" + 
-            temperatureData.status + "/" + temperatureData.date + "/" + audioData.decibels + "/" + audioData.status + "/" + audioData.date + "/" + 
-                eventLogData.temperatureStatus + "/" + eventLogData.audioStatus)
-
-        # The communicate method accepts input as bytes and returns a tuple (stdout_data, stderr_data)
-        # The timeout parameter of the communicate method does not work properly with threading
-        out, err = process.communicate(input=dataString.encode())
-
-        # Printing output data
-        print(out)
-
-        # Printing error data if there is any
-        print(err)
-
-        time.sleep(1)
-
-    print("Exited")   
-
-
-"""route is used to handle uploaded algorithms"""
-@app.route('/algorithm_handler', methods=['POST'])
-def algorithm_handler():
-    files = []
-    filename = request.form['filename'] + ".py"
-    buttonPressed = request.form['button']
-
-    if buttonPressed == "select":
-        thread = None
-
-        if filename not in runningAlgorithms:
-            # Running an algorithm on a new thread
-            thread = threading.Thread(target=program_run, args=(filename,), daemon=True)
-            thread.start()
-            # Adding the filename of an algorithm that was just run to runningAlgorithms, for keeping track of all algorithms running
-            runningAlgorithms.append(filename)
-
-        # elif filename in runningAlgorithms:
-        #     thread.stop()
-        #     runningAlgorithms.remove(filename)
-
-
-    elif buttonPressed == "view":
-        return render_template('snippets/uploads_view_snippet.html')
-
-
-    elif buttonPressed == "delete":
-        with os.scandir(app.config['UPLOADS_FOLDER']) as entries:
-            for entry in entries:
-                if entry.is_file() and (entry.name == filename):
-                    os.remove(os.path.join(app.config['UPLOADS_FOLDER'], filename))
-                else:
-                    files.append(entry.name)  
-
-        return render_template('snippets/uploads_list_snippet.html', files = files)
-
-    return jsonify({'result' : 'Button Not Handled'})
-
-
-"""route is used for downloading boilerplate code"""
-@app.route('/downloadBoilerplate')
-def downloadBoilerplate():
-    return send_from_directory(directory=app.config['DOWNLOADS_FOLDER'], filename="boilerplate.py", as_attachment=True)

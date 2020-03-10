@@ -1,0 +1,23 @@
+<html>
+    <head>
+        <title>Video Test</title>
+        <script src="https://gpac.github.io/mp4box.js/dist/mp4box.all.js"></script>
+        <script src="../static/JS/dash.js"></script>
+        <style>
+          video {
+             width: 640px;
+             height: 360px;
+          }
+      </style>
+    </head>
+
+    <body>
+      <div>
+        <video data-dashjs-player autoplay src="{{url_for('filefetch', filename='liveaudio.mpd')}}" controls></video>
+      </div>
+    </body>
+
+</html>
+
+
+
