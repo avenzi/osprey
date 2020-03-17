@@ -8,16 +8,9 @@ from http import server
 
 #function to stream temperature data to a server
 def stream(server, log):
-    # Identify to ingestion as temperature stream
-    #connection.write(struct.pack('<H', 1))
-    #client_socket.send(struct.pack('<H', 1))
-    
-    time.sleep(1)
-    
     sense = SenseHat()
 
     # fails out if connection broken
-    #for i in range(3):
     while True:
         try:
             temp = sense.get_temperature()
@@ -43,7 +36,6 @@ def stream(server, log):
         except Exception as e:
             # log file
             print("Exception caught:", e, file = log)
-            #client_socket.close()
             
 
         #finally:
