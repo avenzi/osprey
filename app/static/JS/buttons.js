@@ -176,7 +176,7 @@ $(document).ready(function () {
     
     // Select button for an uploaded algorithm
     $('.availableAlgorithmsSelectButton').click(function(e) {
-        // console.log(this.id);
+        $.post('algorithm_handler', {'button' : 'select', 'filename' : this.id});
         e.stopImmediatePropagation();
     });
 
@@ -197,5 +197,6 @@ $(document).ready(function () {
         });
         e.stopImmediatePropagation();
     });
+
 
 });

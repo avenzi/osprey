@@ -1,6 +1,10 @@
 import os
 import urllib.request
-from flask import render_template, flash, redirect, url_for, Response, session, jsonify, request
+import subprocess
+import time
+import threading
+import pickle
+from flask import render_template, flash, redirect, url_for, Response, session, jsonify, request, send_file, send_from_directory
 from app import app
 from app.controllers.forms import LoginForm, TriggerSettingsForm, RegistrationForm
 from app.controllers.video import *
@@ -40,7 +44,8 @@ temperatureData = Temperature()
 eventLogData = EventLog()
 # Data structure for handling trigger settings form data
 triggerSettingsFormData = TriggerSettingsFormData()
-# Files that have been uploaded
+# Algorithms that are currently running
+runningAlgorithms = []
     
 
 @app.route('/', methods = ['GET','POST'])
@@ -457,6 +462,39 @@ def algorithm_upload():
         return render_template('snippets/uploads_list_snippet.html', files = files)
 
 
+"""Creates a child process for a selected python file"""
+def program_run(filename):
+
+    # Creating a child process for a selected python file. If sending data to the child process' stdin, you must create the Popen object with stdin=PIPE.
+    # Similarly, to get anything other than None in the result tuple, you need to use stdout=PIPE and/or stderr=PIPE
+    process = subprocess.Popen(['python3', os.path.join(app.config['UPLOADS_FOLDER'], filename)], 
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    # Polling to check if the child process has been terminated
+    while process.poll() is None:
+
+        print(filename + " is running...")
+
+        # The dataString is contains all temperatureData, audioData, and eventLogData, delimited by /
+        dataString = (temperatureData.roomTemperature + "/" + temperatureData.skinTemperatureSub1 + "/" + temperatureData.skinTemperatureSub2 + "/" + 
+            temperatureData.status + "/" + temperatureData.date + "/" + audioData.decibels + "/" + audioData.status + "/" + audioData.date + "/" + 
+                eventLogData.temperatureStatus + "/" + eventLogData.audioStatus)
+
+        # The communicate method accepts input as bytes and returns a tuple (stdout_data, stderr_data)
+        # The timeout parameter of the communicate method does not work properly with threading
+        out, err = process.communicate(input=dataString.encode())
+
+        # Printing output data
+        print(out)
+
+        # Printing error data if there is any
+        print(err)
+
+        time.sleep(1)
+
+    print("Exited")   
+
+
 """route is used to handle uploaded algorithms"""
 @app.route('/algorithm_handler', methods=['POST'])
 def algorithm_handler():
@@ -465,9 +503,21 @@ def algorithm_handler():
     buttonPressed = request.form['button']
 
     if buttonPressed == "select":
-        pass
+        thread = None
 
-    if buttonPressed == "view":
+        if filename not in runningAlgorithms:
+            # Running an algorithm on a new thread
+            thread = threading.Thread(target=program_run, args=(filename,), daemon=True)
+            thread.start()
+            # Adding the filename of an algorithm that was just run to runningAlgorithms, for keeping track of all algorithms running
+            runningAlgorithms.append(filename)
+
+        # elif filename in runningAlgorithms:
+        #     thread.stop()
+        #     runningAlgorithms.remove(filename)
+
+
+    elif buttonPressed == "view":
         return render_template('snippets/uploads_view_snippet.html')
 
 
@@ -481,7 +531,10 @@ def algorithm_handler():
 
         return render_template('snippets/uploads_list_snippet.html', files = files)
 
-
-
-    
     return jsonify({'result' : 'Button Not Handled'})
+
+
+"""route is used for downloading boilerplate code"""
+@app.route('/downloadBoilerplate')
+def downloadBoilerplate():
+    return send_from_directory(directory=app.config['DOWNLOADS_FOLDER'], filename="boilerplate.py", as_attachment=True)

@@ -11,7 +11,7 @@ img.logo {
     max-width: 60%;
 }
 
-.sidenav {
+.sidebar {
     height: 100%;
     width: 0;
     position: fixed;
@@ -25,31 +25,31 @@ img.logo {
     padding-top: 60px;
   }
   
-  .sidenav a {
-    padding: 8px 8px 8px 32px;
+  .sidebar a {
+    padding: 8px 8px 8px 25px;
     text-decoration: none;
     font-size: 25px;
-    color: #818181;
+    color: #828282;
     display: block;
     transition: 0.3s;
-    -webkit-transition: 0.5s;
+    -webkit-transition: 0.3s;
   }
   
-  .sidenav a:hover {
-    color: #f1f1f1;
+  .sidebar a:hover {
+    color: #f2f2f2f2;
   }
   
-  .sidenav .closebtn {
+  .sidebar .closebtn {
     position: absolute;
     top: 0;
     right: 25px;
-    font-size: 36px;
+    font-size: 35px;
     margin-left: 50px;
   }
   
   @media screen and (max-height: 450px) {
-    .sidenav {padding-top: 15px;}
-    .sidenav a {font-size: 18px;}
+    .sidebar {padding-top: 15px;}
+    .sidebar a {font-size: 18px;}
   }
 
   #login-container {
