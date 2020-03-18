@@ -280,9 +280,29 @@ def update_eventlog_temperature():
         if (temperatureData.roomTemperature > triggerSettingsFormData.temperature):
             alerts.append("Temperature Trigger: Room temperature exceeded " + triggerSettingsFormData.temperature + " ℉ @ " + temperatureData.date)
 
+    return render_template('snippets/eventlog_snippet.html', messages = alerts)
+
+
+
+"""update event log with pressure data"""
+@app.route('/update_eventlog_pressure', methods=['GET', 'POST'])
+def update_eventlog_pressure():
+    eventLogData.pressureStatus = request.form['status']
+
+    if (eventLogData.pressureStatus == 'ON'):
         if (temperatureData.airPressure > triggerSettingsFormData.pressure):
             alerts.append("Air Pressure Trigger: Air pressure exceeded " + triggerSettingsFormData.pressure + " millibars @ " + temperatureData.date)
 
+    return render_template('snippets/eventlog_snippet.html', messages = alerts)
+
+
+
+"""update even log with humidity data"""
+@app.route('/update_eventlog_humidity', methods=['GET', 'POST'])
+def update_eventlog_humidity():
+    eventLogData.humidityStatus = request.form['status']
+
+    if (eventLogData.humidityStatus == 'ON'):
         if (temperatureData.airHumidity > triggerSettingsFormData.humidity):
             alerts.append("Air Humidity Trigger: Air humidity exceeded " + triggerSettingsFormData.humidity + " % @ " + temperatureData.date)
 

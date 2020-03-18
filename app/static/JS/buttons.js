@@ -132,6 +132,46 @@ $(document).ready(function () {
         e.stopImmediatePropagation();
     });
 
+    $('#pressureCheck').click(function(e) {
+        (function doPoll() {
+
+            if ($('#pressureCheck').is(':checked')) {
+                req1 = $.post('update_eventlog_pressure', {status : 'ON'}, function(data){
+                    $('#eventLog').append(data);
+                })
+                .done()
+                .always(function(){
+                    setTimeout(doPoll, 6000);
+                });
+            }
+            else {
+                req2 = $.post('update_eventlog_pressure', {status : 'OFF'});
+                req1.abort();
+            }
+        }());
+        e.stopImmediatePropagation();
+    });
+
+    $('#humidityCheck').click(function(e) {
+        (function doPoll() {
+
+            if ($('#humidityCheck').is(':checked')) {
+                req1 = $.post('update_eventlog_humidity', {status : 'ON'}, function(data){
+                    $('#eventLog').append(data);
+                })
+                .done()
+                .always(function(){
+                    setTimeout(doPoll, 6000);
+                });
+            }
+            else {
+                req2 = $.post('update_eventlog_humidity', {status : 'OFF'});
+                req1.abort();
+            }
+        }());
+        e.stopImmediatePropagation();
+    });
+
 
     $('#triggerSettingsSubmit').click(function(e) {
         var audio_input = $('#audioInput').val();

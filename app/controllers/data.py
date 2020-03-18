@@ -20,7 +20,7 @@ class EventLog:
 
 class TriggerSettingsFormData:
     def __init__(self):
-        self.audio = 0
-        self.temperature = 0.0
-        self.airPressure = 0.0
-        self.airHumidity = 0.0
+        self.audio = "0"
+        self.temperature = "0.0"
+        self.pressure = "0.0"
+        self.humidity = "0.0"
