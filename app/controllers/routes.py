@@ -325,8 +325,6 @@ def update_eventlog_audio():
     #return render_template('section.html', messages = alerts)
 
 
-
-
 @app.route('/test', methods=['GET'])
 def test():
     return render_template('test.html')

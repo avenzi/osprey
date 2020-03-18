@@ -10,24 +10,24 @@ $(document).ready(function () {
     });
 
     $('#audCheck').click(function(e) {
-        console.log("clicked")
         (function doPoll() {
-
+            console.log("clicked");
+            date = new Date();
+            req1 = $.post('update_audio', {status : 'ON', date : date}, function(data){
+                $('#decibels').text("Current dB: " + data.decibels);
+            })
             if ($('#audCheck').is(':checked')) {
-
-                //req1 = $.post('update_eventlog_audio', {status : 'ON'}, function(data){
-                    //$('#eventLog').append(data);
-                //})
-                //.done()
-                always(function(){
-                    console.log("checked")
-                    setTimeout(doPoll, 6000);
+                req1.always(function(){
+                    console.log("checked");
+                    setTimeout(doPoll, 500);
                 });
             }
             else {
-                //req2 = $.post('update_eventlog_audio', {status : 'OFF'});
-                //req1.abort();
-                console.log("unchecked")
+                console.log("unchecked");
+                date = new Date();
+                req2 = $.post('update_audio', {status : 'OFF', date : date});
+                $('#decibels').text('Current dB: --.-');
+                req1.abort();
             }
         }());
         e.stopImmediatePropagation();
