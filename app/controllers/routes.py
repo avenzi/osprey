@@ -262,6 +262,8 @@ def update_audio():
 def update_triggersettings():
     triggerSettingsFormData.audio = request.form['audio_input']
     triggerSettingsFormData.temperature = request.form['temperature_input']
+    triggerSettingsFormData.pressure = request.form['pressure_input']
+    triggerSettingsFormData.humidity = request.form['humidity_input']
 
     return jsonify({'result' : 'success', 'audio_input' : triggerSettingsFormData.audio, 'temperature_input' : triggerSettingsFormData.temperature})
 
