@@ -287,6 +287,8 @@ def update_eventlog_temperature():
 """update event log with pressure data"""
 @app.route('/update_eventlog_pressure', methods=['GET', 'POST'])
 def update_eventlog_pressure():
+    alerts = []
+
     eventLogData.pressureStatus = request.form['status']
 
     if (eventLogData.pressureStatus == 'ON'):
@@ -300,6 +302,8 @@ def update_eventlog_pressure():
 """update even log with humidity data"""
 @app.route('/update_eventlog_humidity', methods=['GET', 'POST'])
 def update_eventlog_humidity():
+    alerts = []
+    
     eventLogData.humidityStatus = request.form['status']
 
     if (eventLogData.humidityStatus == 'ON'):
