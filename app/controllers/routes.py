@@ -228,17 +228,21 @@ def update_sense():
     # Set up Sense table connection
     database_cursor = mysql.connection.cursor()
 
-    
+    # get current SENSE Hat data from DB
     database_cursor.execute("""SELECT Temp, Press, Humid FROM Sense ORDER BY Time DESC LIMIT 1;""")
     db_result = database_cursor.fetchall()
     temp, press, humid = db_result[0]
     
-    temperatureData.roomTemperature = temp
+    # Convert to JQureyable objects
+    temperatureData.roomTemperature = "{:.2f}".format(temp)
+    temperatureData.airPressure = "{:.2f}".format(press)
+    temperatureData.airHumidity = "{:.2f}".format(humid)
 
     temperatureData.status = request.form['status']
     temperatureData.date = request.form['date']
 
-    return jsonify({'result' : 'success', 'status' : temperatureData.status, 'date' : temperatureData.date, 'roomTemperature' : temperatureData.roomTemperature})
+    return jsonify({'result' : 'success', 'status' : temperatureData.status, 'date' : temperatureData.date, 'roomTemperature' : temperatureData.roomTemperature,
+    'airPressure': temperatureData.airPressure, 'airHumidity': temperatureData.airHumidity})
 
 
 """route is used to update audio values in the live stream page"""
@@ -473,7 +477,7 @@ def program_run(filename):
         print(filename + " is running...")
 
         # The dataString is contains all temperatureData, audioData, and eventLogData, delimited by /
-        dataString = (temperatureData.roomTemperature + "/" + temperatureData.skinTemperatureSub1 + "/" + temperatureData.skinTemperatureSub2 + "/" + 
+        dataString = (temperatureData.roomTemperature + "/" + temperatureData.airPressure + "/" + temperatureData.airHumidity + "/" + 
             temperatureData.status + "/" + temperatureData.date + "/" + audioData.decibels + "/" + audioData.status + "/" + audioData.date + "/" + 
                 eventLogData.temperatureStatus + "/" + eventLogData.audioStatus)
 

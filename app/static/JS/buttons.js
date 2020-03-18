@@ -45,7 +45,7 @@ $(document).ready(function () {
             else {
                 date = new Date();
                 req2 = $.post('update_audio', {status : 'OFF', date : date});
-                $('#decibels').text('Current dB: --');
+                $('#decibels').text('Current dB: --.-');
                 req1.abort();
             }
         }());
@@ -58,8 +58,8 @@ $(document).ready(function () {
             date = new Date();
             req1 = $.post('update_sense', {status : 'ON', date : date}, function(data){
                 $('#roomTemperature').text(data.roomTemperature);
-                $('#skinTemperatureSub1').text(data.skinTemperatureSub1);
-                $('#skinTemperatureSub2').text(data.skinTemperatureSub2);
+                $('#airPressure').text(data.airPressure);
+                $('#airHumidity').text(data.airHumidity);
             })
             if ($('#senseSwitch1').is(':checked')) {
                 req1.always(function(){
@@ -70,8 +70,8 @@ $(document).ready(function () {
                 date = new Date();
                 req2 = $.post('update_sense', {status : 'OFF', date : date});
                 $('#roomTemperature').text('--.-');
-                $('#skinTemperatureSub1').text('--.-');
-                $('#skinTemperatureSub2').text('--.-');
+                $('#airPressure').text('--.-');
+                $('#airHumidity').text('--.-');
                 req1.abort();
             }
         }());

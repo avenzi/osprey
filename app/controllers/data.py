@@ -1,16 +1,15 @@
 class Temperature:
-    
     def __init__(self):
         self.roomTemperature = '--.-'
-        self.skinTemperatureSub1 = '--.-'
-        self.skinTemperatureSub2 = '--.-'
+        self.airPressure = '--.-'
+        self.airHumidity = '--.-'
         self.status = ''
         self.date = ''
 
 class Audio:
 
     def __init__(self):
-        self.decibels = '--'
+        self.decibels = '--.-'
         self.status = ''
         self.date = ''
 
