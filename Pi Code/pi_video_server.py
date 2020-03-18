@@ -32,7 +32,7 @@ class StreamingOutput(object):
 ############################################################
 class StreamingHandler(server.BaseHTTPRequestHandler):
     def do_GET(self):
-        elif self.path == '/stream.mjpg':
+        if self.path == '/stream.mjpg':
             self.send_response(200)
             self.send_header('Age', 0)
             self.send_header('Cache-Control', 'no-cache, private')
