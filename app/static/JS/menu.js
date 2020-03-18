@@ -1,11 +1,11 @@
 function openNav() 
 {
-    document.getElementById("mySidenav").style.width = "250px";
+    document.getElementById("theSidebar").style.width = "250px";
 }
   
 function closeNav() 
 {
-    document.getElementById("mySidenav").style.width = "0";
+    document.getElementById("theSidebar").style.width = "0";
 }
 
 (function() {
