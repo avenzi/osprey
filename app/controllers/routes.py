@@ -225,23 +225,20 @@ def write_token(token_value):
 """route is used to update temperature values in the live stream page"""
 @app.route('/update_sense', methods=['GET', 'POST'])
 def update_sense():
-    for _ in range(10):
-        value = randint(0, 4)
-        temperatureData.skinTemperatureSub1 = "98." + str(value)
+    # Set up Sense table connection
+    database_cursor = mysql.connection.cursor()
 
-    for _ in range(10):
-        value = randint(0, 6)
-    temperatureData.skinTemperatureSub2 = "98." + str(value)
-
-    for _ in range(10):
-        value = randint(0, 3)
-        temperatureData.roomTemperature = "75." + str(value)
+    
+    database_cursor.execute("""SELECT Temp, Press, Humid FROM Sense ORDER BY Time DESC LIMIT 1;""")
+    db_result = database_cursor.fetchall()
+    temp, press, humid = db_result[0]
+    
+    temperatureData.roomTemperature = temp
 
     temperatureData.status = request.form['status']
     temperatureData.date = request.form['date']
 
-    return jsonify({'result' : 'success', 'status' : temperatureData.status, 'date' : temperatureData.date, 'roomTemperature' : temperatureData.roomTemperature, 'skinTemperatureSub1' : temperatureData.skinTemperatureSub1, 
-        'skinTemperatureSub2' : temperatureData.skinTemperatureSub2})
+    return jsonify({'result' : 'success', 'status' : temperatureData.status, 'date' : temperatureData.date, 'roomTemperature' : temperatureData.roomTemperature})
 
 
 """route is used to update audio values in the live stream page"""
