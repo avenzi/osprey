@@ -8,6 +8,7 @@ This week we got SENSE Hat data updating regularly on the website.
 We continued the refactor process on the data ingestion layer.
 We made more progress on the audio/ video stream as well as developed a backup method.
 We continued work on algorithm uploads and website UI.
+We also began adding simple triggers to the SENSE Hat data.
 
 **Mar 11th, 2020:**
 
