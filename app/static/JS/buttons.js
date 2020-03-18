@@ -141,11 +141,19 @@ $(document).ready(function () {
     });
 
 
-    // Gets the uploads menu within the modal. The off function is removing the event handler attached to the element so it 
-    // does not get called more than once
-    $('#algorithmModalButton').off().click( function(e) {
+    // Algorithms button to take you to the uploads menu within the modal
+    // The off() function of the jQuery selector removes the event handler attached to the element so it does not get called more than once
+    $('#algorithmModalOpenButton').off().click( function(e) {
         $.get('algorithm_upload', function(data){
-            $('#algorithmModalBody').html(data);
+            $('#algorithmModalContent').html(data);
+        });
+    });
+
+
+    // Back button to take you to the uploads menu within the modal, from the view section
+    $('#algorithmModalBackButton').click( function(e) {
+        $.get('algorithm_upload', function(data){
+            $('#algorithmModalContent').html(data);
         });
     });
 
@@ -168,15 +176,17 @@ $(document).ready(function () {
                 contentType: 'application/x-www-form-urlencoded; charset=UTF-8'
             });
 
-            $('#algorithmModalBody').html(data);
+            $('#algorithmModalContent').html(data);
         });
         e.stopImmediatePropagation();
     });
 
     
     // Select button for an uploaded algorithm
-    $('.availableAlgorithmsSelectButton').click(function(e) {
-        $.post('algorithm_handler', {'button' : 'select', 'filename' : this.id});
+    $('.availableAlgorithmsRunButton').click(function(e) {
+        $.post('algorithm_handler', {'button' : 'select', 'filename' : this.id}, function(data){
+            $('#algorithmModalContent').html(data);
+        });
         e.stopImmediatePropagation();
     });
 
@@ -184,7 +194,7 @@ $(document).ready(function () {
     // View button for an uploaded algorithm
     $('.availableAlgorithmsViewButton').click(function(e) {
         $.post('algorithm_handler', {'button' : 'view', 'filename' : this.id}, function(data) {
-            $('#algorithmModalBody').html(data);
+            $('#algorithmModalContent').html(data);
         });
         e.stopImmediatePropagation();
     });
@@ -193,7 +203,7 @@ $(document).ready(function () {
     // Delete button for an uploaded algorithm 
     $('.availableAlgorithmsDeleteButton').click(function(e) {
         $.post('algorithm_handler', {'button' : 'delete', 'filename' : this.id}, function(data) {
-            $('#algorithmModalBody').html(data);
+            $('#algorithmModalContent').html(data);
         });
         e.stopImmediatePropagation();
     });

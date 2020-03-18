@@ -135,8 +135,11 @@
                         Trigger Settings
                     </div>
                     <div class="card-body p-1">
+
                         <div class="row">
+
                             <div class="col">
+                            
                                 <div class="form-group row">
                                     <label for="audioInput" class="col-4 col-form-label">Audio (dB):</label>
                                     <div class="col-3">
@@ -154,30 +157,21 @@
                                     <button type="submit" class="btn btn-primary" id="triggerSettingsSubmit">OK</button>
                                     </div>
                                 </div>
-
-                                <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#algorithmModal" id="algorithmModalButton">
+                                <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#algorithmModal" id="algorithmModalOpenButton">
                                 Algorithms
                                 </button>
                                 <div class="modal fade" id="algorithmModal" tabindex="-1" role="dialog" aria-labelledby="algorithmModalTitle" aria-hidden="true">
                                     <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title" id="algorithmModalTitle">Algorithms</h5>
-                                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                                    <span aria-hidden="true">&times;</span>
-                                                </button>
-                                            </div>
-                                            <div class="modal-body" id="algorithmModalBody">
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                                            </div>
+                                        {# id algorithmModalContent is filled populated with html from templates/snippets #}
+                                        <div class="modal-content" id="algorithmModalContent">
                                         </div>
                                     </div>
                                 </div>
 
                             </div>
+
                         </div>
+
                     </div>
                 </div>
 
