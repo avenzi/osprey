@@ -2,6 +2,20 @@
 
 Please provide a one paragraph update to the notebook in advance of our weekly meeting. 
 
+**Mar 18th, 2020:**
+
+This week we got SENSE Hat data updating regularly on the website.
+We continued the refactor process on the data ingestion layer.
+We made more progress on the audio/ video stream as well as developed a backup method.
+We continued work on algorithm uploads and website UI.
+
+**Mar 11th, 2020:**
+
+This week we finalized our project plan for the semester.
+We refactored our data ingestion layer
+We also restructured how we stream audio/ video to use MP4Box.
+We continued work on algorithm uploads.
+
 **Feb 27th, 2020:**
 
 This week we fixed UI issues such as the navigation bar.

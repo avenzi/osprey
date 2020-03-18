@@ -1,40 +1,32 @@
 import os
-import urllib.request
-import subprocess
-import time
-import threading
-import pickle
-from flask import render_template, flash, redirect, url_for, Response, session, jsonify, request, send_file, send_from_directory
-from app import app
-from app.controllers.forms import LoginForm, TriggerSettingsForm, RegistrationForm
-from app.controllers.video import *
-from app.controllers.data import *
-from app import mysql
-from app import bcrypt
-from datetime import datetime
-from random import seed, randint
-import logging
-import mimetypes
 import re
-import os
 import sys
 import time
+import logging
+import mimetypes
+import subprocess
+import threading
+import urllib.request
+
+from queue import Queue
+from datetime import datetime
+from random import seed, randint
+from app import app, mysql, bcrypt
+from app.controllers.video import *
 from werkzeug.utils import secure_filename
+from app.controllers.program import Program
+from app.controllers.forms import LoginForm, TriggerSettingsForm, RegistrationForm
+from app.controllers.data import Temperature, Audio, EventLog, TriggerSettingsFormData
+from flask import render_template, flash, redirect, url_for, Response, session, jsonify, request, send_file, send_from_directory
 
 # BUFF_SIZE is the size of the number of bytes in each mp4 video chunk response
 MB = 1 << 20
-BUFF_SIZE = 1 * MB  # send 1 MB at a time
-ALLOWED_EXTENSIONS = set(['py'])
-from werkzeug.utils import secure_filename
-
-ALLOWED_EXTENSIONS = set(['py'])
-
+# Send 1 MB at a time
+BUFF_SIZE = 1 * MB
 # Seed used to for random number generation
 seed(1)
-LOG = logging.getLogger(__name__)
-
-global loggined
-loggined = False
+# global_start 
+bytes_so_far = 0
 
 # Data structure for handling audio data
 audioData = Audio()
@@ -44,9 +36,16 @@ temperatureData = Temperature()
 eventLogData = EventLog()
 # Data structure for handling trigger settings form data
 triggerSettingsFormData = TriggerSettingsFormData()
+
+# Only .py files are allowed to be uploaded
+ALLOWED_EXTENSIONS = set(['py'])
 # Algorithms that are currently running
-runningAlgorithms = []
-    
+runningAlgorithms = {}
+
+LOG = logging.getLogger(__name__)
+global loggined
+loggined = False
+
 
 @app.route('/', methods = ['GET','POST'])
 @app.route('/login', methods=['GET', 'POST'])
@@ -306,41 +305,28 @@ def update_eventlog_audio():
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#global_start 
-bytes_so_far = 0
-
 @app.route('/test', methods=['GET'])
 def test():
     return render_template('test.html')
+
 
 @app.route('/testshaka', methods=['GET'])
 def testshaka():
     return render_template('test-shaka.html')
 
+
 @app.route('/testvideo', methods=['GET'])
 def testvideo():
     return render_template('test-video.html')
+
 
 @app.route("/dashvideo", methods=['GET'])
 def dashvideo():
     path = "/var/www/html/video3/output-dash.mpd"
     return partial_response(path, 0, BUFF_SIZE, None)
 
-# .mpd, then init.mp4, then .m4s segments after that
+
+""" .mpd, then init.mp4, then .m4s segments after that """
 @app.route('/filefetch/<filename>')
 def filefetch(filename):
     print("filename requested: " + filename)
@@ -348,6 +334,7 @@ def filefetch(filename):
     # could construct a master.mpd here if this is an archive viewing (or just make it during livestream)
     path = "/var/www/html/audio/" + filename
     return partial_response(path, 0, os.path.getsize(path), None)
+
 
 @app.route('/filefetchvideo/<filename>')
 def filefetchvideo(filename):
@@ -357,6 +344,7 @@ def filefetchvideo(filename):
     path = "/var/www/html/video/dash-segments/" + filename
     return partial_response(path, 0, os.path.getsize(path), None)
 
+
 @app.route('/fetchvideo', methods=['GET'])
 def fetchvideo():
     print("FETCHING VIDEO")
@@ -364,6 +352,7 @@ def fetchvideo():
     #start, end = get_range(request)
     #return partial_response(path, start, end)
     return partial_response(path, 0, BUFF_SIZE, None)
+
 
 def get_range(request):
     range = request.headers.get('Range')
@@ -425,11 +414,19 @@ def partial_response(path, start, buff_size, end=None):
     return response
 
 
+
+
+"""route is used for downloading boilerplate code"""
+@app.route('/downloadBoilerplate')
+def downloadBoilerplate():
+    return send_from_directory(directory=app.config['DOWNLOADS_FOLDER'], filename="boilerplate.py", as_attachment=True)
+
+
 """route is used to upload algorithms"""
 @app.route("/algorithm_upload", methods=['GET', 'POST'])
 def algorithm_upload():
+    files = []
     if request.method == 'POST':
-        files = []
         # Checking that the post request has the file part
         if 'file' not in request.files:
             return jsonify({'result' : 'No File Part'})
@@ -449,51 +446,17 @@ def algorithm_upload():
                 for entry in entries:
                     if entry.is_file():
                         files.append(entry.name)
-            return render_template('snippets/uploads_list_snippet.html', files = files)
+            return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms)
 
         return jsonify({'result' : 'File Extension Not Allowed'})
 
-    if request.method == 'GET':
-        files = []
+    elif request.method == 'GET':
         # Getting a list of all files in the uploads directory
         with os.scandir(app.config['UPLOADS_FOLDER']) as entries:
             for entry in entries:
                 if entry.is_file():
                     files.append(entry.name)
-        return render_template('snippets/uploads_list_snippet.html', files = files)
-
-
-"""Creates a child process for a selected python file"""
-def program_run(filename):
-
-    # Creating a child process for a selected python file. If sending data to the child process' stdin, you must create the Popen object with stdin=PIPE.
-    # Similarly, to get anything other than None in the result tuple, you need to use stdout=PIPE and/or stderr=PIPE
-    process = subprocess.Popen(['python3', os.path.join(app.config['UPLOADS_FOLDER'], filename)], 
-        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-    # Polling to check if the child process has been terminated
-    while process.poll() is None:
-
-        print(filename + " is running...")
-
-        # The dataString is contains all temperatureData, audioData, and eventLogData, delimited by /
-        dataString = (temperatureData.roomTemperature + "/" + temperatureData.airPressure + "/" + temperatureData.airHumidity + "/" + 
-            temperatureData.status + "/" + temperatureData.date + "/" + audioData.decibels + "/" + audioData.status + "/" + audioData.date + "/" + 
-                eventLogData.temperatureStatus + "/" + eventLogData.audioStatus)
-
-        # The communicate method accepts input as bytes and returns a tuple (stdout_data, stderr_data)
-        # The timeout parameter of the communicate method does not work properly with threading
-        out, err = process.communicate(input=dataString.encode())
-
-        # Printing output data
-        print(out)
-
-        # Printing error data if there is any
-        print(err)
-
-        time.sleep(1)
-
-    print("Exited")   
+        return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms)
 
 
 """route is used to handle uploaded algorithms"""
@@ -504,25 +467,44 @@ def algorithm_handler():
     buttonPressed = request.form['button']
 
     if buttonPressed == "select":
-        thread = None
-
         if filename not in runningAlgorithms:
-            # Running an algorithm on a new thread
-            thread = threading.Thread(target=program_run, args=(filename,), daemon=True)
-            thread.start()
-            # Adding the filename of an algorithm that was just run to runningAlgorithms, for keeping track of all algorithms running
-            runningAlgorithms.append(filename)
+            program_thread = Program(Queue(), args=(True, filename,))
+            program_thread.start()
+            runningAlgorithms[filename] = [program_thread]
+            print("Algorithms running: " + str(runningAlgorithms))
 
-        # elif filename in runningAlgorithms:
-        #     thread.stop()
-        #     runningAlgorithms.remove(filename)
+            # Getting a list of all files in the uploads directory
+            with os.scandir(app.config['UPLOADS_FOLDER']) as entries:
+                for entry in entries:
+                    if entry.is_file():
+                        files.append(entry.name)
+            return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms)
 
+        elif filename in runningAlgorithms:
+            # Exiting the thread
+            runningAlgorithms[filename][0].stop()
+            
+            # Deleting thread from runningAlgorithms
+            # FOR DEBUGGING: Comment this line out to see if the thread truly stopped
+            del runningAlgorithms[filename]
+
+            print("Algotithms running: " + str(runningAlgorithms))
+
+            # Getting a list of all files in the uploads directory
+            with os.scandir(app.config['UPLOADS_FOLDER']) as entries:
+                for entry in entries:
+                    if entry.is_file():
+                        files.append(entry.name)
+            return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms)
 
     elif buttonPressed == "view":
         return render_template('snippets/uploads_view_snippet.html')
 
-
     elif buttonPressed == "delete":
+        # If a file is deleted, delete from running algorithms as well
+        if filename in runningAlgorithms:
+            del runningAlgorithms[filename]
+
         with os.scandir(app.config['UPLOADS_FOLDER']) as entries:
             for entry in entries:
                 if entry.is_file() and (entry.name == filename):
@@ -530,12 +512,6 @@ def algorithm_handler():
                 else:
                     files.append(entry.name)  
 
-        return render_template('snippets/uploads_list_snippet.html', files = files)
+        return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms)
 
     return jsonify({'result' : 'Button Not Handled'})
-
-
-"""route is used for downloading boilerplate code"""
-@app.route('/downloadBoilerplate')
-def downloadBoilerplate():
-    return send_from_directory(directory=app.config['DOWNLOADS_FOLDER'], filename="boilerplate.py", as_attachment=True)

@@ -1,31 +1,53 @@
-<h5>Available Algorithms</h5>
-<ul class="list-group" id="availableAlgorithms">
-    {% for file in files %}
-        <li class="list-group-item">
-            {{ file }}
-            <button type="button" class="btn btn-primary availableAlgorithmsSelectButton" id="{{file.split('.')[0]}}">Select</button>
-            <button type="button" class="btn btn-primary availableAlgorithmsViewButton" id="{{file.split('.')[0]}}">View</button>
-            <button type="button" class="btn btn-primary availableAlgorithmsDeleteButton" id="{{file.split('.')[0]}}">Delete</button>
-        </li>
-    {% endfor %}
-</ul>
+<div class="modal-header">
+    <h5 class="modal-title" id="algorithmModalTitle">Algorithms</h5>
+    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+    </button>
+</div>
 
-<br>
+<div class="modal-body">
+    <h5>Available Algorithms</h5>
+    <ul class="list-group" id="availableAlgorithms">
 
-<h5>Add Algorithm</h5>
+        {% for file in files %}
 
-<p>
-    <font color="red">
-        <i>Note: Boilerplate code should be downloaded and built off of to ensure that data can be interacted with properly. The modified code can then be uploaded to be run on that data.</i>
-    </font>
-</p>
+            <li class="list-group-item">
+                {{ file }}
 
-<a download="boilerplate.py" class="btn btn-primary" href="{{url_for('downloadBoilerplate')}}">Download Boilerplate</a>
+                {% if file in runningAlgorithms %}
+                    <button type="button" class="btn btn-primary availableAlgorithmsRunButton" id="{{file.split('.')[0]}}">
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                        Running...
+                    </button>
+                {% else %}
+                    <button type="button" class="btn btn-primary availableAlgorithmsRunButton" id="{{file.split('.')[0]}}">Run</button>
+                {% endif %}
 
+                <button type="button" class="btn btn-primary availableAlgorithmsViewButton" id="{{file.split('.')[0]}}">View</button>
+                <button type="button" class="btn btn-primary availableAlgorithmsDeleteButton" id="{{file.split('.')[0]}}">Delete</button>
+            </li>
 
-<div class="form-group">
-    <input type="file" class="form-control-file mb-1 mt-4" id="uploadFileInput">
-    <button type="submit" class="btn btn-primary" id="uploadFileSubmit">OK</button>
+        {% endfor %}
+
+    </ul>
+    <br>
+    <h5>Add Algorithm</h5>
+    <p>
+        <font color="red">
+            <i>Note: Boilerplate code should be downloaded and built off of to ensure that data can be interacted with properly. The modified code can then be uploaded to be run on that data.</i>
+        </font>
+    </p>
+
+    <a download="boilerplate.py" class="btn btn-primary" href="{{url_for('downloadBoilerplate')}}">Download Boilerplate</a>
+
+    <div class="form-group">
+        <input type="file" class="form-control-file mb-1 mt-4" id="uploadFileInput">
+        <button type="submit" class="btn btn-primary" id="uploadFileSubmit">OK</button>
+    </div>
+</div>
+
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
 </div>
 
 <script src="../static/JS/buttons.js"></script>
