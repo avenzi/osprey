@@ -279,11 +279,11 @@ def update_eventlog_temperature():
         if (temperatureData.roomTemperature > triggerSettingsFormData.temperature):
             alerts.append("Temperature Trigger: Room temperature exceeded " + triggerSettingsFormData.temperature + " ℉ @ " + temperatureData.date)
 
-        if (temperatureData.skinTemperatureSub1 > triggerSettingsFormData.temperature):
-            alerts.append("Temperature Trigger: Subject 1 skin temperature exceeded " + triggerSettingsFormData.temperature + " ℉ @ " + temperatureData.date)
+        if (temperatureData.airPressure > triggerSettingsFormData.pressure):
+            alerts.append("Air Pressure Trigger: Air pressure exceeded " + triggerSettingsFormData.pressure + " millibars @ " + temperatureData.date)
 
-        if (temperatureData.skinTemperatureSub2 > triggerSettingsFormData.temperature):
-            alerts.append("Temperature Trigger: Subject 2 skin temperature exceeded " + triggerSettingsFormData.temperature + " ℉ @ " + temperatureData.date)
+        if (temperatureData.airHumidity > triggerSettingsFormData.humidity):
+            alerts.append("Air Humidity Trigger: Air humidity exceeded " + triggerSettingsFormData.humidity + " % @ " + temperatureData.date)
 
     return render_template('snippets/eventlog_snippet.html', messages = alerts)
 
