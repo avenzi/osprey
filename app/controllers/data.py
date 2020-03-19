@@ -1,16 +1,15 @@
 class Temperature:
-    
     def __init__(self):
         self.roomTemperature = '--.-'
-        self.skinTemperatureSub1 = '--.-'
-        self.skinTemperatureSub2 = '--.-'
+        self.airPressure = '--.-'
+        self.airHumidity = '--.-'
         self.status = ''
         self.date = ''
 
 class Audio:
 
     def __init__(self):
-        self.decibels = '--'
+        self.decibels = '--.-'
         self.status = ''
         self.date = ''
 
@@ -21,5 +20,7 @@ class EventLog:
 
 class TriggerSettingsFormData:
     def __init__(self):
-        self.audio = 0
-        self.temperature = 0.0
+        self.audio = "0"
+        self.temperature = "0.0"
+        self.pressure = "0.0"
+        self.humidity = "0.0"

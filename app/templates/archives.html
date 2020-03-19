@@ -44,15 +44,14 @@
                     <div class = "row">
                         <div class = "col">
                             <div class="custom-control custom-checkbox">
-                                <input type="checkbox" class="custom-control-input" id="defaultChecked">
-                                <label class="custom-control-label" for="defaultChecked">All</label>
-                            </div>
-                        </div>
-
-                        <div class = "col">
-                            <div class="custom-control custom-checkbox">
                                 <input type="checkbox" class="custom-control-input" id="defaultChecked1">
                                 <label class="custom-control-label" for="defaultChecked1">Video</label>
+                            </div>
+                        </div>
+                        <div class = "col">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" id="audCheck">
+                                <label class="custom-control-label" for="audCheck">Audio</label>
                             </div>
                         </div>
                     </div>
@@ -60,15 +59,8 @@
                     <div class="row">
                         <div class = "col">
                             <div class="custom-control custom-checkbox">
-                                <input type="checkbox" class="custom-control-input" id="defaultChecked2">
-                                <label class="custom-control-label" for="defaultChecked2">Audio</label>
-                            </div>
-                        </div>
-
-                        <div class = "col">
-                            <div class="custom-control custom-checkbox">
-                                <input type="checkbox" class="custom-control-input" id="defaultChecked3">
-                                <label class="custom-control-label" for="defaultChecked3">Temperature</label>
+                                <input type="checkbox" class="custom-control-input" id="tempCheck">
+                                <label class="custom-control-label" for="tempCheck">Temperature</label>
                             </div>
                         </div>
                     </div>
@@ -87,8 +79,8 @@
                         </div>
                     </div>
                     <div class="row justify-content-end">
-                        <div class="col text-right">
-                            Current dB: 60 dB
+                        <div class="col text-right" id="decibels_archives">
+                            Current dB: --
                         </div>
                     </div>
                 </div>
@@ -96,34 +88,34 @@
 
             <div class = "card w-100 mt-1 bg-light rounded">
                 <div class = "card-header p-0 text-center">
-                    Temperature Data
+                    Sense HAT Data
                 </div>
 
                 <div class = "card-body p-1">
                     <div class="row">
                         <div class="col-9">
-                            Room Temp:
+                            Temperature:
                         </div>
-                        <div class="col-3 text-right">
-                            72.3
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-9">
-                            Skin Temp (Subject 1):
-                        </div>
-                        <div class="col-3 text-right">
-                            93.1
+                        <div class="col-3 text-right" id="roomTemperature_archives">
+                            --.-
                         </div>
                     </div>
 
                     <div class="row">
                         <div class="col-9">
-                            Skin Temp (Subject 2):
+                            Air Pressure (millibars):
                         </div>
-                        <div class="col-3 text-right">
-                            95.4
+                        <div class="col-3 text-right" id="airPressure_archives">
+                            --.-
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-9">
+                            Air Humidity (%):
+                        </div>
+                        <div class="col-3 text-right" id="airHumidity_archives">
+                            --.-
                         </div>
                     </div>
                     

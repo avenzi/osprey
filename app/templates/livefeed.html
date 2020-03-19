@@ -20,7 +20,8 @@
                     <div class="card-header p-0 text-center">
                         Video
                     </div>
-                    <img height="480" width="640" src="{{ url_for('video_feed') }}">
+                    <img height="480" width="640" src="http://35.9.42.245:8000/stream.mjpg">
+                    <!--src="{{ url_for('video_feed') }}"-->
                 </div>
 
             </div>
@@ -38,7 +39,7 @@
                     <div class="card-body p-1">
                         <div class="row">
                             <div class="col-8">
-                                Room Temperature:
+                                Temperature (&#8457):
                             </div>
                             <div class="col-4 text-right" id='roomTemperature'>
                                 {{ temperatureData.roomTemperature }}
@@ -46,19 +47,19 @@
                         </div>
                         <div class="row">
                             <div class="col-8">
-                                Skin Temperature (Subject 1):
+                                Air Pressure (millibars):
                             </div>
-                            <div class="col-4 text-right" id='skinTemperatureSub1'>
-                                {{ temperatureData.skinTemperatureSub1 }}
+                            <div class="col-4 text-right" id='airPressure'>
+                                {{ temperatureData.airPressure }}
 
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-8">
-                                Skin Temperature (Subject 2):
+                                Air Humidity (%):
                             </div>
-                            <div class="col-4 text-right" id='skinTemperatureSub2'>
-                                {{ temperatureData.skinTemperatureSub2 }}
+                            <div class="col-4 text-right" id='airHumidity'>
+                                {{ temperatureData.airHumidity }}
                             </div>
                         </div>
                     </div>
@@ -135,8 +136,11 @@
                         Trigger Settings
                     </div>
                     <div class="card-body p-1">
+
                         <div class="row">
+
                             <div class="col">
+                            
                                 <div class="form-group row">
                                     <label for="audioInput" class="col-4 col-form-label">Audio (dB):</label>
                                     <div class="col-3">
@@ -144,9 +148,21 @@
                                     </div>
                                 </div>
                                 <div class="form-group row">
-                                    <label for="temperatureInput" class="col-4 col-form-label">Temperature (℉)</label>
+                                    <label for="temperatureInput" class="col-4 col-form-label">Temperature (&#8457):</label>
                                     <div class="col-3">
                                     <input type="text" class="form-control" id="temperatureInput">
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label for="pressureInput" class="col-4 col-form-label">Air Pressure (millibars):</label>
+                                    <div class="col-3">
+                                    <input type="text" class="form-control" id="pressureInput">
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <label for="humidityInput" class="col-4 col-form-label">Air Humidity (%):</label>
+                                    <div class="col-3">
+                                    <input type="text" class="form-control" id="humidityInput">
                                     </div>
                                 </div>
                                 <div class="form-group row">
@@ -154,30 +170,21 @@
                                     <button type="submit" class="btn btn-primary" id="triggerSettingsSubmit">OK</button>
                                     </div>
                                 </div>
-
-                                <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#algorithmModal" id="algorithmModalButton">
+                                <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#algorithmModal" id="algorithmModalOpenButton">
                                 Algorithms
                                 </button>
                                 <div class="modal fade" id="algorithmModal" tabindex="-1" role="dialog" aria-labelledby="algorithmModalTitle" aria-hidden="true">
                                     <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title" id="algorithmModalTitle">Algorithms</h5>
-                                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                                    <span aria-hidden="true">&times;</span>
-                                                </button>
-                                            </div>
-                                            <div class="modal-body" id="algorithmModalBody">
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                                            </div>
+                                        {# id algorithmModalContent is filled populated with html from templates/snippets #}
+                                        <div class="modal-content" id="algorithmModalContent">
                                         </div>
                                     </div>
                                 </div>
 
                             </div>
+
                         </div>
+
                     </div>
                 </div>
 
@@ -201,6 +208,20 @@
                                 <div class="custom-control custom-checkbox">
                                     <input type="checkbox" class="custom-control-input" id="temperatureCheck">
                                     <label class="custom-control-label" for="temperatureCheck">Temperature</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input" id="pressureCheck">
+                                    <label class="custom-control-label" for="pressureCheck">Pressure</label>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input" id="humidityCheck">
+                                    <label class="custom-control-label" for="humidityCheck">Humidity</label>
                                 </div>
                             </div>
                         </div>
