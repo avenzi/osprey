@@ -1,17 +1,23 @@
 from sense_hat import SenseHat
 import time
 import io
+import sys
 import struct
 import socket
 import requests
 from http import server
 
-#function to stream temperature data to a server
-def stream(server, log):
+#function to stream SENSE Hat data to a server
+#prints error data to a specified log file
+def stream(server, log=sys.stdout:
     sense = SenseHat()
 
     # fails out if connection broken
     while True:
+        # Wait 1 second between updates
+        time.sleep(1)
+        
+        
         try:
             temp = sense.get_temperature()
             press = sense.get_pressure()
@@ -21,23 +27,18 @@ def stream(server, log):
             # convert to F
             temp = ((temp/5) * 9) + 32
 
-            # Create data object
+            # Create data object with temperature, pressure, and humidity data
             sense_data = {"Temp": temp, "Press": press, "Humid": humid}
             
-            print(temp, file = log)
+            # Debugging
+            #print(temp, file = log)
           
             requests.post(server,
                     data = sense_data,
             )
-
-            # Wait 1 second between updates
-            time.sleep(1)
+            
         
         except Exception as e:
-            # log file
-            print("Exception caught:", e, file = log)
-            
-
-        #finally:
-            #connection.close()
+            # print to log file
+            print("Exception caught:", e, file=log)
             

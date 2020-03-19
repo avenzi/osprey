@@ -26,6 +26,18 @@
 
             </div>
 
+            <div class="row mt-1 h-25">
+                
+                <div class="card w-100 h-100">
+                    <div class="card-header p-0 text-center">
+                        Event Log
+                    </div>
+                    <ul class="list-group list-group-flush p-1 h-100" id="eventLog">
+                    </ul>
+                </div>
+                
+            </div> 
+
         </div>
 
         <div class="col m-1">
@@ -214,6 +226,20 @@
                         <div class="row">
                             <div class="col">
                                 <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input" id="pressureCheck">
+                                    <label class="custom-control-label" for="pressureCheck">Pressure</label>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input" id="humidityCheck">
+                                    <label class="custom-control-label" for="humidityCheck">Humidity</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <div class="custom-control custom-checkbox">
                                     <input type="checkbox" class="custom-control-input" id="audioCheck">
                                     <label class="custom-control-label" for="audioCheck">Audio</label>
                                 </div>
@@ -226,22 +252,6 @@
 
         </div> 
 
-    </div>
-
-
-    <div class="row justify-content-start h-25">
-
-        <div class="col-6 m-1 p-0 h-100">
-            
-            <div class="card w-100 h-100">
-                <div class="card-header p-0 text-center">
-                    Event Log
-                </div>
-                <ul class="list-group list-group-flush p-1 h-100" id="eventLog">
-                </ul>
-            </div>
-            
-        </div> 
     </div>
 
 {% endblock %}
