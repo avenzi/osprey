@@ -43,40 +43,41 @@ ALLOWED_EXTENSIONS = set(['py'])
 runningAlgorithms = {}
 
 LOG = logging.getLogger(__name__)
-global loggined
-loggined = False
+global loginStatus
+loginStatus = False
 
 
 @app.route('/', methods = ['GET','POST'])
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
-    #-------------------------------------------------------------------------------------------
+    database_cursor = mysql.connection.cursor()
+    
     # The validate_on_submit() method does all form processing work and returns true when a form
     # is submitted and the browser sends a POST request indicating data is ready to be processed
-    #-------------------------------------------------------------------------------------------
     if form.validate_on_submit():
-        # A template in the application is used to render flashed messages that Flask stores
-        #flash('Login requested for user {}, remember_me={}, password_input={}'.format(
-            #form.username.data, form.remember_me.data, form.password.data))
-        
-        # 1. check DB for user .. if not user in DB, return error
-        database_cursor = mysql.connection.cursor()
         database_cursor.execute("SELECT * FROM user where username = "+"'"+form.username.data+"'")
+
         myresult = database_cursor.fetchone()
         hashed_pw_from_db = myresult[2]
         user_input_pw = form.password.data
         correction_password = bcrypt.check_password_hash(hashed_pw_from_db, user_input_pw)
+
         if correction_password == False:
-            # flash("Wrong password")
             redirect(url_for('login'))
-            # return redirect(url_for('livefeed'))
+
         else:
-            # flash("login password work")
-            session['user'] = form.username.data
-            global loggined
-            loggined = True
+            # Storing the username of a user in the session
+            session['username'] = form.username.data
+            global loginStatus
+            loginStatus = True
+
+            # Creating the eventlog table if not already created. The eventlog table keeps track of all trigger events
+            database_cursor.execute('''CREATE TABLE IF NOT EXISTS eventlog (id INTEGER UNSIGNED AUTO_INCREMENT, user_id INTEGER UNSIGNED, 
+                alert_time DATETIME, alert_type VARCHAR(255), alert_message VARCHAR(255), PRIMARY KEY (id), FOREIGN KEY (user_id) REFERENCES user(id))''')
+
             return redirect(url_for('livefeed'))
+
     return render_template('login.html', title='Sign In', form=form)
 
 
@@ -123,10 +124,10 @@ def registration():
 
 @app.route('/livefeed', methods=['GET', 'POST'])
 def livefeed():
-    if session.get('user') == True:
+    if session.get('username') == True:
         return redirect(url_for('login'))
 
-    if loggined != True:
+    if loginStatus != True:
         return redirect(url_for('login'))
 
     return render_template('livefeed.html', temperatureData = temperatureData, audioData = audioData)
@@ -149,14 +150,14 @@ def archives():
 
 @app.route('/archive/<int:archive_id>')
 def archive(archive_id):
-    if loggined != True:
+    if loginStatus != True:
         return redirect(url_for('login'))
     if archive_id == None:
         print("Archive id is None")
     else:
         print("archive_id: ", archive_id)
 
-    if session.get('user') == True:
+    if session.get('username') == True:
         return redirect(url_for('login'))
     
     # what are the recent recorded sessions
@@ -470,7 +471,14 @@ def algorithm_handler():
 
     if buttonPressed == "select":
         if filename not in runningAlgorithms:
-            program_thread = Program(Queue(), args=(True, filename,))
+            # Get the id of the user that is logged in
+            database_cursor = mysql.connection.cursor()
+            database_cursor.execute("SELECT id FROM user WHERE username = "+"'"+session.get('username')+"'")
+            user_id = database_cursor.fetchone()[0]
+
+            #  Pass the id of the user into the thread
+            program_thread = Program(Queue(), args=(True, filename, user_id))
+
             program_thread.start()
             runningAlgorithms[filename] = [program_thread]
             print("Algorithms running: " + str(runningAlgorithms))
