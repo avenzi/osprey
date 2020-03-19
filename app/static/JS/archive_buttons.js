@@ -1,20 +1,42 @@
 $(document).ready(function () {
+    //archive video
     $('#defaultChecked1').click(function(e) {
         if ($(this).is(':checked')) {
-            console.log("checked")
+            var httpRequest = new XMLHttpRequest();
+            httpRequest.open('GET', 'start', true);
+            httpRequest.onreadystatechange = function(e) {
+                if (httpRequest.readyState == 4) {
+                    if (httpRequest.status == 200) {
+                        console.log('SUCCESS');
+                    }
+                    else console.log('HTTP ERROR');
+                }
+            }
+            httpRequest.send();
         }
         else {
-            console.log("unchecked")
+            var httpRequest = new XMLHttpRequest();
+            httpRequest.open('GET', 'stop', true);
+            httpRequest.onreadystatechange = function(e) {
+                if (httpRequest.readyState == 4) {
+                    if (httpRequest.status == 200) {
+                        console.log('SUCCESS');
+                    }
+                    else console.log('HTTP ERROR');
+                }
+            }
+            httpRequest.send();
         }
         e.stopImmediatePropagation();
     });
 
+    // archive audio
     $('#audCheck').click(function(e) {
         (function doPoll() {
             console.log("clicked");
             date = new Date();
             req1 = $.post('update_audio', {status : 'ON', date : date}, function(data){
-                $('#decibels').text("Current dB: " + data.decibels);
+                $('#decibels_archives').text("Current dB: " + data.decibels);
             })
             if ($('#audCheck').is(':checked')) {
                 req1.always(function(){
@@ -26,31 +48,37 @@ $(document).ready(function () {
                 console.log("unchecked");
                 date = new Date();
                 req2 = $.post('update_audio', {status : 'OFF', date : date});
-                $('#decibels').text('Current dB: --.-');
+                $('#decibels_archives').text('Current dB: --.-');
                 req1.abort();
             }
         }());
         e.stopImmediatePropagation();
     });
 
+    // archive temp
     $('#tempCheck').click(function(e) {
-        console.log("clicked")
         (function doPoll() {
-
+            console.log("clicked");
+            date = new Date();
+            req1 = $.post('update_sense', {status : 'ON', date : date}, function(data){
+                $('#roomTemperature_archives').text(data.roomTemperature);
+                $('#airPressure_archives').text(data.airPressure);
+                $('#airHumidity_archives').text(data.airHumidity);
+            })
             if ($('#tempCheck').is(':checked')) {
-                //req1 = $.post('update_eventlog_temperature', {status : 'ON'}, function(data){
-                    //$('#eventLog').append(data);
-                //})
-                //.done()
-                always(function(){
-                    console.log("checked")
-                    setTimeout(doPoll, 6000);
+                console.log("checked");
+                req1.always(function(){
+                    setTimeout(doPoll, 500);
                 });
             }
             else {
-                //req2 = $.post('update_eventlog_temperature', {status : 'OFF'});
-                //req1.abort();
-                console.log("unchecked")
+                console.log("unchecked");
+                date = new Date();
+                req2 = $.post('update_sense', {status : 'OFF', date : date});
+                $('#roomTemperature_archives').text('--.-');
+                $('#airPressure_archives').text('--.-');
+                $('#airHumidity_archives').text('--.-');
+                req1.abort();
             }
         }());
         e.stopImmediatePropagation();
