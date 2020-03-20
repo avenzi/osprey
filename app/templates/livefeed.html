@@ -34,10 +34,10 @@
                 
                 <div class="card w-100">
                     <div class="card-header p-0 text-center">
-                        Temperature Data
+                        Temperature
                     </div>
                     <div class="card-body p-1">
-                        <div class="row">
+                        <div class="row temp-spacing">
                             <div class="col-8">
                                 Temperature (&#8457):
                             </div>
@@ -45,7 +45,7 @@
                                 {{ temperatureData.roomTemperature }}
                             </div>
                         </div>
-                        <div class="row">
+                        <div class="row temp-spacing">
                             <div class="col-8">
                                 Air Pressure (millibars):
                             </div>
@@ -54,7 +54,7 @@
 
                             </div>
                         </div>
-                        <div class="row">
+                        <div class="row temp-spacing">
                             <div class="col-8">
                                 Air Humidity (%):
                             </div>
@@ -71,16 +71,18 @@
 
                 <div class="card w-100">
                     <div class="card-header p-0 text-center">
-                        Audio Data
+                        Audio
                     </div>
                     <div class="card-body p-1">
                         <div class="row">
                             <div class="col">
-                                {#Streaming Audio#}
+                                <audio id="audio" class="audio-player" controls>
+                                    Your browser doesn't support HTML audio element.
+                                </audio>
                             </div>
                         </div>
                         <div class="row justify-content-end">
-                            <div class="col text-right" id="decibels">
+                            <div class="col text-left" id="decibels">
                                 Current dB: {{ audioData.decibels }}
                             </div>
                         </div>

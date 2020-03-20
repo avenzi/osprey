@@ -62,3 +62,13 @@ img.logo {
   #eventLog{
     overflow-y: scroll;
   }
+
+  .audio-player {
+    margin-top: 1em;
+    width: 100%;
+  }
+
+  .temp-spacing {
+    margin-top: 0.25em;
+    margin-bottom: 0.25em;
+  }
