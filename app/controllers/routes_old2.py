@@ -63,7 +63,7 @@ def login():
             # return redirect(url_for('livefeed'))
         else:
             # flash("login password work")
-            session['user'] = form.username.data
+            session['username'] = form.username.data
             global loggined
             loggined = True
             return redirect(url_for('livefeed'))
@@ -113,7 +113,7 @@ def registration():
 
 @app.route('/livefeed', methods=['GET', 'POST'])
 def livefeed():
-    if session.get('user') == True:
+    if session.get('username') == True:
         return redirect(url_for('login'))
 
     if loggined != True:
@@ -146,7 +146,7 @@ def archive(archive_id):
     else:
         print("archive_id: ", archive_id)
 
-    if session.get('user') == True:
+    if session.get('username') == True:
         return redirect(url_for('login'))
     
     # what are the recent recorded sessions
