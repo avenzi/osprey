@@ -30,16 +30,29 @@ $(document).ready(function () {
 //        e.stopImmediatePropagation();
 //    });
 
+
+
+   // Code to handle switching between video streams
+   // Hide streams 2 and 3 on page load
+   $('#stream2').hide();	
+   $('#stream3').hide();
+
    $('#video1').click(function(e) {
 	$('#stream2').hide();
 	$('#stream1').show();
+	$('#stream3').hide();
    });
 
-   
-   $('#stream2').hide();	
    $('#video2').click(function(e) {
 	$('#stream1').hide();
 	$('#stream2').show();
+	$('#stream3').hide();
+   });
+   
+   $('#video3').click(function(e) {
+	$('#stream1').hide();
+	$('#stream2').hide();
+	$('#stream3').show();
    });
 
 
