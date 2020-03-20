@@ -1,34 +1,46 @@
 $(document).ready(function () {
 
-    $('#videoSwitch1').click(function() {
-        if ($(this).is(':checked')) {
-            var httpRequest = new XMLHttpRequest();
-            httpRequest.open('GET', 'start', true);
-            httpRequest.onreadystatechange = function(e) {
-                if (httpRequest.readyState == 4) {
-                    if (httpRequest.status == 200) {
-                        console.log('SUCCESS');
-                    }
-                    else console.log('HTTP ERROR');
-                }
-            }
-            httpRequest.send();
-        }
-        else {
-            var httpRequest = new XMLHttpRequest();
-            httpRequest.open('GET', 'stop', true);
-            httpRequest.onreadystatechange = function(e) {
-                if (httpRequest.readyState == 4) {
-                    if (httpRequest.status == 200) {
-                        console.log('SUCCESS');
-                    }
-                    else console.log('HTTP ERROR');
-                }
-            }
-            httpRequest.send();
-        }
-        e.stopImmediatePropagation();
-    });
+//    $('#videoSwitch1').click(function() {
+//        if ($(this).is(':checked')) {
+//            var httpRequest = new XMLHttpRequest();
+//           httpRequest.open('GET', 'start', true);
+//            httpRequest.onreadystatechange = function(e) {
+//                if (httpRequest.readyState == 4) {
+//                    if (httpRequest.status == 200) {
+//                        console.log('SUCCESS');
+//                    }
+//                    else console.log('HTTP ERROR');
+//                }
+//            }
+//            httpRequest.send();
+//        }
+//        else {
+//            var httpRequest = new XMLHttpRequest();
+//            httpRequest.open('GET', 'stop', true);
+//            httpRequest.onreadystatechange = function(e) {
+//                if (httpRequest.readyState == 4) {
+//                    if (httpRequest.status == 200) {
+//                        console.log('SUCCESS');
+//                    }
+//                    else console.log('HTTP ERROR');
+//                }
+//            }
+//            httpRequest.send();
+//        }
+//        e.stopImmediatePropagation();
+//    });
+
+   $('#video1').click(function(e) {
+	$('#stream2').hide();
+	$('#stream1').show();
+   });
+
+   
+   $('#stream2').hide();	
+   $('#video2').click(function(e) {
+	$('#stream1').hide();
+	$('#stream2').show();
+   });
 
 
     $('#audioSwitch1').click(function(e) {
