@@ -344,6 +344,10 @@ def testvideo():
     return render_template('test-video.html')
 
 
+@app.route('/testaudio', methods=['GET'])
+def testaudio():
+    return render_template('test-audio.html')
+
 @app.route("/dashvideo", methods=['GET'])
 def dashvideo():
     path = "/var/www/html/video3/output-dash.mpd"
@@ -368,6 +372,17 @@ def filefetchvideo(filename):
     path = "/var/www/html/video/dash-segments/" + filename
     return partial_response(path, 0, os.path.getsize(path), None)
 
+
+@app.route('/filefetchaudio/<filename>')
+def filefetchaudio(filename):
+    print("filename requested: " + filename)
+
+    path = "/var/www/html/audio/mp3-segments/" + filename
+
+    if os.path.exists(path):
+        return partial_response(path, 0, os.path.getsize(path), None) # return the whole file at once
+    else:
+        return jsonify({'nodata': True})
 
 @app.route('/fetchvideo', methods=['GET'])
 def fetchvideo():
