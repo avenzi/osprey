@@ -1,4 +1,4 @@
-class Temperature:
+class Sense:
     def __init__(self):
         self.roomTemperature = '--.-'
         self.airPressure = '--.-'

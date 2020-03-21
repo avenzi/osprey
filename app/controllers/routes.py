@@ -16,14 +16,14 @@ from app.controllers.video import *
 from werkzeug.utils import secure_filename
 from app.controllers.program import Program
 from app.controllers.forms import LoginForm, TriggerSettingsForm, RegistrationForm
-from app.controllers.data import Temperature, Audio, EventLog, TriggerSettingsFormData
+from app.controllers.data import Sense, Audio, EventLog, TriggerSettingsFormData
 from flask import render_template, flash, redirect, url_for, Response, session, jsonify, request, send_file, send_from_directory
 
 # BUFF_SIZE is the size of the number of bytes in each mp4 video chunk response
 MB = 1 << 20
 # Send 1 MB at a time
 BUFF_SIZE = 1 * MB
-# Seed used to for random number generation
+# Seed used for random number generation
 seed(1)
 # global_start 
 bytes_so_far = 0
@@ -31,7 +31,7 @@ bytes_so_far = 0
 # Data structure for handling audio data
 audioData = Audio()
 # Data structure for handling temperature data
-temperatureData = Temperature()
+senseData = Sense()
 # Data structure for handling event log data
 eventLogData = EventLog()
 # Data structure for handling trigger settings form data
@@ -44,7 +44,7 @@ runningAlgorithms = {}
 
 LOG = logging.getLogger(__name__)
 global loginStatus
-loginStatus = False
+loginStatus = True # avoid login for DECS
 
 
 @app.route('/', methods = ['GET','POST'])
@@ -130,7 +130,7 @@ def livefeed():
     if loginStatus != True:
         return redirect(url_for('login'))
 
-    return render_template('livefeed.html', temperatureData = temperatureData, audioData = audioData)
+    return render_template('livefeed.html', senseData = senseData, audioData = audioData)
 
 
 
@@ -234,15 +234,15 @@ def update_sense():
     temp, press, humid = db_result[0]
     
     # Convert to JQureyable objects
-    temperatureData.roomTemperature = "{:.2f}".format(temp)
-    temperatureData.airPressure = "{:.2f}".format(press)
-    temperatureData.airHumidity = "{:.2f}".format(humid)
+    senseData.roomTemperature = "{:.2f}".format(temp)
+    senseData.airPressure = "{:.2f}".format(press)
+    senseData.airHumidity = "{:.2f}".format(humid)
 
-    temperatureData.status = request.form['status']
-    temperatureData.date = request.form['date']
+    senseData.status = request.form['status']
+    senseData.date = request.form['date']
 
-    return jsonify({'result' : 'success', 'status' : temperatureData.status, 'date' : temperatureData.date, 'roomTemperature' : temperatureData.roomTemperature,
-    'airPressure': temperatureData.airPressure, 'airHumidity': temperatureData.airHumidity})
+    return jsonify({'result' : 'success', 'status' : senseData.status, 'date' : senseData.date, 'roomTemperature' : senseData.roomTemperature,
+    'airPressure': senseData.airPressure, 'airHumidity': senseData.airHumidity})
 
 
 """route is used to update audio values in the live stream page"""
@@ -276,10 +276,10 @@ def update_eventlog_temperature():
 
     eventLogData.temperatureStatus = request.form['status']
 
-    if (eventLogData.temperatureStatus == 'ON' and temperatureData.status == 'ON'):
+    if (eventLogData.temperatureStatus == 'ON' and senseData.status == 'ON'):
         #print('ALL TEMPERATURE ON')
-        if (temperatureData.roomTemperature > triggerSettingsFormData.temperature):
-            alerts.append("Temperature Trigger: Room temperature exceeded " + triggerSettingsFormData.temperature + " ℉ @ " + temperatureData.date)
+        if (senseData.roomTemperature > triggerSettingsFormData.temperature):
+            alerts.append("Temperature Trigger: Room temperature exceeded " + triggerSettingsFormData.temperature + " ℉ @ " + senseData.date)
 
     return render_template('snippets/eventlog_snippet.html', messages = alerts)
 
@@ -293,8 +293,8 @@ def update_eventlog_pressure():
     eventLogData.pressureStatus = request.form['status']
 
     if (eventLogData.pressureStatus == 'ON'):
-        if (temperatureData.airPressure > triggerSettingsFormData.pressure):
-            alerts.append("Air Pressure Trigger: Air pressure exceeded " + triggerSettingsFormData.pressure + " millibars @ " + temperatureData.date)
+        if (senseData.airPressure > triggerSettingsFormData.pressure):
+            alerts.append("Air Pressure Trigger: Air pressure exceeded " + triggerSettingsFormData.pressure + " millibars @ " + senseData.date)
 
     return render_template('snippets/eventlog_snippet.html', messages = alerts)
 
@@ -308,8 +308,8 @@ def update_eventlog_humidity():
     eventLogData.humidityStatus = request.form['status']
 
     if (eventLogData.humidityStatus == 'ON'):
-        if (temperatureData.airHumidity > triggerSettingsFormData.humidity):
-            alerts.append("Air Humidity Trigger: Air humidity exceeded " + triggerSettingsFormData.humidity + " % @ " + temperatureData.date)
+        if (senseData.airHumidity > triggerSettingsFormData.humidity):
+            alerts.append("Air Humidity Trigger: Air humidity exceeded " + triggerSettingsFormData.humidity + " % @ " + senseData.date)
 
     return render_template('snippets/eventlog_snippet.html', messages = alerts)
 
