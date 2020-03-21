@@ -21,9 +21,15 @@
                         Video
                     </div>
                     <!--src="{{ url_for('video_feed') }}"-->
-                    <img height="480" width="640" id="stream1" src="http://35.9.42.212:8000/stream.mjpg">
-                    <img height="480" width="640" id="stream2" src="http://35.9.42.245:8000/stream.mjpg">
-                    <img height="480" width="640" id="stream3" src="http://35.9.42.110:8000/stream.mjpg">
+                    <div class="embed-responsive embed-responsive-16by9" id="stream1">
+                        <iframe class="embed-responsive-item" src="http://35.9.42.212:8000/stream.mjpg" allowfullscreen></iframe>
+                    </div>
+                    <div class="embed-responsive embed-responsive-16by9" id="stream2">
+                        <iframe class="embed-responsive-item" src="http://35.9.42.245:8000/stream.mjpg" allowfullscreen></iframe>
+                    </div>
+                    <div class="embed-responsive embed-responsive-16by9" id="stream3">
+                        <iframe class="embed-responsive-item" src="http://35.9.42.110:8000/stream.mjpg" allowfullscreen></iframe>
+                    </div>
                 </div>
 
             </div>
