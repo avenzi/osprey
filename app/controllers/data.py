@@ -5,6 +5,7 @@ class Sense:
         self.airHumidity = '--.-'
         self.status = ''
         self.date = ''
+        self.ip = 0
 
 class Audio:
 
@@ -16,6 +17,8 @@ class Audio:
 class EventLog:
     def __init__(self):
         self.temperatureStatus = ''
+        self.pressStatus = ''
+        self.humidStatus = ''
         self.audioStatus = ''
 
 class TriggerSettingsFormData:
