@@ -241,7 +241,7 @@ def update_sense1():
             database_cursor = mysql.connection.cursor()
 
             # get current Sense HAT data from DB
-            database_cursor.execute("SELECT IP, Temp, Press, Humid FROM Sense WHERE IP <> %s ORDER BY Time DESC;" % senseData2.ip)
+            database_cursor.execute("SELECT INET_NTOA(IP), Temp, Press, Humid FROM Sense WHERE IP <> INET_ATON('%s') ORDER BY Time DESC;" % senseData2.ip)
             ip, temp, press, humid = database_cursor.fetchone()
 
 
@@ -256,12 +256,12 @@ def update_sense1():
             senseData1.airHumidity = "{:.2f}".format(humid)
         
         # Don't fail out if sense hat stream isn't working
-        except:
-            print("Sense HAT 1 broken")
+        except Exception as e:
+            print("Sense HAT 1 broken:", e)
             pass
 
     return jsonify({'result' : 'success', 'status' : senseData1.status, 'date' : senseData1.date, 'roomTemperature' : senseData1.roomTemperature,
-    'airPressure': senseData1.airPressure, 'airHumidity': senseData1.airHumidity})
+    'airPressure': senseData1.airPressure, 'airHumidity': senseData1.airHumidity, 'ip' : senseData1.ip})
 
 
 """route is used to update Sense HAT values for the second Sense HAT in the live stream page"""
@@ -281,8 +281,8 @@ def update_sense2():
         database_cursor = mysql.connection.cursor()
 
         try:
-            database_cursor.execute("SELECT IP, Temp, Press, Humid FROM Sense WHERE IP <> %s ORDER BY Time DESC;" % senseData1.ip)
-            ip, temp, press, humid = database_cursor.fetchone()
+            database_cursor.execute("SELECT INET_NTOA(IP), Temp, Press, Humid, Time FROM Sense WHERE IP <> INET_ATON('%s') ORDER BY Time DESC;" % senseData1.ip)
+            ip, temp, press, humid, time = database_cursor.fetchone()
 
             # SQL command filters out senseData1's ip so no need to check for it
             if senseData2.ip == 0:
@@ -294,12 +294,12 @@ def update_sense2():
             senseData2.airHumidity = "{:.2f}".format(humid)
         
         # Don't fail out of website on Sense HAT error
-        except:
-            print("Sense HAT 2 broken")
+        except Exception as e:
+            print("Sense HAT 2 broken:", e)
             pass
 
     return jsonify({'result' : 'success', 'status' : senseData2.status, 'date' : senseData2.date, 'roomTemperature' : senseData2.roomTemperature,
-    'airPressure': senseData2.airPressure, 'airHumidity': senseData2.airHumidity})
+    'airPressure': senseData2.airPressure, 'airHumidity': senseData2.airHumidity, 'ip': senseData2.ip})
 
 """route is used to update audio values in the live stream page"""
 @app.route('/update_audio', methods=['GET', 'POST'])

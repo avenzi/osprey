@@ -80,6 +80,7 @@ $(document).ready(function () {
                     $('#roomTemperature1').text(data.roomTemperature);
                     $('#airPressure1').text(data.airPressure);
                     $('#airHumidity1').text(data.airHumidity);
+                    $('#atm1').text('Atmosphere ('.concat(data.ip, ')'));
                 });
             }, 1000)
         }
@@ -101,6 +102,7 @@ $(document).ready(function () {
                     $('#roomTemperature2').text(data.roomTemperature);
                     $('#airPressure2').text(data.airPressure);
                     $('#airHumidity2').text(data.airHumidity);
+                    $('#atm2').text('Atmosphere ('.concat(data.ip, ')'));
                 });
             }, 1000);
         }
