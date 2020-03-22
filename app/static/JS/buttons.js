@@ -67,12 +67,22 @@ $(document).ready(function () {
         }
         else {
             clearInterval(intervalIDa);
-            $('#decibels').text('Current dB: --.-');
+
+            // Clear form data after 1.2s to prevent async issues
+            setTimeout(function (){
+                $('#decibels').text('Current dB: --.-');
+            }, 1200);
         }
     });
 
 
+    // Handle sense Switch Functionality
+    // Hide sense cards on page load
+    $('#sense1').hide();
+    $('#sense2').hide();
+
     $('#senseSwitch1').click(function() {
+        $('#sense1').show();
         if ($('#senseSwitch1').is(':checked')){
             intervalID1 = setInterval(function() {
                 date = new Date();
@@ -86,15 +96,19 @@ $(document).ready(function () {
         }
         else {
             clearInterval(intervalID1);
-            date = new Date();
-            $('#roomTemperature1').text('--.-');
-            $('#airPressure1').text('--.-');
-            $('#airHumidity1').text('--.-');
+
+            // Clear form data after 1.2s to prevent async issues
+            setTimeout(function () {
+                $('#roomTemperature1').text('--.-');
+                $('#airPressure1').text('--.-');
+                $('#airHumidity1').text('--.-');
+            }, 1200);
         }
     });
 
 
     $('#senseSwitch2').click(function() {
+        $('#sense2').show();
         if ($('#senseSwitch2').is(':checked')){
             intervalID2 = setInterval(function() {
                 date = new Date();
@@ -108,10 +122,13 @@ $(document).ready(function () {
         }
         else {
             clearInterval(intervalID2);
-            date = new Date();
-            $('#roomTemperature2').text('--.-');
-            $('#airPressure2').text('--.-');
-            $('#airHumidity2').text('--.-');
+
+            // Clear form data after 1.2s to prevent async issues
+            setTimeout(function () {
+                $('#roomTemperature2').text('--.-');
+                $('#airPressure2').text('--.-');
+                $('#airHumidity2').text('--.-');
+            }, 1200);
         }
     });
 
