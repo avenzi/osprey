@@ -57,50 +57,60 @@ $(document).ready(function () {
 
 
     $('#audioSwitch1').click(function(e) {
-        (function doPoll() {
-            date = new Date();
-            req1 = $.post('update_audio', {status : 'ON', date : date}, function(data){
-                $('#decibels').text("Current dB: " + data.decibels);
-            })
-            if ($('#audioSwitch1').is(':checked')) {
-                req1.always(function(){
-                    setTimeout(doPoll, 5000);
-                });
-            }
-            else {
+        if ($('#senseSwitch1').is(':checked')){
+            intervalIDa = setInterval(function() {
                 date = new Date();
-                req2 = $.post('update_audio', {status : 'OFF', date : date});
-                $('#decibels').text('Current dB: --.-');
-                req1.abort();
-            }
-        }());
-        e.stopImmediatePropagation();
+                $.post('update_audio', {status : 'ON', date : date}, function(data){
+                    $('#decibels').text("Current dB: " + data.decibels);
+            });
+            }, 1000);
+        }
+        else {
+            clearInterval(intervalIDa);
+            $('#decibels').text('Current dB: --.-');
+        }
     });
 
 
-    $('#senseSwitch1').click(function(e) {
-        (function doPoll() {
-            date = new Date();
-            req1 = $.post('update_sense', {status : 'ON', date : date}, function(data){
-                $('#roomTemperature').text(data.roomTemperature);
-                $('#airPressure').text(data.airPressure);
-                $('#airHumidity').text(data.airHumidity);
-            })
-            if ($('#senseSwitch1').is(':checked')) {
-                req1.always(function(){
-                    setTimeout(doPoll, 5000);
-                });
-            }
-            else {
+    $('#senseSwitch1').click(function() {
+        if ($('#senseSwitch1').is(':checked')){
+            intervalID1 = setInterval(function() {
                 date = new Date();
-                req2 = $.post('update_sense', {status : 'OFF', date : date});
-                $('#roomTemperature').text('--.-');
-                $('#airPressure').text('--.-');
-                $('#airHumidity').text('--.-');
-                req1.abort();
-            }
-        }());
-        e.stopImmediatePropagation();
+                $.post('update_sense1', {status : 'ON', date : date}, function(data){
+                    $('#roomTemperature1').text(data.roomTemperature);
+                    $('#airPressure1').text(data.airPressure);
+                    $('#airHumidity1').text(data.airHumidity);
+                });
+            }, 1000)
+        }
+        else {
+            clearInterval(intervalID1);
+            date = new Date();
+            $('#roomTemperature1').text('--.-');
+            $('#airPressure1').text('--.-');
+            $('#airHumidity1').text('--.-');
+        }
+    });
+
+
+    $('#senseSwitch2').click(function() {
+        if ($('#senseSwitch2').is(':checked')){
+            intervalID2 = setInterval(function() {
+                date = new Date();
+                $.post('update_sense2', {status : 'ON', date : date}, function(data){
+                    $('#roomTemperature2').text(data.roomTemperature);
+                    $('#airPressure2').text(data.airPressure);
+                    $('#airHumidity2').text(data.airHumidity);
+                });
+            }, 1000);
+        }
+        else {
+            clearInterval(intervalID2);
+            date = new Date();
+            $('#roomTemperature2').text('--.-');
+            $('#airPressure2').text('--.-');
+            $('#airHumidity2').text('--.-');
+        }
     });
 
 
