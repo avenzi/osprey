@@ -30,8 +30,9 @@ bytes_so_far = 0
 
 # Data structure for handling audio data
 audioData = Audio()
-# Data structure for handling temperature data
-senseData = Sense()
+# Data structures for handling temperature data from two sense HATs
+senseData1 = Sense()
+senseData2 = Sense()
 # Data structure for handling event log data
 eventLogData = EventLog()
 # Data structure for handling trigger settings form data
@@ -130,7 +131,7 @@ def livefeed():
     if loginStatus != True:
         return redirect(url_for('login'))
 
-    return render_template('livefeed.html', senseData = senseData, audioData = audioData)
+    return render_template('livefeed.html', senseData1 = senseData1, senseData2 = senseData2, audioData = audioData)
 
 
 
@@ -222,28 +223,83 @@ def write_token(token_value):
     mysql.connection.commit()
 
 
-"""route is used to update temperature values in the live stream page"""
-@app.route('/update_sense', methods=['GET', 'POST'])
-def update_sense():
-    # Set up Sense table connection
-    database_cursor = mysql.connection.cursor()
+"""route is used to update Sense HAT values for the first Sense HAT in the live stream page"""
+@app.route('/update_sense1', methods=['GET', 'POST'])
+def update_sense1():
+    senseData1.date = request.form['date']
 
-    # get current SENSE Hat data from DB
-    database_cursor.execute("""SELECT Temp, Press, Humid FROM Sense ORDER BY Time DESC LIMIT 1;""")
-    db_result = database_cursor.fetchall()
-    temp, press, humid = db_result[0]
-    
-    # Convert to JQureyable objects
-    senseData.roomTemperature = "{:.2f}".format(temp)
-    senseData.airPressure = "{:.2f}".format(press)
-    senseData.airHumidity = "{:.2f}".format(humid)
+    # Check if switch is on or off
+    senseData1.status = request.form['status']
+    if senseData1.status == 'OFF':
+        senseData1.roomTemperature = "--.-"
+        senseData1.airPressure = "--.-"
+        senseData1.airHumidity = "--.-"
 
-    senseData.status = request.form['status']
-    senseData.date = request.form['date']
+    else:
+        try:
+            # Set up Sense table connection
+            database_cursor = mysql.connection.cursor()
 
-    return jsonify({'result' : 'success', 'status' : senseData.status, 'date' : senseData.date, 'roomTemperature' : senseData.roomTemperature,
-    'airPressure': senseData.airPressure, 'airHumidity': senseData.airHumidity})
+            # get current Sense HAT data from DB
+            database_cursor.execute("SELECT IP, Temp, Press, Humid FROM Sense WHERE IP <> %s ORDER BY Time DESC;" % senseData2.ip)
+            ip, temp, press, humid = database_cursor.fetchone()
 
+
+            # SQL command filters out senseData2's ip so no need to check for it
+            if senseData1.ip == 0:
+                senseData1.ip = ip
+            
+            
+            # Convert to JQueryable objects
+            senseData1.roomTemperature = "{:.2f}".format(temp)
+            senseData1.airPressure = "{:.2f}".format(press)
+            senseData1.airHumidity = "{:.2f}".format(humid)
+        
+        # Don't fail out if sense hat stream isn't working
+        except:
+            print("Sense HAT 1 broken")
+            pass
+
+    return jsonify({'result' : 'success', 'status' : senseData1.status, 'date' : senseData1.date, 'roomTemperature' : senseData1.roomTemperature,
+    'airPressure': senseData1.airPressure, 'airHumidity': senseData1.airHumidity})
+
+
+"""route is used to update Sense HAT values for the second Sense HAT in the live stream page"""
+@app.route('/update_sense2', methods=['GET', 'POST'])
+def update_sense2():
+    senseData2.date = request.form['date']
+
+    # Check if switch is on or off
+    senseData2.status = request.form['status']
+    if senseData2.status == 'OFF':
+        senseData2.roomTemperature = "--.-"
+        senseData2.airPressure = "--.-"
+        senseData2.airHumidity = "--.-"
+
+    else:
+        # Set up Sense table connection
+        database_cursor = mysql.connection.cursor()
+
+        try:
+            database_cursor.execute("SELECT IP, Temp, Press, Humid FROM Sense WHERE IP <> %s ORDER BY Time DESC;" % senseData1.ip)
+            ip, temp, press, humid = database_cursor.fetchone()
+
+            # SQL command filters out senseData1's ip so no need to check for it
+            if senseData2.ip == 0:
+                senseData2.ip = ip
+
+
+            senseData2.roomTemperature = "{:.2f}".format(temp)
+            senseData2.airPressure = "{:.2f}".format(press)
+            senseData2.airHumidity = "{:.2f}".format(humid)
+        
+        # Don't fail out of website on Sense HAT error
+        except:
+            print("Sense HAT 2 broken")
+            pass
+
+    return jsonify({'result' : 'success', 'status' : senseData2.status, 'date' : senseData2.date, 'roomTemperature' : senseData2.roomTemperature,
+    'airPressure': senseData2.airPressure, 'airHumidity': senseData2.airHumidity})
 
 """route is used to update audio values in the live stream page"""
 @app.route('/update_audio', methods=['GET', 'POST'])
