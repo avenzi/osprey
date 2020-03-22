@@ -50,27 +50,27 @@
 
         <div class="col m-1">
 
-            <div class="row justify-content-center mb-1">
+            <div class="row justify-content-center mb-1" id="sense1">
                 
                 <div class="card w-100">
                     <div class="card-header p-0 text-center">
-                        Atmosphere
+                        Atmosphere 1
                     </div>
                     <div class="card-body p-1">
                         <div class="row temp-spacing">
                             <div class="col-8">
                                 Temperature (&#8457):
                             </div>
-                            <div class="col-4 text-right" id='roomTemperature'>
-                                {{ senseData.roomTemperature }}
+                            <div class="col-4 text-right" id='roomTemperature1'>
+                                {{ senseData1.roomTemperature }}
                             </div>
                         </div>
                         <div class="row temp-spacing">
                             <div class="col-8">
                                 Air Pressure (millibars):
                             </div>
-                            <div class="col-4 text-right" id='airPressure'>
-                                {{ senseData.airPressure }}
+                            <div class="col-4 text-right" id='airPressure1'>
+                                {{ senseData1.airPressure }}
 
                             </div>
                         </div>
@@ -78,8 +78,45 @@
                             <div class="col-8">
                                 Air Humidity (%):
                             </div>
-                            <div class="col-4 text-right" id='airHumidity'>
-                                {{ senseData.airHumidity }}
+                            <div class="col-4 text-right" id='airHumidity1'>
+                                {{ senseData1.airHumidity }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="row justify-content-center mb-1" id="sense2">
+                
+                <div class="card w-100">
+                    <div class="card-header p-0 text-center">
+                        Atmosphere 2
+                    </div>
+                    <div class="card-body p-1">
+                        <div class="row temp-spacing">
+                            <div class="col-8">
+                                Temperature (&#8457):
+                            </div>
+                            <div class="col-4 text-right" id='roomTemperature2'>
+                                {{ senseData2.roomTemperature }}
+                            </div>
+                        </div>
+                        <div class="row temp-spacing">
+                            <div class="col-8">
+                                Air Pressure (millibars):
+                            </div>
+                            <div class="col-4 text-right" id='airPressure2'>
+                                {{ senseData2.airPressure }}
+
+                            </div>
+                        </div>
+                        <div class="row temp-spacing">
+                            <div class="col-8">
+                                Air Humidity (%):
+                            </div>
+                            <div class="col-4 text-right" id='airHumidity2'>
+                                {{ senseData2.airHumidity }}
                             </div>
                         </div>
                     </div>
@@ -158,6 +195,12 @@
                                 <div class="custom-control custom-switch">
                                     <input type="checkbox" class="custom-control-input" id="senseSwitch1">
                                     <label class="custom-control-label" for="senseSwitch1">Sense 1</label>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="senseSwitch2">
+                                    <label class="custom-control-label" for="senseSwitch2">Sense 2</label>
                                 </div>
                             </div>
                         </div>
