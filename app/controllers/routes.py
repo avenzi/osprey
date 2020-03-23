@@ -40,7 +40,7 @@ triggerSettingsFormData = TriggerSettingsFormData()
 
 # Only .py files are allowed to be uploaded
 ALLOWED_EXTENSIONS = set(['py'])
-# Algorithms that are currently running
+# Algorithms that are currently running for each user
 runningAlgorithms = {}
 
 LOG = logging.getLogger(__name__)
@@ -522,6 +522,16 @@ def downloadBoilerplate():
 @app.route("/algorithm_upload", methods=['GET', 'POST'])
 def algorithm_upload():
     files = []
+    username = session.get('username')
+
+    # Creating a username in runningAlgorithms if it does not exist
+    if username not in runningAlgorithms:
+        runningAlgorithms[username] = {}
+
+    # Creating an uploads folder for a user if one does not already exist
+    if not os.path.exists(os.path.join(app.config['UPLOADS_FOLDER'], username)):
+        os.makedirs(os.path.join(app.config['UPLOADS_FOLDER'], username))
+
     if request.method == 'POST':
         # Checking that the post request has the file part
         if 'file' not in request.files:
@@ -536,23 +546,23 @@ def algorithm_upload():
         # Ensuring that the file name has an extension that is allowed
         if file and ('.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS):
             filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOADS_FOLDER'], filename))
+            file.save(os.path.join(app.config['UPLOADS_FOLDER'], username, filename))
             # Getting a list of all files in the uploads directory
-            with os.scandir(app.config['UPLOADS_FOLDER']) as entries:
+            with os.scandir(os.path.join(app.config['UPLOADS_FOLDER'], username)) as entries:
                 for entry in entries:
                     if entry.is_file():
                         files.append(entry.name)
-            return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms)
+            return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms[username])
 
         return jsonify({'result' : 'File Extension Not Allowed'})
 
     elif request.method == 'GET':
         # Getting a list of all files in the uploads directory
-        with os.scandir(app.config['UPLOADS_FOLDER']) as entries:
+        with os.scandir(os.path.join(app.config['UPLOADS_FOLDER'], username)) as entries:
             for entry in entries:
                 if entry.is_file():
                     files.append(entry.name)
-        return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms)
+        return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms[username])
 
 
 """route is used to handle uploaded algorithms"""
@@ -561,60 +571,68 @@ def algorithm_handler():
     files = []
     filename = request.form['filename'] + ".py"
     buttonPressed = request.form['button']
+    username = session.get('username')
+
+    # Creating a username in runningAlgorithms if it does not exist
+    if username not in runningAlgorithms:
+        runningAlgorithms[username] = {}
 
     if buttonPressed == "select":
-        if filename not in runningAlgorithms:
+        if filename not in runningAlgorithms[username]:
             # Get the id of the user that is logged in
             database_cursor = mysql.connection.cursor()
             database_cursor.execute("SELECT id FROM user WHERE username = "+"'"+session.get('username')+"'")
             user_id = database_cursor.fetchone()[0]
 
-            #  Pass the id of the user into the thread
-            program_thread = Program(Queue(), args=(True, filename, user_id))
+            #  Pass the filename, id, and username of the user into the thread
+            program_thread = Program(Queue(), args=(True, filename, user_id, username))
 
             program_thread.start()
-            runningAlgorithms[filename] = [program_thread]
+            runningAlgorithms[username][filename] = program_thread
             print("Algorithms running: " + str(runningAlgorithms))
 
             # Getting a list of all files in the uploads directory
-            with os.scandir(app.config['UPLOADS_FOLDER']) as entries:
+            with os.scandir(os.path.join(app.config['UPLOADS_FOLDER'], username)) as entries:
                 for entry in entries:
                     if entry.is_file():
                         files.append(entry.name)
-            return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms)
+            return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms[username])
 
-        elif filename in runningAlgorithms:
+        elif filename in runningAlgorithms[username]:
             # Exiting the thread
-            runningAlgorithms[filename][0].stop()
+            runningAlgorithms[username][filename].stop()
             
             # Deleting thread from runningAlgorithms
             # FOR DEBUGGING: Comment this line out to see if the thread truly stopped
-            del runningAlgorithms[filename]
+            del runningAlgorithms[username][filename]
 
             print("Algotithms running: " + str(runningAlgorithms))
 
             # Getting a list of all files in the uploads directory
-            with os.scandir(app.config['UPLOADS_FOLDER']) as entries:
+            with os.scandir(os.path.join(app.config['UPLOADS_FOLDER'], username)) as entries:
                 for entry in entries:
                     if entry.is_file():
                         files.append(entry.name)
-            return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms)
+            return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms[username])
 
     elif buttonPressed == "view":
-        return render_template('snippets/uploads_view_snippet.html')
+        f = open(os.path.join(app.config['UPLOADS_FOLDER'], username, filename), "r")
+        content = f.read()
+        f.close()
+        return render_template('snippets/uploads_view_snippet.html', content = content, filename = filename)
 
     elif buttonPressed == "delete":
         # If a file is deleted, delete from running algorithms as well
-        if filename in runningAlgorithms:
-            del runningAlgorithms[filename]
+        if filename in runningAlgorithms[username]:
+            del runningAlgorithms[username][filename]
 
-        with os.scandir(app.config['UPLOADS_FOLDER']) as entries:
+        with os.scandir(os.path.join(app.config['UPLOADS_FOLDER'], username)) as entries:
             for entry in entries:
                 if entry.is_file() and (entry.name == filename):
-                    os.remove(os.path.join(app.config['UPLOADS_FOLDER'], filename))
+                    os.remove(os.path.join(app.config['UPLOADS_FOLDER'], username, filename))
                 else:
                     files.append(entry.name)  
 
-        return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms)
+        return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms[username])
 
     return jsonify({'result' : 'Button Not Handled'})
