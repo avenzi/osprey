@@ -4,6 +4,8 @@
 
 {% block app_content %}
 
+    
+
     <div class="row justify-content-center">
         <div class="col-2 mt-1 bg-white border border-dark rounded">
             Elapsed Time: 01:32:17
@@ -16,20 +18,11 @@
             
             <div class="row">
 
-                <div class="card w-100">
+                <div class="card w-100" id="videoDiv">
                     <div class="card-header p-0 text-center">
                         Video
                     </div>
                     <!--src="{{ url_for('video_feed') }}"-->
-                    <div class="embed-responsive embed-responsive-16by9" id="stream1">
-                        <iframe class="embed-responsive-item" src="http://35.9.42.212:8000/stream.mjpg" allowfullscreen></iframe>
-                    </div>
-                    <div class="embed-responsive embed-responsive-16by9" id="stream2">
-                        <iframe class="embed-responsive-item" src="http://35.9.42.245:8000/stream.mjpg" allowfullscreen></iframe>
-                    </div>
-                    <div class="embed-responsive embed-responsive-16by9" id="stream3">
-                        <iframe class="embed-responsive-item" src="http://35.9.42.110:8000/stream.mjpg" allowfullscreen></iframe>
-                    </div>
                 </div>
 
             </div>
@@ -126,7 +119,7 @@
 
             <div class="row mt-1">
 
-                <div class="card w-100">
+                <div class="card w-100" id="audioDiv">
                     <div class="card-header p-0 text-center">
                         Audio
                     </div>
@@ -159,50 +152,11 @@
                         Sensor Controls
                     </div>
                     <div class="card-body p-1">
-                        <div class="row">
-			<div class="col">
-                            <div class="radio">
-				<label>
-					<input type="radio" name="video" id="video1" autocomplete="off" checked> Video 1
-  				</label>
-			    </div>
-			</div>
-			<div class="col">
-                            <div class="radio">
-  				<label>
-					<input type="radio" name="video" id="video2" autocomplete="off"> Video 2
-  				</label>
-                            </div>
-			</div>
-			<div class="col">
-                            <div class="radio">
-  				<label>
-					<input type="radio" name="video" id="video3" autocomplete="off"> Video 3
-  				</label>
-                            </div>
-			</div>
+                        <div class="row" id="videoRow">
                         </div>
-                        <div class="row">
-                            <div class="col">
-                                <div class="custom-control custom-switch">
-                                    <input type="checkbox" class="custom-control-input" id="audioSwitch1">
-                                    <label class="custom-control-label" for="audioSwitch1">Audio 1</label>
-                                </div>
-                            </div>
+                        <div class="row" id="audioRow">
                         </div>
-                        <div class="row">
-                            <div class="col">
-                                <div class="custom-control custom-switch">
-                                    <input type="checkbox" class="custom-control-input" id="senseSwitch1">
-                                    <label class="custom-control-label" for="senseSwitch1">Sense 1</label>
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="custom-control custom-switch">
-                                    <input type="checkbox" class="custom-control-input" id="senseSwitch2">
-                                    <label class="custom-control-label" for="senseSwitch2">Sense 2</label>
-                                </div>
-                            </div>
+                        <div class="row" id="senseRow">
                         </div>
                     </div>
                 </div>
@@ -321,5 +275,47 @@
         </div> 
 
     </div>
+
+    <div id="dialog" title="Specify Sensors">
+        <form id="sensorForm">
+            <ul id="cameraList" class="list-group">
+                <li>
+                    <label for="camera1">Camera 1 IP: </label><input name="camera1" id="camera1">
+                </li>
+            </ul>
+            <br>
+            <button id="addCam" class="btn btn-light">Add Camera</button>
+            <br>
+            <button id="deleteCam" class="btn btn-lignt">Delete Camera</button>
+            <br>
+            <hr>
+            <br>
+            <ul id="senseList" class="list-group">
+                <li>
+                    <label for="sense1">Sense 1</label>
+                </li>
+            </ul>
+            <button id="addSense" class="btn btn-light">Add Sense HAT</button>
+            <br>
+            <button id="deleteSense" class="btn btn-lignt">Delete Sense HAT</button>
+            <br>
+            <hr>
+            <br>
+            <ul id="audioList" class="list-group">
+                <li>
+                    <label for="audio1">Audio 1</label>
+                </li>
+            </ul>
+            <button id="addAudio" class="btn btn-light">Add Audio</button>
+            <br>
+            <button id="deleteAudio" class="btn btn-lignt">Delete Audio</button>
+            <br>
+            <br>
+            <input type="submit" id="dialogSubmit" class="btn btn-primary">
+
+        </form>
+    </div>
+
+    <script src="../static/JS/live.js"></script>
 
 {% endblock %}
