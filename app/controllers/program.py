@@ -36,7 +36,7 @@ class Program(threading.Thread):
 
         while self.is_running:
             time.sleep(0.075)
-            print("Process Running...")
+            # print("Process Running...")
             if process.poll() is not None:
                 print("Process Ended, Exiting Loop...")
 

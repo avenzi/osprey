@@ -42,6 +42,8 @@ triggerSettingsFormData = TriggerSettingsFormData()
 ALLOWED_EXTENSIONS = set(['py'])
 # Algorithms that are currently running for each user
 runningAlgorithms = {}
+# Dictionary of the latest ids associated to data types per username
+eventLogEntryIds = {}
 
 LOG = logging.getLogger(__name__)
 global loginStatus
@@ -72,6 +74,10 @@ def login():
             session['username'] = form.username.data
             global loginStatus
             loginStatus = True
+
+            # Storing the id of the user that is logging in in the session
+            database_cursor.execute("SELECT id FROM user WHERE username = "+"'"+session.get('username')+"'")
+            session['user_id'] = database_cursor.fetchone()[0]
 
             # Creating the eventlog table if not already created. The eventlog table keeps track of all trigger events
             database_cursor.execute('''CREATE TABLE IF NOT EXISTS eventlog (id INTEGER UNSIGNED AUTO_INCREMENT, user_id INTEGER UNSIGNED, 
@@ -325,6 +331,74 @@ def update_triggersettings():
     return jsonify({'result' : 'success', 'audio_input' : triggerSettingsFormData.audio, 'temperature_input' : triggerSettingsFormData.temperature})
 
 
+@app.route('/update_eventlog', methods=['POST'])
+def update_eventlog():
+
+    # Instantiating an object that can execute SQL statements
+    database_cursor = mysql.connection.cursor()
+
+    # The username of the logged in user
+    username = session.get('username')
+    # The id of the logged in user
+    user_id = session.get('user_id')
+
+    # Indicates whether a trigger watch button is checked or not
+    status = request.form['status']
+    # Indicates whether a trigger watch button was just initially checked or has been checked
+    initial = request.form['initial']
+    # Indicates the data type associated with the trigger watch button
+    data_type = request.form['data_type']
+
+
+    if status == 'ON':
+    
+        # Trigger watch button was just initially checked
+        if initial == 'YES':
+
+            # eventLogEntryIds is a global dictionary of the latest ids associated to data types per username
+            if username not in eventLogEntryIds:
+    
+                # Check to see if the user has any previous entries in the eventlog table for the specified data type
+                database_cursor.execute("SELECT max(id) FROM eventlog WHERE user_id = '%s' AND alert_type = '%s';" % (user_id, data_type))
+                entryId = database_cursor.fetchone()
+
+                #  If there is an previous entry in the eventlog table
+                if len(entryId) != 0:
+                    eventLogEntryIds[username] = {data_type : entryId[0]}
+
+                # If there are no previous entries in the eventlog table
+                else:
+                    eventLogEntryIds[username] = {data_type : 0}
+
+            else:
+                # If the user has previous entries in the eventlog table for the specified data type, set the latest eventlog entry id for that datatype
+                database_cursor.execute("SELECT max(id) FROM eventlog WHERE user_id = '%s' AND alert_type = '%s';" % (user_id, data_type))
+                entryId = database_cursor.fetchone()[0]
+                eventLogEntryIds[username][data_type] = entryId
+
+        # Trigger watch button has already been checked initially
+        else:
+            # Fetching the newest alert data
+            database_cursor.execute("SELECT id, alert_time, alert_type, alert_message FROM eventlog WHERE user_id = '{}' AND alert_type = '{}' AND id > '{}';".format(user_id, data_type, eventLogEntryIds[username][data_type]))
+            entrysToAdd = database_cursor.fetchall()
+
+            alerts = []
+
+            # Create a list of messages to ship off
+            for entry in entrysToAdd:
+                alert = entry[2] + " Trigger: " + entry[3] + " @ " + str(entry[1])
+                alerts.append(alert)
+
+            # Set the latest eventlog entry id for the specified data type
+            database_cursor.execute("SELECT max(id) FROM eventlog WHERE user_id = '%s' AND alert_type = '%s';" % (user_id, data_type))
+            entryId = database_cursor.fetchone()[0]
+            eventLogEntryIds[username][data_type] = entryId
+
+            return render_template('snippets/eventlog_snippet.html', messages = alerts)
+
+    return jsonify({'result' : 'success'})
+
+
 """route is used to update the event log with temperature data"""
 @app.route('/update_eventlog_temperature', methods=['GET', 'POST'])
 def update_eventlog_temperature():
@@ -340,7 +414,6 @@ def update_eventlog_temperature():
     return render_template('snippets/eventlog_snippet.html', messages = alerts)
 
 
-
 """update event log with pressure data"""
 @app.route('/update_eventlog_pressure', methods=['GET', 'POST'])
 def update_eventlog_pressure():
@@ -353,7 +426,6 @@ def update_eventlog_pressure():
             alerts.append("Air Pressure Trigger: Air pressure exceeded " + triggerSettingsFormData.pressure + " millibars @ " + senseData.date)
 
     return render_template('snippets/eventlog_snippet.html', messages = alerts)
-
 
 
 """update even log with humidity data"""
@@ -569,9 +641,11 @@ def algorithm_upload():
 @app.route('/algorithm_handler', methods=['POST'])
 def algorithm_handler():
     files = []
+    database_cursor = mysql.connection.cursor()
     filename = request.form['filename'] + ".py"
     buttonPressed = request.form['button']
     username = session.get('username')
+    user_id = session.get('user_id')
 
     # Creating a username in runningAlgorithms if it does not exist
     if username not in runningAlgorithms:
@@ -579,11 +653,6 @@ def algorithm_handler():
 
     if buttonPressed == "select":
         if filename not in runningAlgorithms[username]:
-            # Get the id of the user that is logged in
-            database_cursor = mysql.connection.cursor()
-            database_cursor.execute("SELECT id FROM user WHERE username = "+"'"+session.get('username')+"'")
-            user_id = database_cursor.fetchone()[0]
-
             #  Pass the filename, id, and username of the user into the thread
             program_thread = Program(Queue(), args=(True, filename, user_id, username))
 
