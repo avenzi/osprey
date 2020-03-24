@@ -1,6 +1,6 @@
 $(document).ready(function () {
     // Default to 1 of each sensor type
-    var cameraNumber = 1;
+    var cameraNumber = 0;
     var senseNumber = 1;
     var audioNumber = 1;
 
@@ -8,6 +8,8 @@ $(document).ready(function () {
     var maxCam = 3;
     var maxSense = 2;
     var maxAudio = 1;
+
+    var cameraIPS = ["35.9.42.110", "35.9.42.212", "35.9.42.245"];
 
     // Hide sensors on page load
    $("#sense2").hide();
@@ -117,9 +119,8 @@ $(document).ready(function () {
         // Maximum cameras
         if (cameraNumber < maxCam) {
             cameraNumber++;
-            $("#cameraList").append('<li><label for="camera'.concat(cameraNumber,
-            '">Camera ', cameraNumber, ' IP: </label><input name="camera', cameraNumber, 
-            '" id="camera', cameraNumber, '">'));
+            $("#cameraList").append(`<li><label for="camera${cameraNumber}">Camera ${cameraNumber} IP: </label>
+            <input name="camera${cameraNumber}" id="camera${cameraNumber}" value="${cameraIPS[cameraNumber-1]}">`);
         }
     });
 
