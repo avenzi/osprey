@@ -17,35 +17,36 @@ from app.controllers.video import *
 from werkzeug.utils import secure_filename
 from app.controllers.program import Program
 from app.controllers.forms import LoginForm, TriggerSettingsForm, RegistrationForm
-from app.controllers.data import Temperature, Audio, EventLog, TriggerSettingsFormData
+from app.controllers.data import Sense, Audio, EventLog
 from flask import render_template, flash, redirect, url_for, Response, session, jsonify, request, send_file, send_from_directory
 
 # BUFF_SIZE is the size of the number of bytes in each mp4 video chunk response
 MB = 1 << 20
 # Send 1 MB at a time
 BUFF_SIZE = 1 * MB
-# Seed used to for random number generation
+# Seed used for random number generation
 seed(1)
 # global_start 
 bytes_so_far = 0
 
 # Data structure for handling audio data
 audioData = Audio()
-# Data structure for handling temperature data
-temperatureData = Temperature()
+# Data structures for handling temperature data from two sense HATs
+senseData1 = Sense()
+senseData2 = Sense()
 # Data structure for handling event log data
 eventLogData = EventLog()
-# Data structure for handling trigger settings form data
-triggerSettingsFormData = TriggerSettingsFormData()
 
 # Only .py files are allowed to be uploaded
 ALLOWED_EXTENSIONS = set(['py'])
-# Algorithms that are currently running
+# Algorithms that are currently running for each user
 runningAlgorithms = {}
+# Dictionary of the latest ids associated to data types per username
+eventLogEntryIds = {}
 
 LOG = logging.getLogger(__name__)
 global loginStatus
-loginStatus = False
+loginStatus = True # avoid login for DECS
 
 
 @app.route('/', methods = ['GET','POST'])
@@ -74,6 +75,16 @@ def login():
             # TODO: per-user data needs to be stored in the database or the session object. cant use globals...
             global loginStatus
             loginStatus = True
+
+            # Storing the id of the user that is logging in in the session
+            database_cursor.execute("SELECT id FROM user WHERE username = "+"'"+session.get('username')+"'")
+            session['user_id'] = database_cursor.fetchone()[0]
+
+            # Creating session variables for the scalar trigger settings
+            session['triggerSettings_audio'] = '' 
+            session['triggerSettings_temperature'] = '' 
+            session['triggerSettings_pressure'] = '' 
+            session['triggerSettings_humidity'] = '' 
 
             # Creating the eventlog table if not already created. The eventlog table keeps track of all trigger events
             database_cursor.execute('''CREATE TABLE IF NOT EXISTS eventlog (id INTEGER UNSIGNED AUTO_INCREMENT, user_id INTEGER UNSIGNED, 
@@ -133,7 +144,7 @@ def livefeed():
     if loginStatus != True:
         return redirect(url_for('login'))
 
-    return render_template('livefeed.html', temperatureData = temperatureData, audioData = audioData)
+    return render_template('livefeed.html', senseData1 = senseData1, senseData2 = senseData2, audioData = audioData)
 
 
 
@@ -227,112 +238,266 @@ def write_token(token_value):
     mysql.connection.commit()
 
 
-"""route is used to update temperature values in the live stream page"""
-@app.route('/update_sense', methods=['GET', 'POST'])
-def update_sense():
-    # Set up Sense table connection
-    database_cursor = mysql.connection.cursor()
 
-    # get current SENSE Hat data from DB
-    database_cursor.execute("""SELECT Temp, Press, Humid FROM Sense ORDER BY Time DESC LIMIT 1;""")
-    db_result = database_cursor.fetchall()
-    temp, press, humid = db_result[0]
+
+"""route is used to update Sense HAT values for the first Sense HAT in the live stream page"""
+@app.route('/update_sense1', methods=['GET', 'POST'])
+def update_sense1():
+
+    # Indicates whether sense1 switch has been turned on or not
+    status = request.form['status']
+
+    # The scalar trigger settings for temperature, pressure, and humidity
+    triggerSettings_temperature = session.get('triggerSettings_temperature')
+    triggerSettings_pressure = session.get('triggerSettings_pressure')
+    triggerSettings_humidity = session.get('triggerSettings_humidity')
+
+    # The id of the logged in user
+    user_id = session.get('user_id')
+
+    # Setting IP if not set
+    if session.get('senseData1IP') is None:
+        session['senseData1IP'] = 0
+
+    if session.get('senseData2IP') is None:
+        session['senseData2IP'] = 0
+
+    # The initial measurements until set
+    roomTemperature = 0
+    airPressure = 0
+    airHumidity = 0
+
+
+    try:
+        # Instantiating an object that can execute SQL statements
+        database_cursor = mysql.connection.cursor()
+
+        # Get current Sense HAT data from DB
+        database_cursor.execute("SELECT INET_NTOA(IP), Temp, Press, Humid FROM Sense WHERE IP <> INET_ATON('%s') ORDER BY Time DESC;" % session.get('senseData2IP'))
+        ip, temp, press, humid = database_cursor.fetchone()
+
+        # SQL command filters out senseData2's ip so no need to check for it
+        if session.get('senseData1IP') == 0:
+            session['senseData1IP'] = ip
+        
+        # Convert to JQueryable objects
+        roomTemperature = "{:.2f}".format(temp)
+        airPressure = "{:.2f}".format(press)
+        airHumidity = "{:.2f}".format(humid)
+
+        if (triggerSettings_temperature != '') and (float(roomTemperature) > float(triggerSettings_temperature)):
+            # Write temperature data to database
+            database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Temperature", 
+                "Temperature exceeded " + triggerSettings_temperature + " F"))
+            mysql.connection.commit()
+
+        if (triggerSettings_pressure != '') and (float(airPressure) > float(triggerSettings_pressure)):
+            # Write pressure data to database
+            database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Pressure", 
+                "Pressure exceeded " + triggerSettings_pressure + " millibars"))
+            mysql.connection.commit()
+
+        if (triggerSettings_humidity != '') and (float(airHumidity) > float(triggerSettings_humidity)):
+            # Write humidity data to database
+            database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Humidity", 
+                "Humidity exceeded " + triggerSettings_humidity + " %"))
+            mysql.connection.commit()
     
-    # Convert to JQureyable objects
-    temperatureData.roomTemperature = "{:.2f}".format(temp)
-    temperatureData.airPressure = "{:.2f}".format(press)
-    temperatureData.airHumidity = "{:.2f}".format(humid)
+    # Don't fail out of website on Sense HAT error
+    except Exception as e:
+        print("Sense HAT 1 broken:", e)
+        pass
 
-    temperatureData.status = request.form['status']
-    temperatureData.date = request.form['date']
+    return jsonify({'result' : 'success', 'status' : status, 'roomTemperature' : roomTemperature,
+        'airPressure': airPressure, 'airHumidity': airHumidity, 'ip' : session.get('senseData1IP')})
 
-    return jsonify({'result' : 'success', 'status' : temperatureData.status, 'date' : temperatureData.date, 'roomTemperature' : temperatureData.roomTemperature,
-    'airPressure': temperatureData.airPressure, 'airHumidity': temperatureData.airHumidity})
+
+"""route is used to update Sense HAT values for the second Sense HAT in the live stream page"""
+@app.route('/update_sense2', methods=['GET', 'POST'])
+def update_sense2():
+
+    # Indicates whether sense2 switch has been turned on or not
+    status = request.form['status']
+
+    # The scalar trigger settings for temperature, pressure, and humidity
+    triggerSettings_temperature = session.get('triggerSettings_temperature')
+    triggerSettings_pressure = session.get('triggerSettings_pressure')
+    triggerSettings_humidity = session.get('triggerSettings_humidity')
+
+    # The id of the logged in user
+    user_id = session.get('user_id')
+
+    # Setting IP if not set
+    if session.get('senseData2IP') is None:
+        session['senseData2IP'] = 0
+
+    if session.get('senseData1IP') is None:
+        session['senseData1IP'] = 0
+
+    # The initial measurements until set
+    roomTemperature = 0
+    airPressure = 0
+    airHumidity = 0
+
+
+    try:
+        # Instantiating an object that can execute SQL statements
+        database_cursor = mysql.connection.cursor()
+
+        # Get current Sense HAT data from DB
+        database_cursor.execute("SELECT INET_NTOA(IP), Temp, Press, Humid, Time FROM Sense WHERE IP <> INET_ATON('%s') ORDER BY Time DESC;" % session.get('senseData1IP'))
+        ip, temp, press, humid, time = database_cursor.fetchone()
+
+        # SQL command filters out senseData1's ip so no need to check for it
+        if session.get('senseData2IP') == 0:
+            session['senseData2IP'] = ip
+
+        # Convert to JQueryable objects
+        roomTemperature = "{:.2f}".format(temp)
+        airPressure = "{:.2f}".format(press)
+        airHumidity = "{:.2f}".format(humid)
+
+        if (triggerSettings_temperature != '') and (float(roomTemperature) > float(triggerSettings_temperature)):
+            # Write temperature data to database
+            database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Temperature", 
+                "Temperature exceeded " + triggerSettings_temperature + " F"))
+            mysql.connection.commit()
+
+        if (triggerSettings_pressure != '') and (float(airPressure) > float(triggerSettings_pressure)):
+            # Write pressure data to database
+            database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Pressure", 
+                "Pressure exceeded " + triggerSettings_pressure + " millibars"))
+            mysql.connection.commit()
+
+        if (triggerSettings_humidity != '') and (float(airHumidity) > float(triggerSettings_humidity)):
+            # Write humidity data to database
+            database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Humidity", 
+                "Humidity exceeded " + triggerSettings_humidity + " %"))
+            mysql.connection.commit()
+    
+    # Don't fail out of website on Sense HAT error
+    except Exception as e:
+        print("Sense HAT 2 broken:", e)
+        pass
+
+    return jsonify({'result' : 'success', 'status' : status, 'roomTemperature' : roomTemperature,
+    'airPressure': airPressure, 'airHumidity': airHumidity, 'ip': session.get('senseData2IP')})
 
 
 """route is used to update audio values in the live stream page"""
 @app.route('/update_audio', methods=['GET', 'POST'])
 def update_audio():
+
+    # Instantiating an object that can execute SQL statements
+    database_cursor = mysql.connection.cursor()
+
+    # The scalar trigger setting for audio
+    triggerSettings_audio = session.get('triggerSettings_audio')
+    # The id of the logged in user
+    user_id = session.get('user_id')
+
+    # Indicates whether audio has been turned on or not
+    status = request.form['status']
+
+    # The initial decibel level until set
+    decibels = 0
+
+    
     for _ in range(10):
         value = randint(0, 5)
-        audioData.decibels = "6" + str(value)
+        decibels = "6" + str(value)
 
-    audioData.status = request.form['status']
-    audioData.date = request.form['date']
+    if (triggerSettings_audio != '') and (int(decibels) > int(triggerSettings_audio)):
+        # Write audio data to database
+        database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Audio", 
+            "Audio exceeded " + triggerSettings_audio + " dB"))
+        mysql.connection.commit()
 
-    return jsonify({'result' : 'success', 'status' : audioData.status, 'date' : audioData.date, 'decibels' : audioData.decibels})
+    return jsonify({'result' : 'success', 'status' : status, 'decibels' : decibels})
 
 
 """route is used to collect trigger settings from the live stream page"""
 @app.route('/update_triggersettings', methods=['POST'])
 def update_triggersettings():
-    triggerSettingsFormData.audio = request.form['audio_input']
-    triggerSettingsFormData.temperature = request.form['temperature_input']
-    triggerSettingsFormData.pressure = request.form['pressure_input']
-    triggerSettingsFormData.humidity = request.form['humidity_input']
+    # Updating trigger settings in the session
+    session['triggerSettings_audio'] = request.form['audio_input']
+    session['triggerSettings_temperature'] = request.form['temperature_input']
+    session['triggerSettings_pressure'] = request.form['pressure_input']
+    session['triggerSettings_humidity'] = request.form['humidity_input']
 
-    return jsonify({'result' : 'success', 'audio_input' : triggerSettingsFormData.audio, 'temperature_input' : triggerSettingsFormData.temperature})
-
-
-"""route is used to update the event log with temperature data"""
-@app.route('/update_eventlog_temperature', methods=['GET', 'POST'])
-def update_eventlog_temperature():
-    alerts = []
-
-    eventLogData.temperatureStatus = request.form['status']
-
-    if (eventLogData.temperatureStatus == 'ON' and temperatureData.status == 'ON'):
-        #print('ALL TEMPERATURE ON')
-        if (temperatureData.roomTemperature > triggerSettingsFormData.temperature):
-            alerts.append("Temperature Trigger: Room temperature exceeded " + triggerSettingsFormData.temperature + " ℉ @ " + temperatureData.date)
-
-    return render_template('snippets/eventlog_snippet.html', messages = alerts)
+    return jsonify({'result' : 'success', 'audio_input' : session.get('triggerSettings_audio'), 'temperature_input' : session.get('triggerSettings_temperature'), 
+        'pressure_input' : session.get('triggerSettings_pressure'), 'humidity_input' : session.get('triggerSettings_humidity')})
 
 
+"""route is used to update the event log for all data types"""
+@app.route('/update_eventlog', methods=['POST'])
+def update_eventlog():
 
-"""update event log with pressure data"""
-@app.route('/update_eventlog_pressure', methods=['GET', 'POST'])
-def update_eventlog_pressure():
-    alerts = []
+    # Instantiating an object that can execute SQL statements
+    database_cursor = mysql.connection.cursor()
 
-    eventLogData.pressureStatus = request.form['status']
+    # The username of the logged in user
+    username = session.get('username')
+    # The id of the logged in user
+    user_id = session.get('user_id')
 
-    if (eventLogData.pressureStatus == 'ON'):
-        if (temperatureData.airPressure > triggerSettingsFormData.pressure):
-            alerts.append("Air Pressure Trigger: Air pressure exceeded " + triggerSettingsFormData.pressure + " millibars @ " + temperatureData.date)
+    # Indicates whether a trigger watch button is checked or not
+    status = request.form['status']
+    # Indicates whether a trigger watch button was just initially checked or has been checked
+    initial = request.form['initial']
+    # Indicates the data type associated with the trigger watch button
+    data_type = request.form['data_type']
 
-    return render_template('snippets/eventlog_snippet.html', messages = alerts)
 
-
-
-"""update even log with humidity data"""
-@app.route('/update_eventlog_humidity', methods=['GET', 'POST'])
-def update_eventlog_humidity():
-    alerts = []
+    if status == 'ON':
     
-    eventLogData.humidityStatus = request.form['status']
+        # Trigger watch button was just initially checked
+        if initial == 'YES':
 
-    if (eventLogData.humidityStatus == 'ON'):
-        if (temperatureData.airHumidity > triggerSettingsFormData.humidity):
-            alerts.append("Air Humidity Trigger: Air humidity exceeded " + triggerSettingsFormData.humidity + " % @ " + temperatureData.date)
+            # eventLogEntryIds is a global dictionary of the latest ids associated to data types per username
+            if username not in eventLogEntryIds:
+    
+                # Check to see if the user has any previous entries in the eventlog table for the specified data type
+                database_cursor.execute("SELECT max(id) FROM eventlog WHERE user_id = '%s' AND alert_type = '%s';" % (user_id, data_type))
+                entryId = database_cursor.fetchone()
 
-    return render_template('snippets/eventlog_snippet.html', messages = alerts)
+                #  If there is an previous entry in the eventlog table
+                if len(entryId) != 0:
+                    eventLogEntryIds[username] = {data_type : entryId[0]}
+
+                # If there are no previous entries in the eventlog table
+                else:
+                    eventLogEntryIds[username] = {data_type : 0}
+
+            else:
+                # If the user has previous entries in the eventlog table for the specified data type, set the latest eventlog entry id for that datatype
+                database_cursor.execute("SELECT max(id) FROM eventlog WHERE user_id = '%s' AND alert_type = '%s';" % (user_id, data_type))
+                entryId = database_cursor.fetchone()[0]
+                eventLogEntryIds[username][data_type] = entryId
+
+        # Trigger watch button has already been checked initially
+        else:
+            # Fetching the newest alert data
+            database_cursor.execute("SELECT id, alert_time, alert_type, alert_message FROM eventlog WHERE user_id = '{}' AND alert_type = '{}' AND id > '{}';".format(user_id, data_type, eventLogEntryIds[username][data_type]))
+            entrysToAdd = database_cursor.fetchall()
+
+            alerts = []
+
+            # Create a list of messages to ship off
+            for entry in entrysToAdd:
+                alert = entry[2] + " Trigger: " + entry[3] + " @ " + str(entry[1])
+                alerts.append(alert)
+
+            # Set the latest eventlog entry id for the specified data type
+            database_cursor.execute("SELECT max(id) FROM eventlog WHERE user_id = '%s' AND alert_type = '%s';" % (user_id, data_type))
+            entryId = database_cursor.fetchone()[0]
+            eventLogEntryIds[username][data_type] = entryId
+
+            return render_template('snippets/eventlog_snippet.html', messages = alerts)
+
+    return jsonify({'result' : 'success'})
 
 
-"""route is used to update the event log with audio data"""
-@app.route('/update_eventlog_audio', methods=['GET', 'POST'])
-def update_eventlog_audio():
-    alerts = []
-
-    eventLogData.audioStatus = request.form['status']
-
-    if (eventLogData.audioStatus == 'ON' and audioData.status == 'ON'):
-        #print('ALL AUDIO ON')
-        if (audioData.decibels > triggerSettingsFormData.audio):
-            alerts.append("Audio Trigger: Audio exceeded " + triggerSettingsFormData.audio + " dB @ " + audioData.date)
-
-    return render_template('snippets/eventlog_snippet.html', messages = alerts)
-    #return render_template('section.html', messages = alerts)
 
 
 @app.route('/test', methods=['GET'])
@@ -486,6 +651,16 @@ def downloadBoilerplate():
 @app.route("/algorithm_upload", methods=['GET', 'POST'])
 def algorithm_upload():
     files = []
+    username = session.get('username')
+
+    # Creating a username in runningAlgorithms if it does not exist
+    if username not in runningAlgorithms:
+        runningAlgorithms[username] = {}
+
+    # Creating an uploads folder for a user if one does not already exist
+    if not os.path.exists(os.path.join(app.config['UPLOADS_FOLDER'], username)):
+        os.makedirs(os.path.join(app.config['UPLOADS_FOLDER'], username))
+
     if request.method == 'POST':
         # Checking that the post request has the file part
         if 'file' not in request.files:
@@ -500,85 +675,90 @@ def algorithm_upload():
         # Ensuring that the file name has an extension that is allowed
         if file and ('.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS):
             filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOADS_FOLDER'], filename))
+            file.save(os.path.join(app.config['UPLOADS_FOLDER'], username, filename))
             # Getting a list of all files in the uploads directory
-            with os.scandir(app.config['UPLOADS_FOLDER']) as entries:
+            with os.scandir(os.path.join(app.config['UPLOADS_FOLDER'], username)) as entries:
                 for entry in entries:
                     if entry.is_file():
                         files.append(entry.name)
-            return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms)
+            return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms[username])
 
         return jsonify({'result' : 'File Extension Not Allowed'})
 
     elif request.method == 'GET':
         # Getting a list of all files in the uploads directory
-        with os.scandir(app.config['UPLOADS_FOLDER']) as entries:
+        with os.scandir(os.path.join(app.config['UPLOADS_FOLDER'], username)) as entries:
             for entry in entries:
                 if entry.is_file():
                     files.append(entry.name)
-        return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms)
+        return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms[username])
 
 
 """route is used to handle uploaded algorithms"""
 @app.route('/algorithm_handler', methods=['POST'])
 def algorithm_handler():
     files = []
+    database_cursor = mysql.connection.cursor()
     filename = request.form['filename'] + ".py"
     buttonPressed = request.form['button']
+    username = session.get('username')
+    user_id = session.get('user_id')
+
+    # Creating a username in runningAlgorithms if it does not exist
+    if username not in runningAlgorithms:
+        runningAlgorithms[username] = {}
 
     if buttonPressed == "select":
-        if filename not in runningAlgorithms:
-            # Get the id of the user that is logged in
-            database_cursor = mysql.connection.cursor()
-            database_cursor.execute("SELECT id FROM user WHERE username = "+"'"+session.get('username')+"'")
-            user_id = database_cursor.fetchone()[0]
-
-            #  Pass the id of the user into the thread
-            program_thread = Program(Queue(), args=(True, filename, user_id))
+        if filename not in runningAlgorithms[username]:
+            #  Pass the filename, id, and username of the user into the thread
+            program_thread = Program(Queue(), args=(True, filename, user_id, username))
 
             program_thread.start()
-            runningAlgorithms[filename] = [program_thread]
+            runningAlgorithms[username][filename] = program_thread
             print("Algorithms running: " + str(runningAlgorithms))
 
             # Getting a list of all files in the uploads directory
-            with os.scandir(app.config['UPLOADS_FOLDER']) as entries:
+            with os.scandir(os.path.join(app.config['UPLOADS_FOLDER'], username)) as entries:
                 for entry in entries:
                     if entry.is_file():
                         files.append(entry.name)
-            return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms)
+            return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms[username])
 
-        elif filename in runningAlgorithms:
+        elif filename in runningAlgorithms[username]:
             # Exiting the thread
-            runningAlgorithms[filename][0].stop()
+            runningAlgorithms[username][filename].stop()
             
             # Deleting thread from runningAlgorithms
             # FOR DEBUGGING: Comment this line out to see if the thread truly stopped
-            del runningAlgorithms[filename]
+            del runningAlgorithms[username][filename]
 
             print("Algotithms running: " + str(runningAlgorithms))
 
             # Getting a list of all files in the uploads directory
-            with os.scandir(app.config['UPLOADS_FOLDER']) as entries:
+            with os.scandir(os.path.join(app.config['UPLOADS_FOLDER'], username)) as entries:
                 for entry in entries:
                     if entry.is_file():
                         files.append(entry.name)
-            return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms)
+            return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms[username])
 
     elif buttonPressed == "view":
-        return render_template('snippets/uploads_view_snippet.html')
+        f = open(os.path.join(app.config['UPLOADS_FOLDER'], username, filename), "r")
+        content = f.read()
+        f.close()
+        return render_template('snippets/uploads_view_snippet.html', content = content, filename = filename)
 
     elif buttonPressed == "delete":
         # If a file is deleted, delete from running algorithms as well
-        if filename in runningAlgorithms:
-            del runningAlgorithms[filename]
+        if filename in runningAlgorithms[username]:
+            del runningAlgorithms[username][filename]
 
-        with os.scandir(app.config['UPLOADS_FOLDER']) as entries:
+        with os.scandir(os.path.join(app.config['UPLOADS_FOLDER'], username)) as entries:
             for entry in entries:
                 if entry.is_file() and (entry.name == filename):
-                    os.remove(os.path.join(app.config['UPLOADS_FOLDER'], filename))
+                    os.remove(os.path.join(app.config['UPLOADS_FOLDER'], username, filename))
                 else:
                     files.append(entry.name)  
 
-        return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms)
+        return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms[username])
 
     return jsonify({'result' : 'Button Not Handled'})

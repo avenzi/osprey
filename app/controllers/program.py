@@ -13,9 +13,11 @@ class Program(threading.Thread):
         threading.Thread.__init__(self, args=(), kwargs=None)
         self.queue = queue
         self.daemon = True
+        self.is_running = True
         self.filename = args[1]
         self.user_id = args[2]
-        self.is_running = True
+        self.username = args[3]
+        self.name = self.filename
 
     def stop(self):
         self.is_running = False
@@ -29,12 +31,12 @@ class Program(threading.Thread):
 
         # Creating a child process for a selected python file. If sending data to the child process' stdin, you must create the Popen object with stdin=PIPE.
         # Similarly, to get anything other than None in the result tuple, you need to use stdout=PIPE and/or stderr=PIPE
-        process = subprocess.Popen(['python3', os.path.join(app.config['UPLOADS_FOLDER'], self.filename)], stdin=subprocess.PIPE, 
+        process = subprocess.Popen(['python3', os.path.join(app.config['UPLOADS_FOLDER'], self.username, self.filename)], stdin=subprocess.PIPE, 
             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         while self.is_running:
             time.sleep(0.075)
-            print("Process Running...")
+            # print("Process Running...")
             if process.poll() is not None:
                 print("Process Ended, Exiting Loop...")
 

@@ -30,178 +30,183 @@ $(document).ready(function () {
 //        e.stopImmediatePropagation();
 //    });
 
-
-
-   // Code to handle switching between video streams
-   // Hide streams 2 and 3 on page load
-   $('#stream2').hide();	
-   $('#stream3').hide();
-
-   $('#video1').click(function(e) {
-	$('#stream2').hide();
-	$('#stream1').show();
-	$('#stream3').hide();
-   });
-
-   $('#video2').click(function(e) {
-	$('#stream1').hide();
-	$('#stream2').show();
-	$('#stream3').hide();
-   });
-   
-   $('#video3').click(function(e) {
-	$('#stream1').hide();
-	$('#stream2').hide();
-	$('#stream3').show();
-   });
-
-
-    $('#audioSwitch1').click(function(e) {
-        (function doPoll() {
-            date = new Date();
-            req1 = $.post('update_audio', {status : 'ON', date : date}, function(data){
-                $('#decibels').text("Current dB: " + data.decibels);
-            })
-            if ($('#audioSwitch1').is(':checked')) {
-                req1.always(function(){
-                    setTimeout(doPoll, 5000);
-                });
-            }
-            else {
-                date = new Date();
-                req2 = $.post('update_audio', {status : 'OFF', date : date});
-                $('#decibels').text('Current dB: --.-');
-                req1.abort();
-            }
-        }());
-        e.stopImmediatePropagation();
-    });
-
-
-    $('#senseSwitch1').click(function(e) {
-        (function doPoll() {
-            date = new Date();
-            req1 = $.post('update_sense', {status : 'ON', date : date}, function(data){
-                $('#roomTemperature').text(data.roomTemperature);
-                $('#airPressure').text(data.airPressure);
-                $('#airHumidity').text(data.airHumidity);
-            })
-            if ($('#senseSwitch1').is(':checked')) {
-                req1.always(function(){
-                    setTimeout(doPoll, 5000);
-                });
-            }
-            else {
-                date = new Date();
-                req2 = $.post('update_sense', {status : 'OFF', date : date});
-                $('#roomTemperature').text('--.-');
-                $('#airPressure').text('--.-');
-                $('#airHumidity').text('--.-');
-                req1.abort();
-            }
-        }());
-        e.stopImmediatePropagation();
-    });
-
-
+    var videoCounter = 0;
     $('#videoCheck').click(function(e) {
-        if ($(this).is(':checked')) {
-            //alert('Checked')
-        }
-        else {
-            //alert('Unchecked')
-        }
+        (function doPoll() {
+
+            var initial = 'NO'
+
+            if ($('#videoCheck').is(':checked')) {
+                // If the box has just been checked
+                if (videoCounter == 0) {
+                    initial = 'YES'
+                }
+
+                req1 = $.post('update_eventlog', {data_type : 'video', initial : initial, status : 'ON'}, function(data){
+                    $('#eventLog').append(data);
+                })
+                .done()
+                .always(function(){
+                    videoCounter ++;
+                    setTimeout(doPoll, 1000);
+                });
+            }
+
+            else {
+                req2 = $.post('update_eventlog', {data_type : 'video', initial : initial, status : 'OFF'});
+                videoCounter = 0
+                req1.abort();
+            }
+
+        }());
+
         e.stopImmediatePropagation();
     });
     
 
+    var audioCounter = 0;
     $('#audioCheck').click(function(e) {
         (function doPoll() {
 
-            if ($('#audioCheck').is(':checked')) {
+            var initial = 'NO'
 
-                req1 = $.post('update_eventlog_audio', {status : 'ON'}, function(data){
+            if ($('#audioCheck').is(':checked')) {
+                // If the box has just been checked
+                if (audioCounter == 0) {
+                    initial = 'YES'
+                }
+
+                req1 = $.post('update_eventlog', {data_type : 'audio', initial : initial, status : 'ON'}, function(data){
                     $('#eventLog').append(data);
                 })
                 .done()
                 .always(function(){
-                    setTimeout(doPoll, 6000);
+                    audioCounter ++;
+                    setTimeout(doPoll, 1000);
                 });
             }
+
             else {
-                req2 = $.post('update_eventlog_audio', {status : 'OFF'});
+                req2 = $.post('update_eventlog', {data_type : 'audio', initial : initial, status : 'OFF'});
+                audioCounter = 0
                 req1.abort();
             }
+
         }());
+
         e.stopImmediatePropagation();
     });
+    
 
-
+    var temperatureCounter = 0;
     $('#temperatureCheck').click(function(e) {
         (function doPoll() {
 
+            var initial = 'NO'
+
             if ($('#temperatureCheck').is(':checked')) {
-                req1 = $.post('update_eventlog_temperature', {status : 'ON'}, function(data){
+                // If the box has just been checked
+                if (temperatureCounter == 0) {
+                    initial = 'YES'
+                }
+
+                req1 = $.post('update_eventlog', {data_type : 'temperature', initial : initial, status : 'ON'}, function(data){
                     $('#eventLog').append(data);
                 })
                 .done()
                 .always(function(){
-                    setTimeout(doPoll, 6000);
+                    temperatureCounter ++;
+                    setTimeout(doPoll, 1000);
                 });
             }
+
             else {
-                req2 = $.post('update_eventlog_temperature', {status : 'OFF'});
+                req2 = $.post('update_eventlog', {data_type : 'temperature', initial : initial, status : 'OFF'});
+                temperatureCounter = 0
                 req1.abort();
             }
+
         }());
+
         e.stopImmediatePropagation();
     });
 
+
+    var pressureCounter = 0;
     $('#pressureCheck').click(function(e) {
         (function doPoll() {
 
+            var initial = 'NO'
+
             if ($('#pressureCheck').is(':checked')) {
-                req1 = $.post('update_eventlog_pressure', {status : 'ON'}, function(data){
+                // If the box has just been checked
+                if (pressureCounter == 0) {
+                    initial = 'YES'
+                }
+
+                req1 = $.post('update_eventlog', {data_type : 'pressure', initial : initial, status : 'ON'}, function(data){
                     $('#eventLog').append(data);
                 })
                 .done()
                 .always(function(){
-                    setTimeout(doPoll, 6000);
+                    pressureCounter ++;
+                    setTimeout(doPoll, 1000);
                 });
             }
+
             else {
-                req2 = $.post('update_eventlog_pressure', {status : 'OFF'});
+                req2 = $.post('update_eventlog', {data_type : 'pressure', initial : initial, status : 'OFF'});
+                pressureCounter = 0
                 req1.abort();
             }
+
         }());
+
         e.stopImmediatePropagation();
     });
 
+
+    var humidityCounter = 0;
     $('#humidityCheck').click(function(e) {
         (function doPoll() {
 
+            var initial = 'NO'
+
             if ($('#humidityCheck').is(':checked')) {
-                req1 = $.post('update_eventlog_humidity', {status : 'ON'}, function(data){
+                // If the box has just been checked
+                if (humidityCounter == 0) {
+                    initial = 'YES'
+                }
+
+                req1 = $.post('update_eventlog', {data_type : 'humidity', initial : initial, status : 'ON'}, function(data){
                     $('#eventLog').append(data);
                 })
                 .done()
                 .always(function(){
-                    setTimeout(doPoll, 6000);
+                    humidityCounter ++;
+                    setTimeout(doPoll, 1000);
                 });
             }
+
             else {
-                req2 = $.post('update_eventlog_humidity', {status : 'OFF'});
+                req2 = $.post('update_eventlog', {data_type : 'humidity', initial : initial, status : 'OFF'});
+                humidityCounter = 0
                 req1.abort();
             }
+
         }());
+
         e.stopImmediatePropagation();
-    });
+    }); 
 
-
+    
     $('#triggerSettingsSubmit').click(function(e) {
         var audio_input = $('#audioInput').val();
         var temperature_input = $('#temperatureInput').val();
-        req = $.post('update_triggersettings', {audio_input : audio_input, temperature_input : temperature_input});
+        var pressure_input = $('#pressureInput').val();
+        var humidity_input = $('#humidityInput').val();
+
+        req = $.post('update_triggersettings', {audio_input : audio_input, temperature_input : temperature_input, pressure_input : pressure_input, humidity_input : humidity_input});
         e.stopImmediatePropagation();
     });
 

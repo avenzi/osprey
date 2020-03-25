@@ -11,3 +11,5 @@ venv/*
 # Visual Studio Code
 .vscode/*
 
+# User uploaded files
+app/static/uploads/*

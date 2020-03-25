@@ -29,9 +29,29 @@ else:
 # Runs indfinitely until process has ended from the UI, return, or error
 while True:
 
-    # Write data to database
+    # Write video data to database
+    sql = "INSERT INTO `eventlog` (`user_id`, `alert_time`, `alert_type`, `alert_message`) VALUES (%s, NOW(), %s, %s)"
+    cursor.execute(sql, (int(user_id), "Video", "Video Alert"))
+    db_connection.commit()
+
+    # Write audio data to database
     sql = "INSERT INTO `eventlog` (`user_id`, `alert_time`, `alert_type`, `alert_message`) VALUES (%s, NOW(), %s, %s)"
     cursor.execute(sql, (int(user_id), "Audio", "Audio Alert"))
+    db_connection.commit()
+
+    # Write temperature data to database
+    sql = "INSERT INTO `eventlog` (`user_id`, `alert_time`, `alert_type`, `alert_message`) VALUES (%s, NOW(), %s, %s)"
+    cursor.execute(sql, (int(user_id), "Temperature", "Temperature Alert"))
+    db_connection.commit()
+
+    # Write pressure data to database
+    sql = "INSERT INTO `eventlog` (`user_id`, `alert_time`, `alert_type`, `alert_message`) VALUES (%s, NOW(), %s, %s)"
+    cursor.execute(sql, (int(user_id), "Pressure", "Pressure Alert"))
+    db_connection.commit()
+
+    # Write humidity data to database
+    sql = "INSERT INTO `eventlog` (`user_id`, `alert_time`, `alert_type`, `alert_message`) VALUES (%s, NOW(), %s, %s)"
+    cursor.execute(sql, (int(user_id), "Humidity", "Humidity Alert"))
     db_connection.commit()
 
     time.sleep(1)    
