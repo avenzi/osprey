@@ -7,6 +7,7 @@ import mimetypes
 import subprocess
 import threading
 import urllib.request
+import json
 
 from queue import Queue
 from datetime import datetime
@@ -69,6 +70,8 @@ def login():
         else:
             # Storing the username of a user in the session
             session['username'] = form.username.data
+
+            # TODO: per-user data needs to be stored in the database or the session object. cant use globals...
             global loginStatus
             loginStatus = True
 
@@ -150,17 +153,19 @@ def archives():
 
 @app.route('/archive/<int:archive_id>')
 def archive(archive_id):
+    login_auth = """
     if loginStatus != True:
         return redirect(url_for('login'))
     if archive_id == None:
         print("Archive id is None")
     else:
         print("archive_id: ", archive_id)
-
+    
     if session.get('username') == True:
         return redirect(url_for('login'))
+    """
     
-    # what are the recent recorded sessions
+    # recent recorded sessions
     database_cursor = mysql.connection.cursor()
     database_cursor.execute("""SELECT id, StartDate FROM Session ORDER BY StartDate DESC LIMIT 5;""")
     db_result = database_cursor.fetchall()
@@ -178,7 +183,7 @@ def archive(archive_id):
 
     return render_template('archives.html', 
         sessions=template_data,
-        session_id= (archive_id if archive_id != None else -1))
+        session_id=(archive_id if archive_id != None else -1))
 
 
 @app.route('/video_feed')
@@ -364,6 +369,21 @@ def filefetch(filename):
     path = "/var/www/html/audio/" + filename
     return partial_response(path, 0, os.path.getsize(path), None)
 
+@app.route('/videoframefetch/<frame>/<session>/<sensor>')
+def videoframefetch(frame, session, sensor):
+    #print(frame)
+    #print(session)
+    #print(sensor)
+    # TODO: avoid doing queries during every frame fetch by supplying client-side with the paths/metadata
+
+    sql = "SELECT * FROM VideoFrames WHERE SessionId = %s AND SensorId = %s AND %s BETWEEN FirstFrameNumber AND LastFrameNumber;"
+    database_cursor = mysql.connection.cursor()
+    database_cursor.execute(sql, (session, sensor, frame))
+    
+    frame_path = "/root/data-ingester/" + json.loads(database_cursor.fetchone()[7])[frame]['path']
+    #print(frame_path)
+    return partial_response(frame_path, 0, os.path.getsize(frame_path), None)
+    
 
 @app.route('/filefetchvideo/<filename>')
 def filefetchvideo(filename):
