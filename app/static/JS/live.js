@@ -205,10 +205,9 @@ var live = function() {
 
 
     $('#audioSwitch1').click(function(e) {
-        if ($('#senseSwitch1').is(':checked')){
+        if ($('#audioSwitch1').is(':checked')){
             intervalIDa = setInterval(function() {
-                date = new Date();
-                $.post('update_audio', {status : 'ON', date : date}, function(data){
+                $.post('update_audio', {status : 'ON'}, function(data){
                     $('#decibels').text("Current dB: " + data.decibels);
             });
             }, 1000);

@@ -199,13 +199,14 @@ $(document).ready(function () {
         e.stopImmediatePropagation();
     }); 
 
-
-
     
     $('#triggerSettingsSubmit').click(function(e) {
         var audio_input = $('#audioInput').val();
         var temperature_input = $('#temperatureInput').val();
-        req = $.post('update_triggersettings', {audio_input : audio_input, temperature_input : temperature_input});
+        var pressure_input = $('#pressureInput').val();
+        var humidity_input = $('#humidityInput').val();
+
+        req = $.post('update_triggersettings', {audio_input : audio_input, temperature_input : temperature_input, pressure_input : pressure_input, humidity_input : humidity_input});
         e.stopImmediatePropagation();
     });
 

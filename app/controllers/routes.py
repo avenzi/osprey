@@ -16,7 +16,7 @@ from app.controllers.video import *
 from werkzeug.utils import secure_filename
 from app.controllers.program import Program
 from app.controllers.forms import LoginForm, TriggerSettingsForm, RegistrationForm
-from app.controllers.data import Sense, Audio, EventLog, TriggerSettingsFormData
+from app.controllers.data import Sense, Audio, EventLog
 from flask import render_template, flash, redirect, url_for, Response, session, jsonify, request, send_file, send_from_directory
 
 # BUFF_SIZE is the size of the number of bytes in each mp4 video chunk response
@@ -35,8 +35,6 @@ senseData1 = Sense()
 senseData2 = Sense()
 # Data structure for handling event log data
 eventLogData = EventLog()
-# Data structure for handling trigger settings form data
-triggerSettingsFormData = TriggerSettingsFormData()
 
 # Only .py files are allowed to be uploaded
 ALLOWED_EXTENSIONS = set(['py'])
@@ -78,6 +76,12 @@ def login():
             # Storing the id of the user that is logging in in the session
             database_cursor.execute("SELECT id FROM user WHERE username = "+"'"+session.get('username')+"'")
             session['user_id'] = database_cursor.fetchone()[0]
+
+            # Creating session variables for the scalar trigger settings
+            session['triggerSettings_audio'] = '' 
+            session['triggerSettings_temperature'] = '' 
+            session['triggerSettings_pressure'] = '' 
+            session['triggerSettings_humidity'] = '' 
 
             # Creating the eventlog table if not already created. The eventlog table keeps track of all trigger events
             database_cursor.execute('''CREATE TABLE IF NOT EXISTS eventlog (id INTEGER UNSIGNED AUTO_INCREMENT, user_id INTEGER UNSIGNED, 
@@ -229,6 +233,8 @@ def write_token(token_value):
     mysql.connection.commit()
 
 
+
+
 """route is used to update Sense HAT values for the first Sense HAT in the live stream page"""
 @app.route('/update_sense1', methods=['GET', 'POST'])
 def update_sense1():
@@ -307,30 +313,53 @@ def update_sense2():
     return jsonify({'result' : 'success', 'status' : senseData2.status, 'date' : senseData2.date, 'roomTemperature' : senseData2.roomTemperature,
     'airPressure': senseData2.airPressure, 'airHumidity': senseData2.airHumidity, 'ip': senseData2.ip})
 
+
 """route is used to update audio values in the live stream page"""
 @app.route('/update_audio', methods=['GET', 'POST'])
 def update_audio():
+
+    # Instantiating an object that can execute SQL statements
+    database_cursor = mysql.connection.cursor()
+
+    # The scalar trigger setting for audio
+    triggerSettings_audio = session.get('triggerSettings_audio')
+    # The id of the logged in user
+    user_id = session.get('user_id')
+
+    # Indicates whether audio has been turned on or not
+    status = request.form['status']
+
+    # The initial decibel level until set
+    decibels = 0
+
+    
     for _ in range(10):
         value = randint(0, 5)
-        audioData.decibels = "6" + str(value)
+        decibels = "6" + str(value)
 
-    audioData.status = request.form['status']
-    audioData.date = request.form['date']
+    if (triggerSettings_audio != '') and (decibels > triggerSettings_audio):
+        # Write audio data to database
+        database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Audio", 
+            "Audio exceeded " + triggerSettings_audio + " dB"))
+        mysql.connection.commit()
 
-    return jsonify({'result' : 'success', 'status' : audioData.status, 'date' : audioData.date, 'decibels' : audioData.decibels})
+    return jsonify({'result' : 'success', 'status' : status, 'decibels' : decibels})
 
 
 """route is used to collect trigger settings from the live stream page"""
 @app.route('/update_triggersettings', methods=['POST'])
 def update_triggersettings():
-    triggerSettingsFormData.audio = request.form['audio_input']
-    triggerSettingsFormData.temperature = request.form['temperature_input']
-    triggerSettingsFormData.pressure = request.form['pressure_input']
-    triggerSettingsFormData.humidity = request.form['humidity_input']
+    # Updating trigger settings in the session
+    session['triggerSettings_audio'] = request.form['audio_input']
+    session['triggerSettings_temperature'] = request.form['temperature_input']
+    session['triggerSettings_pressure'] = request.form['pressure_input']
+    session['triggerSettings_humidity'] = request.form['humidity_input']
 
-    return jsonify({'result' : 'success', 'audio_input' : triggerSettingsFormData.audio, 'temperature_input' : triggerSettingsFormData.temperature})
+    return jsonify({'result' : 'success', 'audio_input' : session.get('triggerSettings_audio'), 'temperature_input' : session.get('triggerSettings_temperature'), 
+        'pressure_input' : session.get('triggerSettings_pressure'), 'humidity_input' : session.get('triggerSettings_humidity')})
 
 
+"""route is used to update the event log for all data types"""
 @app.route('/update_eventlog', methods=['POST'])
 def update_eventlog():
 
@@ -399,63 +428,6 @@ def update_eventlog():
     return jsonify({'result' : 'success'})
 
 
-"""route is used to update the event log with temperature data"""
-@app.route('/update_eventlog_temperature', methods=['GET', 'POST'])
-def update_eventlog_temperature():
-    alerts = []
-
-    eventLogData.temperatureStatus = request.form['status']
-
-    if (eventLogData.temperatureStatus == 'ON' and senseData.status == 'ON'):
-        #print('ALL TEMPERATURE ON')
-        if (senseData.roomTemperature > triggerSettingsFormData.temperature):
-            alerts.append("Temperature Trigger: Room temperature exceeded " + triggerSettingsFormData.temperature + " ℉ @ " + senseData.date)
-
-    return render_template('snippets/eventlog_snippet.html', messages = alerts)
-
-
-"""update event log with pressure data"""
-@app.route('/update_eventlog_pressure', methods=['GET', 'POST'])
-def update_eventlog_pressure():
-    alerts = []
-
-    eventLogData.pressureStatus = request.form['status']
-
-    if (eventLogData.pressureStatus == 'ON'):
-        if (senseData.airPressure > triggerSettingsFormData.pressure):
-            alerts.append("Air Pressure Trigger: Air pressure exceeded " + triggerSettingsFormData.pressure + " millibars @ " + senseData.date)
-
-    return render_template('snippets/eventlog_snippet.html', messages = alerts)
-
-
-"""update even log with humidity data"""
-@app.route('/update_eventlog_humidity', methods=['GET', 'POST'])
-def update_eventlog_humidity():
-    alerts = []
-    
-    eventLogData.humidityStatus = request.form['status']
-
-    if (eventLogData.humidityStatus == 'ON'):
-        if (senseData.airHumidity > triggerSettingsFormData.humidity):
-            alerts.append("Air Humidity Trigger: Air humidity exceeded " + triggerSettingsFormData.humidity + " % @ " + senseData.date)
-
-    return render_template('snippets/eventlog_snippet.html', messages = alerts)
-
-
-"""route is used to update the event log with audio data"""
-@app.route('/update_eventlog_audio', methods=['GET', 'POST'])
-def update_eventlog_audio():
-    alerts = []
-
-    eventLogData.audioStatus = request.form['status']
-
-    if (eventLogData.audioStatus == 'ON' and audioData.status == 'ON'):
-        #print('ALL AUDIO ON')
-        if (audioData.decibels > triggerSettingsFormData.audio):
-            alerts.append("Audio Trigger: Audio exceeded " + triggerSettingsFormData.audio + " dB @ " + audioData.date)
-
-    return render_template('snippets/eventlog_snippet.html', messages = alerts)
-    #return render_template('section.html', messages = alerts)
 
 
 @app.route('/test', methods=['GET'])
