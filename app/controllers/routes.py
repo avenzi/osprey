@@ -238,80 +238,145 @@ def write_token(token_value):
 """route is used to update Sense HAT values for the first Sense HAT in the live stream page"""
 @app.route('/update_sense1', methods=['GET', 'POST'])
 def update_sense1():
-    senseData1.date = request.form['date']
 
-    # Check if switch is on or off
-    senseData1.status = request.form['status']
-    if senseData1.status == 'OFF':
-        senseData1.roomTemperature = "--.-"
-        senseData1.airPressure = "--.-"
-        senseData1.airHumidity = "--.-"
+    # Indicates whether sense1 switch has been turned on or not
+    status = request.form['status']
 
-    else:
-        try:
-            # Set up Sense table connection
-            database_cursor = mysql.connection.cursor()
+    # The scalar trigger settings for temperature, pressure, and humidity
+    triggerSettings_temperature = session.get('triggerSettings_temperature')
+    triggerSettings_pressure = session.get('triggerSettings_pressure')
+    triggerSettings_humidity = session.get('triggerSettings_humidity')
 
-            # get current Sense HAT data from DB
-            database_cursor.execute("SELECT INET_NTOA(IP), Temp, Press, Humid FROM Sense WHERE IP <> INET_ATON('%s') ORDER BY Time DESC;" % senseData2.ip)
-            ip, temp, press, humid = database_cursor.fetchone()
+    # The id of the logged in user
+    user_id = session.get('user_id')
+
+    # Setting IP if not set
+    if session.get('senseData1IP') is None:
+        session['senseData1IP'] = 0
+
+    if session.get('senseData2IP') is None:
+        session['senseData2IP'] = 0
+
+    # The initial measurements until set
+    roomTemperature = 0
+    airPressure = 0
+    airHumidity = 0
 
 
-            # SQL command filters out senseData2's ip so no need to check for it
-            if senseData1.ip == 0:
-                senseData1.ip = ip
-            
-            
-            # Convert to JQueryable objects
-            senseData1.roomTemperature = "{:.2f}".format(temp)
-            senseData1.airPressure = "{:.2f}".format(press)
-            senseData1.airHumidity = "{:.2f}".format(humid)
+    try:
+        # Instantiating an object that can execute SQL statements
+        database_cursor = mysql.connection.cursor()
+
+        # Get current Sense HAT data from DB
+        database_cursor.execute("SELECT INET_NTOA(IP), Temp, Press, Humid FROM Sense WHERE IP <> INET_ATON('%s') ORDER BY Time DESC;" % session.get('senseData2IP'))
+        ip, temp, press, humid = database_cursor.fetchone()
+
+        # SQL command filters out senseData2's ip so no need to check for it
+        if session.get('senseData1IP') == 0:
+            session['senseData1IP'] = ip
         
-        # Don't fail out if sense hat stream isn't working
-        except Exception as e:
-            print("Sense HAT 1 broken:", e)
-            pass
+        # Convert to JQueryable objects
+        roomTemperature = "{:.2f}".format(temp)
+        airPressure = "{:.2f}".format(press)
+        airHumidity = "{:.2f}".format(humid)
 
-    return jsonify({'result' : 'success', 'status' : senseData1.status, 'date' : senseData1.date, 'roomTemperature' : senseData1.roomTemperature,
-    'airPressure': senseData1.airPressure, 'airHumidity': senseData1.airHumidity, 'ip' : senseData1.ip})
+        if (triggerSettings_temperature != '') and (float(roomTemperature) > float(triggerSettings_temperature)):
+            # Write temperature data to database
+            database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Temperature", 
+                "Temperature exceeded " + triggerSettings_temperature + " F"))
+            mysql.connection.commit()
+
+        if (triggerSettings_pressure != '') and (float(airPressure) > float(triggerSettings_pressure)):
+            # Write pressure data to database
+            database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Pressure", 
+                "Pressure exceeded " + triggerSettings_pressure + " millibars"))
+            mysql.connection.commit()
+
+        if (triggerSettings_humidity != '') and (float(airHumidity) > float(triggerSettings_humidity)):
+            # Write humidity data to database
+            database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Humidity", 
+                "Humidity exceeded " + triggerSettings_humidity + " %"))
+            mysql.connection.commit()
+    
+    # Don't fail out of website on Sense HAT error
+    except Exception as e:
+        print("Sense HAT 1 broken:", e)
+        pass
+
+    return jsonify({'result' : 'success', 'status' : status, 'roomTemperature' : roomTemperature,
+        'airPressure': airPressure, 'airHumidity': airHumidity, 'ip' : session.get('senseData1IP')})
 
 
 """route is used to update Sense HAT values for the second Sense HAT in the live stream page"""
 @app.route('/update_sense2', methods=['GET', 'POST'])
 def update_sense2():
-    senseData2.date = request.form['date']
 
-    # Check if switch is on or off
-    senseData2.status = request.form['status']
-    if senseData2.status == 'OFF':
-        senseData2.roomTemperature = "--.-"
-        senseData2.airPressure = "--.-"
-        senseData2.airHumidity = "--.-"
+    # Indicates whether sense2 switch has been turned on or not
+    status = request.form['status']
 
-    else:
-        # Set up Sense table connection
+    # The scalar trigger settings for temperature, pressure, and humidity
+    triggerSettings_temperature = session.get('triggerSettings_temperature')
+    triggerSettings_pressure = session.get('triggerSettings_pressure')
+    triggerSettings_humidity = session.get('triggerSettings_humidity')
+
+    # The id of the logged in user
+    user_id = session.get('user_id')
+
+    # Setting IP if not set
+    if session.get('senseData2IP') is None:
+        session['senseData2IP'] = 0
+
+    if session.get('senseData1IP') is None:
+        session['senseData1IP'] = 0
+
+    # The initial measurements until set
+    roomTemperature = 0
+    airPressure = 0
+    airHumidity = 0
+
+
+    try:
+        # Instantiating an object that can execute SQL statements
         database_cursor = mysql.connection.cursor()
 
-        try:
-            database_cursor.execute("SELECT INET_NTOA(IP), Temp, Press, Humid, Time FROM Sense WHERE IP <> INET_ATON('%s') ORDER BY Time DESC;" % senseData1.ip)
-            ip, temp, press, humid, time = database_cursor.fetchone()
+        # Get current Sense HAT data from DB
+        database_cursor.execute("SELECT INET_NTOA(IP), Temp, Press, Humid, Time FROM Sense WHERE IP <> INET_ATON('%s') ORDER BY Time DESC;" % session.get('senseData1IP'))
+        ip, temp, press, humid, time = database_cursor.fetchone()
 
-            # SQL command filters out senseData1's ip so no need to check for it
-            if senseData2.ip == 0:
-                senseData2.ip = ip
+        # SQL command filters out senseData1's ip so no need to check for it
+        if session.get('senseData2IP') == 0:
+            session['senseData2IP'] = ip
 
+        # Convert to JQueryable objects
+        roomTemperature = "{:.2f}".format(temp)
+        airPressure = "{:.2f}".format(press)
+        airHumidity = "{:.2f}".format(humid)
 
-            senseData2.roomTemperature = "{:.2f}".format(temp)
-            senseData2.airPressure = "{:.2f}".format(press)
-            senseData2.airHumidity = "{:.2f}".format(humid)
-        
-        # Don't fail out of website on Sense HAT error
-        except Exception as e:
-            print("Sense HAT 2 broken:", e)
-            pass
+        if (triggerSettings_temperature != '') and (float(roomTemperature) > float(triggerSettings_temperature)):
+            # Write temperature data to database
+            database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Temperature", 
+                "Temperature exceeded " + triggerSettings_temperature + " F"))
+            mysql.connection.commit()
 
-    return jsonify({'result' : 'success', 'status' : senseData2.status, 'date' : senseData2.date, 'roomTemperature' : senseData2.roomTemperature,
-    'airPressure': senseData2.airPressure, 'airHumidity': senseData2.airHumidity, 'ip': senseData2.ip})
+        if (triggerSettings_pressure != '') and (float(airPressure) > float(triggerSettings_pressure)):
+            # Write pressure data to database
+            database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Pressure", 
+                "Pressure exceeded " + triggerSettings_pressure + " millibars"))
+            mysql.connection.commit()
+
+        if (triggerSettings_humidity != '') and (float(airHumidity) > float(triggerSettings_humidity)):
+            # Write humidity data to database
+            database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Humidity", 
+                "Humidity exceeded " + triggerSettings_humidity + " %"))
+            mysql.connection.commit()
+    
+    # Don't fail out of website on Sense HAT error
+    except Exception as e:
+        print("Sense HAT 2 broken:", e)
+        pass
+
+    return jsonify({'result' : 'success', 'status' : status, 'roomTemperature' : roomTemperature,
+    'airPressure': airPressure, 'airHumidity': airHumidity, 'ip': session.get('senseData2IP')})
 
 
 """route is used to update audio values in the live stream page"""
@@ -337,7 +402,7 @@ def update_audio():
         value = randint(0, 5)
         decibels = "6" + str(value)
 
-    if (triggerSettings_audio != '') and (decibels > triggerSettings_audio):
+    if (triggerSettings_audio != '') and (int(decibels) > int(triggerSettings_audio)):
         # Write audio data to database
         database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Audio", 
             "Audio exceeded " + triggerSettings_audio + " dB"))
