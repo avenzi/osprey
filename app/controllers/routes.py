@@ -45,7 +45,7 @@ eventLogEntryIds = {}
 
 LOG = logging.getLogger(__name__)
 global loginStatus
-loginStatus = True # avoid login for DECS
+loginStatus = True # Avoid login for DECS
 
 
 @app.route('/', methods = ['GET','POST'])
@@ -283,19 +283,19 @@ def update_sense1():
         if (triggerSettings_temperature != '') and (float(roomTemperature) > float(triggerSettings_temperature)):
             # Write temperature data to database
             database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Temperature", 
-                "Temperature exceeded " + triggerSettings_temperature + " F"))
+                "Sense 1 Temperature exceeded " + triggerSettings_temperature + " F"))
             mysql.connection.commit()
 
         if (triggerSettings_pressure != '') and (float(airPressure) > float(triggerSettings_pressure)):
             # Write pressure data to database
             database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Pressure", 
-                "Pressure exceeded " + triggerSettings_pressure + " millibars"))
+                "Sense 1 Pressure exceeded " + triggerSettings_pressure + " millibars"))
             mysql.connection.commit()
 
         if (triggerSettings_humidity != '') and (float(airHumidity) > float(triggerSettings_humidity)):
             # Write humidity data to database
             database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Humidity", 
-                "Humidity exceeded " + triggerSettings_humidity + " %"))
+                "Sense 1 Humidity exceeded " + triggerSettings_humidity + " %"))
             mysql.connection.commit()
     
     # Don't fail out of website on Sense HAT error
@@ -355,19 +355,19 @@ def update_sense2():
         if (triggerSettings_temperature != '') and (float(roomTemperature) > float(triggerSettings_temperature)):
             # Write temperature data to database
             database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Temperature", 
-                "Temperature exceeded " + triggerSettings_temperature + " F"))
+                "Sense 2 Temperature exceeded " + triggerSettings_temperature + " F"))
             mysql.connection.commit()
 
         if (triggerSettings_pressure != '') and (float(airPressure) > float(triggerSettings_pressure)):
             # Write pressure data to database
             database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Pressure", 
-                "Pressure exceeded " + triggerSettings_pressure + " millibars"))
+                "Sense 2 Pressure exceeded " + triggerSettings_pressure + " millibars"))
             mysql.connection.commit()
 
         if (triggerSettings_humidity != '') and (float(airHumidity) > float(triggerSettings_humidity)):
             # Write humidity data to database
             database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Humidity", 
-                "Humidity exceeded " + triggerSettings_humidity + " %"))
+                "Sense 2 Humidity exceeded " + triggerSettings_humidity + " %"))
             mysql.connection.commit()
     
     # Don't fail out of website on Sense HAT error
