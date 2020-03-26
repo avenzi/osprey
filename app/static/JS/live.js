@@ -205,10 +205,9 @@ var live = function() {
 
 
     $('#audioSwitch1').click(function(e) {
-        if ($('#senseSwitch1').is(':checked')){
+        if ($('#audioSwitch1').is(':checked')){
             intervalIDa = setInterval(function() {
-                date = new Date();
-                $.post('update_audio', {status : 'ON', date : date}, function(data){
+                $.post('update_audio', {status : 'ON'}, function(data){
                     $('#decibels').text("Current dB: " + data.decibels);
             });
             }, 1000);
@@ -229,8 +228,7 @@ var live = function() {
         $('#sense1').show();
         if ($('#senseSwitch1').is(':checked')){
             intervalID1 = setInterval(function() {
-                date = new Date();
-                $.post('update_sense1', {status : 'ON', date : date}, function(data){
+                $.post('update_sense1', {status : 'ON'}, function(data){
                     $('#roomTemperature1').text(data.roomTemperature);
                     $('#airPressure1').text(data.airPressure);
                     $('#airHumidity1').text(data.airHumidity);
@@ -254,8 +252,7 @@ var live = function() {
         $('#sense2').show();
         if ($('#senseSwitch2').is(':checked')){
             intervalID2 = setInterval(function() {
-                date = new Date();
-                $.post('update_sense2', {status : 'ON', date : date}, function(data){
+                $.post('update_sense2', {status : 'ON'}, function(data){
                     $('#roomTemperature2').text(data.roomTemperature);
                     $('#airPressure2').text(data.airPressure);
                     $('#airHumidity2').text(data.airHumidity);
