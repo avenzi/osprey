@@ -2,6 +2,11 @@
 {% extends "base.html" %}
 
 {% block app_content %}
+    <script>
+        var SESSION_ID = "{{session_id}}"
+        var VIDEO_REQUEST_URL = "{{url_for('videoframefetch', frame='FRAME', session='SESSION', sensor='SENSOR')}}"
+    </script>
+    <script src="../static/JS/archive_video.js"></script>
     <script src="../static/JS/archive_buttons.js"></script>
 
     <div class = "row p-2 justify-content-start ">
@@ -9,7 +14,7 @@
         <div class="col-3">
             <div class = "card w-100 bg-light rounded">
                 <div class = "card-header p-0 text-center">
-                    Date Selection
+                    Session Selection
                 </div>
                 <div class = "card-body p-1 text-center">
                     {% for session in sessions %}
@@ -22,10 +27,10 @@
         <div class="col-6">
             <div id="video-archives" class="card w-100 bg-light rounded">
                 <div class = "card-header p-0 text-center">
-                    Video Data
+                    Video
                 </div>
                 <div class = "card-body p-1">
-                    <img src="{{ url_for('session_feed', session_id=session_id) }}" width = "100%">
+                    <img id="session-video-{{session_id}}-1" width = "100%">
                 </div>
             </div>
             <div class = "col mt-1 border border-dark rounded bg-white">
