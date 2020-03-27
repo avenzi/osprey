@@ -189,8 +189,8 @@ def archive(archive_id):
                 time = session_data[1].strftime("%m/%d/%Y @ %H:%M:%S")
             ))
     
-    print("Template data:")
-    print(template_data)
+    #print("Template data:")
+    #print(template_data)
 
     return render_template('archives.html', 
         sessions=template_data,
@@ -595,7 +595,7 @@ def get_range(request):
 
 
 def partial_response(path, start, buff_size, end=None):
-    LOG.info('Requested: %s, %s', start, end)
+    #LOG.info('Requested: %s, %s', start, end)
     file_size = os.path.getsize(path)
 
     # Determine (end, length)
@@ -611,8 +611,8 @@ def partial_response(path, start, buff_size, end=None):
     with open(path, 'rb') as fd:
         fd.seek(start)
         bytes = fd.read(length)
-        print("len(bytes): " + str(len(bytes)))
-        print(buff_size)
+        #print("len(bytes): " + str(len(bytes)))
+        #print(buff_size)
     assert len(bytes) == length
 
     if len(bytes) < buff_size: # if last read on an image
@@ -634,8 +634,8 @@ def partial_response(path, start, buff_size, end=None):
     response.headers.add(
         'Accept-Ranges', 'bytes'
     )
-    LOG.info('Response: %s', response)
-    LOG.info('Response: %s', response.headers)
+    #LOG.info('Response: %s', response)
+    #LOG.info('Response: %s', response.headers)
     return response
 
 
