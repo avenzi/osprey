@@ -189,12 +189,28 @@ def archive(archive_id):
                 time = session_data[1].strftime("%m/%d/%Y @ %H:%M:%S")
             ))
     
-    #print("Template data:")
-    #print(template_data)
+    session_id = archive_id if archive_id != None else -1
+    database_cursor.execute("""SELECT id, INET_NTOA(IP), SessionId, SensorType FROM SessionSensor WHERE SessionId = %s;""", (session_id,))
+    session_sensors = database_cursor.fetchall()
 
-    return render_template('archives.html', 
-        sessions=template_data,
-        session_id=(archive_id if archive_id != None else -1))
+    session_sensors_serialized = json.dumps(session_sensors, separators=(',', ':'))
+    #print(session_sensors_serialized)
+
+    cameras = []
+    for session_sensor in session_sensors:
+        camera_view_data = dict(
+            sensor_id = session_sensor[0]
+        )
+        cameras.append(camera_view_data)
+    
+
+
+    return render_template('archives.html',
+        sessions = template_data,
+        session_id = (archive_id if archive_id != None else -1),
+        session_sensors_serialized = session_sensors_serialized,
+        cameras = cameras
+    )
 
 
 @app.route('/video_feed')
@@ -238,7 +254,47 @@ def write_token(token_value):
     mysql.connection.commit()
 
 
+@app.route('/livestream_config', methods=['GET', 'POST'])
+def livestream_config():
+    # TODO: input validation
+    config_tokens = request.form['livestream_config'].split('&')
+    config_json = {
+        'cameras': {}
+    }
 
+    if len(request.form['livestream_config']) == 0:
+        return jsonify({})
+    
+    for token in config_tokens:
+        key = token.split("=")[0]
+        value = token.split("=")[1]
+        if 'camera' in token:
+            metadata = {}
+            config_json['cameras'][value] = metadata
+    compacted_json = json.dumps(config_json, separators=(',', ':'))
+    # Instantiating an object that can execute SQL statements
+    database_cursor = mysql.connection.cursor()
+    database_cursor.execute("""SELECT id FROM Session WHERE id = (SELECT MAX(id) FROM Session)""")
+    result = database_cursor.fetchone()
+    session_id = 1 if result == None else result[0] + 1
+
+    #print(session_id)
+    #print(compacted_json)
+    # Start a new Session - the web app starts the data ingestion layer when a new Session is started
+    #database_cursor = mysql.connection.cursor()
+    sql = "INSERT INTO Session (`StartDate`, `SensorConfig`) VALUES (NOW(3), %s);"
+    database_cursor.execute(sql, (compacted_json,))
+    mysql.connection.commit()
+
+    for ip in config_json['cameras']:
+        metadata = config_json['cameras'][ip]
+        sql = "INSERT INTO SessionSensor (`IP`, `SessionId`, `SensorType`) VALUES (INET_ATON(%s), %s, %s);"
+        database_cursor.execute(sql, (ip, session_id, "PiCamera"))
+
+    mysql.connection.commit()
+    # TODO: run the data ingestion layer application
+
+    return jsonify({})
 
 """route is used to update Sense HAT values for the first Sense HAT in the live stream page"""
 @app.route('/update_sense1', methods=['GET', 'POST'])
@@ -541,14 +597,40 @@ def videoframefetch(frame, session, sensor):
     #print(session)
     #print(sensor)
     # TODO: avoid doing queries during every frame fetch by supplying client-side with the paths/metadata
-
+    frame = int(frame)
     sql = "SELECT * FROM VideoFrames WHERE SessionId = %s AND SensorId = %s AND %s BETWEEN FirstFrameNumber AND LastFrameNumber;"
     database_cursor = mysql.connection.cursor()
     database_cursor.execute(sql, (session, sensor, frame))
+
+    frames_record = database_cursor.fetchone()
+    last_frame_number = int(frames_record[4])
+    frames_metadata = json.loads(frames_record[7])
+
+    #number_of_frames_to_send = 10 if frame + 10 <= last_frame_number else (last_frame_number - frame) + 1
+    number_of_frames_to_send = 1
+    # TODO: remove absolute paths like this and do it dynamically
+    base_path = "/root/data-ingester/"
+
+    response_frames = []
+    for frame_to_send in range(frame, frame + number_of_frames_to_send):
+        frame_metadata = frames_metadata[str(frame_to_send)]
+        path = base_path + frame_metadata['path']
+        with open(path, 'rb') as frame_file:
+            response_frames.append(frame_file.read() + b"FrameSeperator")
     
-    frame_path = "/root/data-ingester/" + json.loads(database_cursor.fetchone()[7])[frame]['path']
-    #print(frame_path)
-    return partial_response(frame_path, 0, os.path.getsize(frame_path), None)
+    response_bytes = b"".join(response_frames)
+    #print(len(response_bytes))
+
+    response = Response(
+        response_bytes,
+        200,
+        mimetype='image/jpeg',
+        direct_passthrough=True,
+    )
+
+    response.headers.add('Accept-Ranges', 'bytes')
+
+    return response
     
 
 @app.route('/filefetchvideo/<filename>')
@@ -613,13 +695,7 @@ def partial_response(path, start, buff_size, end=None):
     with open(path, 'rb') as fd:
         fd.seek(start)
         bytes = fd.read(length)
-        #print("len(bytes): " + str(len(bytes)))
-        #print(buff_size)
     assert len(bytes) == length
-
-    if len(bytes) < buff_size: # if last read on an image
-        # send the first chunk of the next image
-        pass
 
     response = Response(
         bytes,
