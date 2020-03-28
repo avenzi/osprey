@@ -144,7 +144,7 @@ def livefeed():
     if loginStatus != True:
         return redirect(url_for('login'))
 
-    session['user_id'] = 1 # debugging event log without login -- delete
+    #session['user_id'] = 1 # debugging event log without login -- delete
     return render_template('livefeed.html', senseData1 = senseData1, senseData2 = senseData2, audioData = audioData)
 
 
