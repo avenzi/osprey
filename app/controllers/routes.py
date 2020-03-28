@@ -46,7 +46,7 @@ eventLogEntryIds = {}
 
 LOG = logging.getLogger(__name__)
 global loginStatus
-loginStatus = True # Avoid login for DECS
+loginStatus = True # Avoid login for DECS -- should be false
 
 
 @app.route('/', methods = ['GET','POST'])
@@ -144,6 +144,7 @@ def livefeed():
     if loginStatus != True:
         return redirect(url_for('login'))
 
+    session['user_id'] = 1 # debugging event log without login -- delete
     return render_template('livefeed.html', senseData1 = senseData1, senseData2 = senseData2, audioData = audioData)
 
 
@@ -271,9 +272,15 @@ def update_sense1():
     try:
         # Instantiating an object that can execute SQL statements
         database_cursor = mysql.connection.cursor()
+        sql = """
+            SELECT INET_NTOA(IP), Temp, Press, Humid 
+            FROM Sense 
+            WHERE IP <> INET_ATON(%s) 
+            ORDER BY Time DESC;
+        """
 
         # Get current Sense HAT data from DB
-        database_cursor.execute("SELECT INET_NTOA(IP), Temp, Press, Humid FROM Sense WHERE IP <> INET_ATON('%s') ORDER BY Time DESC;" % session.get('senseData2IP'))
+        database_cursor.execute(sql, (session.get('senseData1IP'),))
         ip, temp, press, humid = database_cursor.fetchone()
 
         # SQL command filters out senseData2's ip so no need to check for it
@@ -287,25 +294,44 @@ def update_sense1():
 
         if (triggerSettings_temperature != '') and (float(roomTemperature) > float(triggerSettings_temperature)):
             # Write temperature data to database
-            database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Temperature", 
-                "Sense 1 Temperature exceeded " + triggerSettings_temperature + " F"))
+            sql = """
+                INSERT INTO eventlog 
+                (user_id, alert_time, alert_type, alert_message) 
+                VALUES (%s, NOW(), %s, %s);
+            """
+            message = "Sense 1 Temperature exceeded " + triggerSettings_temperature + " F"
+
+            database_cursor.execute(sql, (user_id, "Temperature", message))
             mysql.connection.commit()
 
         if (triggerSettings_pressure != '') and (float(airPressure) > float(triggerSettings_pressure)):
             # Write pressure data to database
-            database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Pressure", 
-                "Sense 1 Pressure exceeded " + triggerSettings_pressure + " millibars"))
+            sql = """
+                INSERT INTO eventlog 
+                (user_id, alert_time, alert_type, alert_message) 
+                VALUES (%s, NOW(), %s, %s);
+            """
+            message = "Sense 1 Pressure exceeded " + triggerSettings_pressure + " millibars"
+
+            database_cursor.execute(sql, (user_id, "Pressure", message))
             mysql.connection.commit()
 
         if (triggerSettings_humidity != '') and (float(airHumidity) > float(triggerSettings_humidity)):
             # Write humidity data to database
-            database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Humidity", 
-                "Sense 1 Humidity exceeded " + triggerSettings_humidity + " %"))
+            sql = """
+                INSERT INTO eventlog 
+                (user_id, alert_time, alert_type, alert_message) 
+                VALUES (%s, NOW(), %s, %s);
+            """
+            message = "Sense 1 Humidity exceeded " + triggerSettings_humidity + " %"
+            database_cursor.execute(sql, (user_id, "Humidity", message))
             mysql.connection.commit()
     
     # Don't fail out of website on Sense HAT error
     except Exception as e:
-        print("Sense HAT 1 broken:", e)
+        exc_type, exc_obj, tb = sys.exc_info()
+        lineno = tb.tb_lineno
+        print("Sense HAT 1 broken:", e, lineno)
         pass
 
     return jsonify({'result' : 'success', 'status' : status, 'roomTemperature' : roomTemperature,
@@ -344,8 +370,15 @@ def update_sense2():
         # Instantiating an object that can execute SQL statements
         database_cursor = mysql.connection.cursor()
 
+        sql = """
+            SELECT INET_NTOA(IP), Temp, Press, Humid, Time 
+            FROM Sense 
+            WHERE IP <> INET_ATON(%s) 
+            ORDER BY Time DESC;
+        """
+
         # Get current Sense HAT data from DB
-        database_cursor.execute("SELECT INET_NTOA(IP), Temp, Press, Humid, Time FROM Sense WHERE IP <> INET_ATON('%s') ORDER BY Time DESC;" % session.get('senseData1IP'))
+        database_cursor.execute(sql, (session.get('senseData2IP'),))
         ip, temp, press, humid, time = database_cursor.fetchone()
 
         # SQL command filters out senseData1's ip so no need to check for it
@@ -359,25 +392,44 @@ def update_sense2():
 
         if (triggerSettings_temperature != '') and (float(roomTemperature) > float(triggerSettings_temperature)):
             # Write temperature data to database
-            database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Temperature", 
-                "Sense 2 Temperature exceeded " + triggerSettings_temperature + " F"))
+            sql = """
+                INSERT INTO eventlog 
+                (user_id, alert_time, alert_type, alert_message) 
+                VALUES (%s, NOW(), %s, %s);
+            """
+            message = "Sense 2 Temperature exceeded " + triggerSettings_temperature + " F"
+
+            database_cursor.execute(sql, (user_id, "Temperature", message))
             mysql.connection.commit()
 
         if (triggerSettings_pressure != '') and (float(airPressure) > float(triggerSettings_pressure)):
             # Write pressure data to database
-            database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Pressure", 
-                "Sense 2 Pressure exceeded " + triggerSettings_pressure + " millibars"))
+            sql = """
+                INSERT INTO eventlog 
+                (user_id, alert_time, alert_type, alert_message) 
+                VALUES (%s, NOW(), %s, %s);
+            """
+            message = "Sense 2 Pressure exceeded " + triggerSettings_pressure + " millibars"
+
+            database_cursor.execute(sql, (user_id, "Pressure", message))
             mysql.connection.commit()
 
         if (triggerSettings_humidity != '') and (float(airHumidity) > float(triggerSettings_humidity)):
             # Write humidity data to database
-            database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Humidity", 
-                "Sense 2 Humidity exceeded " + triggerSettings_humidity + " %"))
+            sql = """
+                INSERT INTO eventlog 
+                (user_id, alert_time, alert_type, alert_message) 
+                VALUES (%s, NOW(), %s, %s);
+            """
+            message = "Sense 2 Humidity exceeded " + triggerSettings_humidity + " %"
+            database_cursor.execute(sql, (user_id, "Humidity", message))
             mysql.connection.commit()
     
     # Don't fail out of website on Sense HAT error
     except Exception as e:
-        print("Sense HAT 2 broken:", e)
+        exc_type, exc_obj, tb = sys.exc_info()
+        lineno = tb.tb_lineno
+        print("Sense HAT 2 broken:", e, lineno)
         pass
 
     return jsonify({'result' : 'success', 'status' : status, 'roomTemperature' : roomTemperature,
@@ -432,70 +484,28 @@ def update_triggersettings():
 """route is used to update the event log for all data types"""
 @app.route('/update_eventlog', methods=['POST'])
 def update_eventlog():
-
     # Instantiating an object that can execute SQL statements
     database_cursor = mysql.connection.cursor()
 
-    # The username of the logged in user
-    username = session.get('username')
     # The id of the logged in user
     user_id = session.get('user_id')
 
-    # Indicates whether a trigger watch button is checked or not
-    status = request.form['status']
-    # Indicates whether a trigger watch button was just initially checked or has been checked
-    initial = request.form['initial']
-    # Indicates the data type associated with the trigger watch button
-    data_type = request.form['data_type']
+    #Return the latest 15 event log entries for this user
+    sql = """
+        SELECT alert_message, alert_time
+        FROM eventlog 
+        WHERE user_id = %s
+        ORDER BY alert_time DESC 
+        LIMIT 15;
+    """
+    database_cursor.execute(sql, (user_id,))
+    results = database_cursor.fetchall()
+    alerts = []
+    for alert in results :
+        alerts.append("{} at {}".format(alert[0], alert[1]))
 
+    return render_template('snippets/eventlog_snippet.html', messages = alerts)
 
-    if status == 'ON':
-    
-        # Trigger watch button was just initially checked
-        if initial == 'YES':
-
-            # eventLogEntryIds is a global dictionary of the latest ids associated to data types per username
-            if username not in eventLogEntryIds:
-    
-                # Check to see if the user has any previous entries in the eventlog table for the specified data type
-                database_cursor.execute("SELECT max(id) FROM eventlog WHERE user_id = '%s' AND alert_type = '%s';" % (user_id, data_type))
-                entryId = database_cursor.fetchone()
-
-                #  If there is an previous entry in the eventlog table
-                if len(entryId) != 0:
-                    eventLogEntryIds[username] = {data_type : entryId[0]}
-
-                # If there are no previous entries in the eventlog table
-                else:
-                    eventLogEntryIds[username] = {data_type : 0}
-
-            else:
-                # If the user has previous entries in the eventlog table for the specified data type, set the latest eventlog entry id for that datatype
-                database_cursor.execute("SELECT max(id) FROM eventlog WHERE user_id = '%s' AND alert_type = '%s';" % (user_id, data_type))
-                entryId = database_cursor.fetchone()[0]
-                eventLogEntryIds[username][data_type] = entryId
-
-        # Trigger watch button has already been checked initially
-        else:
-            # Fetching the newest alert data
-            database_cursor.execute("SELECT id, alert_time, alert_type, alert_message FROM eventlog WHERE user_id = '{}' AND alert_type = '{}' AND id > '{}';".format(user_id, data_type, eventLogEntryIds[username][data_type]))
-            entrysToAdd = database_cursor.fetchall()
-
-            alerts = []
-
-            # Create a list of messages to ship off
-            for entry in entrysToAdd:
-                alert = entry[2] + " Trigger: " + entry[3] + " @ " + str(entry[1])
-                alerts.append(alert)
-
-            # Set the latest eventlog entry id for the specified data type
-            database_cursor.execute("SELECT max(id) FROM eventlog WHERE user_id = '%s' AND alert_type = '%s';" % (user_id, data_type))
-            entryId = database_cursor.fetchone()[0]
-            eventLogEntryIds[username][data_type] = entryId
-
-            return render_template('snippets/eventlog_snippet.html', messages = alerts)
-
-    return jsonify({'result' : 'success'})
 
 
 
