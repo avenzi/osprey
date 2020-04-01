@@ -32,6 +32,9 @@ $(document).ready(function () {
         e.preventDefault();
         var queryString = $('#sensorForm').serialize();
         var query = queryString.split("&");
+   
+        $.post('livestream_config', {livestream_config: queryString});
+        
 
         if (cameraNumber > 0){
             // Create correct number of video selectors
