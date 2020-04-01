@@ -193,18 +193,22 @@ function generate_video_handler( k , numCams) {
     };
 }
 
+// Global map object to store interval IDs for audio refresh
+let audioIntervals = new Map();
+
 // Code to handle audio streams -- only works with one audio for now, all thats needed
 function generate_audio_handler( k ) {
     return function() {
         if ($(`#audioSwitch${k}`).is(':checked')){
-            intervalIDa = setInterval(function() {
+            var intervalID = setInterval(function() {
                 $.post('update_audio', {status : 'ON'}, function(data){
                     $('#decibels').text("Current dB: " + data.decibels);
             });
             }, 1000);
+            audioIntervals.set(k, intervalID)
         }
         else {
-            clearInterval(intervalIDa);
+            clearInterval(audioIntervals.get(k));
 
             // Clear form data after 1.2s to prevent async issues
             setTimeout(function (){
@@ -213,6 +217,9 @@ function generate_audio_handler( k ) {
         }
     }
 }
+
+// Global map object to store interval IDs for sense refresh so they can be stopped
+let senseIntervals = new Map();
 
 // Code to handle sense streams -- should work with more than 2 sense streams, unable to test
 function generate_sense_handler( k ) {
@@ -227,9 +234,10 @@ function generate_sense_handler( k ) {
                     $(`#atm${k}`).text('Atmosphere ('.concat(data.ip, ')'));
                 });
             }, 1000)
+            senseIntervals.set(k, intervalID);
         }
         else {
-            clearInterval(intervalID);
+            clearInterval(senseIntervals.get(k));
 
             // Clear form data after 1.2s to prevent async issues
             setTimeout(function () {
@@ -241,8 +249,8 @@ function generate_sense_handler( k ) {
     }
 }
 
-    // Need to make handlers variable to number of sensors
-    var live = function(numCams, numSenses, numAudios) {
+// Create button handlers after number of each sensor is determined
+var live = function(numCams, numSenses, numAudios) {
     // Deal with number of camera streams
     for (var i=1;i<=numCams;i++) {
             // Hide streams on page load
