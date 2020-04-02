@@ -1,6 +1,21 @@
 ## Notebook
 
-Please provide a one paragraph update to the notebook in advance of our weekly meeting. 
+Please provide a one paragraph update to the notebook in advance of our weekly meeting.
+
+**Apr 2nd, 2020:**
+
+This week we continued work on the on demand video playback.
+We reworked the event log to display 15 most recent events updating every second.
+We debugged the live-feed scalar trigger workflow.
+We redid the sensor stream and switch handler to truly accept any number of inputs.
+We revamped the way the system processes user algorithms to handle sensor data and easily stop algorithms.
+
+**Mar 25th, 2020:**
+
+This week we stress tested the website with 3 video streams and 2 Sense HAT streams.
+We overhauled the live-feed page to make it easy for users to specify the ip address of cameras.
+We made algorithms user specific, and overhauled algorithm and event log display.
+We also finalized the audio livestream and began saving streamed video for playback.
 
 **Mar 18th, 2020:**
 
