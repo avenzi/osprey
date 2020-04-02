@@ -5,11 +5,14 @@ __pycache__
 # Ignore virtual environment
 venv/*
 
-# Log file
+# Ignore Log file
 *.Log
 
-# Visual Studio Code
+# Ignore Visual Studio Code
 .vscode/*
 
-# User uploaded files
+# Ignore User uploaded files
 app/static/uploads/*
+
+# Do not ignore datahub module
+!app/static/uploads/datahub.py
