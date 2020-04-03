@@ -4,7 +4,7 @@ import time
 import subprocess
 import threading
 
-from app import app
+from app import app, mysql
 from queue import Queue
 
 
@@ -13,47 +13,28 @@ class Program(threading.Thread):
         threading.Thread.__init__(self, args=(), kwargs=None)
         self.queue = queue
         self.daemon = True
-        self.is_running = True
         self.filename = args[1]
         self.user_id = args[2]
-        self.username = args[3]
         self.name = self.filename
 
-    def stop(self):
-        self.is_running = False
-
     def run(self):
+        # Creating a child process for a selected python file
+        process = subprocess.Popen(['python3', os.path.join(app.config['UPLOADS_FOLDER'], self.filename)])
 
-        # Passing user_id into a tmp file to be accessed by boilerplate and deleted
-        f = open("app/static/tempfiles/tmp.txt", "w")
-        f.write(str(self.user_id))
-        f.close()
-
-        # Creating a child process for a selected python file. If sending data to the child process' stdin, you must create the Popen object with stdin=PIPE.
-        # Similarly, to get anything other than None in the result tuple, you need to use stdout=PIPE and/or stderr=PIPE
-        process = subprocess.Popen(['python3', os.path.join(app.config['UPLOADS_FOLDER'], self.username, self.filename)], stdin=subprocess.PIPE, 
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-        while self.is_running:
+        while True:
             time.sleep(0.075)
-            # print("Process Running...")
+            # If process has ended or had an error, ensure Status is set to 0 (not running) in Algorithm table, and kill the thread
             if process.poll() is not None:
-                print("Process Ended, Exiting Loop...")
+                print("Process Ended...")
 
-                # Remove tmp file if it exists
-                if os.path.exists("app/static/tempfiles/tmp.txt"):
-                    os.remove("app/static/tempfiles/tmp.txt")
-                else:
-                    print("The file does not exist")
+                with app.app_context():
+                    sql = """
+                        UPDATE Algorithm
+                        SET Status = 0
+                        WHERE UserId = %s AND Path = %s;
+                    """
+                    database_cursor = mysql.connection.cursor()
+                    database_cursor.execute(sql, (self.user_id, self.filename.split('.')[0]))
+                    mysql.connection.commit()
 
                 sys.exit()
-        
-        # Remove tmp file if it exists
-        if os.path.exists("app/static/tempfiles/tmp.txt"):
-            os.remove("app/static/tempfiles/tmp.txt")
-        else:
-            print("The file does not exist")
-
-        print("Exiting Loop Immediately")
-        process.kill()
-        sys.exit()

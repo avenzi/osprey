@@ -9,22 +9,22 @@
     <h5>Available Algorithms</h5>
     <ul class="list-group" id="availableAlgorithms">
 
-        {% for file in files %}
+        {% for algorithm in algorithms %}
 
             <li class="list-group-item">
-                {{ file }}
+                {{ algorithm }}
 
-                {% if file in runningAlgorithms %}
-                    <button type="button" class="btn btn-primary availableAlgorithmsRunButton" id="{{file.split('.')[0]}}">
+                {% if algorithm in runningAlgorithms %}
+                    <button type="button" class="btn btn-primary availableAlgorithmsRunButton" id="{{algorithm.split('.')[0]}}">
                         <span class="spinner-border spinner-border-sm" role="status"></span>
                         Running...
                     </button>
                 {% else %}
-                    <button type="button" class="btn btn-primary availableAlgorithmsRunButton" id="{{file.split('.')[0]}}">Run</button>
+                    <button type="button" class="btn btn-primary availableAlgorithmsRunButton" id="{{algorithm.split('.')[0]}}">Run</button>
                 {% endif %}
 
-                <button type="button" class="btn btn-primary availableAlgorithmsViewButton" id="{{file.split('.')[0]}}">View</button>
-                <button type="button" class="btn btn-primary availableAlgorithmsDeleteButton" id="{{file.split('.')[0]}}">Delete</button>
+                <button type="button" class="btn btn-primary availableAlgorithmsViewButton" id="{{algorithm.split('.')[0]}}">View</button>
+                <button type="button" class="btn btn-primary availableAlgorithmsDeleteButton" id="{{algorithm.split('.')[0]}}">Delete</button>
             </li>
 
         {% endfor %}

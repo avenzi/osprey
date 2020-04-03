@@ -62,144 +62,9 @@ $(document).ready(function () {
 
         e.stopImmediatePropagation();
     });
-    
-
-    var audioCounter = 0;
-    $('#audioCheck').click(function(e) {
-        (function doPoll() {
-
-            var initial = 'NO'
-
-            if ($('#audioCheck').is(':checked')) {
-                // If the box has just been checked
-                if (audioCounter == 0) {
-                    initial = 'YES'
-                }
-
-                req1 = $.post('update_eventlog', {data_type : 'audio', initial : initial, status : 'ON'}, function(data){
-                    $('#eventLog').append(data);
-                })
-                .done()
-                .always(function(){
-                    audioCounter ++;
-                    setTimeout(doPoll, 1000);
-                });
-            }
-
-            else {
-                req2 = $.post('update_eventlog', {data_type : 'audio', initial : initial, status : 'OFF'});
-                audioCounter = 0
-                req1.abort();
-            }
-
-        }());
-
-        e.stopImmediatePropagation();
-    });
-    
-
-    var temperatureCounter = 0;
-    $('#temperatureCheck').click(function(e) {
-        (function doPoll() {
-
-            var initial = 'NO'
-
-            if ($('#temperatureCheck').is(':checked')) {
-                // If the box has just been checked
-                if (temperatureCounter == 0) {
-                    initial = 'YES'
-                }
-
-                req1 = $.post('update_eventlog', {data_type : 'temperature', initial : initial, status : 'ON'}, function(data){
-                    $('#eventLog').append(data);
-                })
-                .done()
-                .always(function(){
-                    temperatureCounter ++;
-                    setTimeout(doPoll, 1000);
-                });
-            }
-
-            else {
-                req2 = $.post('update_eventlog', {data_type : 'temperature', initial : initial, status : 'OFF'});
-                temperatureCounter = 0
-                req1.abort();
-            }
-
-        }());
-
-        e.stopImmediatePropagation();
-    });
 
 
-    var pressureCounter = 0;
-    $('#pressureCheck').click(function(e) {
-        (function doPoll() {
-
-            var initial = 'NO'
-
-            if ($('#pressureCheck').is(':checked')) {
-                // If the box has just been checked
-                if (pressureCounter == 0) {
-                    initial = 'YES'
-                }
-
-                req1 = $.post('update_eventlog', {data_type : 'pressure', initial : initial, status : 'ON'}, function(data){
-                    $('#eventLog').append(data);
-                })
-                .done()
-                .always(function(){
-                    pressureCounter ++;
-                    setTimeout(doPoll, 1000);
-                });
-            }
-
-            else {
-                req2 = $.post('update_eventlog', {data_type : 'pressure', initial : initial, status : 'OFF'});
-                pressureCounter = 0
-                req1.abort();
-            }
-
-        }());
-
-        e.stopImmediatePropagation();
-    });
-
-
-    var humidityCounter = 0;
-    $('#humidityCheck').click(function(e) {
-        (function doPoll() {
-
-            var initial = 'NO'
-
-            if ($('#humidityCheck').is(':checked')) {
-                // If the box has just been checked
-                if (humidityCounter == 0) {
-                    initial = 'YES'
-                }
-
-                req1 = $.post('update_eventlog', {data_type : 'humidity', initial : initial, status : 'ON'}, function(data){
-                    $('#eventLog').append(data);
-                })
-                .done()
-                .always(function(){
-                    humidityCounter ++;
-                    setTimeout(doPoll, 1000);
-                });
-            }
-
-            else {
-                req2 = $.post('update_eventlog', {data_type : 'humidity', initial : initial, status : 'OFF'});
-                humidityCounter = 0
-                req1.abort();
-            }
-
-        }());
-
-        e.stopImmediatePropagation();
-    }); 
-
-    
+    // Handle scalar trigger ok buttion
     $('#triggerSettingsSubmit').click(function(e) {
         var audio_input = $('#audioInput').val();
         var temperature_input = $('#temperatureInput').val();
@@ -207,8 +72,28 @@ $(document).ready(function () {
         var humidity_input = $('#humidityInput').val();
 
         req = $.post('update_triggersettings', {audio_input : audio_input, temperature_input : temperature_input, pressure_input : pressure_input, humidity_input : humidity_input});
-        e.stopImmediatePropagation();
     });
+
+    // Start eventlog update once on ok click
+    $('#triggerSettingsSubmit').one("click", function() {
+        // update event log every second on page load-- not cancellable right now
+        setInterval( function() {
+            $.post("update_eventlog", function(data) {
+                $("#eventLog").html(data)
+            })
+        }, 1000);
+    })
+
+    // Handle scalar trigger clear button
+    $('#triggerSettingsClear').click(function(e) {
+        $('#audioInput').val('');
+        $('#temperatureInput').val('');
+        $('#pressureInput').val('');
+        $('#humidityInput').val('');
+
+        req = $.post('update_triggersettings', {audio_input : '', temperature_input : '', pressure_input : '', humidity_input : ''});
+        e.stopImmediatePropagation();
+    })
 
 
     // Algorithms button to take you to the uploads menu within the modal

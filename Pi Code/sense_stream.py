@@ -8,7 +8,7 @@ import requests
 def stream(server, log=sys.stdout):
     sense = SenseHat()
 
-    # fails out if connection broken
+    # Send data forever
     while True:
         # Wait 1 second between updates
         time.sleep(1)
@@ -19,16 +19,12 @@ def stream(server, log=sys.stdout):
             press = sense.get_pressure()
             humid = sense.get_humidity()
 
-
             # convert temperature to F
             temp = ((temp/5) * 9) + 32
 
             # Create data object with temperature, pressure, and humidity data
             sense_data = {"Temp": temp, "Press": press, "Humid": humid}
             
-            # Debugging
-            #print(temp, file = log)
-          
             requests.post(server,
                     data = sense_data,
             )

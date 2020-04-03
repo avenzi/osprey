@@ -1,11 +1,12 @@
 $(document).ready(function () {
     // Default to 1 of each sensor type
-    var cameraNumber = 0;
     var senseNumber = 1;
     var audioNumber = 1;
 
+    var cameraNumber = 0;
+
     // Define max sensors
-    var maxCam = 3;
+    var maxCam = 10;
     var maxSense = 2;
     var maxAudio = 1;
 
@@ -113,7 +114,7 @@ $(document).ready(function () {
         $('#dialog').dialog('close');
 
         // Create all normal live javascript now that all elements are correct
-        live();
+        live(cameraNumber, senseNumber, audioNumber);
     });
 
     $("#addCam").click(function(e) {
@@ -122,8 +123,9 @@ $(document).ready(function () {
         // Maximum cameras
         if (cameraNumber < maxCam) {
             cameraNumber++;
+            cameraIPidx = (cameraNumber-1) % cameraIPS.length;
             $("#cameraList").append(`<li><label for="camera${cameraNumber}">Camera ${cameraNumber} IP: </label>
-            <input name="camera${cameraNumber}" id="camera${cameraNumber}" value="${cameraIPS[cameraNumber-1]}">`);
+            <input name="camera${cameraNumber}" id="camera${cameraNumber}" value="${cameraIPS[cameraIPidx]}">`);
         }
     });
 
@@ -179,99 +181,98 @@ $(document).ready(function () {
     } );
 });
 
-// Need to make handlers variable to number of sensors
-var live = function() {
-   // Hide streams on page load
-   $('#stream2').hide();	
-   $('#stream3').hide();
 
+// Code to handle switching between video streams
+function generate_video_handler( k , numCams) {
+    return function() { 
+        for (var j=1;j<=numCams;j++) {
+            if (j == k) {
+                $(`#stream${j}`).show();
+            } else {
+                $(`#stream${j}`).hide();
+            }
+    }
+    };
+}
 
-   // Code to handle switching between video streams
+// Global map object to store interval IDs for audio refresh
+let audioIntervals = new Map();
 
-   $('#video1').click(function(e) {
-	$('#stream1').show();
-	$('#stream2').hide();
-	$('#stream3').hide();
-   });
-
-   $('#video2').click(function(e) {
-	$('#stream1').hide();
-	$('#stream2').show();
-	$('#stream3').hide();
-   });
-   
-   $('#video3').click(function(e) {
-	$('#stream1').hide();
-	$('#stream2').hide();
-	$('#stream3').show();
-   });
-
-
-    $('#audioSwitch1').click(function(e) {
-        if ($('#audioSwitch1').is(':checked')){
-            intervalIDa = setInterval(function() {
+// Code to handle audio streams -- only works with one audio for now, all thats needed
+function generate_audio_handler( k ) {
+    return function() {
+        if ($(`#audioSwitch${k}`).is(':checked')){
+            var intervalID = setInterval(function() {
                 $.post('update_audio', {status : 'ON'}, function(data){
                     $('#decibels').text("Current dB: " + data.decibels);
             });
             }, 1000);
+            audioIntervals.set(k, intervalID)
         }
         else {
-            clearInterval(intervalIDa);
+            clearInterval(audioIntervals.get(k));
 
             // Clear form data after 1.2s to prevent async issues
             setTimeout(function (){
                 $('#decibels').text('Current dB: --.-');
             }, 1200);
         }
-    });
+    }
+}
 
+// Global map object to store interval IDs for sense refresh so they can be stopped
+let senseIntervals = new Map();
 
-    // Handle sense Switch Functionality
-    $('#senseSwitch1').click(function() {
-        $('#sense1').show();
-        if ($('#senseSwitch1').is(':checked')){
-            intervalID1 = setInterval(function() {
-                $.post('update_sense1', {status : 'ON'}, function(data){
-                    $('#roomTemperature1').text(data.roomTemperature);
-                    $('#airPressure1').text(data.airPressure);
-                    $('#airHumidity1').text(data.airHumidity);
-                    $('#atm1').text('Atmosphere ('.concat(data.ip, ')'));
+// Code to handle sense streams -- should work with more than 2 sense streams, unable to test
+function generate_sense_handler( k ) {
+    return function() {
+        $(`#sense${k}`).show();
+        if ($(`#senseSwitch${k}`).is(':checked')){
+            var intervalID = setInterval(function() {
+                $.post(`update_sense${k}`, {status : 'ON'}, function(data){
+                    $(`#roomTemperature${k}`).text(data.roomTemperature);
+                    $(`#airPressure${k}`).text(data.airPressure);
+                    $(`#airHumidity${k}`).text(data.airHumidity);
+                    $(`#atm${k}`).text('Atmosphere ('.concat(data.ip, ')'));
                 });
             }, 1000)
+            senseIntervals.set(k, intervalID);
         }
         else {
-            clearInterval(intervalID1);
+            clearInterval(senseIntervals.get(k));
 
             // Clear form data after 1.2s to prevent async issues
             setTimeout(function () {
-                $('#roomTemperature1').text('--.-');
-                $('#airPressure1').text('--.-');
-                $('#airHumidity1').text('--.-');
+                $(`#roomTemperature${k}`).text('--.-');
+                $(`#airPressure${k}`).text('--.-');
+                $(`#airHumidity${k}`).text('--.-');
             }, 1200);
         }
-    });
+    }
+}
 
-    $('#senseSwitch2').click(function() {
-        $('#sense2').show();
-        if ($('#senseSwitch2').is(':checked')){
-            intervalID2 = setInterval(function() {
-                $.post('update_sense2', {status : 'ON'}, function(data){
-                    $('#roomTemperature2').text(data.roomTemperature);
-                    $('#airPressure2').text(data.airPressure);
-                    $('#airHumidity2').text(data.airHumidity);
-                    $('#atm2').text('Atmosphere ('.concat(data.ip, ')'));
-                });
-            }, 1000);
-        }
-        else {
-            clearInterval(intervalID2);
+// Create button handlers after number of each sensor is determined
+var live = function(numCams, numSenses, numAudios) {
+    // Deal with number of camera streams
+    for (var i=1;i<=numCams;i++) {
+            // Hide streams on page load
+            if (i==1) {
+                $('#stream1').show();
+            } else {
+                $(`#stream${i}`).hide();
+            }
+       
+        // generate correct click handler for each video selector
+        $(`#video${i}`).on("click", generate_video_handler(i, numCams))
+   }
 
-            // Clear form data after 1.2s to prevent async issues
-            setTimeout(function () {
-                $('#roomTemperature2').text('--.-');
-                $('#airPressure2').text('--.-');
-                $('#airHumidity2').text('--.-');
-            }, 1200);
-        }
-    });
+   // Deal with number of audio streams
+   for (var i=1;i<=numAudios;i++) {
+       $(`#audioSwitch${i}`).click( generate_audio_handler(i));
+   }
+
+   // Deal with number of sense streams
+   for (var i=1; i<=numSenses;i++) {
+       $(`#senseSwitch${i}`).on("click", generate_sense_handler(i));
+   }
 }

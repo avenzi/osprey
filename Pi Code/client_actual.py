@@ -26,6 +26,6 @@ while True:
     except Exception as e:
         # Write to log file
         print("Exception caught: ", e, file = log)
-        time.sleep(.5) # reduced from 2 to minimize connection lag
+        time.sleep(.5)
         
 log.close()

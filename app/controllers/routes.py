@@ -34,19 +34,13 @@ audioData = Audio()
 # Data structures for handling temperature data from two sense HATs
 senseData1 = Sense()
 senseData2 = Sense()
-# Data structure for handling event log data
-eventLogData = EventLog()
 
 # Only .py files are allowed to be uploaded
 ALLOWED_EXTENSIONS = set(['py'])
-# Algorithms that are currently running for each user
-runningAlgorithms = {}
-# Dictionary of the latest ids associated to data types per username
-eventLogEntryIds = {}
 
 LOG = logging.getLogger(__name__)
 global loginStatus
-loginStatus = True # Avoid login for DECS
+loginStatus = True # Avoid login for DECS -- should be false
 
 
 @app.route('/', methods = ['GET','POST'])
@@ -86,9 +80,29 @@ def login():
             session['triggerSettings_pressure'] = '' 
             session['triggerSettings_humidity'] = '' 
 
-            # Creating the eventlog table if not already created. The eventlog table keeps track of all trigger events
-            database_cursor.execute('''CREATE TABLE IF NOT EXISTS eventlog (id INTEGER UNSIGNED AUTO_INCREMENT, user_id INTEGER UNSIGNED, 
-                alert_time DATETIME, alert_type VARCHAR(255), alert_message VARCHAR(255), PRIMARY KEY (id), FOREIGN KEY (user_id) REFERENCES user(id))''')
+            # Creating the eventlog table if it does not exist. The eventlog table keeps track of all trigger events
+            sql = """CREATE TABLE IF NOT EXISTS eventlog(
+                id INTEGER UNSIGNED AUTO_INCREMENT,
+                user_id INTEGER UNSIGNED,
+                alert_time DATETIME,
+                alert_type VARCHAR(255),
+                alert_message VARCHAR(1023),
+                PRIMARY KEY (id),
+                FOREIGN KEY (user_id) REFERENCES user(id)
+            );"""
+            database_cursor.execute(sql)
+
+            # Creating the Algorithm table if it does not exist. The Algorithm table keeps track of all algorithm information
+            sql = """CREATE TABLE IF NOT EXISTS Algorithm(
+                id INTEGER UNSIGNED AUTO_INCREMENT,
+                UserId INTEGER UNSIGNED,
+                Status BOOLEAN,
+                Name VARCHAR(255),
+                Path VARCHAR(255),
+                PRIMARY KEY (id),
+                FOREIGN KEY (UserId) REFERENCES user(id)
+                );"""
+            database_cursor.execute(sql)
 
             return redirect(url_for('livefeed'))
 
@@ -144,6 +158,7 @@ def livefeed():
     if loginStatus != True:
         return redirect(url_for('login'))
 
+    #session['user_id'] = 1 # debugging event log without login -- delete
     return render_template('livefeed.html', senseData1 = senseData1, senseData2 = senseData2, audioData = audioData)
 
 
@@ -327,9 +342,15 @@ def update_sense1():
     try:
         # Instantiating an object that can execute SQL statements
         database_cursor = mysql.connection.cursor()
+        sql = """
+            SELECT INET_NTOA(IP), Temp, Press, Humid 
+            FROM Sense 
+            WHERE IP <> INET_ATON(%s) 
+            ORDER BY Time DESC;
+        """
 
         # Get current Sense HAT data from DB
-        database_cursor.execute("SELECT INET_NTOA(IP), Temp, Press, Humid FROM Sense WHERE IP <> INET_ATON('%s') ORDER BY Time DESC;" % session.get('senseData2IP'))
+        database_cursor.execute(sql, (session.get('senseData1IP'),))
         ip, temp, press, humid = database_cursor.fetchone()
 
         # SQL command filters out senseData2's ip so no need to check for it
@@ -343,25 +364,44 @@ def update_sense1():
 
         if (triggerSettings_temperature != '') and (float(roomTemperature) > float(triggerSettings_temperature)):
             # Write temperature data to database
-            database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Temperature", 
-                "Sense 1 Temperature exceeded " + triggerSettings_temperature + " F"))
+            sql = """
+                INSERT INTO eventlog 
+                (user_id, alert_time, alert_type, alert_message) 
+                VALUES (%s, NOW(), %s, %s);
+            """
+            message = "Sense 1 Temperature exceeded " + triggerSettings_temperature + " F"
+
+            database_cursor.execute(sql, (user_id, "Temperature", message))
             mysql.connection.commit()
 
         if (triggerSettings_pressure != '') and (float(airPressure) > float(triggerSettings_pressure)):
             # Write pressure data to database
-            database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Pressure", 
-                "Sense 1 Pressure exceeded " + triggerSettings_pressure + " millibars"))
+            sql = """
+                INSERT INTO eventlog 
+                (user_id, alert_time, alert_type, alert_message) 
+                VALUES (%s, NOW(), %s, %s);
+            """
+            message = "Sense 1 Pressure exceeded " + triggerSettings_pressure + " millibars"
+
+            database_cursor.execute(sql, (user_id, "Pressure", message))
             mysql.connection.commit()
 
         if (triggerSettings_humidity != '') and (float(airHumidity) > float(triggerSettings_humidity)):
             # Write humidity data to database
-            database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Humidity", 
-                "Sense 1 Humidity exceeded " + triggerSettings_humidity + " %"))
+            sql = """
+                INSERT INTO eventlog 
+                (user_id, alert_time, alert_type, alert_message) 
+                VALUES (%s, NOW(), %s, %s);
+            """
+            message = "Sense 1 Humidity exceeded " + triggerSettings_humidity + " %"
+            database_cursor.execute(sql, (user_id, "Humidity", message))
             mysql.connection.commit()
     
     # Don't fail out of website on Sense HAT error
     except Exception as e:
-        print("Sense HAT 1 broken:", e)
+        exc_type, exc_obj, tb = sys.exc_info()
+        lineno = tb.tb_lineno
+        print("Sense HAT 1 broken:", e, lineno)
         pass
 
     return jsonify({'result' : 'success', 'status' : status, 'roomTemperature' : roomTemperature,
@@ -400,8 +440,15 @@ def update_sense2():
         # Instantiating an object that can execute SQL statements
         database_cursor = mysql.connection.cursor()
 
+        sql = """
+            SELECT INET_NTOA(IP), Temp, Press, Humid, Time 
+            FROM Sense 
+            WHERE IP <> INET_ATON(%s) 
+            ORDER BY Time DESC;
+        """
+
         # Get current Sense HAT data from DB
-        database_cursor.execute("SELECT INET_NTOA(IP), Temp, Press, Humid, Time FROM Sense WHERE IP <> INET_ATON('%s') ORDER BY Time DESC;" % session.get('senseData1IP'))
+        database_cursor.execute(sql, (session.get('senseData2IP'),))
         ip, temp, press, humid, time = database_cursor.fetchone()
 
         # SQL command filters out senseData1's ip so no need to check for it
@@ -415,25 +462,44 @@ def update_sense2():
 
         if (triggerSettings_temperature != '') and (float(roomTemperature) > float(triggerSettings_temperature)):
             # Write temperature data to database
-            database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Temperature", 
-                "Sense 2 Temperature exceeded " + triggerSettings_temperature + " F"))
+            sql = """
+                INSERT INTO eventlog 
+                (user_id, alert_time, alert_type, alert_message) 
+                VALUES (%s, NOW(), %s, %s);
+            """
+            message = "Sense 2 Temperature exceeded " + triggerSettings_temperature + " F"
+
+            database_cursor.execute(sql, (user_id, "Temperature", message))
             mysql.connection.commit()
 
         if (triggerSettings_pressure != '') and (float(airPressure) > float(triggerSettings_pressure)):
             # Write pressure data to database
-            database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Pressure", 
-                "Sense 2 Pressure exceeded " + triggerSettings_pressure + " millibars"))
+            sql = """
+                INSERT INTO eventlog 
+                (user_id, alert_time, alert_type, alert_message) 
+                VALUES (%s, NOW(), %s, %s);
+            """
+            message = "Sense 2 Pressure exceeded " + triggerSettings_pressure + " millibars"
+
+            database_cursor.execute(sql, (user_id, "Pressure", message))
             mysql.connection.commit()
 
         if (triggerSettings_humidity != '') and (float(airHumidity) > float(triggerSettings_humidity)):
             # Write humidity data to database
-            database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Humidity", 
-                "Sense 2 Humidity exceeded " + triggerSettings_humidity + " %"))
+            sql = """
+                INSERT INTO eventlog 
+                (user_id, alert_time, alert_type, alert_message) 
+                VALUES (%s, NOW(), %s, %s);
+            """
+            message = "Sense 2 Humidity exceeded " + triggerSettings_humidity + " %"
+            database_cursor.execute(sql, (user_id, "Humidity", message))
             mysql.connection.commit()
     
     # Don't fail out of website on Sense HAT error
     except Exception as e:
-        print("Sense HAT 2 broken:", e)
+        exc_type, exc_obj, tb = sys.exc_info()
+        lineno = tb.tb_lineno
+        print("Sense HAT 2 broken:", e, lineno)
         pass
 
     return jsonify({'result' : 'success', 'status' : status, 'roomTemperature' : roomTemperature,
@@ -488,70 +554,28 @@ def update_triggersettings():
 """route is used to update the event log for all data types"""
 @app.route('/update_eventlog', methods=['POST'])
 def update_eventlog():
-
     # Instantiating an object that can execute SQL statements
     database_cursor = mysql.connection.cursor()
 
-    # The username of the logged in user
-    username = session.get('username')
     # The id of the logged in user
     user_id = session.get('user_id')
 
-    # Indicates whether a trigger watch button is checked or not
-    status = request.form['status']
-    # Indicates whether a trigger watch button was just initially checked or has been checked
-    initial = request.form['initial']
-    # Indicates the data type associated with the trigger watch button
-    data_type = request.form['data_type']
+    #Return the latest 15 event log entries for this user
+    sql = """
+        SELECT alert_message, alert_time
+        FROM eventlog 
+        WHERE user_id = %s
+        ORDER BY alert_time DESC 
+        LIMIT 15;
+    """
+    database_cursor.execute(sql, (user_id,))
+    results = database_cursor.fetchall()
+    alerts = []
+    for alert in results :
+        alerts.append("{} at {}".format(alert[0], alert[1]))
 
+    return render_template('snippets/eventlog_snippet.html', messages = alerts)
 
-    if status == 'ON':
-    
-        # Trigger watch button was just initially checked
-        if initial == 'YES':
-
-            # eventLogEntryIds is a global dictionary of the latest ids associated to data types per username
-            if username not in eventLogEntryIds:
-    
-                # Check to see if the user has any previous entries in the eventlog table for the specified data type
-                database_cursor.execute("SELECT max(id) FROM eventlog WHERE user_id = '%s' AND alert_type = '%s';" % (user_id, data_type))
-                entryId = database_cursor.fetchone()
-
-                #  If there is an previous entry in the eventlog table
-                if len(entryId) != 0:
-                    eventLogEntryIds[username] = {data_type : entryId[0]}
-
-                # If there are no previous entries in the eventlog table
-                else:
-                    eventLogEntryIds[username] = {data_type : 0}
-
-            else:
-                # If the user has previous entries in the eventlog table for the specified data type, set the latest eventlog entry id for that datatype
-                database_cursor.execute("SELECT max(id) FROM eventlog WHERE user_id = '%s' AND alert_type = '%s';" % (user_id, data_type))
-                entryId = database_cursor.fetchone()[0]
-                eventLogEntryIds[username][data_type] = entryId
-
-        # Trigger watch button has already been checked initially
-        else:
-            # Fetching the newest alert data
-            database_cursor.execute("SELECT id, alert_time, alert_type, alert_message FROM eventlog WHERE user_id = '{}' AND alert_type = '{}' AND id > '{}';".format(user_id, data_type, eventLogEntryIds[username][data_type]))
-            entrysToAdd = database_cursor.fetchall()
-
-            alerts = []
-
-            # Create a list of messages to ship off
-            for entry in entrysToAdd:
-                alert = entry[2] + " Trigger: " + entry[3] + " @ " + str(entry[1])
-                alerts.append(alert)
-
-            # Set the latest eventlog entry id for the specified data type
-            database_cursor.execute("SELECT max(id) FROM eventlog WHERE user_id = '%s' AND alert_type = '%s';" % (user_id, data_type))
-            entryId = database_cursor.fetchone()[0]
-            eventLogEntryIds[username][data_type] = entryId
-
-            return render_template('snippets/eventlog_snippet.html', messages = alerts)
-
-    return jsonify({'result' : 'success'})
 
 
 
@@ -728,19 +752,13 @@ def downloadBoilerplate():
 """route is used to upload algorithms"""
 @app.route("/algorithm_upload", methods=['GET', 'POST'])
 def algorithm_upload():
-    files = []
-    username = session.get('username')
-
-    # Creating a username in runningAlgorithms if it does not exist
-    if username not in runningAlgorithms:
-        runningAlgorithms[username] = {}
-
-    # Creating an uploads folder for a user if one does not already exist
-    if not os.path.exists(os.path.join(app.config['UPLOADS_FOLDER'], username)):
-        os.makedirs(os.path.join(app.config['UPLOADS_FOLDER'], username))
+    algorithms = []
+    runningAlgorithms = []
+    user_id = session.get('user_id')
+    database_cursor = mysql.connection.cursor()
 
     if request.method == 'POST':
-        # Checking that the post request has the file part
+        # Checking that the POST request has the file part
         if 'file' not in request.files:
             return jsonify({'result' : 'No File Part'})
 
@@ -750,93 +768,244 @@ def algorithm_upload():
         if file.filename == '':
             return jsonify({'result' : 'No File Selected'})
 
-        # Ensuring that the file name has an extension that is allowed
+        # Checking that the file name has an extension that is allowed
         if file and ('.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS):
             filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOADS_FOLDER'], username, filename))
-            # Getting a list of all files in the uploads directory
-            with os.scandir(os.path.join(app.config['UPLOADS_FOLDER'], username)) as entries:
-                for entry in entries:
-                    if entry.is_file():
-                        files.append(entry.name)
-            return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms[username])
+
+            # Search Algorithm table for algorithm filename to get file path if it exists
+            sql = """
+                SELECT Path 
+                FROM Algorithm 
+                WHERE UserId = %s AND Name = %s;
+            """
+            database_cursor.execute(sql, (user_id, filename))
+            path = database_cursor.fetchone()
+
+            # If algorithm filename does not exist
+            if path == None:
+                # Get the path of the most recently uploaded algorithm pertaining to a user
+                sql = """
+                    SELECT Path
+                    FROM Algorithm
+                    WHERE UserId = %s
+                    ORDER BY id DESC
+                    LIMIT 1;
+                """
+                database_cursor.execute(sql, (user_id,))
+                pth = database_cursor.fetchone()
+
+                # If user has no recently uploaded algorithm
+                if pth == None:
+                    sql = """ 
+                        INSERT INTO Algorithm
+                        (UserId, Status, Name, Path)
+                        VALUES (%s, %s, %s, %s);
+                    """
+                    database_cursor.execute(sql, (user_id, 0, filename, str(user_id) + "-1"))
+                    mysql.connection.commit()
+
+                    file.save(os.path.join(app.config['UPLOADS_FOLDER'], str(user_id) + "-1.py"))
+
+                # If user has a recently uploaded algorithm
+                else:
+                    alg_num = int(pth[0].split('-')[1]) + 1
+                    sql = """ 
+                        INSERT INTO Algorithm
+                        (UserId, Status, Name, Path)
+                        VALUES (%s, %s, %s, %s);
+                    """
+                    database_cursor.execute(sql, (user_id, 0, filename, str(user_id) + "-" + str(alg_num)))
+                    mysql.connection.commit()
+
+                    file.save(os.path.join(app.config['UPLOADS_FOLDER'], str(user_id) + "-" + str(alg_num) + ".py"))
+                
+            # If algorithm filename exists
+            else:
+                # TODO: Algorithm overwrite prompt
+
+                # Update the old file path
+                file.save(os.path.join(app.config['UPLOADS_FOLDER'], path[0] + ".py"))
+
+            # Search Algorithm table for filenames of algorithms pertaining to a user
+            sql = """
+                SELECT Status, Name 
+                FROM Algorithm 
+                WHERE UserId = %s;
+            """            
+            database_cursor.execute(sql, (user_id,))
+            algs = database_cursor.fetchall()
+
+            for alg in algs:
+                if alg[0] == 1:
+                    runningAlgorithms.append(alg[1])
+                algorithms.append(alg[1])
+
+            return render_template('snippets/uploads_list_snippet.html', algorithms = algorithms, runningAlgorithms = runningAlgorithms)
 
         return jsonify({'result' : 'File Extension Not Allowed'})
 
     elif request.method == 'GET':
-        # Getting a list of all files in the uploads directory
-        with os.scandir(os.path.join(app.config['UPLOADS_FOLDER'], username)) as entries:
-            for entry in entries:
-                if entry.is_file():
-                    files.append(entry.name)
-        return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms[username])
+        # Search Algorithm table for filenames of algorithms pertaining to a user
+        sql = """
+            SELECT Status, Name 
+            FROM Algorithm 
+            WHERE UserId = %s;
+        """            
+        database_cursor.execute(sql, (user_id,))
+        algs = database_cursor.fetchall()
+
+        for alg in algs:
+            if alg[0] == 1:
+                runningAlgorithms.append(alg[1])
+            algorithms.append(alg[1])
+
+        return render_template('snippets/uploads_list_snippet.html', algorithms = algorithms, runningAlgorithms = runningAlgorithms)
 
 
 """route is used to handle uploaded algorithms"""
 @app.route('/algorithm_handler', methods=['POST'])
 def algorithm_handler():
-    files = []
+    algorithms = []
+    runningAlgorithms = []
     database_cursor = mysql.connection.cursor()
     filename = request.form['filename'] + ".py"
     buttonPressed = request.form['button']
-    username = session.get('username')
     user_id = session.get('user_id')
 
-    # Creating a username in runningAlgorithms if it does not exist
-    if username not in runningAlgorithms:
-        runningAlgorithms[username] = {}
-
     if buttonPressed == "select":
-        if filename not in runningAlgorithms[username]:
-            #  Pass the filename, id, and username of the user into the thread
-            program_thread = Program(Queue(), args=(True, filename, user_id, username))
+        # Search Algorithm table for running algorithms pertaining to a user
+        sql = """
+            SELECT Name
+            FROM Algorithm
+            WHERE UserId = %s AND Status = 1;
+        """
+        database_cursor.execute(sql, (user_id,))
+        algs = database_cursor.fetchall()
 
+        for alg in algs:
+            runningAlgorithms.append(alg[0])
+
+        # Get the actual filename of the file to run
+        sql = """
+            SELECT Path
+            FROM Algorithm
+            WHERE UserId = %s AND Name = %s;
+        """
+        database_cursor.execute(sql, (user_id, filename))
+        filename_actual = database_cursor.fetchone()[0] + ".py"
+
+        if filename not in runningAlgorithms:
+            program_thread = Program(Queue(), args=(True, filename_actual, user_id))
             program_thread.start()
-            runningAlgorithms[username][filename] = program_thread
-            print("Algorithms running: " + str(runningAlgorithms))
+           
+            # Set Status of file to 1 for running
+            sql = """
+                UPDATE Algorithm
+                SET Status = 1
+                WHERE UserId = %s AND Name = %s;
+            """
+            database_cursor.execute(sql, (user_id, filename))
+            mysql.connection.commit()
 
-            # Getting a list of all files in the uploads directory
-            with os.scandir(os.path.join(app.config['UPLOADS_FOLDER'], username)) as entries:
-                for entry in entries:
-                    if entry.is_file():
-                        files.append(entry.name)
-            return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms[username])
+            # Search Algorithm table for filenames of algorithms pertaining to a user
+            sql = """
+                SELECT Status, Name 
+                FROM Algorithm 
+                WHERE UserId = %s;
+            """            
+            database_cursor.execute(sql, (user_id,))
+            algs = database_cursor.fetchall()
 
-        elif filename in runningAlgorithms[username]:
-            # Exiting the thread
-            runningAlgorithms[username][filename].stop()
-            
-            # Deleting thread from runningAlgorithms
-            # FOR DEBUGGING: Comment this line out to see if the thread truly stopped
-            del runningAlgorithms[username][filename]
+            runningAlgs = []
 
-            print("Algotithms running: " + str(runningAlgorithms))
+            for alg in algs:
+                if alg[0] == 1:
+                    runningAlgs.append(alg[1])
+                algorithms.append(alg[1])
 
-            # Getting a list of all files in the uploads directory
-            with os.scandir(os.path.join(app.config['UPLOADS_FOLDER'], username)) as entries:
-                for entry in entries:
-                    if entry.is_file():
-                        files.append(entry.name)
-            return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms[username])
+            return render_template('snippets/uploads_list_snippet.html', algorithms = algorithms, runningAlgorithms = runningAlgs)
+
+        else:       
+            # Set Status of file to 0 for not running
+            sql = """
+                UPDATE Algorithm
+                SET Status = 0
+                WHERE UserId = %s AND Name = %s;
+            """
+            database_cursor.execute(sql, (user_id, filename))
+            mysql.connection.commit()
+
+            # Search Algorithm table for filenames of algorithms pertaining to a user
+            sql = """
+                SELECT Status, Name 
+                FROM Algorithm 
+                WHERE UserId = %s;
+            """            
+            database_cursor.execute(sql, (user_id,))
+            algs = database_cursor.fetchall()
+
+            runningAlgs = []
+
+            for alg in algs:
+                if alg[0] == 1:
+                    runningAlgs.append(alg[1])
+                algorithms.append(alg[1])
+
+            return render_template('snippets/uploads_list_snippet.html', algorithms = algorithms, runningAlgorithms = runningAlgs)
 
     elif buttonPressed == "view":
-        f = open(os.path.join(app.config['UPLOADS_FOLDER'], username, filename), "r")
+        # Search Algorithm table for algorithm filename to get file path
+        sql = """
+            SELECT Path 
+            FROM Algorithm 
+            WHERE UserId = %s AND Name = %s;
+        """
+        database_cursor.execute(sql, (user_id, filename))
+        path = database_cursor.fetchone()[0]
+
+        f = open(os.path.join(app.config['UPLOADS_FOLDER'], path + ".py"), "r")
         content = f.read()
         f.close()
         return render_template('snippets/uploads_view_snippet.html', content = content, filename = filename)
 
     elif buttonPressed == "delete":
-        # If a file is deleted, delete from running algorithms as well
-        if filename in runningAlgorithms[username]:
-            del runningAlgorithms[username][filename]
+        # Search Algorithm table for algorithm filename to get file path
+        sql = """
+            SELECT Path 
+            FROM Algorithm 
+            WHERE UserId = %s AND Name = %s;
+        """
+        database_cursor.execute(sql, (user_id, filename))
+        path = database_cursor.fetchone()[0]
 
-        with os.scandir(os.path.join(app.config['UPLOADS_FOLDER'], username)) as entries:
+        with os.scandir(os.path.join(app.config['UPLOADS_FOLDER'])) as entries:
             for entry in entries:
-                if entry.is_file() and (entry.name == filename):
-                    os.remove(os.path.join(app.config['UPLOADS_FOLDER'], username, filename))
-                else:
-                    files.append(entry.name)  
+                if entry.is_file() and (entry.name == (path + ".py")):
+                    os.remove(os.path.join(app.config['UPLOADS_FOLDER'], path + ".py"))
 
-        return render_template('snippets/uploads_list_snippet.html', files = files, runningAlgorithms = runningAlgorithms[username])
+        sql = """
+            DELETE FROM Algorithm
+            WHERE UserId = %s AND Name = %s;
+        """
+        database_cursor.execute(sql, (user_id, filename))
+        mysql.connection.commit()
 
+        # Search Algorithm table for filenames of algorithms pertaining to a user
+        sql = """
+            SELECT Status, Name 
+            FROM Algorithm 
+            WHERE UserId = %s;
+        """            
+        database_cursor.execute(sql, (user_id,))
+        algs = database_cursor.fetchall()
+
+        runningAlgs = []
+
+        for alg in algs:
+            if alg[0] == 1:
+                runningAlgs.append(alg[1])
+            algorithms.append(alg[1])
+
+        return render_template('snippets/uploads_list_snippet.html', algorithms = algorithms, runningAlgorithms = runningAlgs)
+                    
     return jsonify({'result' : 'Button Not Handled'})
