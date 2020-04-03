@@ -1,10 +1,127 @@
-<!doctype html>
-{% extends "base.html" %}
 
-{% block app_content %}
-<div class = "row justify-content-center align-middle h-100">
-    <div class="col sm-12 text-center my-auto">
-        <img src="../static/images/logo.png" class="logo">
-    </div>
-</div>
-{% endblock %}
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <link rel="stylesheet" href="{{url_for('static', filename='stylesheets/home.css')}}">
+    <script src="../static/JS/home-page.js"></script>
+
+    <title>Data Hub</title>
+  </head>
+  <body>
+        <div class="header width-fill gradient-background center-contents ">
+            <img src="../static/images/logo.png" class="logo">
+            <a id="new-session">Start New Live Stream</a>
+        </div>
+
+        <section id="entries">
+            <div id="entry{{id}}" class="entry">
+                <a class="session-name"><strong>Session Name</strong></a>
+                <p class="session-info"><strong>Date: </strong><i>3/1/2020 20:03</i> to <i>3/1/2020 21:38</i></p>
+                <p class="session-info"><strong>Disk Space Used: </strong>512 MB</p>
+                <p class="session-info"><strong>Other Information: </strong>123</p>
+                <div class="action-buttons">
+                    <a class="delete-entry-btn delete bordered-button"></a>
+                    <a class="edit-entry-btn edit bordered-button"></a>
+                </div>
+            </div>
+            <div id="entry{{id}}" class="entry">
+                <a class="session-name"><strong>Session Name</strong></a>
+                <p class="session-info"><strong>Date: </strong><i>3/1/2020 20:03</i> to <i>3/1/2020 21:38</i></p>
+                <p class="session-info"><strong>Disk Space Used: </strong>512 MB</p>
+                <p class="session-info"><strong>Other Information: </strong>123</p>
+                <div class="action-buttons">
+                    <a class="delete-entry-btn delete bordered-button"></a>
+                    <a class="edit-entry-btn edit bordered-button"></a>
+                </div>
+            </div>
+            <div id="entry{{id}}" class="entry">
+                <a class="session-name"><strong>Session Name</strong></a>
+                <p class="session-info"><strong>Date: </strong><i>3/1/2020 20:03</i> to <i>3/1/2020 21:38</i></p>
+                <p class="session-info"><strong>Disk Space Used: </strong>512 MB</p>
+                <p class="session-info"><strong>Other Information: </strong>123</p>
+                <div class="action-buttons">
+                    <a class="delete-entry-btn delete bordered-button"></a>
+                    <a class="edit-entry-btn edit bordered-button"></a>
+                </div>
+            </div>
+            <div id="entry{{id}}" class="entry">
+                <a class="session-name"><strong>Session Name</strong></a>
+                <p class="session-info"><strong>Date: </strong><i>3/1/2020 20:03</i> to <i>3/1/2020 21:38</i></p>
+                <p class="session-info"><strong>Disk Space Used: </strong>512 MB</p>
+                <p class="session-info"><strong>Other Information: </strong>123</p>
+                <div class="action-buttons">
+                    <a class="delete-entry-btn delete bordered-button"></a>
+                    <a class="edit-entry-btn edit bordered-button" ></a>
+                </div>
+            </div>
+            <div id="entry{{id}}" class="entry">
+                <a class="session-name"><strong>Session Name</strong></a>
+                <p class="session-info"><strong>Date: </strong><i>3/1/2020 20:03</i> to <i>3/1/2020 21:38</i></p>
+                <p class="session-info"><strong>Disk Space Used: </strong>512 MB</p>
+                <p class="session-info"><strong>Other Information: </strong>123</p>
+                <div class="action-buttons">
+                    <a class="delete-entry-btn delete bordered-button"></a>
+                    <a class="edit-entry-btn edit bordered-button"></a>
+                </div>
+            </div>
+            <div id="entry{{id}}" class="entry">
+                <a class="session-name"><strong>Session Name</strong></a>
+                <p class="session-info"><strong>Date: </strong><i>3/1/2020 20:03</i> to <i>3/1/2020 21:38</i></p>
+                <p class="session-info"><strong>Disk Space Used: </strong>512 MB</p>
+                <p class="session-info"><strong>Other Information: </strong>123</p>
+                <div class="action-buttons">
+                    <a class="delete-entry-btn delete bordered-button"></a>
+                    <a class="edit-entry-btn edit bordered-button"></a>
+                </div>
+            </div>
+            <div id="entry{{id}}" class="entry">
+                <a class="session-name"><strong>Session Name</strong></a>
+                <p class="session-info"><strong>Date: </strong><i>3/1/2020 20:03</i> to <i>3/1/2020 21:38</i></p>
+                <p class="session-info"><strong>Disk Space Used: </strong>512 MB</p>
+                <p class="session-info"><strong>Other Information: </strong>123</p>
+                <div class="action-buttons">
+                    <a class="delete-entry-btn delete bordered-button"></a>
+                    <a class="edit-entry-btn edit bordered-button"></a>
+                </div>
+            </div>
+            <div id="entry{{id}}" class="entry">
+                <a class="session-name"><strong>Session Name</strong></a>
+                <p class="session-info"><strong>Date: </strong><i>3/1/2020 20:03</i> to <i>3/1/2020 21:38</i></p>
+                <p class="session-info"><strong>Disk Space Used: </strong>512 MB</p>
+                <p class="session-info"><strong>Other Information: </strong>123</p>
+                <div class="action-buttons">
+                    <a class="delete-entry-btn delete bordered-button"></a>
+                    <a class="edit-entry-btn edit bordered-button"></a>
+                </div>
+            </div>
+        </section>
+
+        <div id="overlay">
+            <div id="new-session-modal">
+                <p class="modal-title"><strong>Live Stream Configuration</strong></p>
+                <br>
+
+                <label>Name: </label>
+                <input class="full-width" name="title" type="text">
+            
+                <label class="label-spacing">Video: </label>
+                <a class="delete-entry-btn delete bordered-button"></a>
+                <div id="options">
+                    <ul>
+                        <li>
+                            <p>Video1</p>
+                            <a class="edit bordered-button"></a>
+                        </li>
+                    </ul>
+                </div>
+            
+                <label class="inline-label">Notes: </label>
+                <textarea rows="3"></textarea>
+            
+                <a id="submit-btn">Submit</a>
+            </div>
+        </div>
+  </body>
+</html>
