@@ -311,6 +311,7 @@ def livestream_config():
 
     return jsonify({})
 
+
 """route is used to update Sense HAT values for the first Sense HAT in the live stream page"""
 @app.route('/update_sense1', methods=['GET', 'POST'])
 def update_sense1():
@@ -552,7 +553,7 @@ def update_triggersettings():
 
 
 """route is used to update the event log for all data types"""
-@app.route('/update_eventlog', methods=['POST'])
+@app.route('/update_eventlog', methods=['GET'])
 def update_eventlog():
     # Instantiating an object that can execute SQL statements
     database_cursor = mysql.connection.cursor()
@@ -579,7 +580,6 @@ def update_eventlog():
 
 
 
-
 @app.route('/test', methods=['GET'])
 def test():
     return render_template('test.html')
@@ -598,6 +598,7 @@ def testvideo():
 @app.route('/testaudio', methods=['GET'])
 def testaudio():
     return render_template('test-audio.html')
+
 
 @app.route("/dashvideo", methods=['GET'])
 def dashvideo():

@@ -27,9 +27,9 @@
 
             </div>
 
-            <div class="row mt-1 h-15">
+            <div class="row mt-1 h-25">
                 
-                <div class="card w-100">
+                <div class="card w-100 h-100">
                     <div class="card-header p-0 text-center">
                         Event Log
                     </div>
@@ -176,35 +176,33 @@
                             <div class="col">
                             
                                 <div class="form-group row">
-                                    <label for="audioInput" class="col-4 col-form-label">Audio (dB):</label>
-                                    <div class="col-3">
+                                    <label for="audioInput" class="col-8 col-form-label">Audio (dB):</label>
+                                    <div class="col-3 align-self-center">
                                     <input type="text" class="form-control" id="audioInput">
                                     </div>
                                 </div>
                                 <div class="form-group row">
-                                    <label for="temperatureInput" class="col-4 col-form-label">Temperature (&#8457):</label>
-                                    <div class="col-3">
+                                    <label for="temperatureInput" class="col-8 col-form-label">Temperature (&#8457):</label>
+                                    <div class="col-3 align-self-center">
                                     <input type="text" class="form-control" id="temperatureInput">
                                     </div>
                                 </div>
                                 <div class="form-group row">
-                                    <label for="pressureInput" class="col-4 col-form-label">Air Pressure (millibars):</label>
-                                    <div class="col-3">
+                                    <label for="pressureInput" class="col-8 col-form-label">Air Pressure (millibars):</label>
+                                    <div class="col-3 align-self-center">
                                     <input type="text" class="form-control" id="pressureInput">
                                     </div>
                                 </div>
                                 <div class="form-group row">
-                                    <label for="humidityInput" class="col-4 col-form-label">Air Humidity (%):</label>
-                                    <div class="col-3">
+                                    <label for="humidityInput" class="col-8 col-form-label">Air Humidity (%):</label>
+                                    <div class="col-3 align-self-center">
                                     <input type="text" class="form-control" id="humidityInput">
                                     </div>
                                 </div>
-                                <div class="form-group row">
-                                    <div class="col-sm-3">
-                                    <button type="submit" class="btn btn-primary" id="triggerSettingsSubmit">OK</button>
-                                    </div>
-                                    <div class="col-sm-3">
-                                    <button type="submit" class="btn btn-secondary" id="triggerSettingsClear">Clear</button>
+                                <div class="form-group row mb-1">
+                                    <div class="col">
+                                        <button type="submit" class="btn btn-primary" id="triggerSettingsSubmit">OK</button>
+                                        <button type="submit" class="btn btn-secondary" id="triggerSettingsClear">Clear</button>
                                     </div>
                                 </div>
                                 <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#algorithmModal" id="algorithmModalOpenButton">
@@ -268,6 +266,7 @@
         </form>
     </div>
 
-    <script src="../static/JS/live.js"></script>
+    <script src="../static/JS/generate.js"></script>
+    <script src="../static/JS/livefeed.js"></script>
 
 {% endblock %}
