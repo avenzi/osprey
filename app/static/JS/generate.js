@@ -1,14 +1,14 @@
 $(document).ready(function () {
     // Default to 1 of each sensor type
-    var senseNumber = 1;
-    var audioNumber = 1;
+    var senseNumber = 0;
+    var audioNumber = 0;
 
     var cameraNumber = 0;
 
     // Define max sensors
     var maxCam = 10;
-    var maxSense = 2;
-    var maxAudio = 1;
+    var maxSense = 10;
+    var maxAudio = 10;
 
     var cameraIPS = ["35.9.42.110", "35.9.42.212", "35.9.42.245"];
 
@@ -34,7 +34,10 @@ $(document).ready(function () {
         var queryString = $('#sensorForm').serialize();
         var query = queryString.split("&");
    
-        $.post('livestream_config', {livestream_config: queryString});
+        $.post('livestream_config', {livestream_config: queryString}, function(result) {
+            console.log("Result:");
+            console.log(result);
+        });
         
 
         if (cameraNumber > 0){
@@ -124,8 +127,11 @@ $(document).ready(function () {
         if (cameraNumber < maxCam) {
             cameraNumber++;
             cameraIPidx = (cameraNumber-1) % cameraIPS.length;
-            $("#cameraList").append(`<li><label for="camera${cameraNumber}">Camera ${cameraNumber} IP: </label>
-            <input name="camera${cameraNumber}" id="camera${cameraNumber}" value="${cameraIPS[cameraIPidx]}">`);
+            $("#cameraList").append(`<li id="cam-${cameraNumber}"><label for="camera${cameraNumber}">Camera ${cameraNumber} IP: </label>
+            <input name="camera${cameraNumber}" id="camera${cameraNumber}" value="${cameraIPS[cameraIPidx]}">
+            <label for="cam-name${cameraNumber}">Camera ${cameraNumber} Name: </label>
+            <input name="cam-name${cameraNumber}" id="cam-name${cameraNumber}" value="Camera ${cameraNumber}">
+            </li>`);
         }
     });
 
@@ -133,9 +139,9 @@ $(document).ready(function () {
         e.preventDefault();
 
         // Can have 0 cameras but no less
-        if (cameraNumber > 0){
+        if (cameraNumber > 0) {
+            $("#cam-" + cameraNumber).remove();
             cameraNumber--;
-            $('#cameraList li:last').remove();
         }
     } );
 
@@ -145,8 +151,13 @@ $(document).ready(function () {
         // Maximum Sense HATs
         if (senseNumber < maxSense) {
             senseNumber++;
-            $("#senseList").append('<li><label for="sense'.concat(senseNumber, '">Sense ',
-            senseNumber, '</label></li>'));
+            $("#senseList").append(
+                `<li><label for="sense${senseNumber}">Sense HAT ${senseNumber} IP:</label>
+                <input name="sense${senseNumber}" id="sense${senseNumber}" value="">
+                <label for="sen-name${senseNumber}">Sense HAT ${senseNumber} Name: </label>
+                <input name="sen-name${senseNumber}" id="sen-name${senseNumber}" value="Sense ${senseNumber}">
+                </li>`
+            );
         }
     });
 
@@ -165,8 +176,11 @@ $(document).ready(function () {
         // Maximum audio
         if (audioNumber < maxAudio) {
             audioNumber++;
-            $("#audioList").append('<li><label for="audio'.concat(audioNumber, '">Audio ',
-            audioNumber, '</label></li>'));
+            $("#audioList").append(`<li id="mic-${audioNumber}"><label for="audio${audioNumber}">Microphone ${audioNumber} IP: </label>
+            <input name="audio${audioNumber}" id="audio${audioNumber}" value="">
+            <label for="mic-name${audioNumber}">Microphone ${audioNumber} Name: </label>
+            <input name="mic-name${audioNumber}" id="mic-name${audioNumber}" value="Microphone ${audioNumber}">
+            </li>`);
         }
     });
 
@@ -175,8 +189,8 @@ $(document).ready(function () {
 
         // Can have 0 Audio inputs but no less
         if (audioNumber > 0){
+            $("#mic-" + audioNumber).remove();
             audioNumber--;
-            $('#audioList li:last').remove();
         }
     } );
 });

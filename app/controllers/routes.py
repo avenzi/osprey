@@ -205,26 +205,83 @@ def archive(archive_id):
             ))
     
     session_id = archive_id if archive_id != None else -1
-    database_cursor.execute("""SELECT id, INET_NTOA(IP), SessionId, SensorType FROM SessionSensor WHERE SessionId = %s;""", (session_id,))
+    database_cursor.execute("""SELECT id, Name, INET_NTOA(IP), SessionId, SensorType FROM SessionSensor WHERE SessionId = %s;""", (session_id,))
     session_sensors = database_cursor.fetchall()
 
     session_sensors_serialized = json.dumps(session_sensors, separators=(',', ':'))
     #print(session_sensors_serialized)
 
-    cameras = []
-    for session_sensor in session_sensors:
-        camera_view_data = dict(
-            sensor_id = session_sensor[0]
-        )
-        cameras.append(camera_view_data)
-    
+    session_start_time = -1
+    session_end_time = -1
+    sql = """SELECT id, StartDate, EndDate FROM Session WHERE StartDate = (SELECT MAX(StartDate) FROM Session);"""
+    database_cursor.execute(sql)
+    session_info = database_cursor.fetchone()
+    if session_id != -1:
+        epoch = datetime.utcfromtimestamp(0)
+        session_start_time = int((session_info[1] - epoch).total_seconds() * 1000.0) + 1000
+        session_end_time = int((session_info[2] - epoch).total_seconds() * 1000.0) - 1000
 
+    cameras = []
+    microphones = []
+    sense_hats = []
+    for session_sensor in session_sensors:
+        sensor_type = session_sensor[4]
+        sensor_name = session_sensor[1]
+
+        if sensor_type == 'PiCamera':
+            sql = """SELECT LastFrameNumber FROM VideoFrames WHERE FirstFrameTimestamp = (SELECT MAX(FirstFrameTimestamp) FROM VideoFrames WHERE SensorId = %s);"""
+            database_cursor.execute(sql, (session_sensor[0],))
+            result = database_cursor.fetchone()
+            last_frame_number = 0
+            if result:
+                last_frame_number = result[0]
+
+            camera_view_data = dict(
+                sensor_id = session_sensor[0],
+                sensor_type = sensor_type,
+                last_frame_number = last_frame_number,
+                name = sensor_name
+            )
+            cameras.append(camera_view_data)
+        elif sensor_type == 'Microphone':
+            mic_view_data = dict(
+                sensor_id = session_sensor[0],
+                sensor_type = sensor_type,
+                name = sensor_name
+            )
+            microphones.append(mic_view_data)
+        elif sensor_type == "SenseHat":
+            sense_view_data = dict(
+                sensor_id = session_sensor[0],
+                sensor_type = sensor_type,
+                name = sensor_name
+            )
+            sense_hats.append(sense_view_data)
+
+    sensor_selections = []
+    list_index = 1
+    for sensor in (cameras + microphones + sense_hats):
+        sensor_selections.append(dict(
+            sensor_id = sensor['sensor_id'],
+            sensor_type = sensor['sensor_type'],
+            sensor_name = sensor['name'],
+            index = list_index
+        ))
+        list_index = list_index + 1
+    
+    print("Sensor selections")
+    print(sensor_selections)
 
     return render_template('archives.html',
         sessions = template_data,
         session_id = (archive_id if archive_id != None else -1),
         session_sensors_serialized = session_sensors_serialized,
-        cameras = cameras
+        session_start_time = session_start_time,
+        session_end_time = session_end_time,
+        cameras = cameras,
+        microphones = microphones,
+        sense_hats = sense_hats,
+        sensor_selections = sensor_selections
     )
 
 
@@ -274,18 +331,35 @@ def livestream_config():
     # TODO: input validation
     config_tokens = request.form['livestream_config'].split('&')
     config_json = {
-        'cameras': {}
+        'cameras': {},
+        'microphones': {},
+        'sense_hats': {}
     }
 
     if len(request.form['livestream_config']) == 0:
         return jsonify({})
-    
+
+    index = 0
     for token in config_tokens:
         key = token.split("=")[0]
-        value = token.split("=")[1]
+        value = token.split("=")[1].replace("%20", " ")
+
+        print(key + ": " + value)
         if 'camera' in token:
-            metadata = {}
+            name = config_tokens[index + 1].split("=")[1].replace("%20", " ")
+            metadata = {'name': name}
             config_json['cameras'][value] = metadata
+        elif 'audio' in token:
+            name = config_tokens[index + 1].split("=")[1].replace("%20", " ")
+            metadata = {'name': name}
+            config_json['microphones'][value] = metadata
+        elif 'sense' in token:
+            name = config_tokens[index + 1].split("=")[1].replace("%20", " ")
+            metadata = {'name': name}
+            config_json['sense_hats'][value] = metadata
+
+        index = index + 1
+    
     compacted_json = json.dumps(config_json, separators=(',', ':'))
     # Instantiating an object that can execute SQL statements
     database_cursor = mysql.connection.cursor()
@@ -293,23 +367,34 @@ def livestream_config():
     result = database_cursor.fetchone()
     session_id = 1 if result == None else result[0] + 1
 
-    #print(session_id)
-    #print(compacted_json)
-    # Start a new Session - the web app starts the data ingestion layer when a new Session is started
-    #database_cursor = mysql.connection.cursor()
+    for ip in config_json['cameras']:
+        metadata = config_json['cameras'][ip]
+        name = metadata['name']
+        sql = "INSERT INTO SessionSensor (`IP`, `Name`, `SessionId`, `SensorType`) VALUES (INET_ATON(%s), %s, %s, %s);"
+        database_cursor.execute(sql, (ip, name, session_id, "PiCamera"))
+    
+    for ip in config_json['microphones']:
+        metadata = config_json['microphones'][ip]
+        name = metadata['name']
+        sql = "INSERT INTO SessionSensor (`IP`, `Name`, `SessionId`, `SensorType`) VALUES (INET_ATON(%s), %s, %s, %s);"
+        database_cursor.execute(sql, (ip, name, session_id, "Microphone"))
+    
+    for ip in config_json['sense_hats']:
+        metadata = config_json['sense_hats'][ip]
+        name = metadata['name']
+        sql = "INSERT INTO SessionSensor (`IP`, `Name`, `SessionId`, `SensorType`) VALUES (INET_ATON(%s), %s, %s, %s);"
+        database_cursor.execute(sql, (ip, name, session_id, "SenseHat"))
+
+    
     sql = "INSERT INTO Session (`StartDate`, `SensorConfig`) VALUES (NOW(3), %s);"
     database_cursor.execute(sql, (compacted_json,))
     mysql.connection.commit()
 
-    for ip in config_json['cameras']:
-        metadata = config_json['cameras'][ip]
-        sql = "INSERT INTO SessionSensor (`IP`, `SessionId`, `SensorType`) VALUES (INET_ATON(%s), %s, %s);"
-        database_cursor.execute(sql, (ip, session_id, "PiCamera"))
+    sql = "SELECT id, INET_NTOA(IP), SessionId, SensorType FROM SessionSensor WHERE SessionId = %s"
+    database_cursor.execute(sql, (session_id,))
+    session_sensors = database_cursor.fetchall()
 
-    mysql.connection.commit()
-    # TODO: run the data ingestion layer application
-
-    return jsonify({})
+    return jsonify(session_sensors)
 
 
 """route is used to update Sense HAT values for the first Sense HAT in the live stream page"""
@@ -654,6 +739,94 @@ def videoframefetch(frame, session, sensor):
     )
 
     response.headers.add('Accept-Ranges', 'bytes')
+
+    return response
+
+@app.route('/audiosegmentfetch/<timestamp>/<segment>/<session>/<sensor>')
+def audiosegmentfetch(timestamp, segment, session, sensor):
+    #print(timestamp)
+    #print(segment)
+    #print(session)
+    #print(sensor)
+    database_cursor = mysql.connection.cursor()
+
+    timestamp = int(timestamp)
+    segment = int(segment)
+
+    # fetch on segment number
+    segments_record = []
+    if timestamp == -1:
+        sql = "SELECT * FROM AudioSegments WHERE SessionId = %s AND SensorId = %s AND %s BETWEEN FirstSegmentNumber AND LastSegmentNumber;"
+        database_cursor.execute(sql, (session, sensor, segment))
+        segments_record = database_cursor.fetchone()
+    elif segment == -1:
+        pass
+    
+    segments_metadata = json.loads(segments_record[7])
+    base_path = "/root/data-ingester/"
+    segment_metadata = {}
+
+    if timestamp == -1:
+        # set timestamp in here
+        segment_metadata = segments_metadata[str(segment)]
+        timestamp = int(segment_metadata['time'])
+    elif segment == -1:
+        # set segment in here
+        pass
+    
+    # TODO: refactor to store absolute path in db
+    path = base_path + segment_metadata['path']
+
+    response_bytes = bytes()
+    with open(path, 'rb') as segment_file:
+        response_bytes = segment_file.read()
+    
+    response = Response(
+        response_bytes,
+        200,
+        mimetype='audio/mpeg',
+        direct_passthrough=True,
+    )
+
+    response.headers.add('segment-number', segment)
+    response.headers.add('segment-time', timestamp)
+
+    return response
+
+
+    # TODO: avoid doing queries during every frame fetch by supplying client-side with the paths/metadata
+    frame = int(frame)
+    sql = "SELECT * FROM VideoFrames WHERE SessionId = %s AND SensorId = %s AND %s BETWEEN FirstFrameNumber AND LastFrameNumber;"
+    database_cursor.execute(sql, (session, sensor, frame))
+
+    frames_record = database_cursor.fetchone()
+    last_frame_number = int(frames_record[4])
+    frames_metadata = json.loads(frames_record[7])
+
+    #number_of_frames_to_send = 10 if frame + 10 <= last_frame_number else (last_frame_number - frame) + 1
+    number_of_frames_to_send = 1
+    # TODO: remove absolute paths like this and do it dynamically
+    base_path = "/root/data-ingester/"
+
+    response_frames = []
+    for frame_to_send in range(frame, frame + number_of_frames_to_send):
+        frame_metadata = frames_metadata[str(frame_to_send)]
+        path = base_path + frame_metadata['path']
+        with open(path, 'rb') as frame_file:
+            response_frames.append(frame_file.read() + b"FrameSeperator")
+    
+    response_bytes = b"".join(response_frames)
+    #print(len(response_bytes))
+
+    response = Response(
+        response_bytes,
+        200,
+        mimetype='image/jpeg',
+        direct_passthrough=True,
+    )
+
+    response.headers.add('segment-number', segment)
+    response.headers.add('segment-time', timestamp)
 
     return response
     
