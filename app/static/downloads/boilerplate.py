@@ -67,15 +67,13 @@ import datahub
 # THIS LINE IS NECESSARY TO ENSURE THAT THE ALGORITHM STOPS WHEN TURNED OFF MANUALLY
 while datahub.get_algorithm_status(__file__):
 
-    ######################### TESTING #########################
-    f = open("output.txt", "w")
-    intensity = datahub.get_pix_intensity(datahub.get_video_data(1))
-    f.write(str(intensity))
-    f.close()
+    # TESTING LIGHT INTENSITY FROM VIDEO FEED
+    intensity = datahub.get_pix_intensity(datahub.get_video_data("68.62.53.255"))
+    datahub.update_eventlog(__file__, "Intensity Alert", str(intensity))
 
-    # EXAMPLE CODE
-    # if datahub.get_sense_data(1)[0]['Temp'] > 70.00:
+    # TESTING SENSE DATA
+    # if datahub.get_sense_data("35.9.42.110")[0]['Temp'] > 70.00:
     #     datahub.update_eventlog(__file__, 'Temperature Alert', 'The temperature on Sense 1 has exceeded 70.00 F')
  
-    # THIS LINE IS NECESSARY TO ENSURE NO INFINITE LOOPS
+    # THIS LINE IS NECESSARY TO ENSURE INFINITE LOOPS DO NOT OCCUR
     time.sleep(1)

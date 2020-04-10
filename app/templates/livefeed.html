@@ -242,7 +242,10 @@
             <br>
             <ul id="senseList" class="list-group">
                 <li>
-                    <label for="sense1">Sense 1</label>
+                    <label for="sense1">Sense HAT 1 IP:</label>
+                    <input name="sense1" id="sense1" value="">
+                    <label for="sen-name1">Sense HAT 1 Name: </label>
+                    <input name="sen-name1" id="sen-name1" value="Sense 1">
                 </li>
             </ul>
             <button id="addSense" class="btn btn-light">Add Sense HAT</button>
@@ -252,8 +255,11 @@
             <hr>
             <br>
             <ul id="audioList" class="list-group">
-                <li>
-                    <label for="audio1">Audio 1</label>
+                <li id="mic-1">
+                    <label for="audio1">Microphone 1 IP: </label>
+                    <input name="audio1" id="audio1" value="">
+                    <label for="mic-name1">Microphone 1 Name: </label>
+                    <input name="mic-name1" id="mic-name1" value="Microphone 1">
                 </li>
             </ul>
             <button id="addAudio" class="btn btn-light">Add Audio</button>
@@ -264,7 +270,97 @@
             <input type="submit" id="dialogSubmit" class="btn btn-primary">
 
         </form>
+    </div>  
+
+
+<!-- New Live Modal -->
+<!-- <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLongTitle">Specify Sensors</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <form id="sensorForm">
+                <div class="modal-body">
+            
+                    <div class="container-fluid">
+
+                        <div class="row">
+
+                            <div class="col-4">
+                                <h5>Add sensors</h5>
+                                <div id="list-example" class="list-group">
+                                    <button class="list-group-item list-group-item-action btn btn-light shadow-none" id="addCam">Camera</button>
+                                    <button class="list-group-item list-group-item-action btn btn-light shadow-none" id="addSense">Sense HAT</button>
+                                    <button class="list-group-item list-group-item-action btn btn-light shadow-none" id="addAudio">Audio</button>
+                                </div>
+                            </div>
+
+                            <div class="col-8">
+                                <div class="row">
+                                    <h5>Cameras</h5>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="overflow-auto w-100" style="max-height: 200px;">
+                                        <ul id="cameraList" class="list-group">
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <h5>Sense HATs</h5>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="overflow-auto w-100" style="max-height: 200px;">
+                                        <ul id="senseList" class="list-group">
+                                            <li class="list-group-item">
+                                                <label for="sense1">Sense 1</label>
+                                                <button type="button" class="close" aria-label="Close">
+                                                    <span aria-hidden="true">&times;</span>
+                                                </button>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <h5>Audio</h5>
+                                </div>
+                                <div class="row">
+                                    <div class="overflow-auto w-100" style="max-height: 200px;">
+                                        <ul id="audioList" class="list-group">
+                                            <li class="list-group-item">
+                                                <label for="audio1">Audio 1</label>
+                                                <button type="button" class="close" aria-label="Close">
+                                                    <span aria-hidden="true">&times;</span>
+                                                </button>
+                                            </li>
+                                        </ul>
+                                    </div>        
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary">Save changes</button>
+                </div>
+            </form>
+
     </div>
+  </div>
+</div> -->
 
     <script src="../static/JS/generate.js"></script>
     <script src="../static/JS/livefeed.js"></script>

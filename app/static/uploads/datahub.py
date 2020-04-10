@@ -79,7 +79,7 @@ def get_algorithm_status(filename):
     cursor.execute(sql, (user_id, path))
     return cursor.fetchone()['Status']
 
-def get_sense_data(sense_num, time_start = '', time_end = ''):
+def get_sense_data(ip, time_start = '', time_end = ''):
     """Gets temperature, pressure, and humidity data from a specified Sense HAT
 
     Args:
@@ -98,23 +98,31 @@ def get_sense_data(sense_num, time_start = '', time_end = ''):
     #-------------------------------------------------------------------------------------------------
     if (len(time_start) == 0) and (len(time_end) == 0):
 
-        if sense_num == 1:
-            sql = """
-                SELECT Time, Temp, Press, Humid
-                FROM Sense
-                WHERE IP = INET_ATON(%s)
-                ORDER BY Time DESC;
-            """
-            cursor.execute(sql, (sense_1,))
+        sql = """
+            SELECT Time, Temp, Press, Humid
+            FROM Sense
+            WHERE IP = INET_ATON(%s)
+            ORDER BY Time DESC;
+        """
+        cursor.execute(sql, (ip,))
 
-        elif sense_num == 2:
-            sql = """
-                SELECT Time, Temp, Press, Humid
-                FROM Sense
-                WHERE IP = INET_ATON(%s)
-                ORDER BY Time DESC;
-            """
-            cursor.execute(sql, (sense_2,))
+        # if sense_num == 1:
+        #     sql = """
+        #         SELECT Time, Temp, Press, Humid
+        #         FROM Sense
+        #         WHERE IP = INET_ATON(%s)
+        #         ORDER BY Time DESC;
+        #     """
+        #     cursor.execute(sql, (sense_1,))
+
+        # elif sense_num == 2:
+        #     sql = """
+        #         SELECT Time, Temp, Press, Humid
+        #         FROM Sense
+        #         WHERE IP = INET_ATON(%s)
+        #         ORDER BY Time DESC;
+        #     """
+        #     cursor.execute(sql, (sense_2,))
 
         return [cursor.fetchone()]
 
@@ -127,21 +135,28 @@ def get_sense_data(sense_num, time_start = '', time_end = ''):
         # Converting string to datetime
         time_start_datetime_object = datetime.strptime(time_start, '%m/%d/%y %H:%M:%S.%f')
 
-        if sense_num == 1:
-            sql = """
-                SELECT Time, Temp, Press, Humid
-                FROM Sense
-                WHERE IP = INET_ATON(%s) AND Time >= %s;
-            """
-            cursor.execute(sql, (sense_1, time_start_datetime_object))
+        sql = """
+            SELECT Time, Temp, Press, Humid
+            FROM Sense
+            WHERE IP = INET_ATON(%s) AND Time >= %s;
+        """
+        cursor.execute(sql, (ip, time_start_datetime_object))
 
-        elif sense_num == 2:
-            sql = """
-                SELECT Time, Temp, Press, Humid
-                FROM Sense
-                WHERE IP = INET_ATON(%s) AND Time >= %s;
-            """
-            cursor.execute(sql, (sense_2, time_start_datetime_object))
+        # if sense_num == 1:
+        #     sql = """
+        #         SELECT Time, Temp, Press, Humid
+        #         FROM Sense
+        #         WHERE IP = INET_ATON(%s) AND Time >= %s;
+        #     """
+        #     cursor.execute(sql, (sense_1, time_start_datetime_object))
+
+        # elif sense_num == 2:
+        #     sql = """
+        #         SELECT Time, Temp, Press, Humid
+        #         FROM Sense
+        #         WHERE IP = INET_ATON(%s) AND Time >= %s;
+        #     """
+        #     cursor.execute(sql, (sense_2, time_start_datetime_object))
         
         return cursor.fetchall()
 
@@ -155,35 +170,47 @@ def get_sense_data(sense_num, time_start = '', time_end = ''):
         time_start_datetime_object = datetime.strptime(time_start, '%m/%d/%y %H:%M:%S.%f')
         time_end_datetime_object = datetime.strptime(time_end, '%m/%d/%y %H:%M:%S.%f')
 
-        if sense_num == 1:
-            sql = """
-                SELECT Time, Temp, Press, Humid
-                FROM Sense
-                WHERE IP = INET_ATON(%s) AND Time >= %s AND Time <= %s;
-            """
-            cursor.execute(sql, (sense_1, time_start_datetime_object, time_end_datetime_object))
+        sql = """
+            SELECT Time, Temp, Press, Humid
+            FROM Sense
+            WHERE IP = INET_ATON(%s) AND Time >= %s AND Time <= %s;
+        """
+        cursor.execute(sql, (ip, time_start_datetime_object, time_end_datetime_object))
 
-        elif sense_num == 2:
-            sql = """
-                SELECT Time, Temp, Press, Humid
-                FROM Sense
-                WHERE IP = INET_ATON(%s) AND Time >= %s AND Time <= %s;
-            """
-            cursor.execute(sql, (sense_2, time_start_datetime_object, time_end_datetime_object))
+        # if sense_num == 1:
+        #     sql = """
+        #         SELECT Time, Temp, Press, Humid
+        #         FROM Sense
+        #         WHERE IP = INET_ATON(%s) AND Time >= %s AND Time <= %s;
+        #     """
+        #     cursor.execute(sql, (sense_1, time_start_datetime_object, time_end_datetime_object))
+
+        # elif sense_num == 2:
+        #     sql = """
+        #         SELECT Time, Temp, Press, Humid
+        #         FROM Sense
+        #         WHERE IP = INET_ATON(%s) AND Time >= %s AND Time <= %s;
+        #     """
+        #     cursor.execute(sql, (sense_2, time_start_datetime_object, time_end_datetime_object))
         
         return cursor.fetchall()
 
-def get_video_data(SensorId):
+def get_video_data(ip):
+
     # Query VideoFrames table for the latest segment
+    # TODO: Make is so that it gets the lasest VideoFrames for the specific user session
     sql = """
         SELECT FirstFrameNumber, LastFrameNumber, FramesMetadata
         FROM VideoFrames
-        WHERE SensorId = %s
         ORDER BY LastFrameTimestamp DESC;
     """
-    cursor.execute(sql, (SensorId,))
+    cursor.execute(sql)
     metadata = cursor.fetchone()
     return metadata
+
+
+
+
 
 def get_pix_intensity(metadata):
     first_frame_number = metadata['FirstFrameNumber']               # The first frame number

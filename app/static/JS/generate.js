@@ -1,7 +1,10 @@
 $(document).ready(function () {
+    
+    // $('#myModal').modal('show')
+
     // Default to 1 of each sensor type
-    var senseNumber = 0;
-    var audioNumber = 0;
+    var senseNumber = 1;
+    var audioNumber = 1;
 
     var cameraNumber = 0;
 
@@ -28,18 +31,156 @@ $(document).ready(function () {
            // }
         });
     });
+    
+
+    $("#addCam").click(function(e) {
+        e.preventDefault();
+
+        // Maximum cameras
+        if (cameraNumber < maxCam) {
+            cameraNumber++;
+            cameraIPidx = (cameraNumber-1) % cameraIPS.length;
+
+            $("#cameraList").append(`<li id="cam-${cameraNumber}"><label for="camera${cameraNumber}">Camera ${cameraNumber} IP: </label>
+            <input name="camera${cameraNumber}" id="camera${cameraNumber}" value="${cameraIPS[cameraIPidx]}">
+            <label for="cam-name${cameraNumber}">Camera ${cameraNumber} Name: </label>
+            <input name="cam-name${cameraNumber}" id="cam-name${cameraNumber}" value="Camera ${cameraNumber}">
+            </li>`);
+
+            // $("#cameraList").append(
+            //     `<li id="cam${cameraNumber}">
+            //      <!-- <li id="cam${cameraNumber}" class="list-group-item"> -->
+            //         <label for="camera${cameraNumber}">Camera ${cameraNumber} IP: </label>
+            //         <input name="camera${cameraNumber}" id="camera${cameraNumber}" value="${cameraIPS[cameraIPidx]}">
+            //         <!-- <button type="button" id="cam${cameraNumber}" class="close deleteCam" aria-label="Close">
+            //             <span aria-hidden="true">&times;</span>
+            //         </button> -->
+            //     </li>`
+            // );
+        }
+    });
+
+    // $(document).on('click', '.close.deleteCam', function(e) {
+    //     e.preventDefault();
+
+    //     // Remove the Cam
+    //     // var theId = "#".concat(e.currentTarget.id).concat(".list-group-item");
+    //     // $(theId).remove();
+
+    //     // Get the number of Cams
+    //     // var x = document.getElementsByClassName("close deleteCam").length;
+    //     // console.log(x)
+
+    //     // If the Cam number is not 1, change the tag, subtract from all cam vals
+    //     var blah = "#".concat(e.currentTarget.id).concat(".list-group-item");
+    //     console.log($(blah).children()[0]);
+    //     console.log($(blah).children()[1]);
+    //     console.log($(blah).children()[2]);
+    // } );
+
+    $("#deleteCam").click(function(e) {
+        e.preventDefault();
+
+        // Can have 0 cameras but no less
+        if (cameraNumber > 0) {
+            $("#cam-" + cameraNumber).remove();
+            cameraNumber--;
+        }
+    });
+
+    $("#addAudio").click(function(e) {
+        e.preventDefault();
+
+        // Maximum audio
+        if (audioNumber < maxAudio) {
+            audioNumber++;
+
+            $("#audioList").append(`<li id="mic-${audioNumber}"><label for="audio${audioNumber}">Microphone ${audioNumber} IP: </label>
+            <input name="audio${audioNumber}" id="audio${audioNumber}" value="">
+            <label for="mic-name${audioNumber}">Microphone ${audioNumber} Name: </label>
+            <input name="mic-name${audioNumber}" id="mic-name${audioNumber}" value="Microphone ${audioNumber}">
+            </li>`);
+
+            // $("#audioList").append(
+            //     `<li>
+            //      <!-- <li class="list-group-item"> -->
+            //         <label for="sense${audioNumber}">Sense ${audioNumber}</label>
+            //         <!-- <button type="button" class="close" aria-label="Close">
+            //             <span aria-hidden="true">&times;</span>
+            //         </button> -->
+            //     </li>`
+            // );
+        }
+    });
+
+    $("#deleteAudio").click(function(e) {
+        e.preventDefault();
+
+        // Can have 0 Audio inputs but no less
+        if (audioNumber > 0){
+            $("#mic-" + audioNumber).remove();
+            audioNumber--;
+        }
+    });
+
+
+
+
+
+
+
+
+
+
+    $("#addSense").click(function(e) {
+        e.preventDefault();
+    
+        // Maximum Sense HATs
+        if (senseNumber < maxSense) {
+            senseNumber++;
+            $("#senseList").append(
+                `<li><label for="sense${senseNumber}">Sense HAT ${senseNumber} IP:</label>
+                <input name="sense${senseNumber}" id="sense${senseNumber}" value="">
+                <label for="sen-name${senseNumber}">Sense HAT ${senseNumber} Name: </label>
+                <input name="sen-name${senseNumber}" id="sen-name${senseNumber}" value="Sense ${senseNumber}">
+                </li>`
+            );
+    
+            // $("#senseList").append(
+            //     `<li>
+            //      <!-- <li class="list-group-item"> -->
+            //         <label for="sense${senseNumber}">Sense ${senseNumber}</label>
+            //         <!-- <button type="button" class="close" aria-label="Close">
+            //             <span aria-hidden="true">&times;</span>
+            //         </button> -->
+            //     </li>`
+            // );
+        }
+    });
+    
+
+
+    $("#deleteSense").click(function(e) {
+        e.preventDefault();
+        // Can have 0 Sense HATs but no less
+        if (senseNumber > 0){
+            senseNumber--;
+            $('#senseList li:last').remove();
+        }
+    });
+
+
 
     $(document).on('click','#dialogSubmit',function(e) {
         e.preventDefault();
         var queryString = $('#sensorForm').serialize();
         var query = queryString.split("&");
-   
+
         $.post('livestream_config', {livestream_config: queryString}, function(result) {
             console.log("Result:");
             console.log(result);
         });
         
-
         if (cameraNumber > 0){
             // Create correct number of video selectors
             for (var i=1;i<=cameraNumber;i++){
@@ -47,7 +188,7 @@ $(document).ready(function () {
                 if (i==1) {
                     checked = " checked";
                 }
-
+    
                 var block = `
                 <div class="col">
                     <div class="radio d-inline">
@@ -58,7 +199,7 @@ $(document).ready(function () {
                 </div>`;
                 $("#videoRow").append(block);
             }
-
+    
             // Create iframe tags using form input
             for (var i=1;i<=cameraNumber;i++){
                 var ip = query[i-1].split("=")[1];
@@ -68,14 +209,17 @@ $(document).ready(function () {
                     </div>
                 `;
                 $("#videoDiv").append(block);
-
+    
             }
-        } else {
+        } 
+        else {
             // No cameras active, hide videos and selectors
             $("#videoDiv").hide();
             $("#videoRow").hide();
         }
+    
 
+        let senseData = new Map()
         if (senseNumber > 0){
             // Create correct number of sensor selectors
             for (var i=1;i<=senseNumber;i++){
@@ -90,10 +234,28 @@ $(document).ready(function () {
                 $(`#sense${i}`).show();
             }
 
-        } else {
+
+
+            senseData.set("numSense", senseNumber);
+            for (var i=0; i<=query.length-1; i+=2){
+                if (query[i].substring(0,5) == "sense"){
+                    // console.log(query[i].split("="));
+                    senseData.set(query[i].split("=")[0], query[i].split("=")[1]);
+                }
+            }
+
+
+    
+        } 
+        else {
             // No sensors active, hide sensor selectors
             $("#senseRow").hide();
         }
+
+
+    
+
+
 
         if (audioNumber > 0){
             // Create audio selectors
@@ -107,93 +269,98 @@ $(document).ready(function () {
                 </div>`;
                 $("#audioRow").append(block);
             }
-
-        } else {
+    
+        } 
+        else {
             $("#audioRow").hide();
             $("#audioDiv").hide();
         }
-
+    
         // Close the dialog box
         $('#dialog').dialog('close');
 
+
+
         // Create all normal live javascript now that all elements are correct
-        live(cameraNumber, senseNumber, audioNumber);
+        live(cameraNumber, senseData, audioNumber);
     });
 
-    $("#addCam").click(function(e) {
-        e.preventDefault();
 
-        // Maximum cameras
-        if (cameraNumber < maxCam) {
-            cameraNumber++;
-            cameraIPidx = (cameraNumber-1) % cameraIPS.length;
-            $("#cameraList").append(`<li id="cam-${cameraNumber}"><label for="camera${cameraNumber}">Camera ${cameraNumber} IP: </label>
-            <input name="camera${cameraNumber}" id="camera${cameraNumber}" value="${cameraIPS[cameraIPidx]}">
-            <label for="cam-name${cameraNumber}">Camera ${cameraNumber} Name: </label>
-            <input name="cam-name${cameraNumber}" id="cam-name${cameraNumber}" value="Camera ${cameraNumber}">
-            </li>`);
-        }
-    });
 
-    $("#deleteCam").click(function(e) {
-        e.preventDefault();
 
-        // Can have 0 cameras but no less
-        if (cameraNumber > 0) {
-            $("#cam-" + cameraNumber).remove();
-            cameraNumber--;
-        }
-    } );
 
-    $("#addSense").click(function(e) {
-        e.preventDefault();
 
-        // Maximum Sense HATs
-        if (senseNumber < maxSense) {
-            senseNumber++;
-            $("#senseList").append(
-                `<li><label for="sense${senseNumber}">Sense HAT ${senseNumber} IP:</label>
-                <input name="sense${senseNumber}" id="sense${senseNumber}" value="">
-                <label for="sen-name${senseNumber}">Sense HAT ${senseNumber} Name: </label>
-                <input name="sen-name${senseNumber}" id="sen-name${senseNumber}" value="Sense ${senseNumber}">
-                </li>`
-            );
-        }
-    });
-
-    $("#deleteSense").click(function(e) {
-        e.preventDefault();
-        // Can have 0 Sense HATs but no less
-        if (senseNumber > 0){
-            senseNumber--;
-            $('#senseList li:last').remove();
-        }
-    } );
-
-    $("#addAudio").click(function(e) {
-        e.preventDefault();
-
-        // Maximum audio
-        if (audioNumber < maxAudio) {
-            audioNumber++;
-            $("#audioList").append(`<li id="mic-${audioNumber}"><label for="audio${audioNumber}">Microphone ${audioNumber} IP: </label>
-            <input name="audio${audioNumber}" id="audio${audioNumber}" value="">
-            <label for="mic-name${audioNumber}">Microphone ${audioNumber} Name: </label>
-            <input name="mic-name${audioNumber}" id="mic-name${audioNumber}" value="Microphone ${audioNumber}">
-            </li>`);
-        }
-    });
-
-    $("#deleteAudio").click(function(e) {
-        e.preventDefault();
-
-        // Can have 0 Audio inputs but no less
-        if (audioNumber > 0){
-            $("#mic-" + audioNumber).remove();
-            audioNumber--;
-        }
-    } );
 });
+
+
+
+
+
+
+
+
+
+
+// Global map object to store interval IDs for sense refresh so they can be stopped
+let senseIntervals = new Map();
+
+// Code to handle sense streams -- should work with more than 2 sense streams, unable to test
+function generate_sense_handler( k, ip ) {    
+
+    // console.log(k)          // The Sense Stream Number
+    // console.log(ip)  // The IP Address of the Sense Stream, as a string
+
+
+
+
+    return function() {
+        $(`#sense${k}`).show();
+        if ($(`#senseSwitch${k}`).is(':checked')){
+            var intervalID = setInterval(function() {
+
+                // $.post(`update_sense${k}`, {status : 'ON'}, function(data){
+                //     $(`#roomTemperature${k}`).text(data.roomTemperature);
+                //     $(`#airPressure${k}`).text(data.airPressure);
+                //     $(`#airHumidity${k}`).text(data.airHumidity);
+                //     $(`#atm${k}`).text('Atmosphere ('.concat(data.ip, ')'));
+
+                $.post(`update_sense`, {status : 'ON', ipAddress: ip, streamNumber: k}, function(data){
+                    $(`#roomTemperature${k}`).text(data.roomTemperature);
+                    $(`#airPressure${k}`).text(data.airPressure);
+                    $(`#airHumidity${k}`).text(data.airHumidity);
+                    $(`#atm${k}`).text('Atmosphere ('.concat(data.ip, ')'));
+                });
+
+            }, 1000)
+            senseIntervals.set(k, intervalID);
+        }
+        else {
+            clearInterval(senseIntervals.get(k));
+
+            // Clear form data after 1.2s to prevent async issues
+            setTimeout(function () {
+                $(`#roomTemperature${k}`).text('--.-');
+                $(`#airPressure${k}`).text('--.-');
+                $(`#airHumidity${k}`).text('--.-');
+            }, 1200);
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 // Code to handle switching between video streams
@@ -234,39 +401,12 @@ function generate_audio_handler( k ) {
     }
 }
 
-// Global map object to store interval IDs for sense refresh so they can be stopped
-let senseIntervals = new Map();
 
-// Code to handle sense streams -- should work with more than 2 sense streams, unable to test
-function generate_sense_handler( k ) {
-    return function() {
-        $(`#sense${k}`).show();
-        if ($(`#senseSwitch${k}`).is(':checked')){
-            var intervalID = setInterval(function() {
-                $.post(`update_sense${k}`, {status : 'ON'}, function(data){
-                    $(`#roomTemperature${k}`).text(data.roomTemperature);
-                    $(`#airPressure${k}`).text(data.airPressure);
-                    $(`#airHumidity${k}`).text(data.airHumidity);
-                    $(`#atm${k}`).text('Atmosphere ('.concat(data.ip, ')'));
-                });
-            }, 1000)
-            senseIntervals.set(k, intervalID);
-        }
-        else {
-            clearInterval(senseIntervals.get(k));
 
-            // Clear form data after 1.2s to prevent async issues
-            setTimeout(function () {
-                $(`#roomTemperature${k}`).text('--.-');
-                $(`#airPressure${k}`).text('--.-');
-                $(`#airHumidity${k}`).text('--.-');
-            }, 1200);
-        }
-    }
-}
 
 // Create button handlers after number of each sensor is determined
-var live = function(numCams, numSenses, numAudios) {
+var live = function(numCams, dataSense, numAudios) {
+
     // Deal with number of camera streams
     for (var i=1;i<=numCams;i++) {
             // Hide streams on page load
@@ -286,7 +426,8 @@ var live = function(numCams, numSenses, numAudios) {
    }
 
    // Deal with number of sense streams
-   for (var i=1; i<=numSenses;i++) {
-       $(`#senseSwitch${i}`).on("click", generate_sense_handler(i));
+   // Pass the sense stream number and it's IP Address
+   for (var i=1; i<=dataSense.get("numSense");i++) {
+       $(`#senseSwitch${i}`).on("click", generate_sense_handler(i, dataSense.get("sense".concat(i.toString()))));
    }
 }
