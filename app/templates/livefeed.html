@@ -229,7 +229,7 @@
 
     </div>
 
-    <div id="dialog" title="Specify Sensors">
+    {# <div id="dialog" title="Specify Sensors">
         <form id="sensorForm">
             <ul id="cameraList" class="list-group">
             </ul>
@@ -270,11 +270,11 @@
             <input type="submit" id="dialogSubmit" class="btn btn-primary">
 
         </form>
-    </div>  
+    </div>   #}
 
 
 <!-- New Live Modal -->
-<!-- <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
         <div class="modal-content">
 
@@ -306,7 +306,7 @@
                                     <h5>Cameras</h5>
                                 </div>
                                 <div class="row mb-3">
-                                    <div class="overflow-auto w-100" style="max-height: 200px;">
+                                    <div class="overflow-auto w-100 border border-light" style="height: 150px;">
                                         <ul id="cameraList" class="list-group">
                                         </ul>
                                     </div>
@@ -316,14 +316,8 @@
                                     <h5>Sense HATs</h5>
                                 </div>
                                 <div class="row mb-3">
-                                    <div class="overflow-auto w-100" style="max-height: 200px;">
+                                    <div class="overflow-auto w-100 border border-light" style="height: 150px;">
                                         <ul id="senseList" class="list-group">
-                                            <li class="list-group-item">
-                                                <label for="sense1">Sense 1</label>
-                                                <button type="button" class="close" aria-label="Close">
-                                                    <span aria-hidden="true">&times;</span>
-                                                </button>
-                                            </li>
                                         </ul>
                                     </div>
                                 </div>
@@ -332,14 +326,8 @@
                                     <h5>Audio</h5>
                                 </div>
                                 <div class="row">
-                                    <div class="overflow-auto w-100" style="max-height: 200px;">
+                                    <div class="overflow-auto w-100 border border-light" style="height: 150px;">
                                         <ul id="audioList" class="list-group">
-                                            <li class="list-group-item">
-                                                <label for="audio1">Audio 1</label>
-                                                <button type="button" class="close" aria-label="Close">
-                                                    <span aria-hidden="true">&times;</span>
-                                                </button>
-                                            </li>
                                         </ul>
                                     </div>        
                                 </div>
@@ -354,13 +342,13 @@
 
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary">Save changes</button>
+                    <button type="submit" id="dialogSubmit" class="btn btn-primary">Save changes</button>
                 </div>
             </form>
 
     </div>
   </div>
-</div> -->
+</div>
 
     <script src="../static/JS/generate.js"></script>
     <script src="../static/JS/livefeed.js"></script>
