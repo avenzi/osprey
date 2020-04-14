@@ -19,6 +19,10 @@ from app.controllers.program import Program
 from app.controllers.forms import LoginForm, TriggerSettingsForm, RegistrationForm
 from flask import render_template, flash, redirect, url_for, Response, session, jsonify, request, send_file, send_from_directory
 
+# Views
+from app.views.home_view import HomeView
+from app.views.livefeed_view import LivefeedView
+
 # BUFF_SIZE is the size of the number of bytes in each mp4 video chunk response
 MB = 1 << 20
 # Send 1 MB at a time
@@ -102,47 +106,9 @@ def login():
     return render_template('login.html', title='Sign In', form=form)
 
 
-@app.route('/home')
+@app.route('/home', methods=['GET'])
 def home():
-    database_cursor = mysql.connection.cursor()
-    database_cursor.execute("""SELECT id, StartDate, EndDate FROM Session ORDER BY StartDate DESC LIMIT 10;""")
-    result = database_cursor.fetchall()
-
-    sessions_view_data = []
-    for session_data in result:
-        data = {}
-        session_id = session_data[0]
-        data['name'] = 'Session #' + str(session_data[0])
-        data['id'] = session_data[0]
-
-        start_date = session_data[1].strftime("%m/%d/%Y %H:%M:%S")
-        end_date = session_data[2]
-
-        if end_date == None:
-            end_date = "Ongoing"
-        else:
-            end_date = end_date.strftime("%m/%d/%Y %H:%M:%S")
-        
-        data['start_date'] = start_date
-        data['end_date'] = end_date
-
-        database_cursor.execute("""SELECT id, Name, INET_NTOA(IP), SessionId, SensorType FROM SessionSensor WHERE SessionId = %s;""", (session_id,))
-        session_sensors = database_cursor.fetchall()
-
-        list_of_sensors = ''
-        first = True
-        for sensor in session_sensors:
-            if not first:
-                list_of_sensors = list_of_sensors + ', '
-            list_of_sensors = list_of_sensors + sensor[1]
-            first = False
-        
-        data['sensor_list'] = list_of_sensors
-        sessions_view_data.append(data)
-    
-    #print(sessions_view_data)
-
-    return render_template('home.html', sessions_view_data=sessions_view_data)
+    return HomeView().get_rendered_template()
 
 
 @app.route('/registration', methods=['GET', 'POST'])
@@ -189,8 +155,7 @@ def livefeed():
     if loginStatus != True:
         return redirect(url_for('login'))
 
-    #session['user_id'] = 1 # debugging event log without login -- delete
-    return render_template('livefeed.html')
+    return LivefeedView().get_rendered_template()
 
 
 
@@ -378,6 +343,7 @@ def livestream_config():
 
     if len(request.form['livestream_config']) == 0:
         return jsonify({})
+    
 
     index = 0
     for token in config_tokens:
@@ -388,12 +354,12 @@ def livestream_config():
         if 'cam-ip-input' in token:
             name = config_tokens[index + 1].split("=")[1].replace("%20", " ")
 
-            metadata = {'name': name}
-            config_json['cameras'][value] = metadata
+            metadata = {'name': name, 'ip': value}
+            config_json['cameras'].append(metadata)
         elif 'mic-ip-input' in token:
             name = config_tokens[index + 1].split("=")[1].replace("%20", " ")
-            metadata = {'name': name}
-            config_json['microphones'][value] = metadata
+            metadata = {'name': name, 'ip': value}
+            config_json['microphones'].append(metadata)
         elif 'sen-ip-input' in token:
             name = config_tokens[index + 1].split("=")[1].replace("%20", " ")
             metadata = {'name': name, 'ip': value}
