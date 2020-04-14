@@ -21,4 +21,12 @@ document.addEventListener("DOMContentLoaded", function() {
     document.getElementById("new-session-modal").addEventListener("click", function(event) {
         event.stopPropagation();
     });
+
 });
+
+function delete_session(session_id) {
+    // TODO: confirm delete modal / pop-up
+    $.post(`delete_session/${session_id}`, {}, function(result) {
+        $(`#entry${session_id}`).remove();
+    });
+}
