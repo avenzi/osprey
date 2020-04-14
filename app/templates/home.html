@@ -6,6 +6,7 @@
 
     <link rel="stylesheet" href="{{url_for('static', filename='stylesheets/home.css')}}">
     <script src="../static/JS/home_page.js"></script>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
 
     <title>Data Hub</title>
   </head>
@@ -16,86 +17,17 @@
         </div>
 
         <section id="entries">
-            <div id="entry{{id}}" class="entry">
-                <a class="session-name"><strong>Session Name</strong></a>
-                <p class="session-info"><strong>Date: </strong><i>3/1/2020 20:03</i> to <i>3/1/2020 21:38</i></p>
-                <p class="session-info"><strong>Disk Space Used: </strong>512 MB</p>
-                <p class="session-info"><strong>Other Information: </strong>123</p>
+            {% for session in sessions_view_data %}
+            <div id="entry{{session.id}}" class="entry">
+                <a href="archive/{{session.id}}" class="session-name"><strong>{{session.name}}</strong></a>
+                <p class="session-info"><strong>Date: </strong><i>{{session.start_date}}</i> to <i>{{session.end_date}}</i></p>
+                <p style="max-width: 60%;" class="session-info"><strong>Sensors Used: </strong>{{session.sensor_list}}</p>
                 <div class="action-buttons">
-                    <a class="delete-entry-btn delete bordered-button"></a>
+                    <a onclick="delete_session({{session.id}});" class="delete-entry-btn delete bordered-button"></a>
                     <a class="edit-entry-btn edit bordered-button"></a>
                 </div>
             </div>
-            <div id="entry{{id}}" class="entry">
-                <a class="session-name"><strong>Session Name</strong></a>
-                <p class="session-info"><strong>Date: </strong><i>3/1/2020 20:03</i> to <i>3/1/2020 21:38</i></p>
-                <p class="session-info"><strong>Disk Space Used: </strong>512 MB</p>
-                <p class="session-info"><strong>Other Information: </strong>123</p>
-                <div class="action-buttons">
-                    <a class="delete-entry-btn delete bordered-button"></a>
-                    <a class="edit-entry-btn edit bordered-button"></a>
-                </div>
-            </div>
-            <div id="entry{{id}}" class="entry">
-                <a class="session-name"><strong>Session Name</strong></a>
-                <p class="session-info"><strong>Date: </strong><i>3/1/2020 20:03</i> to <i>3/1/2020 21:38</i></p>
-                <p class="session-info"><strong>Disk Space Used: </strong>512 MB</p>
-                <p class="session-info"><strong>Other Information: </strong>123</p>
-                <div class="action-buttons">
-                    <a class="delete-entry-btn delete bordered-button"></a>
-                    <a class="edit-entry-btn edit bordered-button"></a>
-                </div>
-            </div>
-            <div id="entry{{id}}" class="entry">
-                <a class="session-name"><strong>Session Name</strong></a>
-                <p class="session-info"><strong>Date: </strong><i>3/1/2020 20:03</i> to <i>3/1/2020 21:38</i></p>
-                <p class="session-info"><strong>Disk Space Used: </strong>512 MB</p>
-                <p class="session-info"><strong>Other Information: </strong>123</p>
-                <div class="action-buttons">
-                    <a class="delete-entry-btn delete bordered-button"></a>
-                    <a class="edit-entry-btn edit bordered-button" ></a>
-                </div>
-            </div>
-            <div id="entry{{id}}" class="entry">
-                <a class="session-name"><strong>Session Name</strong></a>
-                <p class="session-info"><strong>Date: </strong><i>3/1/2020 20:03</i> to <i>3/1/2020 21:38</i></p>
-                <p class="session-info"><strong>Disk Space Used: </strong>512 MB</p>
-                <p class="session-info"><strong>Other Information: </strong>123</p>
-                <div class="action-buttons">
-                    <a class="delete-entry-btn delete bordered-button"></a>
-                    <a class="edit-entry-btn edit bordered-button"></a>
-                </div>
-            </div>
-            <div id="entry{{id}}" class="entry">
-                <a class="session-name"><strong>Session Name</strong></a>
-                <p class="session-info"><strong>Date: </strong><i>3/1/2020 20:03</i> to <i>3/1/2020 21:38</i></p>
-                <p class="session-info"><strong>Disk Space Used: </strong>512 MB</p>
-                <p class="session-info"><strong>Other Information: </strong>123</p>
-                <div class="action-buttons">
-                    <a class="delete-entry-btn delete bordered-button"></a>
-                    <a class="edit-entry-btn edit bordered-button"></a>
-                </div>
-            </div>
-            <div id="entry{{id}}" class="entry">
-                <a class="session-name"><strong>Session Name</strong></a>
-                <p class="session-info"><strong>Date: </strong><i>3/1/2020 20:03</i> to <i>3/1/2020 21:38</i></p>
-                <p class="session-info"><strong>Disk Space Used: </strong>512 MB</p>
-                <p class="session-info"><strong>Other Information: </strong>123</p>
-                <div class="action-buttons">
-                    <a class="delete-entry-btn delete bordered-button"></a>
-                    <a class="edit-entry-btn edit bordered-button"></a>
-                </div>
-            </div>
-            <div id="entry{{id}}" class="entry">
-                <a class="session-name"><strong>Session Name</strong></a>
-                <p class="session-info"><strong>Date: </strong><i>3/1/2020 20:03</i> to <i>3/1/2020 21:38</i></p>
-                <p class="session-info"><strong>Disk Space Used: </strong>512 MB</p>
-                <p class="session-info"><strong>Other Information: </strong>123</p>
-                <div class="action-buttons">
-                    <a class="delete-entry-btn delete bordered-button"></a>
-                    <a class="edit-entry-btn edit bordered-button"></a>
-                </div>
-            </div>
+            {% endfor %}
         </section>
 
         <div id="overlay">

@@ -104,7 +104,45 @@ def login():
 
 @app.route('/home')
 def home():
-    return render_template('home.html')
+    database_cursor = mysql.connection.cursor()
+    database_cursor.execute("""SELECT id, StartDate, EndDate FROM Session ORDER BY StartDate DESC LIMIT 10;""")
+    result = database_cursor.fetchall()
+
+    sessions_view_data = []
+    for session_data in result:
+        data = {}
+        session_id = session_data[0]
+        data['name'] = 'Session #' + str(session_data[0])
+        data['id'] = session_data[0]
+
+        start_date = session_data[1].strftime("%m/%d/%Y %H:%M:%S")
+        end_date = session_data[2]
+
+        if end_date == None:
+            end_date = "Ongoing"
+        else:
+            end_date = end_date.strftime("%m/%d/%Y %H:%M:%S")
+        
+        data['start_date'] = start_date
+        data['end_date'] = end_date
+
+        database_cursor.execute("""SELECT id, Name, INET_NTOA(IP), SessionId, SensorType FROM SessionSensor WHERE SessionId = %s;""", (session_id,))
+        session_sensors = database_cursor.fetchall()
+
+        list_of_sensors = ''
+        first = True
+        for sensor in session_sensors:
+            if not first:
+                list_of_sensors = list_of_sensors + ', '
+            list_of_sensors = list_of_sensors + sensor[1]
+            first = False
+        
+        data['sensor_list'] = list_of_sensors
+        sessions_view_data.append(data)
+    
+    #print(sessions_view_data)
+
+    return render_template('home.html', sessions_view_data=sessions_view_data)
 
 
 @app.route('/registration', methods=['GET', 'POST'])
@@ -164,6 +202,14 @@ def livefeed():
 
     #return Response(stream_with_context(generate_video()), mimetype="video/mp4")
 
+@app.route('/delete_session/<int:session_id>', methods=['POST'])
+def delete_session(session_id):
+    database_cursor = mysql.connection.cursor()
+    database_cursor.execute('''DELETE FROM Session WHERE id = %s''', (session_id,))
+    database_cursor.execute('''DELETE FROM SessionSensor WHERE SessionId = %s''', (session_id,))
+    mysql.connection.commit()
+    # TODO: actually remove all the data from db and disk
+    return Response()
 
 @app.route('/archives')
 def archives():
@@ -172,6 +218,7 @@ def archives():
 
 @app.route('/archive/<int:archive_id>')
 def archive(archive_id):
+    print("Entered archive route")
     login_auth = """
     if loginStatus != True:
         return redirect(url_for('login'))
@@ -324,9 +371,9 @@ def livestream_config():
     # TODO: input validation
     config_tokens = request.form['livestream_config'].split('&')
     config_json = {
-        'cameras': {},
-        'microphones': {},
-        'sense_hats': {}
+        'cameras': [],
+        'microphones': [],
+        'sense_hats': []
     }
 
     if len(request.form['livestream_config']) == 0:
@@ -340,6 +387,7 @@ def livestream_config():
         print(key + ": " + value)
         if 'cam-ip-input' in token:
             name = config_tokens[index + 1].split("=")[1].replace("%20", " ")
+
             metadata = {'name': name}
             config_json['cameras'][value] = metadata
         elif 'mic-ip-input' in token:
@@ -348,8 +396,8 @@ def livestream_config():
             config_json['microphones'][value] = metadata
         elif 'sen-ip-input' in token:
             name = config_tokens[index + 1].split("=")[1].replace("%20", " ")
-            metadata = {'name': name}
-            config_json['sense_hats'][value] = metadata
+            metadata = {'name': name, 'ip': value}
+            config_json['sense_hats'].append(metadata)
 
         index = index + 1
     
@@ -360,20 +408,20 @@ def livestream_config():
     result = database_cursor.fetchone()
     session_id = 1 if result == None else result[0] + 1
 
-    for ip in config_json['cameras']:
-        metadata = config_json['cameras'][ip]
+    for metadata in config_json['cameras']:
+        ip = metadata['ip']
         name = metadata['name']
         sql = "INSERT INTO SessionSensor (`IP`, `Name`, `SessionId`, `SensorType`) VALUES (INET_ATON(%s), %s, %s, %s);"
         database_cursor.execute(sql, (ip, name, session_id, "PiCamera"))
     
-    for ip in config_json['microphones']:
-        metadata = config_json['microphones'][ip]
+    for metadata in config_json['microphones']:
+        ip = metadata['ip']
         name = metadata['name']
         sql = "INSERT INTO SessionSensor (`IP`, `Name`, `SessionId`, `SensorType`) VALUES (INET_ATON(%s), %s, %s, %s);"
         database_cursor.execute(sql, (ip, name, session_id, "Microphone"))
     
-    for ip in config_json['sense_hats']:
-        metadata = config_json['sense_hats'][ip]
+    for metadata in config_json['sense_hats']:
+        ip = metadata['ip']
         name = metadata['name']
         sql = "INSERT INTO SessionSensor (`IP`, `Name`, `SessionId`, `SensorType`) VALUES (INET_ATON(%s), %s, %s, %s);"
         database_cursor.execute(sql, (ip, name, session_id, "SenseHat"))
@@ -651,6 +699,7 @@ def audiosegmentfetch(timestamp, segment, session, sensor):
     elif segment == -1:
         pass
     
+    print(segments_record)
     segments_metadata = json.loads(segments_record[7])
     base_path = "/root/data-ingester/"
     segment_metadata = {}
