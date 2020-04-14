@@ -17,7 +17,6 @@ from app.controllers.video import *
 from werkzeug.utils import secure_filename
 from app.controllers.program import Program
 from app.controllers.forms import LoginForm, TriggerSettingsForm, RegistrationForm
-from app.controllers.data import Sense, Audio, EventLog
 from flask import render_template, flash, redirect, url_for, Response, session, jsonify, request, send_file, send_from_directory
 
 # BUFF_SIZE is the size of the number of bytes in each mp4 video chunk response
@@ -28,12 +27,6 @@ BUFF_SIZE = 1 * MB
 seed(1)
 # global_start 
 bytes_so_far = 0
-
-# Data structure for handling audio data
-audioData = Audio()
-# Data structures for handling temperature data from two sense HATs
-senseData1 = Sense()
-senseData2 = Sense()
 
 # Only .py files are allowed to be uploaded
 ALLOWED_EXTENSIONS = set(['py'])
@@ -159,7 +152,7 @@ def livefeed():
         return redirect(url_for('login'))
 
     #session['user_id'] = 1 # debugging event log without login -- delete
-    return render_template('livefeed.html', senseData1 = senseData1, senseData2 = senseData2, audioData = audioData)
+    return render_template('livefeed.html')
 
 
 

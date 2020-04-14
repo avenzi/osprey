@@ -1,69 +1,48 @@
-$(document).ready(function () {
+$(document).ready(function() {
     
-    $('#myModal').modal('show')
+    // Display modal once the DOM is ready for JS to execute
+    $('#myModal').modal('show');
 
-    // Default to 1 of each sensor type
-    var senseNumber = 0;
-    var audioNumber = 0;
+    // Defining default number of sensors for each sensor type
+    var senNumber = 0;
+    var micNumber = 0;
+    var camNumber = 0;
 
-    var cameraNumber = 0;
+    // Defining max number of sensors for each sensor type
+    var maxCams = 10;
+    var maxSens = 10;
+    var maxMics = 10;
 
-    // Define max sensors
-    var maxCam = 10;
-    var maxSense = 10;
-    var maxAudio = 10;
-
-    var cameraIPS = ["35.9.42.110", "35.9.42.212", "35.9.42.245"];
-
-    // Hide sensors on page load
-   $("#sense2").hide();
-
-
-    // open dialog form immediately, grey out everything else, disable closing without submitting the form
-    $(function() {
-        $( "#dialog" ).dialog({
-            modal:true,
-
-            // commented out closing disable for testing
-            //closeOnEscape: false,
-            //open: function(event, ui) {
-            //    $(".ui-dialog-titlebar-close", $(this).parent()).hide();
-           // }
-        });
-    });
-    
-
+    // Element existed in the HTML during initial DOM binding event, so it is already present in the DOM
     $("#addCam").click(function(e) {
         e.preventDefault();
 
-        // Maximum cameras
-        if (cameraNumber < maxCam) {
-            cameraNumber++;
-            cameraIPidx = (cameraNumber-1) % cameraIPS.length;
+        if (camNumber < maxCams) {
+            camNumber++;
 
-            $("#cameraList").append(
-                `<li id="cam-${cameraNumber}" class="list-group-item">
+            $("#camList").append(
+                `<li id="cam-${camNumber}" class="list-group-item">
                     <div class="row">
                         <div class="col-11">
                             <div class="row">
                                 <div class="col-5">
-                                <label for="cam-ip-input-${cameraNumber}" id="cam-ip-label-${cameraNumber}">Camera ${cameraNumber} IP: </label>
+                                <label for="cam-ip-input-${camNumber}" id="cam-ip-label-${camNumber}">Camera ${camNumber} IP: </label>
                                 </div>
                                 <div class="col-7">
-                                <input name="cam-ip-input-${cameraNumber}" value="${cameraIPS[cameraIPidx]}">
+                                <input name="cam-ip-input-${camNumber}" value="">
                                 </div>
                             </div>
                             <div class="row">
                                 <div class="col-5">
-                                <label for="cam-name-input-${cameraNumber}" id="cam-name-label-${cameraNumber}">Camera ${cameraNumber} Name: </label>
+                                <label for="cam-name-input-${camNumber}" id="cam-name-label-${camNumber}">Camera ${camNumber} Name: </label>
                                 </div>
                                 <div class="col-7">
-                                <input name="cam-name-input-${cameraNumber}" value="Camera ${cameraNumber}">
+                                <input name="cam-name-input-${camNumber}" value="Camera ${camNumber}">
                                 </div>
                             </div>
                         </div>
                         <div class="col-1">
-                            <button type="button" id="cam-delete-${cameraNumber}" class="close deleteCam" aria-label="Close">
+                            <button type="button" id="cam-delete-${camNumber}" class="close deleteCam" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
                         </div>
@@ -73,26 +52,25 @@ $(document).ready(function () {
         }
     });
 
+    // Binding the click event on close buttons which were not present at the time of initial DOM binding event
     $(document).on('click', '.close.deleteCam', function(e) {
         e.preventDefault();
 
-        // The number of the cam that was clicked on
-        var camClicked = e.currentTarget.id.split("-")[2]
+        // Number of the camera whose delete button was clicked
+        var camRemoveNum = e.currentTarget.id.split("-")[2];
 
-        // Remove the Cam
-        var camToRemove = "#cam-".concat(camClicked).concat(".list-group-item");
-        $(camToRemove).remove();
+        // Removing the camera
+        var camRemove = "#cam-".concat(camRemoveNum).concat(".list-group-item");
+        $(camRemove).remove();
 
-        cameraNumber--;
-
-        // The total number of cams after removal
-        var numCams = document.getElementsByClassName("close deleteCam").length;
-
+        // Subtracting from the total number of cameras
+        camNumber--;
         
-        for (let i =Number(camClicked)+1; i <= numCams +1; i++){
+        /* Adjusting the HTML attributes and text content for other cameras to account for the removed camera */
+        for (let i = Number(camRemoveNum) + 1; i <= camNumber + 1; i++){
+
             var camLiTag = document.getElementById("cam-".concat(i));
             camLiTag.setAttribute("id", "cam-".concat((i-1).toString()));
-
 
             var ipLabelTag = document.getElementById("cam-ip-label-".concat(i));
             ipLabelTag.setAttribute("for", "cam-ip-input-".concat((i-1).toString()));
@@ -102,7 +80,6 @@ $(document).ready(function () {
             var ipInputTag = document.getElementsByName("cam-ip-input-".concat(i))[0];
             ipInputTag.setAttribute("name", "cam-ip-input-".concat((i-1).toString()));
 
-
             var nameLabelTag = document.getElementById("cam-name-label-".concat(i));
             nameLabelTag.setAttribute("for", "cam-name-input-".concat((i-1).toString()));
             nameLabelTag.setAttribute("id", "cam-name-label-".concat((i-1).toString()));
@@ -110,12 +87,12 @@ $(document).ready(function () {
             
             var nameInputTag = document.getElementsByName("cam-name-input-".concat(i))[0];
             nameInputTag.setAttribute("name", "cam-name-input-".concat((i-1).toString()));
+
             // If value is the default and has not been customized, change it
             if (nameInputTag.getAttribute("value") == "Camera ".concat((i).toString())){
                 nameInputTag.setAttribute("value", "Camera ".concat((i-1).toString()));
             }
             
-
             var deleteButtonTag = document.getElementById("cam-delete-".concat(i))
             deleteButtonTag.setAttribute("id", "cam-delete-".concat((i-1).toString()));
         }
@@ -123,36 +100,70 @@ $(document).ready(function () {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // Element existed in the HTML during initial DOM binding event, so it is already present in the DOM
     $("#addAudio").click(function(e) {
         e.preventDefault();
 
         // Maximum audio
-        if (audioNumber < maxAudio) {
-            audioNumber++;
+        if (micNumber < maxMics) {
+            micNumber++;
 
             $("#audioList").append(
-                `<li id="mic-${audioNumber}" class="list-group-item">
+                `<li id="mic-${micNumber}" class="list-group-item">
                     <div class="row">
                         <div class="col-11">
                             <div class="row">
                                 <div class="col-5">
-                                    <label for="mic-ip-input-${audioNumber}" id="mic-ip-label-${audioNumber}">Microphone ${audioNumber} IP: </label>
+                                    <label for="mic-ip-input-${micNumber}" id="mic-ip-label-${micNumber}">Microphone ${micNumber} IP: </label>
                                 </div>
                                 <div class="col-7">
-                                    <input name="mic-ip-input-${audioNumber}" value="">
+                                    <input name="mic-ip-input-${micNumber}" value="">
                                 </div>
                             </div>
                             <div class="row">
                                 <div class="col-5">
-                                    <label for="mic-name-input-${audioNumber}" id="mic-name-label-${audioNumber}">Microphone ${audioNumber} Name: </label>
+                                    <label for="mic-name-input-${micNumber}" id="mic-name-label-${micNumber}">Microphone ${micNumber} Name: </label>
                                 </div>
                                 <div class="col-7">
-                                    <input name="mic-name-input-${audioNumber}" value="Microphone ${audioNumber}">
+                                    <input name="mic-name-input-${micNumber}" value="Microphone ${micNumber}">
                                 </div>
                             </div>
                         </div>
                         <div class="col-1">
-                            <button type="button" id="mic-delete-${audioNumber}" class="close deleteMic" aria-label="Close">
+                            <button type="button" id="mic-delete-${micNumber}" class="close deleteMic" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
                         </div>
@@ -162,7 +173,7 @@ $(document).ready(function () {
         }
     });
 
-
+    // Binding the click event on close buttons which were not present at the time of initial DOM binding event
     $(document).on('click', '.close.deleteMic', function(e) {
         e.preventDefault();
 
@@ -173,7 +184,7 @@ $(document).ready(function () {
         var micToRemove = "#mic-".concat(micClicked).concat(".list-group-item");
         $(micToRemove).remove();
 
-        audioNumber--;
+        micNumber--;
 
         // The total number of mics after removal
         var numMics = document.getElementsByClassName("close deleteMic").length;
@@ -211,37 +222,37 @@ $(document).ready(function () {
         }
     });
 
-
+    // Element existed in the HTML during initial DOM binding event, so it is already present in the DOM
     $("#addSense").click(function(e) {
         e.preventDefault();
     
         // Maximum Sense HATs
-        if (senseNumber < maxSense) {
-            senseNumber++;
+        if (senNumber < maxSens) {
+            senNumber++;
 
             $("#senseList").append(                
-                `<li id="sen-${senseNumber}" class="list-group-item">
+                `<li id="sen-${senNumber}" class="list-group-item">
                 <div class="row">
                     <div class="col-11">
                         <div class="row">
                             <div class="col-5">
-                                <label for="sen-ip-input-${senseNumber}" id="sen-ip-label-${senseNumber}">Sense HAT ${senseNumber} IP: </label>
+                                <label for="sen-ip-input-${senNumber}" id="sen-ip-label-${senNumber}">Sense HAT ${senNumber} IP: </label>
                             </div>
                             <div class="col-7">
-                                <input name="sen-ip-input-${senseNumber}" value="">
+                                <input name="sen-ip-input-${senNumber}" value="">
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-5">
-                                <label for="sen-name-input-${senseNumber}" id="sen-name-label-${senseNumber}">Sense HAT ${senseNumber} Name: </label>
+                                <label for="sen-name-input-${senNumber}" id="sen-name-label-${senNumber}">Sense HAT ${senNumber} Name: </label>
                             </div>
                             <div class="col-7">
-                                <input name="sen-name-input-${senseNumber}" value="Sense HAT ${senseNumber}">
+                                <input name="sen-name-input-${senNumber}" value="Sense HAT ${senNumber}">
                             </div>
                         </div>
                     </div>
                     <div class="col-1">
-                        <button type="button" id="sen-delete-${senseNumber}" class="close deleteSen" aria-label="Close">
+                        <button type="button" id="sen-delete-${senNumber}" class="close deleteSen" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
@@ -251,8 +262,7 @@ $(document).ready(function () {
         }
     });
     
-
-
+    // Binding the click event on close buttons which were not present at the time of initial DOM binding event
     $(document).on('click', '.close.deleteSen', function(e) {
         e.preventDefault();
 
@@ -263,7 +273,7 @@ $(document).ready(function () {
         var senToRemove = "#sen-".concat(senClicked).concat(".list-group-item");
         $(senToRemove).remove();
 
-        senseNumber--;
+        senNumber--;
 
         // The total number of sens after removal
         var numSens = document.getElementsByClassName("close deleteSen").length;
@@ -301,9 +311,8 @@ $(document).ready(function () {
         }
     });
 
-
-
-    $(document).on('click','#dialogSubmit',function(e) {
+    // Element existed in the HTML during initial DOM binding event, so it is already present in the DOM
+    $('#dialogSubmit').click(function(e) {
         e.preventDefault();
         var queryString = $('#sensorForm').serialize();
         var query = queryString.split("&");
@@ -313,9 +322,9 @@ $(document).ready(function () {
             console.log(result);
         });
         
-        if (cameraNumber > 0){
+        if (camNumber > 0){
             // Create correct number of video selectors
-            for (var i=1;i<=cameraNumber;i++){
+            for (var i=1;i<=camNumber;i++){
                 var checked = "";
                 if (i==1) {
                     checked = " checked";
@@ -333,7 +342,7 @@ $(document).ready(function () {
             }
     
             // Create iframe tags using form input
-            for (var i=1;i<=cameraNumber;i++){
+            for (var i=1;i<=camNumber;i++){
                 var ip = query[i-1].split("=")[1];
                 var block=`
                     <div class="embed-responsive embed-responsive-16by9" id="stream${i}">
@@ -352,9 +361,9 @@ $(document).ready(function () {
     
 
         let senseData = new Map()
-        if (senseNumber > 0){
+        if (senNumber > 0){
             // Create correct number of sensor selectors
-            for (var i=1;i<=senseNumber;i++){
+            for (var i=1;i<=senNumber;i++){
                 var block=`
                 <div class="col">
                     <div class="custom-control custom-switch d-inline">
@@ -363,10 +372,48 @@ $(document).ready(function () {
                     </div>
                 </div>`;
                 $("#senseRow").append(block);
-                $(`#sense${i}`).show();
+
+                var block=
+                `<div class="row justify-content-center mb-1" id="sense${i}">
+                
+                    <div class="card w-100">
+                        <div class="card-header p-0 text-center">
+                            <p id="atm${i}">Atmosphere ${i}</p>
+                        </div>
+                        <div class="card-body p-1">
+                            <div class="row temp-spacing">
+                                <div class="col-8">
+                                    Temperature (&#8457):
+                                </div>
+                                <div class="col-4 text-right" id='roomTemperature${i}'>
+                                    --.-
+                                </div>
+                            </div>
+                            <div class="row temp-spacing">
+                                <div class="col-8">
+                                    Air Pressure (millibars):
+                                </div>
+                                <div class="col-4 text-right" id='airPressure${i}'>
+                                    --.-
+                                </div>
+                            </div>
+                            <div class="row temp-spacing">
+                                <div class="col-8">
+                                    Air Humidity (%):
+                                </div>
+                                <div class="col-4 text-right" id='airHumidity${i}'>
+                                    --.-
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>`
+                $("#senMic").append(block);
+                
             }
 
-            senseData.set("numSense", senseNumber);
+            senseData.set("numSense", senNumber);
             for (var i=0; i<=query.length-1; i+=2){
                 if (query[i].substring(0,12) == "sen-ip-input"){
                     // console.log(query[i].split("="));
@@ -384,9 +431,9 @@ $(document).ready(function () {
 
 
 
-        if (audioNumber > 0){
+        if (micNumber > 0){
             // Create audio selectors
-            for (var i=1;i<=audioNumber;i++) {
+            for (var i=1;i<=micNumber;i++) {
                 var block=`
                 <div class="col">
                     <div class="custom-control custom-switch">
@@ -395,16 +442,41 @@ $(document).ready(function () {
                     </div>
                 </div>`;
                 $("#audioRow").append(block);
+
+
+                var block=
+                `<div class="row">
+
+                    <div class="card w-100" id="audioDiv">
+                        <div class="card-header p-0 text-center">
+                            Audio
+                        </div>
+                        <div class="card-body p-1">
+                            <div class="row">
+                                <div class="col">
+                                    <audio id="audio" class="audio-player" controls>
+                                        Your browser doesn't support HTML audio element.
+                                    </audio>
+                                </div>
+                            </div>
+                            <div class="row justify-content-end">
+                                <div class="col text-left" id="decibels">
+                                    Current dB: --.-
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>`
+                $("#senMic").append(block);
             }
     
         } 
         else {
             $("#audioRow").hide();
-            $("#audioDiv").hide();
         }
     
-        // Close the dialog box
-        // $('#dialog').dialog('close');
+
 
         $('#myModal').modal('hide')
 
@@ -412,23 +484,10 @@ $(document).ready(function () {
 
 
         // Create all normal live javascript now that all elements are correct
-        live(cameraNumber, senseData, audioNumber);
+        live(camNumber, senseData, micNumber);
     });
 
-
-
-
-
-
 });
-
-
-
-
-
-
-
-
 
 
 // Global map object to store interval IDs for sense refresh so they can be stopped
@@ -470,22 +529,6 @@ function generate_sense_handler( k, ip ) {
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // Code to handle switching between video streams
 function generate_video_handler( k , numCams) {
     return function() { 
@@ -523,9 +566,6 @@ function generate_audio_handler( k ) {
         }
     }
 }
-
-
-
 
 // Create button handlers after number of each sensor is determined
 var live = function(numCams, dataSense, numAudios) {
