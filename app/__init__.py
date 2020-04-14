@@ -18,4 +18,4 @@ mysql = MySQL(app)
 # Initializing Flask-Bootstrap
 bootstrap = Bootstrap(app)
 
-from app.controllers import routes
+from app.main import routes

@@ -13,15 +13,16 @@ from queue import Queue
 from datetime import datetime
 from random import seed, randint
 from app import app, mysql, bcrypt
-from app.controllers.video import *
 from werkzeug.utils import secure_filename
-from app.controllers.program import Program
-from app.controllers.forms import LoginForm, TriggerSettingsForm, RegistrationForm
+from app.main.program import Program
+from app.main.forms import LoginForm, TriggerSettingsForm, RegistrationForm
 from flask import render_template, flash, redirect, url_for, Response, session, jsonify, request, send_file, send_from_directory
 
 # Views
 from app.views.home_view import HomeView
 from app.views.livefeed_view import LivefeedView
+
+# Controllers
 
 # BUFF_SIZE is the size of the number of bytes in each mp4 video chunk response
 MB = 1 << 20
