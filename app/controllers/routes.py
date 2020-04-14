@@ -290,47 +290,6 @@ def archive(archive_id):
     )
 
 
-@app.route('/video_feed')
-def video_feed():
-    """Video streaming route. Put this in the src attribute of an img tag."""
-    return Response(gen(Camera(-1, False)),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
-
-
-@app.route('/session_feed/<int:session_id>')
-def session_feed(session_id):
-    """Video streaming route. Put this in the src attribute of an img tag."""
-    return Response(gen(Camera(session_id, True)),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
-
-
-"""route is used to start the live stream"""
-@app.route('/start')
-def start():
-    write_token("START")
-    print("pressed Start")
-    return {}
-
-
-"""route is used to stop the live stream"""
-@app.route('/stop')
-def stop():
-    print("pressed Stop")
-    write_token("STOP")
-    return {}
-
-
-def write_token(token_value):
-    database_cursor = mysql.connection.cursor()
-    database_cursor.execute("""CREATE TABLE IF NOT EXISTS `Token` (id int(11) NOT NULL AUTO_INCREMENT, Value TEXT NOT NULL, PRIMARY KEY (id));""")
-    mysql.connection.commit()
-
-    # insert new token
-    sql = "INSERT INTO `Token` (`Value`) VALUES (%s)"
-    database_cursor.execute(sql, (token_value,))
-    mysql.connection.commit()
-
-
 @app.route('/livestream_config', methods=['GET', 'POST'])
 def livestream_config():
     # TODO: input validation
@@ -567,43 +526,6 @@ def update_eventlog():
 
 
 
-
-@app.route('/test', methods=['GET'])
-def test():
-    return render_template('test.html')
-
-
-@app.route('/testshaka', methods=['GET'])
-def testshaka():
-    return render_template('test-shaka.html')
-
-
-@app.route('/testvideo', methods=['GET'])
-def testvideo():
-    return render_template('test-video.html')
-
-
-@app.route('/testaudio', methods=['GET'])
-def testaudio():
-    return render_template('test-audio.html')
-
-
-@app.route("/dashvideo", methods=['GET'])
-def dashvideo():
-    path = "/var/www/html/video3/output-dash.mpd"
-    return partial_response(path, 0, BUFF_SIZE, None)
-
-
-""" .mpd, then init.mp4, then .m4s segments after that """
-@app.route('/filefetch/<filename>')
-def filefetch(filename):
-    print("filename requested: " + filename)
-
-    # could construct a master.mpd here if this is an archive viewing (or just make it during livestream)
-    path = "/var/www/html/audio/" + filename
-    return partial_response(path, 0, os.path.getsize(path), None)
-
-
 @app.route('/videoframefetch/<frame>/<session>/<sensor>')
 def videoframefetch(frame, session, sensor):
     #print(frame)
@@ -733,27 +655,6 @@ def audiosegmentfetch(timestamp, segment, session, sensor):
     response.headers.add('segment-time', timestamp)
 
     return response
-    
-
-@app.route('/filefetchvideo/<filename>')
-def filefetchvideo(filename):
-    print("filename requested: " + filename)
-
-    # could construct a master.mpd here if this is an archive viewing (or just make it during livestream)
-    path = "/var/www/html/video/dash-segments/" + filename
-    return partial_response(path, 0, os.path.getsize(path), None)
-
-
-@app.route('/filefetchaudio/<filename>')
-def filefetchaudio(filename):
-    print("filename requested: " + filename)
-
-    path = "/var/www/html/audio/mp3-segments/" + filename
-
-    if os.path.exists(path):
-        return partial_response(path, 0, os.path.getsize(path), None) # return the whole file at once
-    else:
-        return jsonify({'nodata': True})
 
 
 @app.route('/fetchvideo', methods=['GET'])
