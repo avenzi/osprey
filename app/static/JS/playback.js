@@ -2,7 +2,7 @@
 // # TODO: drift detection, scrubbing
 class MotionJPGVideoPlayer {
     constructor(session_id, sensor_id) {
-        this.session_id = session_id
+        this.session_id = session_id;
         this.sensor_id = sensor_id;
         this.fps = 16;
         this.ms_play_interval = 1000 / this.fps;
