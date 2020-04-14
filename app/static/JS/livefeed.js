@@ -7,6 +7,7 @@ $(document).ready(function () {
             $("#eventLog").html(data)
         })
         .always(function(){
+            // Was 1000
             setTimeout(doPoll, 1000);
             });
     }());
