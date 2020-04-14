@@ -24,6 +24,7 @@ class MotionJPGVideoPlayer {
 
         var that = this;
         fetch(frame_request_url).then(response => {
+            //console.log(response);
             return response.arrayBuffer()
         }).then(function(buffer) {
             function to64( buffer ) {
