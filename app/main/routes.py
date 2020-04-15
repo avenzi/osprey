@@ -15,14 +15,16 @@ from random import seed, randint
 from app import app, mysql, bcrypt
 from werkzeug.utils import secure_filename
 from app.main.program import Program
-from app.main.forms import LoginForm, TriggerSettingsForm, RegistrationForm
+from app.views.forms import LoginForm, TriggerSettingsForm, RegistrationForm
 from flask import render_template, flash, redirect, url_for, Response, session, jsonify, request, send_file, send_from_directory
 
 # Views
 from app.views.home_view import HomeView
 from app.views.livefeed_view import LivefeedView
+from app.views.login_view import LoginView
 
 # Controllers
+from app.controllers.login_controller import LoginController
 
 # BUFF_SIZE is the size of the number of bytes in each mp4 video chunk response
 MB = 1 << 20
@@ -44,67 +46,13 @@ loginStatus = True # Avoid login for DECS -- should be false
 @app.route('/', methods = ['GET','POST'])
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    form = LoginForm()
-    database_cursor = mysql.connection.cursor()
-    
-    # The validate_on_submit() method does all form processing work and returns true when a form
-    # is submitted and the browser sends a POST request indicating data is ready to be processed
-    if form.validate_on_submit():
-        database_cursor.execute("SELECT * FROM user where username = "+"'"+form.username.data+"'")
-
-        myresult = database_cursor.fetchone()
-        hashed_pw_from_db = myresult[2]
-        user_input_pw = form.password.data
-        correction_password = bcrypt.check_password_hash(hashed_pw_from_db, user_input_pw)
-
-        if correction_password == False:
-            redirect(url_for('login'))
-
+    if request.method == 'POST':
+        if LoginForm().validate_on_submit():
+            return LoginController().handle_response()
         else:
-            # Storing the username of a user in the session
-            session['username'] = form.username.data
-
-            # TODO: per-user data needs to be stored in the database or the session object. cant use globals...
-            global loginStatus
-            loginStatus = True
-
-            # Storing the id of the user that is logging in in the session
-            database_cursor.execute("SELECT id FROM user WHERE username = "+"'"+session.get('username')+"'")
-            session['user_id'] = database_cursor.fetchone()[0]
-
-            # Creating session variables for the scalar trigger settings
-            session['triggerSettings_audio'] = '' 
-            session['triggerSettings_temperature'] = '' 
-            session['triggerSettings_pressure'] = '' 
-            session['triggerSettings_humidity'] = '' 
-
-            # Creating the eventlog table if it does not exist. The eventlog table keeps track of all trigger events
-            sql = """CREATE TABLE IF NOT EXISTS eventlog(
-                id INTEGER UNSIGNED AUTO_INCREMENT,
-                user_id INTEGER UNSIGNED,
-                alert_time DATETIME,
-                alert_type VARCHAR(255),
-                alert_message VARCHAR(1023),
-                PRIMARY KEY (id),
-                FOREIGN KEY (user_id) REFERENCES user(id)
-            );"""
-            database_cursor.execute(sql)
-
-            # Creating the Algorithm table if it does not exist. The Algorithm table keeps track of all algorithm information
-            sql = """CREATE TABLE IF NOT EXISTS Algorithm(
-                id INTEGER UNSIGNED AUTO_INCREMENT,
-                UserId INTEGER UNSIGNED,
-                Status BOOLEAN,
-                Name VARCHAR(255),
-                Path VARCHAR(255),
-                PRIMARY KEY (id),
-                FOREIGN KEY (UserId) REFERENCES user(id)
-                );"""
-            database_cursor.execute(sql)
-
-            return redirect(url_for('livefeed'))
-
-    return render_template('login.html', title='Sign In', form=form)
+            LoginView().get_rendered_template()
+    else:
+        return LoginView().get_rendered_template()
 
 
 @app.route('/home', methods=['GET'])
