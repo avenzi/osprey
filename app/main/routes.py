@@ -46,11 +46,8 @@ loginStatus = True # Avoid login for DECS -- should be false
 @app.route('/', methods = ['GET','POST'])
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == 'POST':
-        if LoginForm().validate_on_submit():
-            return LoginController().handle_response()
-        else:
-            LoginView().get_rendered_template()
+    if request.method == 'POST' and LoginForm().validate_on_submit():
+        return LoginController().handle_response()
     else:
         return LoginView().get_rendered_template()
 
