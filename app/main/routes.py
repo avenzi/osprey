@@ -8,9 +8,10 @@ import subprocess
 import threading
 import urllib.request
 import json
+import pytz
 
 from queue import Queue
-from datetime import datetime
+from datetime import datetime, timedelta
 from random import seed, randint
 from app import app, mysql, bcrypt
 from werkzeug.utils import secure_filename
@@ -22,6 +23,7 @@ from flask import render_template, flash, redirect, url_for, Response, session, 
 from app.views.home_view import HomeView
 from app.views.livefeed_view import LivefeedView
 from app.views.login_view import LoginView
+from app.views.eventlog_view import EventlogView
 
 # Controllers
 from app.controllers.login_controller import LoginController
@@ -56,7 +58,7 @@ def login():
 def home():
     return HomeView().get_rendered_template()
 
-
+# TODO: refactor like how /login route was refactored (using RegistrationView and RegistrationController)
 @app.route('/registration', methods=['GET', 'POST'])
 def registration():
     form = RegistrationForm()
@@ -121,10 +123,6 @@ def delete_session(session_id):
     mysql.connection.commit()
     # TODO: actually remove all the data from db and disk
     return Response()
-
-@app.route('/archives')
-def archives():
-    return archive(None)
 
 
 @app.route('/archive/<int:archive_id>')
@@ -298,8 +296,10 @@ def livestream_config():
         database_cursor.execute(sql, (ip, name, session_id, "SenseHat"))
 
     
-    sql = "INSERT INTO Session (`StartDate`, `SensorConfig`) VALUES (NOW(3), %s);"
-    database_cursor.execute(sql, (compacted_json,))
+    dt = datetime.now()
+    dt = dt.astimezone(pytz.timezone("America/Detroit"))
+    sql = "INSERT INTO Session (`StartDate`, `SensorConfig`) VALUES (%s, %s);"
+    database_cursor.execute(sql, (dt, compacted_json))
     mysql.connection.commit()
 
     sql = "SELECT id, INET_NTOA(IP), SessionId, SensorType FROM SessionSensor WHERE SessionId = %s"
@@ -445,9 +445,9 @@ def update_triggersettings():
         'pressure_input' : session.get('triggerSettings_pressure'), 'humidity_input' : session.get('triggerSettings_humidity')})
 
 
-"""route is used to update the event log for all data types"""
-@app.route('/update_eventlog', methods=['GET'])
-def update_eventlog():
+"""route is used to retrieve items from the event log"""
+@app.route('/retrieve_eventlog/<int:time>/<int:adjustment>/<int:mintime>', methods=['GET'])
+def retrieve_eventlog(time, adjustment, mintime):
     # Instantiating an object that can execute SQL statements
     database_cursor = mysql.connection.cursor()
 
@@ -457,19 +457,22 @@ def update_eventlog():
     #Return the latest 15 event log entries for this user
     sql = """
         SELECT alert_message, alert_time
-        FROM eventlog 
-        WHERE user_id = %s
-        ORDER BY alert_time DESC 
+        FROM eventlog
+        WHERE user_id = %s AND alert_time < %s AND alert_time > %s
+        ORDER BY alert_time DESC
         LIMIT 15;
     """
-    database_cursor.execute(sql, (user_id,))
+    dt = datetime.fromtimestamp(time / 1000)
+    dt = dt.astimezone(pytz.timezone("America/Detroit")) + timedelta(hours=adjustment)
+    dt_min = datetime.fromtimestamp(mintime / 1000)
+    dt_min = dt_min.astimezone(pytz.timezone("America/Detroit")) + timedelta(hours=adjustment)
+    database_cursor.execute(sql, (user_id, dt, dt_min))
     results = database_cursor.fetchall()
     alerts = []
     for alert in results :
         alerts.append("{} at {}".format(alert[0], alert[1]))
-
+    
     return render_template('snippets/eventlog_snippet.html', messages = alerts)
-
 
 
 @app.route('/videoframefetch/<frame>/<session>/<sensor>')

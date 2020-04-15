@@ -3,7 +3,8 @@ $(document).ready(function () {
 
     // Updating the eventlog front end
     (function doPoll() {
-        $.get("update_eventlog", function(data) {
+        var now = Math.round(Date.now());
+        $.get(`retrieve_eventlog/${now}/0/0`, function(data) {
             $("#eventLog").html(data)
         })
         .always(function(){

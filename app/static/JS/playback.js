@@ -557,6 +557,17 @@ document.addEventListener("DOMContentLoaded", async function() {
         $("#archive-time").html("Archive Time: " + archive_date.toLocaleString());
     }, 50);
 
+    // Updating the eventlog front end
+    function doPoll() {
+        $.get(`/retrieve_eventlog/${parseInt(slider.value)}/4/${SESSION_START_TIME}`, function(data) {
+            $("#eventLog").html(data)
+        }).always(function() {
+            // Was 1000
+            setTimeout(doPoll, 1000);
+        });
+    }
+    doPoll();
+
 });
 
 function on_slider_input(time_ms) {
