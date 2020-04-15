@@ -62,4 +62,4 @@ class LoginController(Controller):
                 );"""
             self.database_cursor.execute(sql)
             
-            return self.redirect('livefeed')
+            return self.redirect('home')
