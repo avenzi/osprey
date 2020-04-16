@@ -23,10 +23,13 @@ from flask import render_template, flash, redirect, url_for, Response, session, 
 from app.views.home_view import HomeView
 from app.views.livefeed_view import LivefeedView
 from app.views.login_view import LoginView
+from app.views.registration_view import RegistrationView
 from app.views.eventlog_view import EventlogView
 
 # Controllers
 from app.controllers.login_controller import LoginController
+from app.controllers.registration_controller import RegistrationController
+
 
 # BUFF_SIZE is the size of the number of bytes in each mp4 video chunk response
 MB = 1 << 20
@@ -61,38 +64,10 @@ def home():
 # TODO: refactor like how /login route was refactored (using RegistrationView and RegistrationController)
 @app.route('/registration', methods=['GET', 'POST'])
 def registration():
-    form = RegistrationForm()
-    #-------------------------------------------------------------------------------------------
-    # The validate_on_submit() method does all form processing work and returns true when a form
-    # is submitted and the browser sends a POST request indicating data is ready to be processed
-    #-------------------------------------------------------------------------------------------
-    if form.validate_on_submit():
-        # A template in the application is used to render flashed messages that Flask stores
-        # flash('registration requested for user {}, password={}, password_confirm={}'.format(
-        #    form.username.data, form.password.data, form.password_confirm.data))
-
-        if form.password.data != form.password_confirm.data:
-            flash("Password confirmation and password need to be the same")
-            return redirect(url_for('registration'))
-
-        # Password Hashing
-        inputted_password = form.password.data
-        pw_hash = bcrypt.generate_password_hash(inputted_password).decode('utf-8')
-
-        username = form.username.data
-
-        database_cursor = mysql.connection.cursor()
-        database_cursor.execute('''CREATE TABLE IF NOT EXISTS user (id INTEGER UNSIGNED AUTO_INCREMENT PRIMARY KEY , username VARCHAR(60), hashed_pw TEXT)''')
-        database_cursor.execute(" INSERT INTO user (username,hashed_pw) VALUES ("+ '"'+ username +'"' + ","+ '"'+pw_hash +'"' +")")
-
-        #INSERT INTO Persons (FirstName,LastName)
-        #VALUES ('Lars','Monsn');
-        # https://www.w3schools.com/python/python_mysql_select.asp
-
-        mysql.connection.commit()
-
-        return redirect(url_for('login'))
-    return render_template('registration.html', title='Registration', form=form)
+    if request.method == 'POST' and RegistrationForm().validate_on_submit():
+        return RegistrationController().handle_response()
+    else:
+        return RegistrationView().get_rendered_template()
 
 
 @app.route('/livefeed', methods=['GET', 'POST'])
