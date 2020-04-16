@@ -88,8 +88,8 @@ def delete_session(session_id):
     return SessionController().delete_session(session_id)
 
 
-@app.route('/archive/<int:archive_id>')
-def archive(archive_id):
+@app.route('/archived/session/<int:session_id>')
+def archived_session(session_id):
     print("Entered archive route")
     login_auth = """
     if loginStatus != True:
@@ -103,7 +103,7 @@ def archive(archive_id):
         return redirect(url_for('login'))
     """
 
-    return SessionView().serve_session(archive_id)
+    return SessionView().serve_session(session_id)
 
 @app.route('/livestream_config', methods=['GET', 'POST'])
 def livestream_config():
