@@ -25,6 +25,7 @@ from app.views.livefeed_view import LivefeedView
 from app.views.login_view import LoginView
 from app.views.registration_view import RegistrationView
 from app.views.eventlog_view import EventlogView
+from app.views.session_view import SessionView
 
 # Controllers
 from app.controllers.login_controller import LoginController
@@ -101,6 +102,8 @@ def archive(archive_id):
     if session.get('username') == True:
         return redirect(url_for('login'))
     """
+
+    return SessionView().serve_session(archive_id)
     
     # recent recorded sessions
     database_cursor = mysql.connection.cursor()
@@ -184,7 +187,6 @@ def archive(archive_id):
     print(sensor_selections)
 
     return render_template('archives.html',
-        sessions = template_data,
         session_id = (archive_id if archive_id != None else -1),
         session_sensors_serialized = session_sensors_serialized,
         session_start_time = session_start_time,
