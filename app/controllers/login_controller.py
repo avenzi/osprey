@@ -61,5 +61,7 @@ class LoginController(Controller):
                 FOREIGN KEY (UserId) REFERENCES user(id)
                 );"""
             self.database_cursor.execute(sql)
+
+            self.database_connection.commit()
             
             return self.redirect('home')
