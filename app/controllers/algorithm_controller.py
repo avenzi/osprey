@@ -81,7 +81,7 @@ class AlgorithmController(Controller):
 
                 # Update the old file path
                 file.save(os.path.join(app.config['UPLOADS_FOLDER'], path[0] + ".py"))
-
+            
             # Search Algorithm table for filenames of algorithms pertaining to a user
             sql = """
                 SELECT Status, Name 

@@ -20,6 +20,7 @@ from app.views.forms import LoginForm, TriggerSettingsForm, RegistrationForm
 from flask import render_template, flash, redirect, url_for, Response, session, jsonify, request, send_file, send_from_directory
 
 # Views
+from app.views.algorithm_view import AlgorithmView
 from app.views.home_view import HomeView
 from app.views.livefeed_view import LivefeedView
 from app.views.login_view import LoginView
@@ -477,28 +478,10 @@ def algorithm_upload():
     if request.method == 'POST':
         return AlgorithmController().handle_upload()
     elif request.method == 'GET':
-        algorithms = []
-        runningAlgorithms = []
-        user_id = session.get('user_id')
-        database_cursor = mysql.connection.cursor()
-
-        # Search Algorithm table for filenames of algorithms pertaining to a user
-        sql = """
-            SELECT Status, Name 
-            FROM Algorithm 
-            WHERE UserId = %s;
-        """            
-        database_cursor.execute(sql, (user_id,))
-        algs = database_cursor.fetchall()
-
-        for alg in algs:
-            if alg[0] == 1:
-                runningAlgorithms.append(alg[1])
-            algorithms.append(alg[1])
-
-        return render_template('snippets/uploads_list_snippet.html', algorithms = algorithms, runningAlgorithms = runningAlgorithms)
+        return AlgorithmView().get_uploads_snippet()
 
 
+# TODO: move logic to AlgorithmController
 """route is used to handle uploaded algorithms"""
 @app.route('/algorithm_handler', methods=['POST'])
 def algorithm_handler():
