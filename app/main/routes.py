@@ -36,19 +36,9 @@ from app.controllers.livefeed_controller import LivefeedController
 from app.controllers.algorithm_controller import AlgorithmController
 
 
-# BUFF_SIZE is the size of the number of bytes in each mp4 video chunk response
-MB = 1 << 20
-# Send 1 MB at a time
-BUFF_SIZE = 1 * MB
-# Seed used for random number generation
-seed(1)
-# global_start 
-bytes_so_far = 0
-
-# Only .py files are allowed to be uploaded
-ALLOWED_EXTENSIONS = set(['py'])
 
 LOG = logging.getLogger(__name__)
+# Variable to disable logging in
 global loginStatus
 loginStatus = True # Avoid login for DECS -- should be false
 
@@ -74,6 +64,14 @@ def registration():
     else:
         return RegistrationView().get_rendered_template()
 
+"""route is used to upload algorithms"""
+@app.route("/algorithm_upload", methods=['GET', 'POST'])
+def algorithm_upload():
+    if request.method == 'POST':
+        return AlgorithmController().handle_upload()
+    elif request.method == 'GET':
+        return AlgorithmView().get_uploads_snippet()
+
 
 @app.route('/livefeed', methods=['GET', 'POST'])
 def livefeed():
@@ -93,19 +91,6 @@ def delete_session(session_id):
 
 @app.route('/archived/session/<int:session_id>')
 def archived_session(session_id):
-    print("Entered archive route")
-    login_auth = """
-    if loginStatus != True:
-        return redirect(url_for('login'))
-    if archive_id == None:
-        print("Archive id is None")
-    else:
-        print("archive_id: ", archive_id)
-    
-    if session.get('username') == True:
-        return redirect(url_for('login'))
-    """
-
     return SessionView().serve_session(session_id)
 
 @app.route('/livestream_config', methods=['GET', 'POST'])
@@ -471,14 +456,6 @@ def partial_response(path, start, buff_size, end=None):
 def downloadBoilerplate():
     return send_from_directory(directory=app.config['DOWNLOADS_FOLDER'], filename="boilerplate.py", as_attachment=True)
 
-
-"""route is used to upload algorithms"""
-@app.route("/algorithm_upload", methods=['GET', 'POST'])
-def algorithm_upload():
-    if request.method == 'POST':
-        return AlgorithmController().handle_upload()
-    elif request.method == 'GET':
-        return AlgorithmView().get_uploads_snippet()
 
 
 # TODO: move logic to AlgorithmController
