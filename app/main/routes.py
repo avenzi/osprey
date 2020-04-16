@@ -32,6 +32,7 @@ from app.controllers.login_controller import LoginController
 from app.controllers.registration_controller import RegistrationController
 from app.controllers.session_controller import SessionController
 from app.controllers.livefeed_controller import LivefeedController
+from app.controllers.algorithm_controller import AlgorithmController
 
 
 # BUFF_SIZE is the size of the number of bytes in each mp4 video chunk response
@@ -382,7 +383,7 @@ def audiosegmentfetch(timestamp, segment, session, sensor):
 
     #number_of_frames_to_send = 10 if frame + 10 <= last_frame_number else (last_frame_number - frame) + 1
     number_of_frames_to_send = 1
-    # TODO: remove absolute paths like this and do it dynamically
+    # TODO: use global configuration to determine path
     base_path = "/root/data-ingester/"
 
     response_frames = []
@@ -473,99 +474,14 @@ def downloadBoilerplate():
 """route is used to upload algorithms"""
 @app.route("/algorithm_upload", methods=['GET', 'POST'])
 def algorithm_upload():
-    algorithms = []
-    runningAlgorithms = []
-    user_id = session.get('user_id')
-    database_cursor = mysql.connection.cursor()
-
     if request.method == 'POST':
-        # Checking that the POST request has the file part
-        if 'file' not in request.files:
-            return jsonify({'result' : 'No File Part'})
-
-        file = request.files['file']
-
-        # Checking that a file was selected
-        if file.filename == '':
-            return jsonify({'result' : 'No File Selected'})
-
-        # Checking that the file name has an extension that is allowed
-        if file and ('.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS):
-            filename = secure_filename(file.filename)
-
-            # Search Algorithm table for algorithm filename to get file path if it exists
-            sql = """
-                SELECT Path 
-                FROM Algorithm 
-                WHERE UserId = %s AND Name = %s;
-            """
-            database_cursor.execute(sql, (user_id, filename))
-            path = database_cursor.fetchone()
-
-            # If algorithm filename does not exist
-            if path == None:
-                # Get the path of the most recently uploaded algorithm pertaining to a user
-                sql = """
-                    SELECT Path
-                    FROM Algorithm
-                    WHERE UserId = %s
-                    ORDER BY id DESC
-                    LIMIT 1;
-                """
-                database_cursor.execute(sql, (user_id,))
-                pth = database_cursor.fetchone()
-
-                # If user has no recently uploaded algorithm
-                if pth == None:
-                    sql = """ 
-                        INSERT INTO Algorithm
-                        (UserId, Status, Name, Path)
-                        VALUES (%s, %s, %s, %s);
-                    """
-                    database_cursor.execute(sql, (user_id, 0, filename, str(user_id) + "-1"))
-                    mysql.connection.commit()
-
-                    file.save(os.path.join(app.config['UPLOADS_FOLDER'], str(user_id) + "-1.py"))
-
-                # If user has a recently uploaded algorithm
-                else:
-                    alg_num = int(pth[0].split('-')[1]) + 1
-                    sql = """ 
-                        INSERT INTO Algorithm
-                        (UserId, Status, Name, Path)
-                        VALUES (%s, %s, %s, %s);
-                    """
-                    database_cursor.execute(sql, (user_id, 0, filename, str(user_id) + "-" + str(alg_num)))
-                    mysql.connection.commit()
-
-                    file.save(os.path.join(app.config['UPLOADS_FOLDER'], str(user_id) + "-" + str(alg_num) + ".py"))
-                
-            # If algorithm filename exists
-            else:
-                # TODO: Algorithm overwrite prompt
-
-                # Update the old file path
-                file.save(os.path.join(app.config['UPLOADS_FOLDER'], path[0] + ".py"))
-
-            # Search Algorithm table for filenames of algorithms pertaining to a user
-            sql = """
-                SELECT Status, Name 
-                FROM Algorithm 
-                WHERE UserId = %s;
-            """            
-            database_cursor.execute(sql, (user_id,))
-            algs = database_cursor.fetchall()
-
-            for alg in algs:
-                if alg[0] == 1:
-                    runningAlgorithms.append(alg[1])
-                algorithms.append(alg[1])
-
-            return render_template('snippets/uploads_list_snippet.html', algorithms = algorithms, runningAlgorithms = runningAlgorithms)
-
-        return jsonify({'result' : 'File Extension Not Allowed'})
-
+        return AlgorithmController().handle_upload()
     elif request.method == 'GET':
+        algorithms = []
+        runningAlgorithms = []
+        user_id = session.get('user_id')
+        database_cursor = mysql.connection.cursor()
+
         # Search Algorithm table for filenames of algorithms pertaining to a user
         sql = """
             SELECT Status, Name 
