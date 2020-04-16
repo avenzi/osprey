@@ -397,12 +397,12 @@ def update_sense():
         pass
 
     return jsonify({'result' : 'success', 'status' : status, 'roomTemperature' : roomTemperature,
-    'airPressure': airPressure, 'airHumidity': airHumidity, 'ip': ip_address})
+    'airPressure': airPressure, 'airHumidity': airHumidity})
 
 
 """route is used to update audio values in the live stream page"""
-@app.route('/update_audio', methods=['GET', 'POST'])
-def update_audio():
+@app.route('/update_microphone', methods=['GET', 'POST'])
+def update_microphone():
 
     # Instantiating an object that can execute SQL statements
     database_cursor = mysql.connection.cursor()
@@ -436,12 +436,12 @@ def update_audio():
 @app.route('/update_triggersettings', methods=['POST'])
 def update_triggersettings():
     # Updating trigger settings in the session
-    session['triggerSettings_audio'] = request.form['audio_input']
+    session['triggerSettings_audio'] = request.form['microphone_input']
     session['triggerSettings_temperature'] = request.form['temperature_input']
     session['triggerSettings_pressure'] = request.form['pressure_input']
     session['triggerSettings_humidity'] = request.form['humidity_input']
 
-    return jsonify({'result' : 'success', 'audio_input' : session.get('triggerSettings_audio'), 'temperature_input' : session.get('triggerSettings_temperature'), 
+    return jsonify({'result' : 'success', 'microphone_input' : session.get('triggerSettings_audio'), 'temperature_input' : session.get('triggerSettings_temperature'), 
         'pressure_input' : session.get('triggerSettings_pressure'), 'humidity_input' : session.get('triggerSettings_humidity')})
 
 
