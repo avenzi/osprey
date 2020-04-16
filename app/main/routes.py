@@ -31,6 +31,7 @@ from app.views.session_view import SessionView
 from app.controllers.login_controller import LoginController
 from app.controllers.registration_controller import RegistrationController
 from app.controllers.session_controller import SessionController
+from app.controllers.livefeed_controller import LivefeedController
 
 
 # BUFF_SIZE is the size of the number of bytes in each mp4 video chunk response
@@ -107,77 +108,7 @@ def archived_session(session_id):
 
 @app.route('/livestream_config', methods=['GET', 'POST'])
 def livestream_config():
-    # TODO: input validation
-    config_tokens = request.form['livestream_config'].split('&')
-    config_json = {
-        'cameras': [],
-        'microphones': [],
-        'sense_hats': []
-    }
-
-    if len(request.form['livestream_config']) == 0:
-        return jsonify({})
-    
-
-    index = 0
-    for token in config_tokens:
-        key = token.split("=")[0]
-        value = token.split("=")[1].replace("%20", " ")
-
-        print(key + ": " + value)
-        if 'cam-ip-input' in token:
-            name = config_tokens[index + 1].split("=")[1].replace("%20", " ")
-
-            metadata = {'name': name, 'ip': value}
-            config_json['cameras'].append(metadata)
-        elif 'mic-ip-input' in token:
-            name = config_tokens[index + 1].split("=")[1].replace("%20", " ")
-            metadata = {'name': name, 'ip': value}
-            config_json['microphones'].append(metadata)
-        elif 'sen-ip-input' in token:
-            name = config_tokens[index + 1].split("=")[1].replace("%20", " ")
-            metadata = {'name': name, 'ip': value}
-            config_json['sense_hats'].append(metadata)
-
-        index = index + 1
-    
-    compacted_json = json.dumps(config_json, separators=(',', ':'))
-    # Instantiating an object that can execute SQL statements
-    database_cursor = mysql.connection.cursor()
-    database_cursor.execute("""SELECT id FROM Session WHERE id = (SELECT MAX(id) FROM Session)""")
-    result = database_cursor.fetchone()
-    session_id = 1 if result == None else result[0] + 1
-
-    for metadata in config_json['cameras']:
-        ip = metadata['ip']
-        name = metadata['name']
-        sql = "INSERT INTO SessionSensor (`IP`, `Name`, `SessionId`, `SensorType`) VALUES (INET_ATON(%s), %s, %s, %s);"
-        database_cursor.execute(sql, (ip, name, session_id, "PiCamera"))
-    
-    for metadata in config_json['microphones']:
-        ip = metadata['ip']
-        name = metadata['name']
-        sql = "INSERT INTO SessionSensor (`IP`, `Name`, `SessionId`, `SensorType`) VALUES (INET_ATON(%s), %s, %s, %s);"
-        database_cursor.execute(sql, (ip, name, session_id, "Microphone"))
-    
-    for metadata in config_json['sense_hats']:
-        ip = metadata['ip']
-        name = metadata['name']
-        sql = "INSERT INTO SessionSensor (`IP`, `Name`, `SessionId`, `SensorType`) VALUES (INET_ATON(%s), %s, %s, %s);"
-        database_cursor.execute(sql, (ip, name, session_id, "SenseHat"))
-
-    
-    dt = datetime.now()
-    dt = dt.astimezone(pytz.timezone("America/Detroit"))
-    sql = "INSERT INTO Session (`StartDate`, `SensorConfig`) VALUES (%s, %s);"
-    database_cursor.execute(sql, (dt, compacted_json))
-    mysql.connection.commit()
-
-    sql = "SELECT id, INET_NTOA(IP), SessionId, SensorType FROM SessionSensor WHERE SessionId = %s"
-    database_cursor.execute(sql, (session_id,))
-    session_sensors = database_cursor.fetchall()
-
-    return jsonify(session_sensors)
+    return LivefeedController().store_configuration(request.form)
 
 
 @app.route('/update_sense', methods=['GET', 'POST'])
