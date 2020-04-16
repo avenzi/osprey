@@ -29,6 +29,7 @@ from app.views.eventlog_view import EventlogView
 # Controllers
 from app.controllers.login_controller import LoginController
 from app.controllers.registration_controller import RegistrationController
+from app.controllers.session_controller import SessionController
 
 
 # BUFF_SIZE is the size of the number of bytes in each mp4 video chunk response
@@ -81,23 +82,9 @@ def livefeed():
     return LivefeedView().get_rendered_template()
 
 
-
-    #def generate_video():
-    #    with open("/root/capstone-site/site/static/video/107-8.mp4", "rb") as f:
-    #        while True:
-    #            chunk = ... # read each chunk or break if EOF
-    #            yield chunk
-
-    #return Response(stream_with_context(generate_video()), mimetype="video/mp4")
-
 @app.route('/delete_session/<int:session_id>', methods=['POST'])
 def delete_session(session_id):
-    database_cursor = mysql.connection.cursor()
-    database_cursor.execute('''DELETE FROM Session WHERE id = %s''', (session_id,))
-    database_cursor.execute('''DELETE FROM SessionSensor WHERE SessionId = %s''', (session_id,))
-    mysql.connection.commit()
-    # TODO: actually remove all the data from db and disk
-    return Response()
+    return SessionController().delete_session(session_id)
 
 
 @app.route('/archive/<int:archive_id>')
@@ -579,15 +566,6 @@ def audiosegmentfetch(timestamp, segment, session, sensor):
     response.headers.add('segment-time', timestamp)
 
     return response
-
-
-@app.route('/fetchvideo', methods=['GET'])
-def fetchvideo():
-    print("FETCHING VIDEO")
-    path = "/root/capstone-site/site/static/video/107-6.mp4"
-    #start, end = get_range(request)
-    #return partial_response(path, start, end)
-    return partial_response(path, 0, BUFF_SIZE, None)
 
 
 def get_range(request):
