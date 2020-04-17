@@ -2,10 +2,11 @@ import io
 import picamera
 import logging
 import socketserver
+import datetime
 from threading import Condition
 from http import server
 
-
+epoch = datetime.datetime.utcfromtimestamp(0)
 ###########################################################
 # Streaming Output class to support mjpeg stream
 ###########################################################
@@ -46,9 +47,13 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                     with output.condition:
                         output.condition.wait()
                         frame = output.frame
+
+                    time = datetime.datetime.now()
+                    timestamp = (time - epoch).total_seconds() * 1000.0
                     self.wfile.write(b'--FRAME\r\n')
                     self.send_header('Content-Type', 'image/jpeg')
                     self.send_header('Content-Length', len(frame))
+                    self.send_header('Timestamp', timestamp)
                     self.end_headers()
                     self.wfile.write(frame)
                     self.wfile.write(b'\r\n')
@@ -73,7 +78,7 @@ class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
 
 
 # Start camera recording
-with picamera.PiCamera(resolution='640x480', framerate=24) as camera:
+with picamera.PiCamera(resolution='640x480', framerate=16) as camera:
     output = StreamingOutput()
     # Change camera rotation  
     camera.rotation = 180
