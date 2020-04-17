@@ -355,7 +355,7 @@ $(document).ready(function() {
 
                 // Creating iframe tag for a camera using form input to display video in the camera card
                 $("#camDiv").append(
-                    `<div class="card w-100" id="stream${i}">
+                    `<div class="card w-100 mb-1" id="stream${i}">
                         <div class="card-header p-0 text-center">
                             ${decodeURI(name)}
                         </div>
@@ -499,6 +499,11 @@ $(document).ready(function() {
 
         // TODO: FINISH COMMENTING THIS
         createHandlers(camNumber, senData, micNumber);
+
+        // Starting the timer
+        var timer = document.getElementById('timer');
+        var watch = new ElapsedTime(timer);
+        watch.start();
 
         // Hide sensor modal
         $("#sensorModal").modal("hide");

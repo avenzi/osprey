@@ -28,10 +28,6 @@ db_connection = pymysql.connect(host='localhost',
 
 cursor = db_connection.cursor()
 
-# Sense HAT IP Addresses
-sense_1 = "35.9.42.212"
-sense_2 = "35.9.42.110"
-
 
 def update_eventlog(filename, alert_type = '', alert_message= ''):
     """Updates the eventlog
@@ -106,24 +102,6 @@ def get_sense_data(ip, time_start = '', time_end = ''):
         """
         cursor.execute(sql, (ip,))
 
-        # if sense_num == 1:
-        #     sql = """
-        #         SELECT Time, Temp, Press, Humid
-        #         FROM Sense
-        #         WHERE IP = INET_ATON(%s)
-        #         ORDER BY Time DESC;
-        #     """
-        #     cursor.execute(sql, (sense_1,))
-
-        # elif sense_num == 2:
-        #     sql = """
-        #         SELECT Time, Temp, Press, Humid
-        #         FROM Sense
-        #         WHERE IP = INET_ATON(%s)
-        #         ORDER BY Time DESC;
-        #     """
-        #     cursor.execute(sql, (sense_2,))
-
         return [cursor.fetchone()]
 
     #-------------------------------------------------------------------------------------------------
@@ -141,22 +119,6 @@ def get_sense_data(ip, time_start = '', time_end = ''):
             WHERE IP = INET_ATON(%s) AND Time >= %s;
         """
         cursor.execute(sql, (ip, time_start_datetime_object))
-
-        # if sense_num == 1:
-        #     sql = """
-        #         SELECT Time, Temp, Press, Humid
-        #         FROM Sense
-        #         WHERE IP = INET_ATON(%s) AND Time >= %s;
-        #     """
-        #     cursor.execute(sql, (sense_1, time_start_datetime_object))
-
-        # elif sense_num == 2:
-        #     sql = """
-        #         SELECT Time, Temp, Press, Humid
-        #         FROM Sense
-        #         WHERE IP = INET_ATON(%s) AND Time >= %s;
-        #     """
-        #     cursor.execute(sql, (sense_2, time_start_datetime_object))
         
         return cursor.fetchall()
 
@@ -176,26 +138,18 @@ def get_sense_data(ip, time_start = '', time_end = ''):
             WHERE IP = INET_ATON(%s) AND Time >= %s AND Time <= %s;
         """
         cursor.execute(sql, (ip, time_start_datetime_object, time_end_datetime_object))
-
-        # if sense_num == 1:
-        #     sql = """
-        #         SELECT Time, Temp, Press, Humid
-        #         FROM Sense
-        #         WHERE IP = INET_ATON(%s) AND Time >= %s AND Time <= %s;
-        #     """
-        #     cursor.execute(sql, (sense_1, time_start_datetime_object, time_end_datetime_object))
-
-        # elif sense_num == 2:
-        #     sql = """
-        #         SELECT Time, Temp, Press, Humid
-        #         FROM Sense
-        #         WHERE IP = INET_ATON(%s) AND Time >= %s AND Time <= %s;
-        #     """
-        #     cursor.execute(sql, (sense_2, time_start_datetime_object, time_end_datetime_object))
         
         return cursor.fetchall()
 
 def get_video_data(ip):
+    """
+
+    Args:
+        ip (str): The IP address for the camera
+
+    Returns:
+        ...: ...
+    """
 
     # Query VideoFrames table for the latest segment
     # TODO: Make is so that it gets the lasest VideoFrames for the specific user session
@@ -208,24 +162,36 @@ def get_video_data(ip):
     metadata = cursor.fetchone()
     return metadata
 
-
-
-
-
 def get_pix_intensity(metadata):
-    first_frame_number = metadata['FirstFrameNumber']               # The first frame number
-    last_frame_number = metadata['LastFrameNumber']                 # The last frame number
-    frames_metadata = metadata['FramesMetadata']                    # frames_metadata contains "time", "frame_number", and "path" for 50 frames
-    json_frames_metadata = json.loads(frames_metadata)              # Converting frames_metadata to json
-    intensities = []                                                # Intensities for all 50 frames
+    """
+
+    Args:
+        metadata (dict): ...
+
+    Returns:
+        ...: ...
+    """
+
+    first_frame_number = metadata['FirstFrameNumber']               
+    last_frame_number = metadata['LastFrameNumber']    
+    
+    # Contains "time", "frame_number", and "path" for frames in a segment
+    frames_metadata = metadata['FramesMetadata']         
+
+    # Converting frames_metadata to JSON format    
+    json_frames_metadata = json.loads(frames_metadata)
+
+    # Contains the pixel intensities for frames in a segment
+    intensities = []                                                
 
     for i in range (first_frame_number, last_frame_number + 1):
         path = json_frames_metadata[str(i)]["path"]    
         full_path = "/root/data-ingester/" + path
 
+        # Get mean of each frame in a segment, and add it to the intensities list
         image = io.imread(full_path)
         mean =  np.mean(image)
-
         intensities.append(mean)
 
+    # Return the mean of the means of each frame in a segment
     return np.mean(intensities)
