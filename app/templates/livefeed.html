@@ -4,12 +4,6 @@
 
 {% block app_content %}
 
-    <div class="row justify-content-center">
-        <div class="col-2 mt-1 bg-white border border-dark rounded">
-            Elapsed Time: 01:32:17
-        </div>
-    </div>
-
     <div class="row justify-content-start">
 
         <div class="col-6 m-1">
@@ -21,7 +15,7 @@
 
             </div>
 
-            <div class="row mt-1 h-25">
+            <div class="row h-25">
                 
                 <div class="card w-100 h-100">
                     <div class="card-header p-0 text-center">
@@ -39,6 +33,17 @@
         </div>
 
         <div class="col m-1">
+
+            <div class="row mb-1">
+                <div class="card w-100">
+                    <div class="card-header p-0 text-center">
+                        Elapsed Time
+                    </div>
+                    <div class="card-body p-1 text-center" id="timer">
+                        00:00:00.000
+                    </div>
+                </div>
+            </div>            
 
             <div class="row mb-1">
 
@@ -202,6 +207,7 @@
   </div>
 </div>
 
+    <script src="../static/JS/elapsed_time.js"></script>
     <script src="../static/JS/generate.js"></script>
     <script src="../static/JS/livefeed.js"></script>
 

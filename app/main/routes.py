@@ -36,7 +36,6 @@ from app.controllers.livefeed_controller import LivefeedController
 from app.controllers.algorithm_controller import AlgorithmController
 
 
-
 LOG = logging.getLogger(__name__)
 # Variable to disable logging in
 global loginStatus
@@ -56,6 +55,7 @@ def login():
 def home():
     return HomeView().get_rendered_template()
 
+
 # TODO: refactor like how /login route was refactored (using RegistrationView and RegistrationController)
 @app.route('/registration', methods=['GET', 'POST'])
 def registration():
@@ -63,6 +63,7 @@ def registration():
         return RegistrationController().handle_response()
     else:
         return RegistrationView().get_rendered_template()
+
 
 """route is used to upload algorithms"""
 @app.route("/algorithm_upload", methods=['GET', 'POST'])
@@ -92,6 +93,7 @@ def delete_session(session_id):
 @app.route('/archived/session/<int:session_id>')
 def archived_session(session_id):
     return SessionView().serve_session(session_id)
+
 
 @app.route('/livestream_config', methods=['GET', 'POST'])
 def livestream_config():
@@ -305,6 +307,7 @@ def videoframefetch(frame, session, sensor):
 
     return response
 
+
 @app.route('/audiosegmentfetch/<timestamp>/<segment>/<session>/<sensor>')
 def audiosegmentfetch(timestamp, segment, session, sensor):
     #print(timestamp)
@@ -449,13 +452,10 @@ def partial_response(path, start, buff_size, end=None):
     return response
 
 
-
-
 """route is used for downloading boilerplate code"""
 @app.route('/downloadBoilerplate')
 def downloadBoilerplate():
     return send_from_directory(directory=app.config['DOWNLOADS_FOLDER'], filename="boilerplate.py", as_attachment=True)
-
 
 
 # TODO: move logic to AlgorithmController
