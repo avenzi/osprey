@@ -12,19 +12,27 @@
         {% for algorithm in algorithms %}
 
             <li class="list-group-item">
-                {{ algorithm }}
+                <div class="row align-items-center">
+                    <div class="col">
+                        {{ algorithm }}
+                    </div>
+                    <div class="col text-right">
+                        {% if algorithm in runningAlgorithms %}
+                            <button type="button" class="btn btn-primary availableAlgorithmsRunButton" id="{{algorithm.split('.')[0]}}">
+                                <span class="spinner-border spinner-border-sm" role="status"></span>
+                                Running...
+                            </button>
+                        {% else %}
+                            <button type="button" class="btn btn-primary availableAlgorithmsRunButton" id="{{algorithm.split('.')[0]}}">Run</button>
+                        {% endif %}
 
-                {% if algorithm in runningAlgorithms %}
-                    <button type="button" class="btn btn-primary availableAlgorithmsRunButton" id="{{algorithm.split('.')[0]}}">
-                        <span class="spinner-border spinner-border-sm" role="status"></span>
-                        Running...
-                    </button>
-                {% else %}
-                    <button type="button" class="btn btn-primary availableAlgorithmsRunButton" id="{{algorithm.split('.')[0]}}">Run</button>
-                {% endif %}
+                        <button type="button" class="btn btn-primary availableAlgorithmsViewButton" id="{{algorithm.split('.')[0]}}">View</button>
+                        <button type="button" class="btn btn-danger availableAlgorithmsDeleteButton" id="{{algorithm.split('.')[0]}}">Delete</button>
+                    </div>
+                </div>
 
-                <button type="button" class="btn btn-primary availableAlgorithmsViewButton" id="{{algorithm.split('.')[0]}}">View</button>
-                <button type="button" class="btn btn-primary availableAlgorithmsDeleteButton" id="{{algorithm.split('.')[0]}}">Delete</button>
+
+
             </li>
 
         {% endfor %}

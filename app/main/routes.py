@@ -533,6 +533,9 @@ def algorithm_handler():
         return render_template('snippets/uploads_view_snippet.html', content = content, filename = filename)
 
     elif buttonPressed == "delete":
+        return render_template('snippets/uploads_delete_snippet.html')
+
+    elif buttonPressed == "delete_confirm":
         # Search Algorithm table for algorithm filename to get file path
         sql = """
             SELECT Path 
@@ -572,4 +575,9 @@ def algorithm_handler():
 
         return render_template('snippets/uploads_list_snippet.html', algorithms = algorithms, runningAlgorithms = runningAlgs)
                     
+
+
+
+
+
     return jsonify({'result' : 'Button Not Handled'})
