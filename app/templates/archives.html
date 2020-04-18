@@ -110,7 +110,30 @@
                         {{sense.name}}
                     </div>
                     <div class = "card-body p-1">
-                        
+                        <div class="row temp-spacing">
+                            <div class="col-8">
+                                Temperature (&#8457):
+                            </div>
+                            <div class="col-4 text-right" id="sense-temperature-{{sense.sensor_id}}">
+                                --.-
+                            </div>
+                        </div>
+                        <div class="row temp-spacing">
+                            <div class="col-8">
+                                Air Pressure (millibars):
+                            </div>
+                            <div class="col-4 text-right" id="sense-pressure-{{sense.sensor_id}}">
+                                --.-
+                            </div>
+                        </div>
+                        <div class="row temp-spacing">
+                            <div class="col-8">
+                                Air Humidity (%):
+                            </div>
+                            <div class="col-4 text-right" id="sense-humidity-{{sense.sensor_id}}">
+                                --.-
+                            </div>
+                        </div>
                     </div>
                 </div>
             {% endfor %}
