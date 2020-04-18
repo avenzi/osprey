@@ -460,16 +460,6 @@ $(document).ready(function() {
             for (var i = 1; i <= micNumber; i++) {
                 var name = micData.get(`mic-name-input-${i}`);
 
-                // Adding the microphone switch
-                $("#micRow").append(
-                    `<div class="col">
-                        <div class="custom-control custom-switch">
-                            <input type="checkbox" class="custom-control-input" id="micSwitch${i}">
-                            <label class="custom-control-label" for="micSwitch${i}">${decodeURI(name)}</label>
-                        </div>
-                    </div>`
-                );
-
                 // Creating a div to display microphone data in the microphone card
                 $("#senMic").append(
                     `<div class="row">
@@ -483,11 +473,6 @@ $(document).ready(function() {
                                         <audio id="audio" class="audio-player" controls>
                                             Your browser doesn't support HTML audio element.
                                         </audio>
-                                    </div>
-                                </div>
-                                <div class="row justify-content-end">
-                                    <div class="col text-left" id="decibels">
-                                        Current dB: --.-
                                     </div>
                                 </div>
                             </div>
@@ -512,9 +497,6 @@ $(document).ready(function() {
 
 // Global map object to store interval IDs for sense refresh so they can be stopped
 var senseIntervals = new Map();
-
-// Global map object to store interval IDs for microphone refresh
-var microphoneIntervals = new Map();
 
 // TODO: FINISH COMMENTING
 // Code to handle sense streams -- should work with more than 2 sense streams, unable to test
@@ -563,29 +545,6 @@ function generateCameraHandler(k, numCams) {
 }
 
 // TODO: FINISH COMMENTING
-// Code to handle microphone streams -- only works with one microphone for now, all thats needed
-function generateMicrophoneHandler(k) {
-    return function() {
-        if ($(`#micSwitch${k}`).is(":checked")){
-            var intervalID = setInterval(function() {
-                $.post("update_microphone", {status : "ON"}, function(data){
-                    $("#decibels").text("Current dB: " + data.decibels);
-            });
-            }, 1000);
-            microphoneIntervals.set(k, intervalID)
-        }
-        else {
-            clearInterval(microphoneIntervals.get(k));
-
-            // Clear form data after 1.2s to prevent async issues
-            setTimeout(function (){
-                $("#decibels").text("Current dB: --.-");
-            }, 1200);
-        }
-    }
-}
-
-// TODO: FINISH COMMENTING
 // Creates button click handlers after the number of each type of sensor is determined
 function createHandlers(numCams, dataSense, numMics) {
 
@@ -599,11 +558,6 @@ function createHandlers(numCams, dataSense, numMics) {
         }
         $(`#cam${i}`).on("click", generateCameraHandler(i, numCams))
    }
-
-    // Generate on click handlers for each microphone selector
-    for (var i=1;i<=numMics;i++) {
-        $(`#micSwitch${i}`).click( generateMicrophoneHandler(i));
-    }
 
    // Generate on click handlers for each Sense HAT selector and pass the Sense HAT number and IP address to the handler
    for (var i=1; i<=dataSense.get("numSense");i++) {

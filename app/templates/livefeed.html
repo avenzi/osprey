@@ -54,8 +54,6 @@
                     <div class="card-body p-1">
                         <div class="row" id="camRow">
                         </div>
-                        <div class="row" id="micRow">
-                        </div>
                         <div class="row" id="senRow">
                         </div>
                     </div>
@@ -75,12 +73,6 @@
 
                             <div class="col">
                             
-                                <div class="form-group row">
-                                    <label for="microphoneInput" class="col-8 col-form-label">Microphone (dB):</label>
-                                    <div class="col-3 align-self-center">
-                                    <input type="text" class="form-control" id="microphoneInput">
-                                    </div>
-                                </div>
                                 <div class="form-group row">
                                     <label for="temperatureInput" class="col-8 col-form-label">Temperature (&#8457):</label>
                                     <div class="col-3 align-self-center">
@@ -130,63 +122,65 @@
     </div>
 
 
-{# Sensor Modal #}
-<div class="modal fade" id="sensorModal" tabindex="-1" role="dialog" aria-labelledby="sensorModalTitle" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-        <div class="modal-content">
+    {# Sensor Modal #}
+    <div class="modal fade" id="sensorModal" tabindex="-1" role="dialog" aria-labelledby="sensorModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content">
 
-            <div class="modal-header">
-                <h5 class="modal-title" id="sensorModalTitle">Specify Sensors</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
+                <div class="modal-header">
+                    <h5 class="modal-title" id="sensorModalTitle">Specify Sensors</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
 
-            <form id="sensorForm">
-                <div class="modal-body">
-            
-                    <div class="container-fluid">
+                <form id="sensorForm">
+                    <div class="modal-body">
+                
+                        <div class="container-fluid">
 
-                        <div class="row">
+                            <div class="row">
 
-                            <div class="col-4">
-                                <h5>Add sensors</h5>
-                                <div id="list-example" class="list-group">
-                                    <button class="list-group-item list-group-item-action btn btn-light shadow-none" id="addCam">Camera</button>
-                                    <button class="list-group-item list-group-item-action btn btn-light shadow-none" id="addSen">Sense HAT</button>
-                                    <button class="list-group-item list-group-item-action btn btn-light shadow-none" id="addMic">Microphone</button>
-                                </div>
-                            </div>
-
-                            <div class="col-8">
-                                <div class="row">
-                                    <h5>Cameras</h5>
-                                </div>
-                                <div class="row mb-3">
-                                    <div class="overflow-auto w-100 border border-light" style="height: 150px;">
-                                        <ul id="camList" class="list-group">
-                                        </ul>
+                                <div class="col-4">
+                                    <h5>Add sensors</h5>
+                                    <div id="list-example" class="list-group">
+                                        <button class="list-group-item list-group-item-action btn btn-light shadow-none" id="addCam">Camera</button>
+                                        <button class="list-group-item list-group-item-action btn btn-light shadow-none" id="addSen">Sense HAT</button>
+                                        <button class="list-group-item list-group-item-action btn btn-light shadow-none" id="addMic">Microphone</button>
                                     </div>
                                 </div>
 
-                                <div class="row">
-                                    <h5>Sense HATs</h5>
-                                </div>
-                                <div class="row mb-3">
-                                    <div class="overflow-auto w-100 border border-light" style="height: 150px;">
-                                        <ul id="senList" class="list-group">
-                                        </ul>
+                                <div class="col-8">
+                                    <div class="row">
+                                        <h5>Cameras</h5>
                                     </div>
-                                </div>
+                                    <div class="row mb-3">
+                                        <div class="overflow-auto w-100 border border-light rounded" style="height: 150px;">
+                                            <ul id="camList" class="list-group">
+                                            </ul>
+                                        </div>
+                                    </div>
 
-                                <div class="row">
-                                    <h5>Microphones</h5>
-                                </div>
-                                <div class="row">
-                                    <div class="overflow-auto w-100 border border-light" style="height: 150px;">
-                                        <ul id="micList" class="list-group">
-                                        </ul>
-                                    </div>        
+                                    <div class="row">
+                                        <h5>Sense HATs</h5>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="overflow-auto w-100 border border-light rounded" style="height: 150px;">
+                                            <ul id="senList" class="list-group">
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <h5>Microphones</h5>
+                                    </div>
+                                    <div class="row">
+                                        <div class="overflow-auto w-100 border border-light rounded" style="height: 150px;">
+                                            <ul id="micList" class="list-group">
+                                            </ul>
+                                        </div>        
+                                    </div>
+
                                 </div>
 
                             </div>
@@ -195,17 +189,15 @@
 
                     </div>
 
-                </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="submit" id="sensorModalSubmit" class="btn btn-primary">Save changes</button>
+                    </div>
+                </form>
 
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    <button type="submit" id="sensorModalSubmit" class="btn btn-primary">Save changes</button>
-                </div>
-            </form>
-
+        </div>
     </div>
-  </div>
-</div>
+    </div>
 
     <script src="../static/JS/elapsed_time.js"></script>
     <script src="../static/JS/generate.js"></script>

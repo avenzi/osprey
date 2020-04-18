@@ -16,7 +16,7 @@ from random import seed, randint
 from app import app, mysql, bcrypt
 from werkzeug.utils import secure_filename
 from app.main.program import Program
-from app.views.forms import LoginForm, TriggerSettingsForm, RegistrationForm
+from app.views.forms import LoginForm, RegistrationForm
 from flask import render_template, flash, redirect, url_for, Response, session, jsonify, request, send_file, send_from_directory
 
 # Views
@@ -191,48 +191,15 @@ def update_sense():
     'airPressure': airPressure, 'airHumidity': airHumidity})
 
 
-"""route is used to update audio values in the live stream page"""
-@app.route('/update_microphone', methods=['GET', 'POST'])
-def update_microphone():
-
-    # Instantiating an object that can execute SQL statements
-    database_cursor = mysql.connection.cursor()
-
-    # The scalar trigger setting for audio
-    triggerSettings_audio = session.get('triggerSettings_audio')
-    # The id of the logged in user
-    user_id = session.get('user_id')
-
-    # Indicates whether audio has been turned on or not
-    status = request.form['status']
-
-    # The initial decibel level until set
-    decibels = 0
-
-    
-    for _ in range(10):
-        value = randint(0, 5)
-        decibels = "6" + str(value)
-
-    if (triggerSettings_audio != '') and (int(decibels) > int(triggerSettings_audio)):
-        # Write audio data to database
-        database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Audio", 
-            "Audio exceeded " + triggerSettings_audio + " dB"))
-        mysql.connection.commit()
-
-    return jsonify({'result' : 'success', 'status' : status, 'decibels' : decibels})
-
-
 """route is used to collect trigger settings from the live stream page"""
 @app.route('/update_triggersettings', methods=['POST'])
 def update_triggersettings():
     # Updating trigger settings in the session
-    session['triggerSettings_audio'] = request.form['microphone_input']
     session['triggerSettings_temperature'] = request.form['temperature_input']
     session['triggerSettings_pressure'] = request.form['pressure_input']
     session['triggerSettings_humidity'] = request.form['humidity_input']
 
-    return jsonify({'result' : 'success', 'microphone_input' : session.get('triggerSettings_audio'), 'temperature_input' : session.get('triggerSettings_temperature'), 
+    return jsonify({'result' : 'success', 'temperature_input' : session.get('triggerSettings_temperature'), 
         'pressure_input' : session.get('triggerSettings_pressure'), 'humidity_input' : session.get('triggerSettings_humidity')})
 
 
@@ -566,6 +533,9 @@ def algorithm_handler():
         return render_template('snippets/uploads_view_snippet.html', content = content, filename = filename)
 
     elif buttonPressed == "delete":
+        return render_template('snippets/uploads_delete_snippet.html')
+
+    elif buttonPressed == "delete_confirm":
         # Search Algorithm table for algorithm filename to get file path
         sql = """
             SELECT Path 
@@ -605,4 +575,9 @@ def algorithm_handler():
 
         return render_template('snippets/uploads_list_snippet.html', algorithms = algorithms, runningAlgorithms = runningAlgs)
                     
+
+
+
+
+
     return jsonify({'result' : 'Button Not Handled'})

@@ -9,12 +9,6 @@ class LoginForm(FlaskForm):
     remember_me = BooleanField('Remember Me')
     submit = SubmitField('Sign In')
 
-class TriggerSettingsForm(FlaskForm):
-    audio = IntegerField('Audio (dB):')
-    temperature = DecimalField('Temperature (&#8457):', places=1)
-    submit = SubmitField('OK')
-
-
 class RegistrationForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
