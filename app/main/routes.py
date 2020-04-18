@@ -90,7 +90,7 @@ def delete_session(session_id):
     return SessionController().delete_session(session_id)
 
 
-@app.route('/archived/session/<int:session_id>')
+@app.route('/session/<int:session_id>')
 def archived_session(session_id):
     return SessionView().serve_session(session_id)
 

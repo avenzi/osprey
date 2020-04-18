@@ -19,7 +19,7 @@
         <section id="entries">
             {% for session in sessions_view_data %}
             <div id="entry{{session.id}}" class="entry">
-                <a href="archived/session/{{session.id}}" class="session-name"><strong>{{session.name}}</strong></a>
+                <a href="session/{{session.id}}" class="session-name"><strong>{{session.name}}</strong></a>
                 <p class="session-info"><strong>Date: </strong><i>{{session.start_date}}</i> to <i>{{session.end_date}}</i></p>
                 <p style="max-width: 60%;" class="session-info"><strong>Sensors Used: </strong>{{session.sensor_list}}</p>
                 <div class="action-buttons">
