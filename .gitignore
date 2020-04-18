@@ -16,3 +16,14 @@ app/static/uploads/*
 
 # Do not ignore datahub module
 !app/static/uploads/datahub.py
+
+
+# Raspberry Pi .gitignore
+__pycache__
+audio-segments
+dash-segments
+mp4-segments
+segments
+audio-dash
+video-segments
+*.mp3

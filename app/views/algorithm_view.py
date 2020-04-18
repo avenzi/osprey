@@ -23,5 +23,6 @@ class AlgorithmView(View):
             algorithms.append(alg[1])
 
         return self.render('snippets/uploads_list_snippet.html', 
-            algorithms=algorithms, runningAlgorithms=runningAlgorithms)
+            algorithms=algorithms,
+            runningAlgorithms=runningAlgorithms)
 

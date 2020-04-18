@@ -1,0 +1,17 @@
+https://pimylifeup.com/compiling-ffmpeg-raspberry-pi/ - used some of the install commands from this one
+https://www.howtoforge.com/tutorial/ffmpeg-audio-conversion/
+
+http://jollejolles.com/installing-ffmpeg-with-h264-support-on-raspberry-pi/
+
+Install ffmpeg:
+Change to home directory: cd ~
+Download ffmpeg: git clone git://source.ffmpeg.org/ffmpeg --depth=1
+Change to ffmpeg directory: cd ffmpeg
+Configure installation: ./configure --arch=armel --target-os=linux --enable-libmp3lame --enable-gpl --enable-libx264 --enable-nonfree
+Make the installation: make -j4. Note this step will take a long time!
+Now finally run the installation: sudo make install
+Note: If you are working with an older model of the raspberrypi (< 3 B+) then you may not have 4 cores available. You will then have to change make -j4 to make -j.
+
+
+MP4 Box Install Commands
+sudo apt-get install gpac
