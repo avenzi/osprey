@@ -16,23 +16,21 @@ $(document).ready(function () {
 
     // Handle scalar trigger ok buttion
     $('#triggerSettingsSubmit').click(function(e) {
-        var microphone_input = $('#microphoneInput').val();
         var temperature_input = $('#temperatureInput').val();
         var pressure_input = $('#pressureInput').val();
         var humidity_input = $('#humidityInput').val();
 
-        req = $.post('update_triggersettings', {microphone_input : microphone_input, temperature_input : temperature_input, pressure_input : pressure_input, humidity_input : humidity_input});
+        req = $.post('update_triggersettings', {temperature_input : temperature_input, pressure_input : pressure_input, humidity_input : humidity_input});
     });
 
 
     // Handle scalar trigger clear button
     $('#triggerSettingsClear').click(function(e) {
-        $('#microphoneInput').val('');
         $('#temperatureInput').val('');
         $('#pressureInput').val('');
         $('#humidityInput').val('');
 
-        req = $.post('update_triggersettings', {microphone_input : '', temperature_input : '', pressure_input : '', humidity_input : ''});
+        req = $.post('update_triggersettings', {temperature_input : '', pressure_input : '', humidity_input : ''});
         e.stopImmediatePropagation();
     })
 
