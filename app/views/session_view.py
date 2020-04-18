@@ -63,6 +63,9 @@ class SessionView(View):
                     name = sensor_name
                 )
                 sense_hats.append(sense_view_data)
+        
+        print("Sense Hats:")
+        print(sense_hats)
 
         sensor_selections = []
         list_index = 1

@@ -103,6 +103,17 @@
                 <ul style="text-align: center; max-height: 13em;" class="list-group list-group-flush p-1" id="eventLog">
                 </ul>
             </div>
+
+            {% for sense in sense_hats %}
+                <div style="margin-top: 1em;" id="sensor-box-{{sense.sensor_id}}-{{sense.sensor_type}}" class="hide card w-100 bg-light rounded">
+                    <div class = "card-header p-0 text-center">
+                        {{sense.name}}
+                    </div>
+                    <div class = "card-body p-1">
+                        
+                    </div>
+                </div>
+            {% endfor %}
         </div>
     </div>
 {% endblock %}
