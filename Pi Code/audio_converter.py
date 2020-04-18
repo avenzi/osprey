@@ -14,7 +14,6 @@ import pyaudio
 import wave
 import json
 import requests
-from recorder import Recorder
 from queue import Queue
 
 class AudioConverter(threading.Thread):
