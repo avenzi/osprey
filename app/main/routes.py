@@ -309,7 +309,6 @@ def audiosegmentfetch(timestamp, segment, session, sensor):
         # set segment in here
         pass
     
-    # TODO: refactor to store absolute path in db
     path = base_path + segment_metadata['path']
 
     response_bytes = bytes()
