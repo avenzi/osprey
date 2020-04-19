@@ -1,19 +1,9 @@
 import io
-import socket
-import struct
 import time
-import picamera
-import subprocess
-import itertools
 import threading
-import sys
 import os
 import os.path
-import datetime
 import pyaudio
-import wave
-import json
-import requests
 from queue import Queue
 
 class AudioCollecter(threading.Thread):
@@ -32,21 +22,20 @@ class AudioCollecter(threading.Thread):
 
     def start_recording(self):
         form_1 = pyaudio.paInt16
-        chans=2
+        chans = 2
         samp_rate = 44100
         chunk = 4096
-        record_secs = 99999     #record time
-
-        segment_duration = 1
+        record_secs = 99999
+        segment_duration = 3
 
 
         self.audio = pyaudio.PyAudio()
 
-        # find the correct device index
+        # Find the audio device
         info = self.audio.get_host_api_info_by_index(0)
         numdevices = info.get('deviceCount')
         audio_device_id = -1
-        print("Numdevices %d" % numdevices)
+
         for device_id in range(0, numdevices):
             if (self.audio.get_device_info_by_host_api_device_index(0, device_id).get('maxInputChannels')) > 0:
                 device_name = self.audio.get_device_info_by_host_api_device_index(0, device_id).get('name')
@@ -56,7 +45,7 @@ class AudioCollecter(threading.Thread):
         if audio_device_id == -1:
             return
         #setup audio input stream
-        stream=self.audio.open(format = form_1,rate=samp_rate,channels=chans, input_device_index = audio_device_id, input=True, frames_per_buffer=chunk)
+        stream = self.audio.open(format = form_1,rate=samp_rate,channels=chans, input_device_index = audio_device_id, input=True, frames_per_buffer=chunk)
         print("Samson GoMic device id %d" % audio_device_id)
         print("Started Audio Recording")
         frames=[]
@@ -65,7 +54,7 @@ class AudioCollecter(threading.Thread):
         current_time = start_time
         last_time = start_time
         segment_number = 0
-        for ii in range(0,int((samp_rate/chunk)*record_secs)):
+        for x in range(0,int((samp_rate/chunk)*record_secs)):
             data=stream.read(chunk,exception_on_overflow = False)
 
             print("read some audio data")
