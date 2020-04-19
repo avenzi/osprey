@@ -14,7 +14,6 @@ import pyaudio
 import wave
 import json
 import requests
-from recorder import Recorder
 from queue import Queue
 
 class AudioCollecter(threading.Thread):
@@ -23,6 +22,13 @@ class AudioCollecter(threading.Thread):
         self.queue = queue
         self.daemon = True
         self.audio_converter_thread = args[0]
+    
+    def ensure_temporary_directories(self):
+        if not os.path.exists('mp3-segments'):
+            os.mkdir('mp3-segments')
+        
+        if not os.path.exists('audio-segments'):
+            os.mkdir('audio-segments')
 
     def start_recording(self):
         form_1 = pyaudio.paInt16
@@ -47,7 +53,8 @@ class AudioCollecter(threading.Thread):
                 if 'GoMic' in device_name:
                     audio_device_id = device_id
                 #print("Input Device id ", device_id, " - ", audio.get_device_info_by_host_api_device_index(0, device_id).get('name'))
-
+        if audio_device_id == -1:
+            return
         #setup audio input stream
         stream=self.audio.open(format = form_1,rate=samp_rate,channels=chans, input_device_index = audio_device_id, input=True, frames_per_buffer=chunk)
         print("Samson GoMic device id %d" % audio_device_id)
@@ -83,4 +90,5 @@ class AudioCollecter(threading.Thread):
         self.audio.terminate()
 
     def run(self):
+        self.ensure_temporary_directories()
         self.start_recording()

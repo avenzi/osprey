@@ -23,7 +23,7 @@ class AudioStreamer(threading.Thread):
         threading.Thread.__init__(self, args=(), kwargs=None)
         self.queue = queue
         self.daemon = True
-        self.receive_messages = args[0]
+        self.server = args[0]
         self.last_dash_segment_sent = 1
         self.dash_segment_format = 'audio-seg-%d.m4s'
 
@@ -47,7 +47,7 @@ class AudioStreamer(threading.Thread):
 
                 try:
                     # TODO: set in config file
-                    requests.post('http://192.99.151.151:5582', 
+                    requests.post(self.server, 
                         data = mp3_file_bytes,
                         headers = custom_headers
                     )
