@@ -1,76 +1,89 @@
+/**
+ * @fileoverview This file is used to handle all events that occur within the algorithmModal
+ */
+
 $(document).ready(function () {
 
-    // Back button to take you to the uploads menu within the modal, from the view section
-    $('#algorithmModalBackButton').click( function(e) {
-        $.get('algorithm_upload', function(data){
-            $('#algorithmModalContent').html(data);
-        });
-    });
+    /* Uploads a file and displays the updated uploads menu within the algorithmModal */
+    $("#uploadFileSubmit").click(function(e) {
 
-    // Posts a file to be uploaded and displays the updated uploads menu within the modal
-    $('#uploadFileSubmit').click(function(e) {
+        // Getting the file to be uploaded
         formData = new FormData();
-        for (file of document.getElementById('uploadFileInput').files) {
-            formData.append('file', file);
+        for (file of document.getElementById("uploadFileInput").files) {
+            formData.append("file", file);
         }
+
+        // Preventing TypeError : Illegal Invocation from jQuery trying to transform the FormData object into a string
         $.ajaxSetup({
-            // Preventing TypeError : Illegal Invocation from jQuery trying to transform the FormData object into a string
             processData: false,
             contentType: false
         });
-        $.post('algorithm_upload', formData, function(data){
-            $.ajaxSetup({
-                // Setting variables back to default to allow for JSON parsing
-                processData: true,
-                contentType: 'application/x-www-form-urlencoded; charset=UTF-8'
-            });
 
-            $('#algorithmModalContent').html(data);
+        // Sending the file to the back end to be uploaded
+        $.post("algorithm_upload", formData, function(data){
+
+            // Setting variables back to default to allow for JSON parsing
+            $.ajaxSetup({
+                processData: true,
+                contentType: "application/x-www-form-urlencoded; charset=UTF-8"
+            });
+            
+            $("#algorithmModalContent").html(data);
+        });
+        e.stopImmediatePropagation();
+    });
+
+    /* Runs an uploaded algorithm and indicates that the algorithm is running within the algorithmModal */
+    $(".availableAlgorithmsRunButton").click(function(e) {
+        $.post("algorithm_handler", {"button" : "run", "filename" : this.id}, function(data){
+            $("#algorithmModalContent").html(data);
+        });
+        e.stopImmediatePropagation();
+    });
+
+    /* Takes a user to the view section of an uploaded algorithm within the algorithmModal */   
+    $(".availableAlgorithmsViewButton").click(function(e) {
+        $.post("algorithm_handler", {"button" : "view", "filename" : this.id}, function(data) {
+            $("#algorithmModalContent").html(data);
         });
         e.stopImmediatePropagation();
     });
     
-    // Select button for an uploaded algorithm
-    $('.availableAlgorithmsRunButton').click(function(e) {
-        $.post('algorithm_handler', {'button' : 'select', 'filename' : this.id}, function(data){
-            $('#algorithmModalContent').html(data);
+    /* Takes a user from the view section to the uploads menu within the algorithmModal */
+    $("#algorithmModalBackButton").click( function(e) {
+        $.get("algorithm_upload", function(data){
+            $("#algorithmModalContent").html(data);
         });
-        e.stopImmediatePropagation();
     });
+    
+    /* Takes a user to a prompt for the deletion of an uploaded algorithm within the algorithmModal */
+    $(".availableAlgorithmsDeleteButton").click(function(e) {
 
-    // View button for an uploaded algorithm    
-    $('.availableAlgorithmsViewButton').click(function(e) {
-        $.post('algorithm_handler', {'button' : 'view', 'filename' : this.id}, function(data) {
-            $('#algorithmModalContent').html(data);
-        });
-        e.stopImmediatePropagation();
-    });
-
-    // Delete button for an uploaded algorithm 
-    $('.availableAlgorithmsDeleteButton').click(function(e) {
+        // Setting the filename to be deleted
         filename = this.id;
-        $.post('algorithm_handler', {'button' : 'delete', 'filename' : this.id}, function(data) {
-            $('#algorithmModalContent').html(data);
+
+        $.post("algorithm_handler", {"button" : "delete", "filename" : filename}, function(data) {
+            $("#algorithmModalContent").html(data);
         });
         e.stopImmediatePropagation();
     });
 
-    // Delete confirm button for an uploaded algorithm 
-    $('.availableAlgorithmsDeleteConfirmButton').click(function(e) {
-        $.post('algorithm_handler', {'button' : 'delete_confirm', 'filename' : filename}, function(data) {
-            $('#algorithmModalContent').html(data);
+    /* Cancels the deletion of an uploaded algorithm and takes a user back to the uploads menu within the algorithmModal */
+    $(".availableAlgorithmsDeleteCancelButton").click(function(e) {
+        $.get("algorithm_upload", function(data){
+            $("#algorithmModalContent").html(data);
         });
         e.stopImmediatePropagation();
     });
 
-    // Delete cancel button for an uploaded algorithm 
-    $('.availableAlgorithmsDeleteCancelButton').click(function(e) {
-        $.get('algorithm_upload', function(data){
-            $('#algorithmModalContent').html(data);
+    /* Confirms the deletion an uploaded algorithm and displays the updated uploads menu within the algorithmModal */
+    $(".availableAlgorithmsDeleteConfirmButton").click(function(e) {
+        $.post("algorithm_handler", {"button" : "delete_confirm", "filename" : filename}, function(data) {
+            $("#algorithmModalContent").html(data);
         });
         e.stopImmediatePropagation();
     });
-
 });
+
 // The name of a file to be deleted
 var filename;

@@ -103,13 +103,10 @@ def livestream_config():
 @app.route('/update_sense', methods=['GET', 'POST'])
 def update_sense():
 
-    # Indicates if the sense switch has been turned on or not
-    status = request.form['status']
+    # The IP Address of the Sense HAT
+    ip = request.form['ip']
 
-    # The IP Address of the sensor
-    ip_address = request.form['ipAddress']
-
-    # The stream number of the sensor
+    # The stream number of the Sense HAT
     stream_number = request.form['streamNumber']
 
     # The scalar trigger settings for temperature, pressure, and humidity
@@ -137,7 +134,7 @@ def update_sense():
         """
 
         # Get current Sense HAT data from DB
-        database_cursor.execute(sql, (ip_address,))
+        database_cursor.execute(sql, (ip,))
         temp, press, humid, time = database_cursor.fetchone()
 
         # Convert to JQueryable objects
@@ -187,8 +184,7 @@ def update_sense():
         print("Sense HAT " + stream_number + " broken:", e, lineno)
         pass
 
-    return jsonify({'result' : 'success', 'status' : status, 'roomTemperature' : roomTemperature,
-    'airPressure': airPressure, 'airHumidity': airHumidity})
+    return jsonify({'roomTemperature' : roomTemperature, 'airPressure': airPressure, 'airHumidity': airHumidity})
 
 
 """route is used to collect trigger settings from the live stream page"""
@@ -463,7 +459,7 @@ def algorithm_handler():
     buttonPressed = request.form['button']
     user_id = session.get('user_id')
 
-    if buttonPressed == "select":
+    if buttonPressed == "run":
         # Search Algorithm table for running algorithms pertaining to a user
         sql = """
             SELECT Name
