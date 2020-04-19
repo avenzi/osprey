@@ -151,14 +151,14 @@ def get_video_data(ip):
         ...: ...
     """
 
-    # Query VideoFrames table for the latest segment
-    # TODO: Make is so that it gets the lasest VideoFrames for the specific user session
     sql = """
-        SELECT FirstFrameNumber, LastFrameNumber, FramesMetadata
-        FROM VideoFrames
+        SELECT LastFrameTimestamp, FirstFrameNumber, LastFrameNumber, FramesMetadata
+        FROM SessionSensor INNER JOIN VideoFrames
+        ON SessionSensor.id = VideoFrames.SensorId
+        WHERE SessionSensor.IP = INET_ATON(%s)
         ORDER BY LastFrameTimestamp DESC;
     """
-    cursor.execute(sql)
+    cursor.execute(sql, (ip,))
     metadata = cursor.fetchone()
     return metadata
 

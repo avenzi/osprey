@@ -459,7 +459,7 @@ def algorithm_handler():
     buttonPressed = request.form['button']
     user_id = session.get('user_id')
 
-    if buttonPressed == "select":
+    if buttonPressed == "run":
         # Search Algorithm table for running algorithms pertaining to a user
         sql = """
             SELECT Name

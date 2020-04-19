@@ -1,3 +1,8 @@
+/**
+ * @fileoverview This file is used to handle all things related to the sensorModal. 
+ * It creates the sensor controls and cards upon user submittal in the sensorModal
+ */
+
 $(document).ready(function() {
     
     // Display sensor modal once the DOM is ready for JS to execute
@@ -334,7 +339,7 @@ $(document).ready(function() {
 
                 // Adding a camera radio button
                 $("#camRow").append(
-                    `<div class="col">
+                    `<div class="col-6 text-center">
                         <div class="radio d-inline">
                             <label>
                                 <input type="radio" name="cam" id="cam${i}" autocomplete="off"${checkedStatus}> ${decodeURI(name)}
@@ -382,10 +387,11 @@ $(document).ready(function() {
 
                 // Adding a Sense HAT switch
                 $("#senRow").append(
-                    `<div class="col">
+                    `<div class="col-6 text-center">
                         <div class="custom-control custom-switch d-inline">
-                            <input type="checkbox" class="custom-control-input" id="senseSwitch${i}">
-                            <label class="custom-control-label" for="senseSwitch${i}">${decodeURI(name)}</label>
+                            <label class="custom-control-label" for="senseSwitch${i}">
+                                <input type="checkbox" class="custom-control-input" id="senseSwitch${i}">${decodeURI(name)}
+                            </label>
                         </div>
                     </div>`
                 );
