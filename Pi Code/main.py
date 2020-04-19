@@ -17,6 +17,8 @@ from audio_streamer import AudioStreamer
 # Sense HAT imports
 from sense_stream import SenseStream
 
+from pi_video_server import VideoStream
+
 def delete_old_audio_data():
     filelist = [ f for f in os.listdir('audio-segments') if f.endswith(".wav") ]
     for f in filelist:
@@ -34,10 +36,14 @@ audio_collection_thread = AudioCollecter(Queue(), args=(audio_converter_thread,)
 
 sense_hat_stream = SenseStream(Queue(), args=('http://192.99.151.151:5510',)) # TODO: replace with rpi config value
 
-audio_collection_thread.start()
-audio_streamer_thread.start()
-audio_converter_thread.start()
+video_stream = VideoStream(Queue(), args=())
 
-sense_hat_stream.start()
+#audio_collection_thread.start()
+#audio_streamer_thread.start()
+#audio_converter_thread.start()
+
+#sense_hat_stream.start()
+
+video_stream.start()
 
 time.sleep(9999999)
