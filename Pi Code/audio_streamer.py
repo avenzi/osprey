@@ -14,7 +14,6 @@ import pyaudio
 import wave
 import json
 import requests
-from recorder import Recorder
 from queue import Queue
 
 class AudioStreamer(threading.Thread):
@@ -24,7 +23,7 @@ class AudioStreamer(threading.Thread):
         threading.Thread.__init__(self, args=(), kwargs=None)
         self.queue = queue
         self.daemon = True
-        self.receive_messages = args[0]
+        self.server = args[0]
         self.last_dash_segment_sent = 1
         self.dash_segment_format = 'audio-seg-%d.m4s'
 
@@ -47,7 +46,8 @@ class AudioStreamer(threading.Thread):
                 custom_headers = {'filename': mp3_file_path, 'timestamp': timestamp}
 
                 try:
-                    requests.post('http://192.99.151.151:5582', 
+                    # TODO: set in config file
+                    requests.post(self.server, 
                         data = mp3_file_bytes,
                         headers = custom_headers
                     )

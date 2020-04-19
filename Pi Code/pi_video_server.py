@@ -1,12 +1,59 @@
+from sense_hat import SenseHat
+
 import io
+import socket
+import struct
+import time
 import picamera
+import subprocess
+import itertools
+import threading
+import sys
+import os
+import os.path
+import datetime
+import pyaudio
+import wave
+import json
+import requests
+from queue import Queue
+
 import logging
 import socketserver
-import datetime
 from threading import Condition
 from http import server
 
 epoch = datetime.datetime.utcfromtimestamp(0)
+
+output = None
+
+class VideoStream(threading.Thread):
+    def __init__(self, queue, args=(), kwargs=None):
+        threading.Thread.__init__(self, args=(), kwargs=None)
+        self.queue = queue
+        self.daemon = True
+
+    def run(self):
+        # Start camera recording
+        try:
+            with picamera.PiCamera(resolution='640x480', framerate=16) as camera:
+                global output
+                output = StreamingOutput()
+                # Change camera rotation  
+                camera.rotation = 180
+                camera.start_recording(output, format='mjpeg')
+                
+                # Serve until local error
+                try:
+                    address = ('', 8000)
+                    server = StreamingServer(address, StreamingHandler)
+                    server.serve_forever()
+                finally:
+                    camera.stop_recording()
+        except:
+            return
+    
+    
 ###########################################################
 # Streaming Output class to support mjpeg stream
 ###########################################################
@@ -75,19 +122,3 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
 class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
     allow_reuse_address = True
     daemon_threads = True
-
-
-# Start camera recording
-with picamera.PiCamera(resolution='640x480', framerate=16) as camera:
-    output = StreamingOutput()
-    # Change camera rotation  
-    camera.rotation = 180
-    camera.start_recording(output, format='mjpeg')
-    
-    # Serve until local error
-    try:
-        address = ('', 8000)
-        server = StreamingServer(address, StreamingHandler)
-        server.serve_forever()
-    finally:
-        camera.stop_recording()
