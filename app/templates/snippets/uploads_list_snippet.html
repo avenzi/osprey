@@ -7,29 +7,43 @@
 
 <div class="modal-body">
     <h5>Available Algorithms</h5>
-    <ul class="list-group" id="availableAlgorithms">
 
-        {% for algorithm in algorithms %}
+    <div class="overflow-auto w-100 border border-light rounded" style="height: 250px;">
 
-            <li class="list-group-item">
-                {{ algorithm }}
+        <ul class="list-group" id="availableAlgorithms">
 
-                {% if algorithm in runningAlgorithms %}
-                    <button type="button" class="btn btn-primary availableAlgorithmsRunButton" id="{{algorithm.split('.')[0]}}">
-                        <span class="spinner-border spinner-border-sm" role="status"></span>
-                        Running...
-                    </button>
-                {% else %}
-                    <button type="button" class="btn btn-primary availableAlgorithmsRunButton" id="{{algorithm.split('.')[0]}}">Run</button>
-                {% endif %}
+            {% for algorithm in algorithms %}
 
-                <button type="button" class="btn btn-primary availableAlgorithmsViewButton" id="{{algorithm.split('.')[0]}}">View</button>
-                <button type="button" class="btn btn-primary availableAlgorithmsDeleteButton" id="{{algorithm.split('.')[0]}}">Delete</button>
-            </li>
+                <li class="list-group-item">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            {{ algorithm }}
+                        </div>
+                        <div class="col text-right">
+                            {% if algorithm in runningAlgorithms %}
+                                <button type="button" class="btn btn-primary availableAlgorithmsRunButton" id="{{algorithm.split('.')[0]}}">
+                                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                                    Running...
+                                </button>
+                            {% else %}
+                                <button type="button" class="btn btn-primary availableAlgorithmsRunButton" id="{{algorithm.split('.')[0]}}">Run</button>
+                            {% endif %}
 
-        {% endfor %}
+                            <button type="button" class="btn btn-primary availableAlgorithmsViewButton" id="{{algorithm.split('.')[0]}}">View</button>
+                            <button type="button" class="btn btn-danger availableAlgorithmsDeleteButton" id="{{algorithm.split('.')[0]}}">Delete</button>
+                        </div>
+                    </div>
 
-    </ul>
+
+
+                </li>
+
+            {% endfor %}
+
+        </ul>
+
+    </div>
+
     <br>
     <h5>Add Algorithm</h5>
     <p>

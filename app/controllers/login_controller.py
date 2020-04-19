@@ -33,7 +33,6 @@ class LoginController(Controller):
             session['user_id'] = self.database_cursor.fetchone()[0]
 
             # Creating session variables for the scalar trigger settings
-            session['triggerSettings_audio'] = '' 
             session['triggerSettings_temperature'] = '' 
             session['triggerSettings_pressure'] = '' 
             session['triggerSettings_humidity'] = '' 

@@ -16,7 +16,7 @@ from random import seed, randint
 from app import app, mysql, bcrypt
 from werkzeug.utils import secure_filename
 from app.main.program import Program
-from app.views.forms import LoginForm, TriggerSettingsForm, RegistrationForm
+from app.views.forms import LoginForm, RegistrationForm
 from flask import render_template, flash, redirect, url_for, Response, session, jsonify, request, send_file, send_from_directory
 
 # Views
@@ -90,7 +90,7 @@ def delete_session(session_id):
     return SessionController().delete_session(session_id)
 
 
-@app.route('/archived/session/<int:session_id>')
+@app.route('/session/<int:session_id>')
 def archived_session(session_id):
     return SessionView().serve_session(session_id)
 
@@ -103,13 +103,10 @@ def livestream_config():
 @app.route('/update_sense', methods=['GET', 'POST'])
 def update_sense():
 
-    # Indicates if the sense switch has been turned on or not
-    status = request.form['status']
+    # The IP Address of the Sense HAT
+    ip = request.form['ip']
 
-    # The IP Address of the sensor
-    ip_address = request.form['ipAddress']
-
-    # The stream number of the sensor
+    # The stream number of the Sense HAT
     stream_number = request.form['streamNumber']
 
     # The scalar trigger settings for temperature, pressure, and humidity
@@ -137,7 +134,7 @@ def update_sense():
         """
 
         # Get current Sense HAT data from DB
-        database_cursor.execute(sql, (ip_address,))
+        database_cursor.execute(sql, (ip,))
         temp, press, humid, time = database_cursor.fetchone()
 
         # Convert to JQueryable objects
@@ -187,52 +184,18 @@ def update_sense():
         print("Sense HAT " + stream_number + " broken:", e, lineno)
         pass
 
-    return jsonify({'result' : 'success', 'status' : status, 'roomTemperature' : roomTemperature,
-    'airPressure': airPressure, 'airHumidity': airHumidity})
-
-
-"""route is used to update audio values in the live stream page"""
-@app.route('/update_microphone', methods=['GET', 'POST'])
-def update_microphone():
-
-    # Instantiating an object that can execute SQL statements
-    database_cursor = mysql.connection.cursor()
-
-    # The scalar trigger setting for audio
-    triggerSettings_audio = session.get('triggerSettings_audio')
-    # The id of the logged in user
-    user_id = session.get('user_id')
-
-    # Indicates whether audio has been turned on or not
-    status = request.form['status']
-
-    # The initial decibel level until set
-    decibels = 0
-
-    
-    for _ in range(10):
-        value = randint(0, 5)
-        decibels = "6" + str(value)
-
-    if (triggerSettings_audio != '') and (int(decibels) > int(triggerSettings_audio)):
-        # Write audio data to database
-        database_cursor.execute("INSERT INTO eventlog (user_id, alert_time, alert_type, alert_message) VALUES ('{}', NOW(), '{}', '{}');".format(user_id, "Audio", 
-            "Audio exceeded " + triggerSettings_audio + " dB"))
-        mysql.connection.commit()
-
-    return jsonify({'result' : 'success', 'status' : status, 'decibels' : decibels})
+    return jsonify({'roomTemperature' : roomTemperature, 'airPressure': airPressure, 'airHumidity': airHumidity})
 
 
 """route is used to collect trigger settings from the live stream page"""
 @app.route('/update_triggersettings', methods=['POST'])
 def update_triggersettings():
     # Updating trigger settings in the session
-    session['triggerSettings_audio'] = request.form['microphone_input']
     session['triggerSettings_temperature'] = request.form['temperature_input']
     session['triggerSettings_pressure'] = request.form['pressure_input']
     session['triggerSettings_humidity'] = request.form['humidity_input']
 
-    return jsonify({'result' : 'success', 'microphone_input' : session.get('triggerSettings_audio'), 'temperature_input' : session.get('triggerSettings_temperature'), 
+    return jsonify({'result' : 'success', 'temperature_input' : session.get('triggerSettings_temperature'), 
         'pressure_input' : session.get('triggerSettings_pressure'), 'humidity_input' : session.get('triggerSettings_humidity')})
 
 
@@ -264,6 +227,33 @@ def retrieve_eventlog(time, adjustment, mintime):
         alerts.append("{} at {}".format(alert[0], alert[1]))
     
     return render_template('snippets/eventlog_snippet.html', messages = alerts)
+
+"""route is used to retrieve items from the event log"""
+@app.route('/retrieve_sense/<int:time>/<int:adjustment>/<int:session_id>/<int:sensor_id>', methods=['GET'])
+def retrieve_sense(time, adjustment, session_id, sensor_id):
+    # Instantiating an object that can execute SQL statements
+    database_cursor = mysql.connection.cursor()
+
+    # Return the Sense Hat record closest in time to the time provided
+    sql = """
+        SELECT Temp, Press, Humid
+        FROM Sense
+        WHERE SessionId = %s and SensorId = %s AND Time < %s
+        ORDER BY Time DESC
+        LIMIT 1;
+    """
+    dt = datetime.fromtimestamp(time / 1000).astimezone(pytz.timezone("America/Detroit")) + timedelta(hours=adjustment)
+    database_cursor.execute(sql, (session_id, sensor_id, dt))
+    result = database_cursor.fetchone()
+    
+    if result is None:
+        return jsonify({})
+    else:
+        return jsonify({
+            'temperature': result[0],
+            'pressure': result[1],
+            'humidity': result[2]
+        })
 
 
 @app.route('/videoframefetch/<frame>/<session>/<sensor>')
@@ -566,6 +556,9 @@ def algorithm_handler():
         return render_template('snippets/uploads_view_snippet.html', content = content, filename = filename)
 
     elif buttonPressed == "delete":
+        return render_template('snippets/uploads_delete_snippet.html')
+
+    elif buttonPressed == "delete_confirm":
         # Search Algorithm table for algorithm filename to get file path
         sql = """
             SELECT Path 
@@ -605,4 +598,9 @@ def algorithm_handler():
 
         return render_template('snippets/uploads_list_snippet.html', algorithms = algorithms, runningAlgorithms = runningAlgs)
                     
+
+
+
+
+
     return jsonify({'result' : 'Button Not Handled'})

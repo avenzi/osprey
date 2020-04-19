@@ -103,6 +103,40 @@
                 <ul style="text-align: center; max-height: 13em;" class="list-group list-group-flush p-1" id="eventLog">
                 </ul>
             </div>
+
+            {% for sense in sense_hats %}
+                <div style="margin-top: 1em;" id="sensor-box-{{sense.sensor_id}}-{{sense.sensor_type}}" class="hide card w-100 bg-light rounded">
+                    <div class = "card-header p-0 text-center">
+                        {{sense.name}}
+                    </div>
+                    <div class = "card-body p-1">
+                        <div class="row temp-spacing">
+                            <div class="col-8">
+                                Temperature (&#8457):
+                            </div>
+                            <div class="col-4 text-right" id="sense-temperature-{{sense.sensor_id}}">
+                                --.-
+                            </div>
+                        </div>
+                        <div class="row temp-spacing">
+                            <div class="col-8">
+                                Air Pressure (millibars):
+                            </div>
+                            <div class="col-4 text-right" id="sense-pressure-{{sense.sensor_id}}">
+                                --.-
+                            </div>
+                        </div>
+                        <div class="row temp-spacing">
+                            <div class="col-8">
+                                Air Humidity (%):
+                            </div>
+                            <div class="col-4 text-right" id="sense-humidity-{{sense.sensor_id}}">
+                                --.-
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
         </div>
     </div>
 {% endblock %}
