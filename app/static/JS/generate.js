@@ -13,8 +13,7 @@ $(document).ready(function() {
     var maxSens = 10;
     var maxMics = 10;
 
-    // TODO: FINISH COMMENTING
-    /* Element existed in the HTML during initial DOM binding event, so it is already present in the DOM */
+    /* Adds a camera to the sensorForm */
     $("#addCam").click(function(e) {
         e.preventDefault();
 
@@ -54,8 +53,7 @@ $(document).ready(function() {
         }
     });
 
-    // TODO: FINISH COMMENTING
-    /* Binding the click event on close buttons which were not present at the time of initial DOM binding event */
+    /* Deletes a camera from the sensorForm */
     $(document).on("click", ".close.deleteCam", function(e) {
         e.preventDefault();
 
@@ -106,8 +104,7 @@ $(document).ready(function() {
         }
     });
 
-    // TODO: FINISH COMMENTING
-    /* Element existed in the HTML during initial DOM binding event, so it is already present in the DOM */
+    /* Adds a microphone to the sensorForm */
     $("#addMic").click(function(e) {
         e.preventDefault();
 
@@ -147,8 +144,7 @@ $(document).ready(function() {
         }
     });
 
-    // TODO: FINISH COMMENTING
-    /* Binding the click event on close buttons which were not present at the time of initial DOM binding event */
+    /* Deletes a microphone from the sensorForm */
     $(document).on("click", ".close.deleteMic", function(e) {
         e.preventDefault();
 
@@ -199,8 +195,7 @@ $(document).ready(function() {
         }
     });
 
-    // TODO: FINISH COMMENTING
-    /* Element existed in the HTML during initial DOM binding event, so it is already present in the DOM */
+    /* Adds a Sense HAT to the sensorForm */
     $("#addSen").click(function(e) {
         e.preventDefault();
     
@@ -240,8 +235,7 @@ $(document).ready(function() {
         }
     });
 
-    // TODO: FINISH COMMENTING
-    /* Binding the click event on close buttons which were not present at the time of initial DOM binding event */
+    /* Deletes a Sense HAT from the sensorForm */
     $(document).on("click", ".close.deleteSen", function(e) {
         e.preventDefault();
 
@@ -292,8 +286,7 @@ $(document).ready(function() {
         }
     });
 
-    // TODO: FINISH COMMENTING
-    /* Element existed in the HTML during initial DOM binding event, so it is already present in the DOM */
+    /* Configures livestreaming, creates sensor cards and the buttons associated, and starts the timer */
     $("#sensorModalSubmit").click(function(e) {
         e.preventDefault();
         
@@ -311,21 +304,18 @@ $(document).ready(function() {
         var micData = new Map();
 
         // Sending form data to livestream_config in routes.py
-        $.post("livestream_config", {livestream_config: queryString}, function(result) {
-            console.log(`Result: ${result}`);
-        });
+        $.post("livestream_config", {livestream_config: queryString});
 
         if (camNumber > 0) {
 
-            // Adding IP addresses and names of cameras to the camData map
+            // Adding IP addresses and names of cameras to the camData map to be used when creating camera cards
             for (var i = 0; i <= queryList.length - 1; i++) {
                 if (queryList[i].substring(0,12) == "cam-ip-input") {
                     ipInputName = queryList[i].split("=")[0];
                     ipInputValue = queryList[i].split("=")[1];
                     camData.set(ipInputName, ipInputValue);
                 }
-
-                if (queryList[i].substring(0,14) == "cam-name-input") {
+                else if (queryList[i].substring(0,14) == "cam-name-input") {
                     nameInputName = queryList[i].split("=")[0];
                     nameInputValue = queryList[i].split("=")[1];
                     camData.set(nameInputName, nameInputValue);
@@ -342,7 +332,7 @@ $(document).ready(function() {
                     checkedStatus = " checked";
                 }
 
-                // Adding the camera radio button
+                // Adding a camera radio button
                 $("#camRow").append(
                     `<div class="col">
                         <div class="radio d-inline">
@@ -353,7 +343,7 @@ $(document).ready(function() {
                     </div>`
                 );
 
-                // Creating iframe tag for a camera using form input to display video in the camera card
+                // Creating a camera card to display a camera stream
                 $("#camDiv").append(
                     `<div class="card w-100 mb-1" id="stream${i}">
                         <div class="card-header p-0 text-center">
@@ -373,15 +363,14 @@ $(document).ready(function() {
             // Adding number of Sense HATs to the senData map
             senData.set("numSense", senNumber);
 
-            // Adding IP addresses and names of Sense HATs to the senData map
+            // Adding IP addresses and names of Sense HATs to the senData map to be used when creating Sense HAT cards
             for (var i = 0; i <= queryList.length - 1; i++) {
                 if (queryList[i].substring(0,12) == "sen-ip-input") {
                     ipInputName = queryList[i].split("=")[0];
                     ipInputValue = queryList[i].split("=")[1];
                     senData.set(ipInputName, ipInputValue);
                 }
-
-                if (queryList[i].substring(0,14) == "sen-name-input") {
+                else if (queryList[i].substring(0,14) == "sen-name-input") {
                     nameInputName = queryList[i].split("=")[0];
                     nameInputValue = queryList[i].split("=")[1];
                     senData.set(nameInputName, nameInputValue);
@@ -391,7 +380,7 @@ $(document).ready(function() {
             for (var i = 1; i <= senNumber; i++) {
                 var name = senData.get(`sen-name-input-${i}`);
 
-                // Adding the Sense HAT switch
+                // Adding a Sense HAT switch
                 $("#senRow").append(
                     `<div class="col">
                         <div class="custom-control custom-switch d-inline">
@@ -401,7 +390,7 @@ $(document).ready(function() {
                     </div>`
                 );
 
-                // Creating a div to display Sense HAT data in the Sense HAT card
+                // Creating a Sense HAT card to display Sense HAT data
                 $("#senMic").append(
                     `<div class="row justify-content-center mb-1" id="sense${i}">
                         <div class="card w-100">
@@ -442,15 +431,14 @@ $(document).ready(function() {
 
         if (micNumber > 0) {
 
-            // Adding IP addresses and names of microphones to the micData map
+            // Adding IP addresses and names of microphones to the micData map to be used when creating microphone cards
             for (var i = 0; i <= queryList.length - 1; i++) {
                 if (queryList[i].substring(0,12) == "mic-ip-input") {
                     ipInputName = queryList[i].split("=")[0];
                     ipInputValue = queryList[i].split("=")[1];
                     micData.set(ipInputName, ipInputValue);
                 }
-
-                if (queryList[i].substring(0,14) == "mic-name-input") {
+                else if (queryList[i].substring(0,14) == "mic-name-input") {
                     nameInputName = queryList[i].split("=")[0];
                     nameInputValue = queryList[i].split("=")[1];
                     micData.set(nameInputName, nameInputValue);
@@ -460,7 +448,7 @@ $(document).ready(function() {
             for (var i = 1; i <= micNumber; i++) {
                 var name = micData.get(`mic-name-input-${i}`);
 
-                // Creating a div to display microphone data in the microphone card
+                // Creating a microphone card to display microphone data
                 $("#senMic").append(
                     `<div class="row">
                         <div class="card w-100" id="micDiv">
@@ -482,8 +470,8 @@ $(document).ready(function() {
             }
         } 
 
-        // TODO: FINISH COMMENTING THIS
-        createHandlers(camNumber, senData, micNumber);
+        // Creating onclick handlers for cameras and Sense HATs and showing a camera stream by default if there is one available
+        createHandlers(camNumber, senData);
 
         // Starting the timer
         var timer = document.getElementById('timer');
@@ -495,19 +483,22 @@ $(document).ready(function() {
     });
 });
 
-// Global map object to store interval IDs for sense refresh so they can be stopped
+// Global map object to store interval IDs for Sense HAT refresh
 var senseIntervals = new Map();
 
-// TODO: FINISH COMMENTING
-// Code to handle sense streams -- should work with more than 2 sense streams, unable to test
-// k is the Sense Stream Number and ip is the IP address of the Sense Stream, as a string
-function generateSenseHandler(k, ip) {    
-
+/**
+ * Handles updating of Sense HAT streams. Shows Sense HAT stream whose button was clicked
+ * @param {number} k The number of the Sense HAT whose button was clicked
+ * @param {string} ip The IP address of the Sense HAT whose button was clicked
+ * @return {undefined}
+ */
+function generateSenseHatHandler(k, ip) {    
     return function() {
-        $(`#sense${k}`).show();
         if ($(`#senseSwitch${k}`).is(":checked")){
             var intervalID = setInterval(function() {
-                $.post(`update_sense`, {status : "ON", ipAddress: ip, streamNumber: k}, function(data){
+
+                // Querying the database for Sense HAT data associated with the IP address
+                $.post(`update_sense`, {ip: ip, streamNumber: k}, function(data){
                     $(`#roomTemperature${k}`).text(data.roomTemperature);
                     $(`#airPressure${k}`).text(data.airPressure);
                     $(`#airHumidity${k}`).text(data.airHumidity);
@@ -519,18 +510,21 @@ function generateSenseHandler(k, ip) {
         else {
             clearInterval(senseIntervals.get(k));
 
-            // Clear form data after 1.2s to prevent async issues
             setTimeout(function () {
                 $(`#roomTemperature${k}`).text("--.-");
                 $(`#airPressure${k}`).text("--.-");
                 $(`#airHumidity${k}`).text("--.-");
             }, 1200);
         }
-    }
+    };    
 }
 
-// TODO: FINISH COMMENTING
-// Code to handle switching between camera streams
+/**
+ * Handles switching between camera streams. Shows the camera stream whose button was clicked and hides the rest of the camera streams
+ * @param {number} k The number of the camera whose button was clicked
+ * @param {number} numCams The total number of cameras
+ * @return {undefined}
+ */
 function generateCameraHandler(k, numCams) {
     return function() { 
         for (var j = 1; j <= numCams; j++) {
@@ -540,15 +534,19 @@ function generateCameraHandler(k, numCams) {
             else {
                 $(`#stream${j}`).hide();
             }
-    }
+        }
     };
 }
 
-// TODO: FINISH COMMENTING
-// Creates button click handlers after the number of each type of sensor is determined
-function createHandlers(numCams, dataSense, numMics) {
-
-    // Show only the first camera when the page loads and generate on click handler for camera selector
+/**
+ * Creates onclick handlers for cameras and Sense HATs. Shows a camera stream by default if there is one available
+ * @param {number} numCams The total number of cameras
+ * @param {map} senData A map containing Sense HAT data submitted from sensorForm
+ * @return {undefined}
+ */
+function createHandlers(numCams, senData) {
+    
+    // If there are camera streams, show the first camera stream and hide any others
     for (var i = 1; i <= numCams; i++) {
         if (i == 1) {
             $(`#stream1${i}`).show();
@@ -556,11 +554,13 @@ function createHandlers(numCams, dataSense, numMics) {
         else {
             $(`#stream${i}`).hide();
         }
-        $(`#cam${i}`).on("click", generateCameraHandler(i, numCams))
-   }
 
-   // Generate on click handlers for each Sense HAT selector and pass the Sense HAT number and IP address to the handler
-   for (var i=1; i<=dataSense.get("numSense");i++) {
-       $(`#senseSwitch${i}`).on("click", generateSenseHandler(i, dataSense.get(`sen-ip-input-${i}`)));
-   }
+        // Generate onclick handlers for each camera stream button
+        $(`#cam${i}`).on("click", generateCameraHandler(i, numCams));
+    }
+
+    // Generate onclick handlers for each Sense HAT button
+    for (var i = 1; i <= senData.get("numSense"); i++) {
+        $(`#senseSwitch${i}`).on("click", generateSenseHatHandler(i, senData.get(`sen-ip-input-${i}`)));
+    }
 }
