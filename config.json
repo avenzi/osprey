@@ -1,4 +1,4 @@
 {
-"Hello": 34,
-"Data Ingestion IP": "172.3.2.3"
+    "Hello": 34,
+    "SERVER_IP_ADDRESS": "192.99.151.151"
 }

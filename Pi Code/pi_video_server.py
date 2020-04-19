@@ -1,5 +1,3 @@
-from sense_hat import SenseHat
-
 import io
 import socket
 import struct

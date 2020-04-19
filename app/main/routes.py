@@ -10,14 +10,11 @@ import urllib.request
 import json
 import pytz
 
-from queue import Queue
 from datetime import datetime, timedelta
 from random import seed, randint
 from app import app, mysql, bcrypt
-from werkzeug.utils import secure_filename
-from app.main.program import Program
 from app.views.forms import LoginForm, RegistrationForm
-from flask import render_template, flash, redirect, url_for, Response, session, jsonify, request, send_file, send_from_directory
+from flask import render_template, flash, redirect, url_for, Response, session, jsonify, request
 
 # Views
 from app.views.algorithm_view import AlgorithmView
@@ -63,15 +60,6 @@ def registration():
         return RegistrationController().handle_response()
     else:
         return RegistrationView().get_rendered_template()
-
-
-"""route is used to upload algorithms"""
-@app.route("/algorithm_upload", methods=['GET', 'POST'])
-def algorithm_upload():
-    if request.method == 'POST':
-        return AlgorithmController().handle_upload()
-    elif request.method == 'GET':
-        return AlgorithmView().get_uploads_snippet()
 
 
 @app.route('/livefeed', methods=['GET', 'POST'])
@@ -442,165 +430,23 @@ def partial_response(path, start, buff_size, end=None):
     return response
 
 
+"""route is used to upload algorithms"""
+@app.route("/algorithm_upload", methods=['GET', 'POST'])
+def algorithm_upload():
+    if request.method == 'POST':
+        return AlgorithmController().handle_upload()
+    elif request.method == 'GET':
+        return AlgorithmView().get_uploads_snippet()
+
+
 """route is used for downloading boilerplate code"""
-@app.route('/downloadBoilerplate')
-def downloadBoilerplate():
-    return send_from_directory(directory=app.config['DOWNLOADS_FOLDER'], filename="boilerplate.py", as_attachment=True)
+@app.route('/download_boilerplate')
+def download_boilerplate():
+    return AlgorithmController().download_boilerplate()
 
 
 # TODO: move logic to AlgorithmController
 """route is used to handle uploaded algorithms"""
 @app.route('/algorithm_handler', methods=['POST'])
 def algorithm_handler():
-    algorithms = []
-    runningAlgorithms = []
-    database_cursor = mysql.connection.cursor()
-    filename = request.form['filename'] + ".py"
-    buttonPressed = request.form['button']
-    user_id = session.get('user_id')
-
-    if buttonPressed == "run":
-        # Search Algorithm table for running algorithms pertaining to a user
-        sql = """
-            SELECT Name
-            FROM Algorithm
-            WHERE UserId = %s AND Status = 1;
-        """
-        database_cursor.execute(sql, (user_id,))
-        algs = database_cursor.fetchall()
-
-        for alg in algs:
-            runningAlgorithms.append(alg[0])
-
-        # Get the actual filename of the file to run
-        sql = """
-            SELECT Path
-            FROM Algorithm
-            WHERE UserId = %s AND Name = %s;
-        """
-        database_cursor.execute(sql, (user_id, filename))
-        filename_actual = database_cursor.fetchone()[0] + ".py"
-
-        if filename not in runningAlgorithms:
-            program_thread = Program(Queue(), args=(True, filename_actual, user_id))
-            program_thread.start()
-           
-            # Set Status of file to 1 for running
-            sql = """
-                UPDATE Algorithm
-                SET Status = 1
-                WHERE UserId = %s AND Name = %s;
-            """
-            database_cursor.execute(sql, (user_id, filename))
-            mysql.connection.commit()
-
-            # Search Algorithm table for filenames of algorithms pertaining to a user
-            sql = """
-                SELECT Status, Name 
-                FROM Algorithm 
-                WHERE UserId = %s;
-            """            
-            database_cursor.execute(sql, (user_id,))
-            algs = database_cursor.fetchall()
-
-            runningAlgs = []
-
-            for alg in algs:
-                if alg[0] == 1:
-                    runningAlgs.append(alg[1])
-                algorithms.append(alg[1])
-
-            return render_template('snippets/uploads_list_snippet.html', algorithms = algorithms, runningAlgorithms = runningAlgs)
-
-        else:       
-            # Set Status of file to 0 for not running
-            sql = """
-                UPDATE Algorithm
-                SET Status = 0
-                WHERE UserId = %s AND Name = %s;
-            """
-            database_cursor.execute(sql, (user_id, filename))
-            mysql.connection.commit()
-
-            # Search Algorithm table for filenames of algorithms pertaining to a user
-            sql = """
-                SELECT Status, Name 
-                FROM Algorithm 
-                WHERE UserId = %s;
-            """            
-            database_cursor.execute(sql, (user_id,))
-            algs = database_cursor.fetchall()
-
-            runningAlgs = []
-
-            for alg in algs:
-                if alg[0] == 1:
-                    runningAlgs.append(alg[1])
-                algorithms.append(alg[1])
-
-            return render_template('snippets/uploads_list_snippet.html', algorithms = algorithms, runningAlgorithms = runningAlgs)
-
-    elif buttonPressed == "view":
-        # Search Algorithm table for algorithm filename to get file path
-        sql = """
-            SELECT Path 
-            FROM Algorithm 
-            WHERE UserId = %s AND Name = %s;
-        """
-        database_cursor.execute(sql, (user_id, filename))
-        path = database_cursor.fetchone()[0]
-
-        f = open(os.path.join(app.config['UPLOADS_FOLDER'], path + ".py"), "r")
-        content = f.read()
-        f.close()
-        return render_template('snippets/uploads_view_snippet.html', content = content, filename = filename)
-
-    elif buttonPressed == "delete":
-        return render_template('snippets/uploads_delete_snippet.html')
-
-    elif buttonPressed == "delete_confirm":
-        # Search Algorithm table for algorithm filename to get file path
-        sql = """
-            SELECT Path 
-            FROM Algorithm 
-            WHERE UserId = %s AND Name = %s;
-        """
-        database_cursor.execute(sql, (user_id, filename))
-        path = database_cursor.fetchone()[0]
-
-        with os.scandir(os.path.join(app.config['UPLOADS_FOLDER'])) as entries:
-            for entry in entries:
-                if entry.is_file() and (entry.name == (path + ".py")):
-                    os.remove(os.path.join(app.config['UPLOADS_FOLDER'], path + ".py"))
-
-        sql = """
-            DELETE FROM Algorithm
-            WHERE UserId = %s AND Name = %s;
-        """
-        database_cursor.execute(sql, (user_id, filename))
-        mysql.connection.commit()
-
-        # Search Algorithm table for filenames of algorithms pertaining to a user
-        sql = """
-            SELECT Status, Name 
-            FROM Algorithm 
-            WHERE UserId = %s;
-        """            
-        database_cursor.execute(sql, (user_id,))
-        algs = database_cursor.fetchall()
-
-        runningAlgs = []
-
-        for alg in algs:
-            if alg[0] == 1:
-                runningAlgs.append(alg[1])
-            algorithms.append(alg[1])
-
-        return render_template('snippets/uploads_list_snippet.html', algorithms = algorithms, runningAlgorithms = runningAlgs)
-                    
-
-
-
-
-
-    return jsonify({'result' : 'Button Not Handled'})
+    return AlgorithmController().handle_algorithm()

@@ -24,8 +24,6 @@ class AudioStreamer(threading.Thread):
         self.queue = queue
         self.daemon = True
         self.server = args[0]
-        self.last_dash_segment_sent = 1
-        self.dash_segment_format = 'audio-seg-%d.m4s'
 
     def run(self):
         while True:
@@ -46,7 +44,6 @@ class AudioStreamer(threading.Thread):
                 custom_headers = {'filename': mp3_file_path, 'timestamp': timestamp}
 
                 try:
-                    # TODO: set in config file
                     requests.post(self.server, 
                         data = mp3_file_bytes,
                         headers = custom_headers
@@ -54,11 +51,10 @@ class AudioStreamer(threading.Thread):
                     print("Sent %s to data ingestion" % mp3_file_path)
                 except Exception as e:
                     print(e)
-                    print("Could not establish connection with data ingestion layer audio listener")
+                    print("Could not establish connection with server %s" % self.server)
         else:
             raise Exception("Mp3 path did not exist in Audio Streamer")
     
     def remove_segment(self, mp3_path, wav_path):
-        #segment_number = mp3_path[mp3_path.find('mp3_') + 4:-4]
         os.unlink(mp3_path) # delete mp3 segment
         os.unlink(wav_path) # delete wav segment

@@ -78,7 +78,7 @@ class SenseStream(threading.Thread):
                 # Create data object with temperature, pressure, and humidity data
                 sense_data = {"Temp": temp, "Press": press, "Humid": humid}
                 
-                requests.post(self.server, # TODO: replace with rpi config value
+                requests.post(self.server,
                     data = sense_data,
                 )
                 
