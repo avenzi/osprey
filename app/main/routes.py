@@ -1,4 +1,5 @@
 import os
+import os.path
 import re
 import sys
 import time
@@ -246,10 +247,6 @@ def retrieve_sense(time, adjustment, session_id, sensor_id):
 
 @app.route('/videoframefetch/<frame>/<session>/<sensor>')
 def videoframefetch(frame, session, sensor):
-    #print(frame)
-    #print(session)
-    #print(sensor)
-    # TODO: avoid doing queries during every frame fetch by supplying client-side with the paths/metadata
     frame = int(frame)
     sql = "SELECT * FROM VideoFrames WHERE SessionId = %s AND SensorId = %s AND %s BETWEEN FirstFrameNumber AND LastFrameNumber;"
     database_cursor = mysql.connection.cursor()
@@ -259,28 +256,21 @@ def videoframefetch(frame, session, sensor):
     last_frame_number = int(frames_record[4])
     frames_metadata = json.loads(frames_record[7])
 
-    #number_of_frames_to_send = 10 if frame + 10 <= last_frame_number else (last_frame_number - frame) + 1
-    number_of_frames_to_send = 1
-    # TODO: remove absolute paths like this and do it dynamically
-    base_path = "/root/data-ingester/"
-
+    # TODO: test config changes
     response_frames = []
-    for frame_to_send in range(frame, frame + number_of_frames_to_send):
-        frame_metadata = frames_metadata[str(frame_to_send)]
-        path = base_path + frame_metadata['path']
-        with open(path, 'rb') as frame_file:
-            response_frames.append(frame_file.read() + b"FrameSeperator")
+    frame_metadata = frames_metadata[frame]
+    base_path = os.path.dirname(__file__) + '/../../data-ingestion'
+    path = base_path + frame_metadata['path']
+    with open(path, 'rb') as frame_file:
+        response_frames.append(frame_file.read())
     
     response_bytes = b"".join(response_frames)
-    #print(len(response_bytes))
-
     response = Response(
         response_bytes,
         200,
         mimetype='image/jpeg',
         direct_passthrough=True,
     )
-
     response.headers.add('Accept-Ranges', 'bytes')
 
     return response
@@ -308,7 +298,7 @@ def audiosegmentfetch(timestamp, segment, session, sensor):
     
     print(segments_record)
     segments_metadata = json.loads(segments_record[7])
-    base_path = "/root/data-ingester/"
+    base_path = os.path.dirname(__file__) + '/../../data-ingestion'
     segment_metadata = {}
 
     if timestamp == -1:
@@ -330,43 +320,6 @@ def audiosegmentfetch(timestamp, segment, session, sensor):
         response_bytes,
         200,
         mimetype='audio/mpeg',
-        direct_passthrough=True,
-    )
-
-    response.headers.add('segment-number', segment)
-    response.headers.add('segment-time', timestamp)
-
-    return response
-
-
-    # TODO: avoid doing queries during every frame fetch by supplying client-side with the paths/metadata
-    frame = int(frame)
-    sql = "SELECT * FROM VideoFrames WHERE SessionId = %s AND SensorId = %s AND %s BETWEEN FirstFrameNumber AND LastFrameNumber;"
-    database_cursor.execute(sql, (session, sensor, frame))
-
-    frames_record = database_cursor.fetchone()
-    last_frame_number = int(frames_record[4])
-    frames_metadata = json.loads(frames_record[7])
-
-    #number_of_frames_to_send = 10 if frame + 10 <= last_frame_number else (last_frame_number - frame) + 1
-    number_of_frames_to_send = 1
-    # TODO: use global configuration to determine path
-    base_path = "/root/data-ingester/"
-
-    response_frames = []
-    for frame_to_send in range(frame, frame + number_of_frames_to_send):
-        frame_metadata = frames_metadata[str(frame_to_send)]
-        path = base_path + frame_metadata['path']
-        with open(path, 'rb') as frame_file:
-            response_frames.append(frame_file.read() + b"FrameSeperator")
-    
-    response_bytes = b"".join(response_frames)
-    #print(len(response_bytes))
-
-    response = Response(
-        response_bytes,
-        200,
-        mimetype='image/jpeg',
         direct_passthrough=True,
     )
 
