@@ -38,11 +38,11 @@ sense_hat_stream = SenseStream(Queue(), args=('http://192.99.151.151:5510',)) # 
 
 video_stream = VideoStream(Queue(), args=())
 
-#audio_collection_thread.start()
-#audio_streamer_thread.start()
-#audio_converter_thread.start()
+audio_collection_thread.start()
+audio_streamer_thread.start()
+audio_converter_thread.start()
 
-#sense_hat_stream.start()
+sense_hat_stream.start()
 
 video_stream.start()
 
