@@ -25,6 +25,7 @@ from app.views.login_view import LoginView
 from app.views.registration_view import RegistrationView
 from app.views.eventlog_view import EventlogView
 from app.views.session_view import SessionView
+from app.views.sense_view import SenseView
 
 # Controllers
 from app.controllers.login_controller import LoginController
@@ -32,6 +33,7 @@ from app.controllers.registration_controller import RegistrationController
 from app.controllers.session_controller import SessionController
 from app.controllers.livefeed_controller import LivefeedController
 from app.controllers.algorithm_controller import AlgorithmController
+from app.controllers.sense_controller import SenseController
 
 
 LOG = logging.getLogger(__name__)
@@ -91,89 +93,8 @@ def livestream_config():
 
 @app.route('/update_sense', methods=['GET', 'POST'])
 def update_sense():
-
-    # The IP Address of the Sense HAT
-    ip = request.form['ip']
-
-    # The stream number of the Sense HAT
-    stream_number = request.form['streamNumber']
-
-    # The scalar trigger settings for temperature, pressure, and humidity
-    triggerSettings_temperature = session.get('triggerSettings_temperature')
-    triggerSettings_pressure = session.get('triggerSettings_pressure')
-    triggerSettings_humidity = session.get('triggerSettings_humidity')
-
-    # The id of the logged in user
-    user_id = session.get('user_id')
-
-    # The initial measurements until set
-    roomTemperature = 0
-    airPressure = 0
-    airHumidity = 0
-
-    try:
-        # Instantiating an object that can execute SQL statements
-        database_cursor = mysql.connection.cursor()
-
-        sql = """
-            SELECT Temp, Press, Humid, Time 
-            FROM Sense 
-            WHERE IP = INET_ATON(%s) 
-            ORDER BY Time DESC;
-        """
-
-        # Get current Sense HAT data from DB
-        database_cursor.execute(sql, (ip,))
-        temp, press, humid, time = database_cursor.fetchone()
-
-        # Convert to JQueryable objects
-        roomTemperature = "{:.2f}".format(temp)
-        airPressure = "{:.2f}".format(press)
-        airHumidity = "{:.2f}".format(humid)
-
-        if (triggerSettings_temperature != '') and (float(roomTemperature) > float(triggerSettings_temperature)):
-            # Write temperature data to database
-            sql = """
-                INSERT INTO eventlog 
-                (user_id, alert_time, alert_type, alert_message) 
-                VALUES (%s, NOW(), %s, %s);
-            """
-            message = "Sense " + stream_number + " Temperature exceeded " + triggerSettings_temperature + " F"
-
-            database_cursor.execute(sql, (user_id, "Temperature", message))
-            mysql.connection.commit()
-
-        if (triggerSettings_pressure != '') and (float(airPressure) > float(triggerSettings_pressure)):
-            # Write pressure data to database
-            sql = """
-                INSERT INTO eventlog 
-                (user_id, alert_time, alert_type, alert_message) 
-                VALUES (%s, NOW(), %s, %s);
-            """
-            message = "Sense " + stream_number + " Pressure exceeded " + triggerSettings_pressure + " millibars"
-
-            database_cursor.execute(sql, (user_id, "Pressure", message))
-            mysql.connection.commit()
-
-        if (triggerSettings_humidity != '') and (float(airHumidity) > float(triggerSettings_humidity)):
-            # Write humidity data to database
-            sql = """
-                INSERT INTO eventlog 
-                (user_id, alert_time, alert_type, alert_message) 
-                VALUES (%s, NOW(), %s, %s);
-            """
-            message = "Sense " + stream_number + " Humidity exceeded " + triggerSettings_humidity + " %"
-            database_cursor.execute(sql, (user_id, "Humidity", message))
-            mysql.connection.commit()
-    
-    # Don't fail out of website on Sense HAT error
-    except Exception as e:
-        exc_type, exc_obj, tb = sys.exc_info()
-        lineno = tb.tb_lineno
-        print("Sense HAT " + stream_number + " broken:", e, lineno)
-        pass
-
-    return jsonify({'roomTemperature' : roomTemperature, 'airPressure': airPressure, 'airHumidity': airHumidity})
+    SenseController().monitor_sense_data()
+    return SenseView().get_sense_data()
 
 
 """route is used to collect trigger settings from the live stream page"""
