@@ -1,3 +1,8 @@
+/**
+ * @fileoverview The AudioPlayer class is a solution for playing independent mp3 files
+ * gaplessly in sequence
+ */
+
 class AudioPlayer {
     constructor(session_id, sensor_id) {
         this.sensor_id = sensor_id;
@@ -6,21 +11,10 @@ class AudioPlayer {
         this.mp3_degapper = new MP3Degapper();
 
         this.audio_element = document.getElementById(`audio-${this.sensor_id}`);
-        this.last_frame_number = this.audio_element.getAttribute('last--number');
         this.media_source = new MediaSource();
         var that = this;
         this.media_source.addEventListener('sourceopen', function() {
             that.source_buffer = that.media_source.addSourceBuffer('audio/mpeg');
-
-            // gets called when we're done updating the SourceBuffer (after appending a segment)
-            that.source_buffer.addEventListener('updateend', function() {
-                //console.log("entered updateend callback");
-                //current_segment_number = current_segment_number + 1;
-
-                //if (current_segment_number <= 7) {
-                //requestSegment(current_segment_number); 
-                //}
-            });
         });
 
         this.audio_element.src = URL.createObjectURL(this.media_source);
@@ -31,8 +25,8 @@ class AudioPlayer {
 
         // playback
         this.current_segment = 1;
-        // TODO: actually know what the last segment number is
-        this.last_segment_number = 999;
+        this.last_segment_number = this.audio_element.getAttribute('last-segment-number');
+
 
         // buffering
         this.fetching = false;
@@ -76,19 +70,12 @@ class AudioPlayer {
             .replace("SESSION", this.session_id)
             .replace("SENSOR", this.sensor_id);
 
-        //console.log("segment request url: " + segment_request_url);
-
         var that = this;
         fetch(segment_request_url).then(response => {
-            //that.frame_times[segment_number] = response.headers.get('frame-time')
             that.last_fetched_segment_number = response.headers.get('segment-number');
             that.last_fetched_segment_time = response.headers.get('segment-time');
             return response.arrayBuffer();
         }).then(function(buffer) {
-            //console.log(buffer);
-            //console.log(that.last_fetched_segment_number);
-            //console.log(that.last_fetched_segment_time);
-            //console.log(buffer);
             that.receive_frame(buffer, that.last_fetched_segment_number, that.last_fetched_segment_time);
             that.fetching = false;
         });
