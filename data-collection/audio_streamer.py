@@ -1,18 +1,9 @@
 import io
-import socket
-import struct
 import time
-import picamera
-import subprocess
-import itertools
 import threading
-import sys
 import os
 import os.path
 import datetime
-import pyaudio
-import wave
-import json
 import requests
 from queue import Queue
 
@@ -29,8 +20,10 @@ class AudioStreamer(threading.Thread):
         while True:
             time.sleep(0.03)
             val = self.queue.get()
-            if val is None:   # If you send `None`, the thread will exit.
+            # If `None` is sent, the thread will exit.
+            if val is None:
                 return
+            
             mp3_path = val['mp3']
             wav_path = val['wav']
             self.send_data(mp3_path)
@@ -48,10 +41,8 @@ class AudioStreamer(threading.Thread):
                         data = mp3_file_bytes,
                         headers = custom_headers
                     )
-                    print("Sent %s to data ingestion" % mp3_file_path)
                 except Exception as e:
-                    print(e)
-                    print("Could not establish connection with server %s" % self.server)
+                    pass
         else:
             raise Exception("Mp3 path did not exist in Audio Streamer")
     

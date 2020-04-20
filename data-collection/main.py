@@ -1,12 +1,3 @@
-# System imports
-import time
-import threading
-import picamera
-import sys
-import os
-import os.path
-import subprocess
-import requests
 import json
 from datetime import datetime
 from queue import Queue

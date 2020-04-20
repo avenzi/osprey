@@ -1,19 +1,9 @@
 import io
 import socket
-import struct
 import time
 import picamera
-import subprocess
-import itertools
 import threading
-import sys
-import os
-import os.path
 import datetime
-import pyaudio
-import wave
-import json
-import requests
 from queue import Queue
 
 import logging
@@ -22,7 +12,6 @@ from threading import Condition
 from http import server
 
 epoch = datetime.datetime.utcfromtimestamp(0)
-
 output = None
 
 class VideoStream(threading.Thread):

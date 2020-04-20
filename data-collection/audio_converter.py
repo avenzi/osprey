@@ -1,18 +1,8 @@
 import io
-import socket
-import struct
 import time
-import picamera
 import subprocess
-import itertools
 import threading
-import sys
-import os
-import os.path
-import datetime
-import pyaudio
 import wave
-import json
 from queue import Queue
 
 class AudioConverter(threading.Thread):
@@ -34,7 +24,6 @@ class AudioConverter(threading.Thread):
             audio_wav_file_path = self.write_to_file(queue_data)
             audio_mp3_file_path = self.convert_to_mp3(audio_wav_file_path, queue_data['segment_number'])
 
-            print("put in audio streamer thread queue")
             self.audio_streamer_thread.queue.put({'wav': audio_wav_file_path, 'mp3': audio_mp3_file_path})
     
     def write_to_file(self, data):
@@ -48,8 +37,6 @@ class AudioConverter(threading.Thread):
         wavefile.setframerate(44100)
         wavefile.writeframes(b''.join(frames))
         wavefile.close()
-        
-        print("Created audio segment: " + wav_file_path)
         
         return wav_file_path
 

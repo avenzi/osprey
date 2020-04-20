@@ -25,9 +25,7 @@ class AudioCollecter(threading.Thread):
         chans = 2
         samp_rate = 44100
         chunk = 4096
-        record_secs = 99999
         segment_duration = 3
-
 
         self.audio = pyaudio.PyAudio()
 
@@ -41,38 +39,39 @@ class AudioCollecter(threading.Thread):
                 device_name = self.audio.get_device_info_by_host_api_device_index(0, device_id).get('name')
                 if 'GoMic' in device_name:
                     audio_device_id = device_id
-                #print("Input Device id ", device_id, " - ", audio.get_device_info_by_host_api_device_index(0, device_id).get('name'))
+        
         if audio_device_id == -1:
+            # Do not collect audio if the proper audio device cannot be found
             return
-        #setup audio input stream
-        stream = self.audio.open(format = form_1,rate=samp_rate,channels=chans, input_device_index = audio_device_id, input=True, frames_per_buffer=chunk)
-        print("Samson GoMic device id %d" % audio_device_id)
-        print("Started Audio Recording")
+        
+        # Create the audio input stream
+        stream = self.audio.open(
+            format=form_1,
+            rate=samp_rate,
+            channels=chans,
+            input_device_index=audio_device_id,
+            input=True,
+            frames_per_buffer=chunk
+        )
         frames=[]
-
         start_time = time.time()
         current_time = start_time
         last_time = start_time
         segment_number = 0
-        for x in range(0,int((samp_rate/chunk)*record_secs)):
-            data=stream.read(chunk,exception_on_overflow = False)
+        for x in range(0, int((samp_rate/chunk)*44100)):
+            data = stream.read(chunk, exception_on_overflow=False)
 
-            print("read some audio data")
             current_time = time.time()
             if current_time > last_time + segment_duration:
                 last_time = current_time
                 segment_number = segment_number + 1
-                print("Recorded audio segment %d " % segment_number)
 
                 self.audio_converter_thread.queue.put({
                     'segment_number': segment_number,
                     'frames': frames.copy()
                 })
                 frames.clear()
-
             frames.append(data)
-
-        print("finished recording")
 
         stream.stop_stream()
         stream.close()

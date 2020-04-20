@@ -1,20 +1,9 @@
 from sense_hat import SenseHat
 
 import io
-import socket
-import struct
 import time
-import picamera
-import subprocess
-import itertools
 import threading
-import sys
-import os
-import os.path
 import datetime
-import pyaudio
-import wave
-import json
 import requests
 from queue import Queue
 
@@ -58,21 +47,17 @@ class SenseStream(threading.Thread):
             return False
 
     def stream(self):
-        print("sense: ")
-        print(self.sense)
-
         # Send data forever
         while True:
             # Wait 1 second between updates
             time.sleep(1)
-            
             
             try:
                 temp = self.sense.get_temperature()
                 press = self.sense.get_pressure()
                 humid = self.sense.get_humidity()
 
-                # convert temperature to F
+                # Convert temperature to F
                 temp = ((temp/5) * 9) + 32
 
                 # Create data object with temperature, pressure, and humidity data
@@ -81,8 +66,6 @@ class SenseStream(threading.Thread):
                 requests.post(self.server,
                     data = sense_data,
                 )
-                
-            
             except Exception as e:
                 print("Exception caught:", e)
             
