@@ -94,7 +94,7 @@ def livestream_config():
 @app.route('/update_sense', methods=['GET', 'POST'])
 def update_sense():
     SenseController().monitor_sense_data()
-    return SenseView().get_sense_data()
+    return SenseView().get_most_recent_sense_data()
 
 
 """route is used to collect trigger settings from the live stream page"""
@@ -117,29 +117,7 @@ def retrieve_eventlog(time, adjustment, mintime):
 """route is used to retrieve items from the event log"""
 @app.route('/retrieve_sense/<int:time>/<int:adjustment>/<int:session_id>/<int:sensor_id>', methods=['GET'])
 def retrieve_sense(time, adjustment, session_id, sensor_id):
-    # Instantiating an object that can execute SQL statements
-    database_cursor = mysql.connection.cursor()
-
-    # Return the Sense Hat record closest in time to the time provided
-    sql = """
-        SELECT Temp, Press, Humid
-        FROM Sense
-        WHERE SessionId = %s and SensorId = %s AND Time < %s
-        ORDER BY Time DESC
-        LIMIT 1;
-    """
-    dt = datetime.fromtimestamp(time / 1000).astimezone(pytz.timezone("America/Detroit")) + timedelta(hours=adjustment)
-    database_cursor.execute(sql, (session_id, sensor_id, dt))
-    result = database_cursor.fetchone()
-    
-    if result is None:
-        return jsonify({})
-    else:
-        return jsonify({
-            'temperature': result[0],
-            'pressure': result[1],
-            'humidity': result[2]
-        })
+    return SenseView().get_by_time(time, adjustment, session_id, sensor_id)
 
 
 @app.route('/videoframefetch/<frame>/<session>/<sensor>')
