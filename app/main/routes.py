@@ -112,31 +112,7 @@ def update_triggersettings():
 """route is used to retrieve items from the event log"""
 @app.route('/retrieve_eventlog/<int:time>/<int:adjustment>/<int:mintime>', methods=['GET'])
 def retrieve_eventlog(time, adjustment, mintime):
-    # Instantiating an object that can execute SQL statements
-    database_cursor = mysql.connection.cursor()
-
-    # The id of the logged in user
-    user_id = session.get('user_id')
-
-    #Return the latest 15 event log entries for this user
-    sql = """
-        SELECT alert_message, alert_time
-        FROM eventlog
-        WHERE user_id = %s AND alert_time < %s AND alert_time > %s
-        ORDER BY alert_time DESC
-        LIMIT 15;
-    """
-    dt = datetime.fromtimestamp(time / 1000)
-    dt = dt.astimezone(pytz.timezone("America/Detroit")) + timedelta(hours=adjustment)
-    dt_min = datetime.fromtimestamp(mintime / 1000)
-    dt_min = dt_min.astimezone(pytz.timezone("America/Detroit")) + timedelta(hours=adjustment)
-    database_cursor.execute(sql, (user_id, dt, dt_min))
-    results = database_cursor.fetchall()
-    alerts = []
-    for alert in results :
-        alerts.append("{} at {}".format(alert[0], alert[1]))
-    
-    return render_template('snippets/eventlog_snippet.html', messages = alerts)
+    return EventlogView().get_closest_items(time, adjustment, mintime)
 
 """route is used to retrieve items from the event log"""
 @app.route('/retrieve_sense/<int:time>/<int:adjustment>/<int:session_id>/<int:sensor_id>', methods=['GET'])
