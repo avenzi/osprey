@@ -68,7 +68,7 @@ import datahub
 while datahub.get_algorithm_status(__file__):
 
     # TESTING LIGHT INTENSITY FROM VIDEO FEED
-    intensity = datahub.get_pix_intensity(datahub.get_video_data("68.62.53.255"))
+    intensity = datahub.get_pix_intensity_percentage(datahub.get_video_data("68.62.53.255"))
     datahub.update_eventlog(__file__, "Intensity Alert", str(intensity))
 
     # TESTING SENSE DATA
