@@ -8,6 +8,9 @@ class LoginController(Controller):
     def handle_response(self):
         form = LoginForm()
 
+        self.database_cursor.execute('''CREATE TABLE IF NOT EXISTS user (id INTEGER UNSIGNED AUTO_INCREMENT PRIMARY KEY , username VARCHAR(60), hashed_pw TEXT)''')
+        self.database_connection.commit()
+
         self.database_cursor.execute("SELECT * FROM user where username = "+"'"+form.username.data+"'")
 
         result = self.database_cursor.fetchone()
