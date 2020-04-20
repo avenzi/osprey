@@ -50,9 +50,17 @@ class SessionView(View):
                 )
                 cameras.append(camera_view_data)
             elif sensor_type == 'Microphone':
+                sql = """SELECT LastSegmentNumber FROM AudioSegments WHERE FirstSegmentTimestamp = (SELECT MAX(FirstSegmentTimestamp) FROM AudioSegments WHERE SensorId = %s);"""
+                self.database_cursor.execute(sql, (session_sensor[0],))
+                result = self.database_cursor.fetchone()
+                last_segment_number = 0
+                if result:
+                    last_segment_number = result[0]
+                
                 mic_view_data = dict(
                     sensor_id = session_sensor[0],
                     sensor_type = sensor_type,
+                    last_segment_number = last_segment_number,
                     name = sensor_name
                 )
                 microphones.append(mic_view_data)

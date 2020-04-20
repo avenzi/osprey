@@ -62,7 +62,7 @@ for worker in workers:
 
 
 try:
-    time.sleep(160)
+    time.sleep(30)
     # Stop after 20 minutes
     # time.sleep(1200)
     session_handler.end_latest_session()

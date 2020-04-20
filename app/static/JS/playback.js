@@ -184,6 +184,7 @@ class AudioPlayer {
         this.mp3_degapper = new MP3Degapper();
 
         this.audio_element = document.getElementById(`audio-${this.sensor_id}`);
+        this.last_segment_number = this.audio_element.getAttribute('last-segment-number');
         this.media_source = new MediaSource();
         var that = this;
         this.media_source.addEventListener('sourceopen', function() {
@@ -208,8 +209,6 @@ class AudioPlayer {
 
         // playback
         this.current_segment = 1;
-        // TODO: actually know what the last segment number is
-        this.last_segment_number = 999;
 
         // buffering
         this.fetching = false;
@@ -223,9 +222,6 @@ class AudioPlayer {
         var that = this;
         window.setInterval(function() {
             var now = Date.now();
-            if (that.segment_to_fetch > 27) {
-                return;
-            }
 
             if (!that.fetching || (now - that.last_fetch_time > 1000)) {
                 that.last_fetch_time = now;

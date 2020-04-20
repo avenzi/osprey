@@ -34,6 +34,8 @@ from app.controllers.session_controller import SessionController
 from app.controllers.livefeed_controller import LivefeedController
 from app.controllers.algorithm_controller import AlgorithmController
 from app.controllers.sense_controller import SenseController
+from app.controllers.video_controller import VideoController
+from app.controllers.audio_controller import AudioController
 
 
 LOG = logging.getLogger(__name__)
@@ -122,85 +124,12 @@ def retrieve_sense(time, adjustment, session_id, sensor_id):
 
 @app.route('/videoframefetch/<frame>/<session>/<sensor>')
 def videoframefetch(frame, session, sensor):
-    frame = int(frame)
-    sql = "SELECT * FROM VideoFrames WHERE SessionId = %s AND SensorId = %s AND %s BETWEEN FirstFrameNumber AND LastFrameNumber;"
-    database_cursor = mysql.connection.cursor()
-    database_cursor.execute(sql, (session, sensor, frame))
-
-    frames_record = database_cursor.fetchone()
-    last_frame_number = int(frames_record[4])
-    frames_metadata = json.loads(frames_record[7])
-
-    # TODO: test config changes
-    response_frames = []
-    frame_metadata = frames_metadata[frame]
-    base_path = os.path.dirname(__file__) + '/../../data-ingestion'
-    path = base_path + frame_metadata['path']
-    with open(path, 'rb') as frame_file:
-        response_frames.append(frame_file.read())
-    
-    response_bytes = b"".join(response_frames)
-    response = Response(
-        response_bytes,
-        200,
-        mimetype='image/jpeg',
-        direct_passthrough=True,
-    )
-    response.headers.add('Accept-Ranges', 'bytes')
-
-    return response
+    return VideoController().serve_frame(int(frame), session, sensor)
 
 
 @app.route('/audiosegmentfetch/<timestamp>/<segment>/<session>/<sensor>')
 def audiosegmentfetch(timestamp, segment, session, sensor):
-    #print(timestamp)
-    #print(segment)
-    #print(session)
-    #print(sensor)
-    database_cursor = mysql.connection.cursor()
-
-    timestamp = int(timestamp)
-    segment = int(segment)
-
-    # fetch on segment number
-    segments_record = []
-    if timestamp == -1:
-        sql = "SELECT * FROM AudioSegments WHERE SessionId = %s AND SensorId = %s AND %s BETWEEN FirstSegmentNumber AND LastSegmentNumber;"
-        database_cursor.execute(sql, (session, sensor, segment))
-        segments_record = database_cursor.fetchone()
-    elif segment == -1:
-        pass
-    
-    print(segments_record)
-    segments_metadata = json.loads(segments_record[7])
-    base_path = os.path.dirname(__file__) + '/../../data-ingestion'
-    segment_metadata = {}
-
-    if timestamp == -1:
-        # set timestamp in here
-        segment_metadata = segments_metadata[str(segment)]
-        timestamp = int(segment_metadata['time'])
-    elif segment == -1:
-        # set segment in here
-        pass
-    
-    path = base_path + segment_metadata['path']
-
-    response_bytes = bytes()
-    with open(path, 'rb') as segment_file:
-        response_bytes = segment_file.read()
-    
-    response = Response(
-        response_bytes,
-        200,
-        mimetype='audio/mpeg',
-        direct_passthrough=True,
-    )
-
-    response.headers.add('segment-number', segment)
-    response.headers.add('segment-time', timestamp)
-
-    return response
+    return AudioController().serve_segment(int(timestamp), int(segment), session, sensor)
 
 
 def get_range(request):
@@ -272,7 +201,6 @@ def download_boilerplate():
     return AlgorithmController().download_boilerplate()
 
 
-# TODO: move logic to AlgorithmController
 """route is used to handle uploaded algorithms"""
 @app.route('/algorithm_handler', methods=['POST'])
 def algorithm_handler():

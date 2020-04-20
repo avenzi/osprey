@@ -30,8 +30,11 @@ class SenseListener(Listener, object):
         sql = """SELECT * FROM SessionSensor WHERE SessionId = %s AND SensorType = 'SenseHat'"""
         self.cursor.execute(sql, (session_id))
         result = self.cursor.fetchone()
-        sensor_id = result['id']
 
+        if not result:
+            return
+
+        sensor_id = result['id']
         # Write data to database
         sql = "INSERT INTO `Sense` (`Time`, `IP`, `Temp`, `Press`, `Humid`, `SessionId`, `SensorId`) VALUES (NOW(3), INET_ATON(%s), %s, %s, %s, %s, %s)"
         self.cursor.execute(sql, (ip, temp, press, humid, session_id, sensor_id))
