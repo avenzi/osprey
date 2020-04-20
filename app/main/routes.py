@@ -34,6 +34,7 @@ from app.controllers.session_controller import SessionController
 from app.controllers.livefeed_controller import LivefeedController
 from app.controllers.algorithm_controller import AlgorithmController
 from app.controllers.sense_controller import SenseController
+from app.controllers.triggersettings_controller import TriggerSettingsController
 from app.controllers.video_controller import VideoController
 from app.controllers.audio_controller import AudioController
 
@@ -102,19 +103,14 @@ def update_sense():
 """route is used to collect trigger settings from the live stream page"""
 @app.route('/update_triggersettings', methods=['POST'])
 def update_triggersettings():
-    # Updating trigger settings in the session
-    session['triggerSettings_temperature'] = request.form['temperature_input']
-    session['triggerSettings_pressure'] = request.form['pressure_input']
-    session['triggerSettings_humidity'] = request.form['humidity_input']
-
-    return jsonify({'result' : 'success', 'temperature_input' : session.get('triggerSettings_temperature'), 
-        'pressure_input' : session.get('triggerSettings_pressure'), 'humidity_input' : session.get('triggerSettings_humidity')})
+    return TriggerSettingsController().update_triggersettings()
 
 
 """route is used to retrieve items from the event log"""
 @app.route('/retrieve_eventlog/<int:time>/<int:adjustment>/<int:mintime>', methods=['GET'])
 def retrieve_eventlog(time, adjustment, mintime):
     return EventlogView().get_closest_items(time, adjustment, mintime)
+
 
 """route is used to retrieve items from the event log"""
 @app.route('/retrieve_sense/<int:time>/<int:adjustment>/<int:session_id>/<int:sensor_id>', methods=['GET'])

@@ -1,14 +1,14 @@
-from app.controllers.controller import Controller
+from flask import request, session
 
-from flask import jsonify, request, session
+from app.controllers.controller import Controller
 
 class SenseController(Controller):
     def monitor_sense_data(self):
         # The IP Address of the Sense HAT
         ip = request.form['ip']
 
-        # The stream number of the Sense HAT
-        stream_number = request.form['streamNumber']
+        # The name of the Sense HAT
+        name = request.form['name'].replace("%20", " ")
 
         # The scalar trigger settings for temperature, pressure, and humidity
         triggerSettings_temperature = session.get('triggerSettings_temperature')
@@ -47,7 +47,7 @@ class SenseController(Controller):
                     (user_id, alert_time, alert_type, alert_message) 
                     VALUES (%s, NOW(), %s, %s);
                 """
-                message = "Sense " + stream_number + " Temperature exceeded " + triggerSettings_temperature + " F"
+                message = name + " Temperature exceeded " + triggerSettings_temperature + " F"
 
                 self.database_cursor.execute(sql, (user_id, "Temperature", message))
                 self.database_connection.commit()
@@ -59,7 +59,7 @@ class SenseController(Controller):
                     (user_id, alert_time, alert_type, alert_message) 
                     VALUES (%s, NOW(), %s, %s);
                 """
-                message = "Sense " + stream_number + " Pressure exceeded " + triggerSettings_pressure + " millibars"
+                message = name + " Pressure exceeded " + triggerSettings_pressure + " millibars"
 
                 self.database_cursor.execute(sql, (user_id, "Pressure", message))
                 self.database_connection.commit()
@@ -71,8 +71,9 @@ class SenseController(Controller):
                     (user_id, alert_time, alert_type, alert_message) 
                     VALUES (%s, NOW(), %s, %s);
                 """
-                message = "Sense " + stream_number + " Humidity exceeded " + triggerSettings_humidity + " %"
+                message = name + " Humidity exceeded " + triggerSettings_humidity + " %"
                 self.database_cursor.execute(sql, (user_id, "Humidity", message))
                 self.database_connection.commit()
+
         except Exception as e:
             pass

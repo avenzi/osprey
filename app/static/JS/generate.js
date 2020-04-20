@@ -497,15 +497,16 @@ var senseIntervals = new Map();
  * Handles updating of Sense HAT streams. Shows Sense HAT stream whose button was clicked
  * @param {number} k The number of the Sense HAT whose button was clicked
  * @param {string} ip The IP address of the Sense HAT whose button was clicked
+ * @param {string} name The name of the Sense HAT whose button was clicked
  * @return {undefined}
  */
-function generateSenseHatHandler(k, ip) {    
+function generateSenseHatHandler(k, ip, name) {    
     return function() {
         if ($(`#senseSwitch${k}`).is(":checked")){
             var intervalID = setInterval(function() {
 
                 // Querying the database for Sense HAT data associated with the IP address
-                $.post(`update_sense`, {ip: ip, streamNumber: k}, function(data){
+                $.post(`update_sense`, {ip : ip, name : name}, function(data){
                     $(`#roomTemperature${k}`).text(data.roomTemperature);
                     $(`#airPressure${k}`).text(data.airPressure);
                     $(`#airHumidity${k}`).text(data.airHumidity);
@@ -568,6 +569,6 @@ function createHandlers(numCams, senData) {
 
     // Generate onclick handlers for each Sense HAT button
     for (var i = 1; i <= senData.get("numSense"); i++) {
-        $(`#senseSwitch${i}`).on("click", generateSenseHatHandler(i, senData.get(`sen-ip-input-${i}`)));
+        $(`#senseSwitch${i}`).on("click", generateSenseHatHandler(i, senData.get(`sen-ip-input-${i}`), senData.get(`sen-name-input-${i}`)));
     }
 }
