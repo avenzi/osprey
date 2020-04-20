@@ -14,7 +14,7 @@ from datetime import datetime
 # INSTALL ALL REQUIRED DEPENDENCIES: sudo apt-get install python3-matplotlib python3-numpy python3-pil python3-scipy python3-tk
 # INSTALL SUITABLE COMPILERS: sudo apt-get install build-essential cython3
 # PIP INSTALLATION: pip3 install scikit-image
-from skimage import io
+from skimage import io, img_as_float
 import numpy as np
 
 # Set up database connection
@@ -162,7 +162,43 @@ def get_video_data(ip):
     metadata = cursor.fetchone()
     return metadata
 
-def get_pix_intensity(metadata):
+def get_pix_intensity_percentage(metadata):
+    """
+
+    Args:
+        metadata (dict): ...
+
+    Returns:
+        ...: ...
+    """
+
+    first_frame_number = metadata['FirstFrameNumber']               
+    last_frame_number = metadata['LastFrameNumber']    
+    
+    # Contains "time", "frame_number", and "path" for frames in a segment
+    frames_metadata = metadata['FramesMetadata']         
+
+    # Converting frames_metadata to JSON format    
+    json_frames_metadata = json.loads(frames_metadata)
+
+    # Contains the pixel intensities for frames in a segment
+    intensities = []                                                
+
+    for i in range (first_frame_number, last_frame_number + 1):
+        path = json_frames_metadata[str(i)]["path"]    
+        full_path = "/root/data-ingester/" + path
+
+        # Get mean of each frame in a segment, and add it to the intensities list
+        image = io.imread(full_path)
+        image = img_as_float(image)
+        mean =  np.mean(image)
+        intensities.append(mean)
+
+    # Return the mean of the means of each frame in a segment
+    return str(round(np.mean(intensities) * 100, 2)) + ' %'
+
+
+def get_pix_intensity_value(metadata):
     """
 
     Args:
@@ -194,4 +230,4 @@ def get_pix_intensity(metadata):
         intensities.append(mean)
 
     # Return the mean of the means of each frame in a segment
-    return np.mean(intensities)
+    return str(round(np.mean(intensities), 2))
