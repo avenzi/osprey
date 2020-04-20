@@ -389,8 +389,9 @@ $(document).ready(function() {
                 $("#senRow").append(
                     `<div class="col-6 text-center">
                         <div class="custom-control custom-switch d-inline">
+                            <input type="checkbox" class="custom-control-input" id="senseSwitch${i}">
                             <label class="custom-control-label" for="senseSwitch${i}">
-                                <input type="checkbox" class="custom-control-input" id="senseSwitch${i}">${decodeURI(name)}
+                                ${decodeURI(name)}
                             </label>
                         </div>
                     </div>`
