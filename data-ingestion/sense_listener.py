@@ -31,7 +31,7 @@ class SenseListener(Listener, object):
         self.cursor.execute(sql, (session_id))
         result = self.cursor.fetchone()
 
-        if not result:
+        if result is None:
             return
 
         sensor_id = result['id']
