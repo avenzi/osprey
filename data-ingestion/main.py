@@ -3,6 +3,7 @@ import time
 import socketserver
 import http.server
 from queue import Queue
+from utils import Utils
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import pymysql.cursors
 
@@ -16,14 +17,10 @@ from session_monitor import SessionMonitor
 
 # Create the SQL tables to store data if they don't already exist
 database = Database()
-# database.drop_all_tables()
-# database.drop_table("SessionSensor")
 database.ensure_schema()
 
 session_handler = SessionMonitor()
 session = session_handler.block_until_new_session()
-print("current_session:")
-print(session)
 
 db_connection, cursor = Database().get_connection()
 sql = """SELECT id, INET_NTOA(IP), SessionId, SensorType FROM SessionSensor WHERE SessionId = %s;"""
@@ -59,13 +56,8 @@ for worker in workers:
     worker.start()
 
 
-
-
 try:
-    time.sleep(9999999)
-    # Stop after 20 minutes
-    # time.sleep(1200)
-    session_handler.end_latest_session()
+    Utils().sleep()
 except KeyboardInterrupt:
     session_handler.end_latest_session()
 
