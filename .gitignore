@@ -24,3 +24,4 @@ app/static/uploads/*
 __pycache__
 *.mp3
 *.wav
+*.jpg
