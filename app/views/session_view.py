@@ -86,7 +86,7 @@ class SessionView(View):
         print("Sensor selections")
         print(sensor_selections)
 
-        return self.render('archives.html',
+        return self.render('session.html',
             session_id = session_id,
             session_sensors_serialized = session_sensors_serialized,
             session_start_time = session_start_time,
