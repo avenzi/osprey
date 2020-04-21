@@ -23,7 +23,7 @@ class MP3Degapper {
 
         var frontPadding = 0, endPadding = 0, realSamples = 0;
 
-        var iTunesDataIndex = byteStr.indexOf('iTunSMPB');
+        var iTunesDataIndex = byteStr.indexOf("iTunSMPB");
         if (iTunesDataIndex != -1) {
             var frontPaddingIndex = iTunesDataIndex + 34;
             frontPadding = parseInt(byteStr.substr(frontPaddingIndex, 8), 16);
@@ -36,8 +36,8 @@ class MP3Degapper {
         }
 
 
-        var xingDataIndex = byteStr.indexOf('Xing');
-        if (xingDataIndex == -1) xingDataIndex = byteStr.indexOf('Info');
+        var xingDataIndex = byteStr.indexOf("Xing");
+        if (xingDataIndex == -1) xingDataIndex = byteStr.indexOf("Info");
         if (xingDataIndex != -1) {
             // Parse the Xing byte
             var frameCountIndex = xingDataIndex + 8;
@@ -46,8 +46,8 @@ class MP3Degapper {
             // For Layer3 Version 1 and Layer2 there are 1152 samples per frame.
             var paddedSamples = frameCount * 1152;
 
-            xingDataIndex = byteStr.indexOf('LAME');
-            if (xingDataIndex == -1) xingDataIndex = byteStr.indexOf('Lavf');
+            xingDataIndex = byteStr.indexOf("LAME");
+            if (xingDataIndex == -1) xingDataIndex = byteStr.indexOf("Lavf");
             if (xingDataIndex != -1) {
                 // See http://gabriel.mp3-tech.org/mp3infotag.html#delays for details of how this information is encoded and parsed.
                 var gaplessDataIndex = xingDataIndex + 21;

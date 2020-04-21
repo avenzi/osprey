@@ -45,33 +45,33 @@ global loginStatus
 loginStatus = True # Avoid login for DECS -- should be false
 
 
-@app.route('/', methods = ['GET','POST'])
-@app.route('/login', methods=['GET', 'POST'])
+@app.route("/", methods = ["GET","POST"])
+@app.route("/login", methods=["GET", "POST"])
 def login():
-    if request.method == 'POST' and LoginForm().validate_on_submit():
+    if request.method == "POST" and LoginForm().validate_on_submit():
         return LoginController().handle_response()
     else:
         return LoginView().get_rendered_template()
 
-@app.route('/home', methods=['GET'])
+@app.route("/home", methods=["GET"])
 def home():
     return HomeView().get_rendered_template()
 
-@app.route('/registration', methods=['GET', 'POST'])
+@app.route("/registration", methods=["GET", "POST"])
 def registration():
-    if request.method == 'POST' and RegistrationForm().validate_on_submit():
+    if request.method == "POST" and RegistrationForm().validate_on_submit():
         return RegistrationController().handle_response()
     else:
         return RegistrationView().get_rendered_template()
 
 
-@app.route('/livefeed', methods=['GET', 'POST'])
+@app.route("/livefeed", methods=["GET", "POST"])
 def livefeed():
-    if session.get('username') == True:
-        return redirect(url_for('login'))
+    if session.get("username") == True:
+        return redirect(url_for("login"))
 
     if loginStatus != True:
-        return redirect(url_for('login'))
+        return redirect(url_for("login"))
 
     return LivefeedView().get_rendered_template()
 
@@ -79,70 +79,70 @@ def livefeed():
 def end_session(session_id):
     return SessionController().end_session(session_id)
 
-@app.route('/delete_session/<int:session_id>', methods=['POST'])
+@app.route("/delete_session/<int:session_id>", methods=["POST"])
 def delete_session(session_id):
     return SessionController().delete_session(session_id)
 
-@app.route('/session/<int:session_id>')
+@app.route("/session/<int:session_id>")
 def archived_session(session_id):
     return SessionView().serve_session(session_id)
 
 
-@app.route('/livestream_config', methods=['GET', 'POST'])
+@app.route("/livestream_config", methods=["GET", "POST"])
 def livestream_config():
     return LivefeedController().store_configuration(request.form)
 
 
-@app.route('/update_sense', methods=['GET', 'POST'])
+@app.route("/update_sense", methods=["GET", "POST"])
 def update_sense():
     SenseController().monitor_sense_data()
     return SenseView().get_most_recent_sense_data()
 
 
 """route is used to collect trigger settings from the live stream page"""
-@app.route('/update_triggersettings', methods=['POST'])
+@app.route("/update_triggersettings", methods=["POST"])
 def update_triggersettings():
     return TriggerSettingsController().update_triggersettings()
 
 
 """route is used to retrieve items from the event log"""
-@app.route('/retrieve_eventlog/<int:time>/<int:adjustment>/<int:mintime>', methods=['GET'])
+@app.route("/retrieve_eventlog/<int:time>/<int:adjustment>/<int:mintime>", methods=["GET"])
 def retrieve_eventlog(time, adjustment, mintime):
     return EventlogView().get_closest_items(time, adjustment, mintime)
 
 
 """route is used to retrieve items from the event log"""
-@app.route('/retrieve_sense/<int:time>/<int:adjustment>/<int:session_id>/<int:sensor_id>', methods=['GET'])
+@app.route("/retrieve_sense/<int:time>/<int:adjustment>/<int:session_id>/<int:sensor_id>", methods=["GET"])
 def retrieve_sense(time, adjustment, session_id, sensor_id):
     return SenseView().get_by_time(time, adjustment, session_id, sensor_id)
 
 
-@app.route('/videoframefetch/<frame>/<session>/<sensor>')
+@app.route("/videoframefetch/<frame>/<session>/<sensor>")
 def videoframefetch(frame, session, sensor):
     return VideoController().serve_frame(int(frame), session, sensor)
 
 
-@app.route('/audiosegmentfetch/<timestamp>/<segment>/<session>/<sensor>')
+@app.route("/audiosegmentfetch/<timestamp>/<segment>/<session>/<sensor>")
 def audiosegmentfetch(timestamp, segment, session, sensor):
     return AudioController().serve_segment(int(timestamp), int(segment), session, sensor)
 
 
 """route is used to upload algorithms"""
-@app.route("/algorithm_upload", methods=['GET', 'POST'])
+@app.route("/algorithm_upload", methods=["GET", "POST"])
 def algorithm_upload():
-    if request.method == 'POST':
+    if request.method == "POST":
         return AlgorithmController().handle_upload()
-    elif request.method == 'GET':
+    elif request.method == "GET":
         return AlgorithmView().get_uploads_snippet()
 
 
 """route is used for downloading boilerplate code"""
-@app.route('/download_boilerplate')
+@app.route("/download_boilerplate")
 def download_boilerplate():
     return AlgorithmController().download_boilerplate()
 
 
 """route is used to handle uploaded algorithms"""
-@app.route('/algorithm_handler', methods=['POST'])
+@app.route("/algorithm_handler", methods=["POST"])
 def algorithm_handler():
     return AlgorithmController().handle_algorithm()

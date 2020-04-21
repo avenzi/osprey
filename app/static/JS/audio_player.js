@@ -13,9 +13,9 @@ class AudioPlayer {
         this.audio_element = document.getElementById(`audio-${this.sensor_id}`);
         this.media_source = new MediaSource();
         var that = this;
-        this.media_source.addEventListener('sourceopen', function() {
+        this.media_source.addEventListener("sourceopen", function() {
             // Set the MediaSource's source buffer upon being opened
-            that.source_buffer = that.media_source.addSourceBuffer('audio/mpeg');
+            that.source_buffer = that.media_source.addSourceBuffer("audio/mpeg");
         });
         this.audio_element.src = URL.createObjectURL(this.media_source);
 
@@ -23,7 +23,7 @@ class AudioPlayer {
         this.paused = false;
         this.playing = false;
         this.current_segment = 1;
-        this.last_segment_number = this.audio_element.getAttribute('last-segment-number');
+        this.last_segment_number = this.audio_element.getAttribute("last-segment-number");
 
         // Buffering control variables
         this.fetching = false;
@@ -71,8 +71,8 @@ class AudioPlayer {
 
         // Fetch the audio segment
         fetch(segment_request_url).then(response => {
-            that.last_fetched_segment_number = response.headers.get('segment-number');
-            that.last_fetched_segment_time = response.headers.get('segment-time');
+            that.last_fetched_segment_number = response.headers.get("segment-number");
+            that.last_fetched_segment_time = response.headers.get("segment-time");
             return response.arrayBuffer();
         }).then(function(buffer) {
             that.receive_frame(buffer, that.last_fetched_segment_number, that.last_fetched_segment_time);

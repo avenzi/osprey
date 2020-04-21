@@ -19,7 +19,7 @@ class Program(threading.Thread):
 
     def run(self):
         # Creating a child process for a selected python file
-        process = subprocess.Popen(['python3', os.path.join(app.config['UPLOADS_FOLDER'], self.filename)])
+        process = subprocess.Popen(["python3", os.path.join(app.config["UPLOADS_FOLDER"], self.filename)])
 
         while True:
             time.sleep(0.075)
@@ -34,7 +34,7 @@ class Program(threading.Thread):
                         WHERE UserId = %s AND Path = %s;
                     """
                     database_cursor = mysql.connection.cursor()
-                    database_cursor.execute(sql, (self.user_id, self.filename.split('.')[0]))
+                    database_cursor.execute(sql, (self.user_id, self.filename.split(".")[0]))
                     mysql.connection.commit()
 
                 sys.exit()
