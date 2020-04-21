@@ -5,9 +5,18 @@ import json
 import os.path
 
 class AudioController(Controller):
+    ###############################################
+    # serve_segment  : Prepares a Flask Response containing the bytes of an audio segment
+    # Input         : timestamp int - timestamp of the segment
+    # Input         : segment int - frame number of the segment
+    # Input         : session int - the session id that the segment was recorded in
+    # Input         : sensor int - the sensor id of the sensor that produced the segment
+    # Outputs       : <response Flask> - a Flask response containing the bytes of the segment
+    ###############################################
     def serve_segment(self, timestamp, segment, session, sensor):
-        segments_record = []
-
+        #------------------------------------------
+        # Retrieve the metadata for the segment from the database
+        #------------------------------------------
         sql = "SELECT * FROM AudioSegments WHERE SessionId = %s AND SensorId = %s AND %s BETWEEN FirstSegmentNumber AND LastSegmentNumber;"
         self.database_cursor.execute(sql, (session, sensor, segment))
         segments_record = self.database_cursor.fetchone()
@@ -32,7 +41,6 @@ class AudioController(Controller):
             mimetype='audio/mpeg',
             direct_passthrough=True,
         )
-
         response.headers.add('segment-number', segment)
         response.headers.add('segment-time', timestamp)
 

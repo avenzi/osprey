@@ -6,6 +6,7 @@ import os.path
 
 class VideoController(Controller):
     def serve_frame(self, frame, session, sensor):
+        # Retrieve the video frame metadata from the database
         sql = "SELECT * FROM VideoFrames WHERE SessionId = %s AND SensorId = %s AND %s BETWEEN FirstFrameNumber AND LastFrameNumber;"
         self.database_cursor.execute(sql, (session, sensor, frame))
 
@@ -21,6 +22,7 @@ class VideoController(Controller):
             response_frames.append(frame_file.read())
         
         response_bytes = b"".join(response_frames)
+        # Generate the Flask response with the frame bytes
         response = Response(
             response_bytes,
             200,

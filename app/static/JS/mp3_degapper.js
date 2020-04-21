@@ -1,10 +1,14 @@
+/**
+ * @fileoverview This file contains logic to "degap" an MP3 file, which
+ * removes the padding from the audio data.
+ */
+
 class MP3Degapper {
     SECONDS_PER_SAMPLE = 1 / 44100;
 
-    // Since most MP3 encoders store the gapless metadata in binary, we'll need a
-    // method for turning bytes into integers.  Note: This doesn't work for values
-    // larger than 2^30 since we'll overflow the signed integer type when shifting.
-   read_int(buffer) {
+    /* Since most MP3 encoders store the gapless metadata in binary, we require a
+    method for turning bytes into integers. */
+    read_int(buffer) {
         var result = buffer.charCodeAt(0);
         for (var i = 1; i < buffer.length; ++i) {
             result <<= 8;
@@ -12,7 +16,7 @@ class MP3Degapper {
         }
         return result;
     }
-
+    
     degap_buffer(arrayBuffer) {
         // Gapless data is generally within the first 512 bytes, so limit parsing.
         var byteStr = new TextDecoder().decode(arrayBuffer.slice(0, 512));
@@ -35,7 +39,7 @@ class MP3Degapper {
         var xingDataIndex = byteStr.indexOf('Xing');
         if (xingDataIndex == -1) xingDataIndex = byteStr.indexOf('Info');
         if (xingDataIndex != -1) {
-            // parsing the Xing
+            // Parse the Xing byte
             var frameCountIndex = xingDataIndex + 8;
             var frameCount = this.read_int(byteStr.substr(frameCountIndex, 4));
 
@@ -45,14 +49,13 @@ class MP3Degapper {
             xingDataIndex = byteStr.indexOf('LAME');
             if (xingDataIndex == -1) xingDataIndex = byteStr.indexOf('Lavf');
             if (xingDataIndex != -1) {
-            // See http://gabriel.mp3-tech.org/mp3infotag.html#delays for details of
-            // how this information is encoded and parsed.
-            var gaplessDataIndex = xingDataIndex + 21;
-            var gaplessBits = this.read_int(byteStr.substr(gaplessDataIndex, 3));
+                // See http://gabriel.mp3-tech.org/mp3infotag.html#delays for details of how this information is encoded and parsed.
+                var gaplessDataIndex = xingDataIndex + 21;
+                var gaplessBits = this.read_int(byteStr.substr(gaplessDataIndex, 3));
 
-            // Upper 12 bits are the front padding, lower are the end padding.
-            frontPadding = gaplessBits >> 12;
-            endPadding = gaplessBits & 0xFFF;
+                // Upper 12 bits are the front padding, lower are the end padding.
+                frontPadding = gaplessBits >> 12;
+                endPadding = gaplessBits & 0xFFF;
             }
 
             realSamples = paddedSamples - (frontPadding + endPadding);

@@ -1,6 +1,6 @@
 /**
- * @fileoverview The AudioPlayer class is a solution for playing independent mp3 files
- * gaplessly in sequence
+ * @fileoverview This file implements an MP3 audio player class that plays independent mp3 files
+ * gaplessly in sequence.
  */
 
 class AudioPlayer {
@@ -14,21 +14,18 @@ class AudioPlayer {
         this.media_source = new MediaSource();
         var that = this;
         this.media_source.addEventListener('sourceopen', function() {
+            // Set the MediaSource's source buffer upon being opened
             that.source_buffer = that.media_source.addSourceBuffer('audio/mpeg');
         });
-
         this.audio_element.src = URL.createObjectURL(this.media_source);
 
-        // controls
+        // Playback control variables
         this.paused = false;
         this.playing = false;
-
-        // playback
         this.current_segment = 1;
         this.last_segment_number = this.audio_element.getAttribute('last-segment-number');
 
-
-        // buffering
+        // Buffering control variables
         this.fetching = false;
         this.segment_to_fetch = 1;
         this.last_fetch_time = Date.now() - 100;
@@ -52,7 +49,7 @@ class AudioPlayer {
     }
 
     request_segment(time, segment_number) {
-        // check if we've retrieved the last frame
+        // Check if we've retrieved the last frame
         if (segment_number > this.last_segment_number) {
             return;
         }
@@ -71,6 +68,8 @@ class AudioPlayer {
             .replace("SENSOR", this.sensor_id);
 
         var that = this;
+
+        // Fetch the audio segment
         fetch(segment_request_url).then(response => {
             that.last_fetched_segment_number = response.headers.get('segment-number');
             that.last_fetched_segment_time = response.headers.get('segment-time');
@@ -98,11 +97,7 @@ class AudioPlayer {
     receive_frame(buffer, segment_number, segment_time) {
         var index = segment_number - 1;
 
-        // Buffer conversion to gapless mp3:
-        //this.source_buffer.mode = 'sequence';
-        // Parsing gapless metadata is unfortunately non trivial and a bit messy, so
-        // we'll glaze over it here; see the appendix for details.
-        // ParseGaplessData() will return a dictionary with two elements:
+        // degap_buffer will return a dictionary with two elements:
         //
         //    audioDuration: Duration in seconds of all non-padding audio.
         //    frontPaddingDuration: Duration in seconds of the front padding.
@@ -136,7 +131,6 @@ class AudioPlayer {
         // appendBuffer() will now use the timestamp offset and append window settings
         // to filter and timestamp the data we're appending.
         this.source_buffer.appendBuffer(buffer);
-
     }
 
 

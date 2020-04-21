@@ -1,3 +1,8 @@
+/**
+ * @fileoverview This file implements a MJPG video player and performs
+ * fetching, buffering, and playback control.
+ */
+
 class MotionJPGVideoPlayer {
     constructor(session_id, sensor_id) {
         this.session_id = session_id;
@@ -23,14 +28,16 @@ class MotionJPGVideoPlayer {
         this._buffer_interval();
     }
 
-    // should only be called once
+    // Decides when to play a new frame
     _start_play_interval() {
         var that = this;
         window.setInterval(function() {
+            // Check playback controls variables
             if (that.paused === true || that.playing === false) {
                 return;
             }
 
+            // Avoid playing past the last frame
             if (that.current_frame > that.last_frame_number) {
                 if (!that.paused) {
                     that.pause();
@@ -41,6 +48,7 @@ class MotionJPGVideoPlayer {
             var current_time = Date.now();
             var ms_passed = current_time - that.last_frame_time;
             
+            // Determine how often to play a new frame from the FPS
             if (ms_passed >= that.ms_play_interval) {
                 if (that.buffered_images[that.current_frame] != null) {
                     that.last_frame_time = current_time;
@@ -53,6 +61,7 @@ class MotionJPGVideoPlayer {
         }, 1);
     }
 
+    // Requests video frames from the server
     _buffer_interval() {
         var that = this;
         window.setInterval(function() {
@@ -68,6 +77,7 @@ class MotionJPGVideoPlayer {
     }
 
     display_frame(frame_number) {
+        // Replace the conetnts of the image with the new base64 JPG bytes
         this.img.src = "data:image/jpg;base64," + this.buffered_images[frame_number];
     }
 
@@ -76,12 +86,12 @@ class MotionJPGVideoPlayer {
     }
 
     request_frame(frame_number) {
-        // check if we've retrieved the last frame
+        // Check if the last frame has been retrieved
         if (frame_number > this.last_frame_number) {
             return;
         }
 
-        // check to make sure the frame isn't already stored
+        // Check to make sure the frame is not already stored
         if (this.buffered_images[frame_number] != null) {
             this.fetching = false;
             return;
@@ -93,6 +103,7 @@ class MotionJPGVideoPlayer {
             .replace("SENSOR", this.sensor_id);
 
         var that = this;
+        // Fetch the frame
         fetch(frame_request_url).then(response => {
             that.frame_times[frame_number] = response.headers.get('frame-time')
             return response.arrayBuffer();
@@ -112,32 +123,36 @@ class MotionJPGVideoPlayer {
             }
             return window.btoa( binary );
         }
+        // Convert the raw jpg bytes to base64
         var base64 = jpg_to_base64(buffer);
 
         this.buffered_images[frame_number] = base64;
-
         if (this.immediately_play_next_frame && this.hold_frame == frame_number) {
             this.immediately_play_next_frame = false;
             this.display_frame(this.hold_frame);
         }
     }
 
+    // Resume playback of the video
     play() {
         this.playing = true;
         this.paused = false;
         this.last_frame_time = Date.now() + (1000 / this.fps) + 5;
     }
 
+    // Pause the playback of the video
     pause() {
         this.paused = true;
         this.playing = false;
     }
 
-    scrub(ratio) {
-        var frame_number = Math.floor(this.last_frame_number * ratio);
+    // Navigating to a certain part of the video (scrubbing)
+    scrub(progress) {
+        var frame_number = Math.floor(this.last_frame_number * progress);
         if (frame_number == 0) frame_number = 1;
         if (frame_number > this.last_frame_number) frame_number = this.last_frame_number;
 
+        // Pause the video when a user scrubs
         this.pause();
         this.current_frame = frame_number;
         this.set_next_frame_to_fetch(frame_number);
@@ -145,6 +160,7 @@ class MotionJPGVideoPlayer {
         if (this.buffered_images[frame_number] != null) {
             this.display_frame(frame_number);
         } else {
+            // Immediately show the next frame after scrubbing
             this.immediately_play_next_frame = true;
             this.hold_frame = frame_number;
         }

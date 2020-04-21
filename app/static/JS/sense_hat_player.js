@@ -1,3 +1,7 @@
+/**
+ * @fileoverview This file implements a Sense Hat data player.
+ */
+
 class SenseHatPlayer {
     constructor(session_id, sensor_id) {
         this.sensor_id = sensor_id;
@@ -14,6 +18,7 @@ class SenseHatPlayer {
         this._buffer_interval();
     }
 
+    /* Coordinates fetching of Sense Hat data according to where the playback position is */
     _buffer_interval() {
         var that = this;
         window.setInterval(function() {
@@ -23,9 +28,10 @@ class SenseHatPlayer {
                 that.fetching = true;
                 that.fetch(current_playback_time);
             }
-        }, 400);
+        }, 250);
     }
 
+    /* Fetches Sense Hat data for a specific time from the server */
     fetch(time) {
         var that = this;
 
@@ -33,6 +39,7 @@ class SenseHatPlayer {
             if (data['temperature'] !== undefined) {
                 that.receive_data(data);
             } else {
+                // If we don't receive any data then show the placeholder values
                 that.receive_data({
                     'temperature': '--.-',
                     'pressure': '--.-',
@@ -44,6 +51,7 @@ class SenseHatPlayer {
         });
     }
 
+    /* Update the DOM with the Sense Hat data */
     receive_data(data) {
         this.temperature.innerHTML = data['temperature'];
         this.pressure.innerHTML = data['pressure'];

@@ -27,7 +27,6 @@ class LoginController(Controller):
             # Storing the username of a user in the session
             session['username'] = form.username.data
 
-            # TODO: per-user data needs to be stored in the database or the session object. cant use globals...
             global loginStatus
             loginStatus = True
 
@@ -36,9 +35,9 @@ class LoginController(Controller):
             session['user_id'] = self.database_cursor.fetchone()[0]
 
             # Creating session variables for the scalar trigger settings
-            session['triggerSettings_temperature'] = '' 
-            session['triggerSettings_pressure'] = '' 
-            session['triggerSettings_humidity'] = '' 
+            session['triggerSettings_temperature'] = ''
+            session['triggerSettings_pressure'] = ''
+            session['triggerSettings_humidity'] = ''
 
             # Creating the eventlog table if it does not exist. The eventlog table keeps track of all trigger events
             sql = """CREATE TABLE IF NOT EXISTS eventlog(
@@ -63,7 +62,6 @@ class LoginController(Controller):
                 FOREIGN KEY (UserId) REFERENCES user(id)
                 );"""
             self.database_cursor.execute(sql)
-
             self.database_connection.commit()
             
             return self.redirect('home')

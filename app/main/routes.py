@@ -53,13 +53,10 @@ def login():
     else:
         return LoginView().get_rendered_template()
 
-
 @app.route('/home', methods=['GET'])
 def home():
     return HomeView().get_rendered_template()
 
-
-# TODO: refactor like how /login route was refactored (using RegistrationView and RegistrationController)
 @app.route('/registration', methods=['GET', 'POST'])
 def registration():
     if request.method == 'POST' and RegistrationForm().validate_on_submit():
