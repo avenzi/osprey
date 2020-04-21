@@ -186,7 +186,7 @@ def get_pix_intensity_percentage(metadata):
 
     for i in range (first_frame_number, last_frame_number + 1):
         path = json_frames_metadata[str(i)]["path"]    
-        full_path = "/root/data-ingester/" + path
+        full_path = "/root/capstone-site/data-ingestion/" + path
 
         # Get mean of each frame in a segment, and add it to the intensities list
         image = io.imread(full_path)
@@ -222,7 +222,7 @@ def get_pix_intensity_value(metadata):
 
     for i in range (first_frame_number, last_frame_number + 1):
         path = json_frames_metadata[str(i)]["path"]    
-        full_path = "/root/data-ingester/" + path
+        full_path = "/root/capstone-site/data-ingestion/" + path
 
         # Get mean of each frame in a segment, and add it to the intensities list
         image = io.imread(full_path)
