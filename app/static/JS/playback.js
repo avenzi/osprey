@@ -4,7 +4,7 @@
  */
 
 document.addEventListener("DOMContentLoaded", async function() {
-    var slider = document.getElementById('playback-slider');
+    var slider = document.getElementById("playback-slider");
 
     if (SESSION_ID != -1) {
         // Initialize the sensor data players
@@ -137,14 +137,14 @@ function on_slider_input(time_ms) {
 function sensor_selection_clicked(sensor_id, sensor_type) {
     var box = document.getElementById(`sensor-box-${sensor_id}-${sensor_type}`);
     var checkbox = document.getElementById(`checkbox-${sensor_id}-${sensor_type}`);
-    var hidden = $(box).hasClass('hide');
+    var hidden = $(box).hasClass("hide");
 
     if (hidden) {
-        $(box).removeClass('hide');
-        $(checkbox).attr('checked', true);
+        $(box).removeClass("hide");
+        $(checkbox).attr("checked", true);
     } else {
-        $(box).addClass('hide');
-        $(checkbox).removeAttr('checked');
+        $(box).addClass("hide");
+        $(checkbox).removeAttr("checked");
     }
 }
 

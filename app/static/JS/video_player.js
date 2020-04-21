@@ -20,9 +20,9 @@ class MotionJPGVideoPlayer {
         this.last_fetch_time = Date.now() - 100;
 
         this.img = document.getElementById(`session-video-${this.session_id}-${this.sensor_id}`);
-        this.slider = document.getElementById('playback-slider');
-        this.play_button = document.getElementById('play-button');
-        this.last_frame_number = this.img.getAttribute('last-frame-number');
+        this.slider = document.getElementById("playback-slider");
+        this.play_button = document.getElementById("play-button");
+        this.last_frame_number = this.img.getAttribute("last-frame-number");
 
         this._start_play_interval();
         this._buffer_interval();
@@ -105,7 +105,7 @@ class MotionJPGVideoPlayer {
         var that = this;
         // Fetch the frame
         fetch(frame_request_url).then(response => {
-            that.frame_times[frame_number] = response.headers.get('frame-time')
+            that.frame_times[frame_number] = response.headers.get("frame-time")
             return response.arrayBuffer();
         }).then(function(buffer) {
             that.receive_frame(buffer, frame_number);
@@ -115,7 +115,7 @@ class MotionJPGVideoPlayer {
 
     receive_frame(buffer, frame_number) {
         function jpg_to_base64( buffer ) {
-            var binary = '';
+            var binary = "";
             var bytes = new Uint8Array( buffer );
             var len = bytes.byteLength;
             for (var i = 0; i < len; i++) {

@@ -7,7 +7,7 @@ class SenseHatPlayer {
         this.sensor_id = sensor_id;
         this.session_id = session_id;
 
-        this.slider = document.getElementById('playback-slider');
+        this.slider = document.getElementById("playback-slider");
         this.temperature = document.getElementById(`sense-temperature-${this.sensor_id}`);
         this.pressure = document.getElementById(`sense-pressure-${this.sensor_id}`);
         this.humidity = document.getElementById(`sense-humidity-${this.sensor_id}`);
@@ -36,14 +36,14 @@ class SenseHatPlayer {
         var that = this;
 
         $.get(`/retrieve_sense/${time}/4/${this.session_id}/${this.sensor_id}`, function(data) {
-            if (data['temperature'] !== undefined) {
+            if (data["temperature"] !== undefined) {
                 that.receive_data(data);
             } else {
                 // If we don't receive any data then show the placeholder values
                 that.receive_data({
-                    'temperature': '--.-',
-                    'pressure': '--.-',
-                    'humidity': '--.-',
+                    "temperature": "--.-",
+                    "pressure": "--.-",
+                    "humidity": "--.-",
                 });
             }
         }).always(function() {
@@ -53,9 +53,9 @@ class SenseHatPlayer {
 
     /* Update the DOM with the Sense Hat data */
     receive_data(data) {
-        this.temperature.innerHTML = data['temperature'];
-        this.pressure.innerHTML = data['pressure'];
-        this.humidity.innerHTML = data['humidity'];
+        this.temperature.innerHTML = data["temperature"];
+        this.pressure.innerHTML = data["pressure"];
+        this.humidity.innerHTML = data["humidity"];
     }
 
 }

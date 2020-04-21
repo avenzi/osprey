@@ -67,7 +67,7 @@
                 </div>
                 <div class = "card-header text-left bg-white">
                     <span class="playback-controls">
-                        <button id='play-button' class="paused"></button>
+                        <button id="play-button" class="paused"></button>
                     </span>
                     <input type="range" min="{{(session_start_time + 1)|int}}" max="{{(session_end_time - 1)|int}}" value="{{(session_start_time + 1)|int}}" class="slider" id="playback-slider" oninput="on_slider_input(this.value)">
                 </div>

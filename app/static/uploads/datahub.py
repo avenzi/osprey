@@ -18,31 +18,31 @@ from skimage import io, img_as_float
 import numpy as np
 
 # Set up database connection
-db_connection = pymysql.connect(host='localhost',
-    user='CapstoneMySQLUser',
-    password='CapstoneMySQLUserDbPw',
-    db='CapstoneData',
-    charset='utf8mb4',
+db_connection = pymysql.connect(host="localhost",
+    user="CapstoneMySQLUser",
+    password="CapstoneMySQLUserDbPw",
+    db="CapstoneData",
+    charset="utf8mb4",
     cursorclass=pymysql.cursors.DictCursor,
     autocommit=True)
 
 cursor = db_connection.cursor()
 
 
-def update_eventlog(filename, alert_type = '', alert_message= ''):
+def update_eventlog(filename, alert_type = "", alert_message= ""):
     """Updates the eventlog
 
     Args:
         filename (str): The name of the file using this function
-        alert_type (str): The type of alert to be entered into the eventlog (default is '')
-        alert_message (str): The message to be entered into the eventlog (default is '')
+        alert_type (str): The type of alert to be entered into the eventlog (default is "")
+        alert_message (str): The message to be entered into the eventlog (default is "")
 
     Returns:
         None
     """
 
     # The id associated with a user
-    user_id = int(filename.split('/')[6].split('-')[0])
+    user_id = int(filename.split("/")[6].split("-")[0])
 
     sql = """
         INSERT INTO eventlog 
@@ -63,9 +63,9 @@ def get_algorithm_status(filename):
     """
     
     # The id associated with a user
-    user_id = int(filename.split('/')[6].split('-')[0])
+    user_id = int(filename.split("/")[6].split("-")[0])
     # The path of the file using this function
-    path = str(filename.split('/')[6].split('.')[0])
+    path = str(filename.split("/")[6].split(".")[0])
 
     sql = """
         SELECT Status 
@@ -73,17 +73,17 @@ def get_algorithm_status(filename):
         WHERE UserId = %s AND Path = %s;
     """
     cursor.execute(sql, (user_id, path))
-    return cursor.fetchone()['Status']
+    return cursor.fetchone()["Status"]
 
-def get_sense_data(ip, time_start = '', time_end = ''):
+def get_sense_data(ip, time_start = "", time_end = ""):
     """Gets temperature, pressure, and humidity data from a specified Sense HAT
 
     Args:
         sense_num (int): The Sense HAT device to get sense data from
-        time_start (str): The time to start gathering sense data. For example, format should be like '03/24/20 22:40:19.000' 
-            (default is '')
-        time_end (str): The time to end gathering sense data. For example, format should be like '03/24/20 22:40:19.000' 
-            (default is '')
+        time_start (str): The time to start gathering sense data. For example, format should be like "03/24/20 22:40:19.000" 
+            (default is "")
+        time_end (str): The time to end gathering sense data. For example, format should be like "03/24/20 22:40:19.000" 
+            (default is "")
 
     Returns:
         list: a list of dictionaries containing sense data at a point in time
@@ -111,7 +111,7 @@ def get_sense_data(ip, time_start = '', time_end = ''):
     elif (len(time_start) > 0) and (len(time_end) == 0):
 
         # Converting string to datetime
-        time_start_datetime_object = datetime.strptime(time_start, '%m/%d/%y %H:%M:%S.%f')
+        time_start_datetime_object = datetime.strptime(time_start, "%m/%d/%y %H:%M:%S.%f")
 
         sql = """
             SELECT Time, Temp, Press, Humid
@@ -129,8 +129,8 @@ def get_sense_data(ip, time_start = '', time_end = ''):
     elif (len(time_start) > 0) and (len(time_end) > 0):
 
         # Converting strings to datetime
-        time_start_datetime_object = datetime.strptime(time_start, '%m/%d/%y %H:%M:%S.%f')
-        time_end_datetime_object = datetime.strptime(time_end, '%m/%d/%y %H:%M:%S.%f')
+        time_start_datetime_object = datetime.strptime(time_start, "%m/%d/%y %H:%M:%S.%f")
+        time_end_datetime_object = datetime.strptime(time_end, "%m/%d/%y %H:%M:%S.%f")
 
         sql = """
             SELECT Time, Temp, Press, Humid
@@ -172,11 +172,11 @@ def get_pix_intensity_percentage(metadata):
         ...: ...
     """
 
-    first_frame_number = metadata['FirstFrameNumber']               
-    last_frame_number = metadata['LastFrameNumber']    
+    first_frame_number = metadata["FirstFrameNumber"]               
+    last_frame_number = metadata["LastFrameNumber"]    
     
     # Contains "time", "frame_number", and "path" for frames in a segment
-    frames_metadata = metadata['FramesMetadata']         
+    frames_metadata = metadata["FramesMetadata"]         
 
     # Converting frames_metadata to JSON format    
     json_frames_metadata = json.loads(frames_metadata)
@@ -195,7 +195,7 @@ def get_pix_intensity_percentage(metadata):
         intensities.append(mean)
 
     # Return the mean of the means of each frame in a segment
-    return str(round(np.mean(intensities) * 100, 2)) + ' %'
+    return str(round(np.mean(intensities) * 100, 2)) + " %"
 
 
 def get_pix_intensity_value(metadata):
@@ -208,11 +208,11 @@ def get_pix_intensity_value(metadata):
         ...: ...
     """
 
-    first_frame_number = metadata['FirstFrameNumber']               
-    last_frame_number = metadata['LastFrameNumber']    
+    first_frame_number = metadata["FirstFrameNumber"]               
+    last_frame_number = metadata["LastFrameNumber"]    
     
     # Contains "time", "frame_number", and "path" for frames in a segment
-    frames_metadata = metadata['FramesMetadata']         
+    frames_metadata = metadata["FramesMetadata"]         
 
     # Converting frames_metadata to JSON format    
     json_frames_metadata = json.loads(frames_metadata)
