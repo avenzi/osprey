@@ -64,7 +64,6 @@ class LivefeedController(Controller):
             self.database_cursor.execute(sql, (ip, name, session_id, "SenseHat"))
 
         
-        dt = datetime.now()
         dt = datetime.now().astimezone(pytz.timezone("America/Detroit"))
         sql = "INSERT INTO Session (`StartDate`, `SensorConfig`) VALUES (%s, %s);"
         self.database_cursor.execute(sql, (dt, compacted_json))

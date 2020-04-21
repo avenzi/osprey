@@ -57,8 +57,8 @@ for worker in workers:
 
 
 try:
-    Utils().sleep()
+    session_handler.block_until_end(session)
 except KeyboardInterrupt:
-    session_handler.end_latest_session()
+    pass
 
 print("Data Ingestion Layer Closed")

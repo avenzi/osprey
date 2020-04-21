@@ -75,11 +75,13 @@ def livefeed():
 
     return LivefeedView().get_rendered_template()
 
+@app.route('/end_session/<int:session_id>', methods=['POST'])
+def end_session(session_id):
+    return SessionController().end_session(session_id)
 
 @app.route('/delete_session/<int:session_id>', methods=['POST'])
 def delete_session(session_id):
     return SessionController().delete_session(session_id)
-
 
 @app.route('/session/<int:session_id>')
 def archived_session(session_id):

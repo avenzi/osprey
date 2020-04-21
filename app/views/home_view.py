@@ -19,8 +19,10 @@ class HomeView(View):
             # If the session is not end-dated, show that it is ongoing
             if end_date == None:
                 end_date = "Ongoing"
+                data['is_ongoing'] = True
             else:
                 end_date = end_date.strftime("%m/%d/%Y %H:%M:%S")
+                data['is_ongoing'] = False
             
             data['start_date'] = start_date
             data['end_date'] = end_date
@@ -40,5 +42,7 @@ class HomeView(View):
             data['sensor_list'] = list_of_sensors
             sessions_view_data.append(data)
 
-        return self.render('home.html', sessions_view_data=sessions_view_data)
+        return self.render('home.html',
+            sessions_view_data=sessions_view_data
+        )
 

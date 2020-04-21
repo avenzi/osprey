@@ -190,15 +190,16 @@ textarea {
     background-color: rgba(255, 0, 0, .20);
 }
 
-.edit-entry-btn {
+.end-btn {
     width: 2em;
-    height: 2em;
+    color: #18453B !important;
     border-radius: 5px;
-    padding: 20px;
+    font-size: 1.20em;
+    padding: 10px;
     position: absolute;
     background-size: 2em;
     object-fit: cover;
-    right: 6em;
+    right: 5em;
     bottom: 1.25em;
     background-color: rgba(192, 192, 192, .35);
     background-repeat: no-repeat;
@@ -211,20 +212,8 @@ ul {
     list-style: square outside url("https://cdn.bitdegree.org/learn/list-style-image-marker-1.png?426d93cd");
 }
 
-.edit {
-    background-image: url("http://www.paradigm.mp/images/edit-entry.png");
-}
-
-.save {
-    background-image: url("http://www.paradigm.mp/images/save.png");
-}
-
 .delete {
     background-image: url("http://www.paradigm.mp/images/trash-icon.png");
-}
-
-.cancel {
-    background-image: url("http://www.paradigm.mp/images/cancel-icon.png");
 }
 
 .save:hover {

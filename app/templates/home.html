@@ -24,7 +24,9 @@
                 <p style="max-width: 60%;" class="session-info"><strong>Sensors Used: </strong>{{session.sensor_list}}</p>
                 <div class="action-buttons">
                     <a onclick="delete_session({{session.id}});" class="delete-entry-btn delete bordered-button"></a>
-                    <a class="edit-entry-btn edit bordered-button"></a>
+                    {% if session.is_ongoing %}
+                    <a onclick="end_session({{session.id}});" class="end-btn bordered-button"><strong>END</strong></a>
+                    {% endif %}
                 </div>
             </div>
             {% endfor %}
