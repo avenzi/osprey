@@ -6,10 +6,9 @@ import pytz
 
 class EventlogView(View):
     def get_closest_items(self, time, adjustment, mintime):
-        # The id of the logged in user
         user_id = session.get('user_id')
 
-        # Return the latest 15 event log entries for this user
+        # Query for the event log entries for this user at the time given
         sql = """
             SELECT alert_message, alert_time
             FROM eventlog

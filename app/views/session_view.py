@@ -15,7 +15,6 @@ class SessionView(View):
         session_sensors = self.database_cursor.fetchall()
 
         session_sensors_serialized = json.dumps(session_sensors, separators=(',', ':'))
-        #print(session_sensors_serialized)
 
         session_start_time = -1
         session_end_time = -1
@@ -27,6 +26,7 @@ class SessionView(View):
             session_start_time = int((session_info[1] - epoch).total_seconds() * 1000.0) + 1000
             session_end_time = int((session_info[2] - epoch).total_seconds() * 1000.0) - 1000
 
+        # Generate the view data for the sensor types
         cameras = []
         microphones = []
         sense_hats = []
@@ -82,9 +82,6 @@ class SessionView(View):
                 index = list_index
             ))
             list_index = list_index + 1
-        
-        print("Sensor selections")
-        print(sensor_selections)
 
         return self.render('session.html',
             session_id = session_id,

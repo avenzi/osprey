@@ -2,6 +2,7 @@ from app.views.view import View
 
 class HomeView(View):
     def get_rendered_template(self):
+        # Query the database for the most recent sessions
         self.database_cursor.execute("""SELECT id, StartDate, EndDate FROM Session ORDER BY StartDate DESC LIMIT 10;""")
         result = self.database_cursor.fetchall()
 
@@ -15,6 +16,7 @@ class HomeView(View):
             start_date = session_data[1].strftime("%m/%d/%Y %H:%M:%S")
             end_date = session_data[2]
 
+            # If the session is not end-dated, show that it is ongoing
             if end_date == None:
                 end_date = "Ongoing"
             else:
@@ -26,6 +28,7 @@ class HomeView(View):
             self.database_cursor.execute("""SELECT id, Name, INET_NTOA(IP), SessionId, SensorType FROM SessionSensor WHERE SessionId = %s;""", (session_id,))
             session_sensors = self.database_cursor.fetchall()
 
+            # Generate a display string for the list of sensors
             list_of_sensors = ''
             first = True
             for sensor in session_sensors:

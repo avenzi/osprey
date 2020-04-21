@@ -50,7 +50,7 @@ class SenseView(View):
             self.database_cursor.execute(sql, (ip,))
             temp, press, humid = self.database_cursor.fetchone()
 
-            # Convert to JQueryable objects
+            # Convert the values to compatible objects that with fixed decimal places
             roomTemperature = "{:.2f}".format(temp)
             airPressure = "{:.2f}".format(press)
             airHumidity = "{:.2f}".format(humid)
