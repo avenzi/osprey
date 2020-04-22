@@ -42,7 +42,7 @@ from app.controllers.audio_controller import AudioController
 LOG = logging.getLogger(__name__)
 # Variable to disable logging in
 global loginStatus
-loginStatus = False
+loginStatus = True
 
 
 @app.route("/", methods = ["GET","POST"])
