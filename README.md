@@ -1,68 +1,88 @@
 # MSU Capstone: Spring 2020
 
+### Project Components Overview
+This repository contains the computational infrastructure to allow for data from sensors to be streamed to a server. The sensor data 
+and metadata are stored on the server and can be viewed and analyzed using a web application.
+
+Data Hub (Flask web application) Overview:
+The Data Hub is the web application in the app directory at the root of the repository that can be used to view a near 
+real-time livestream of sensor data as well as play back the sensor streams. Using the Data Hub's algorithms feature, 
+a user can upload algorithms to analyze the livestream data as it becomes available.
+
+Data Ingestion Overview:
+The Data Ingestion Layer is the application in the data-ingestion directory at the root of the repository that serves
+as the server endpoint for receiving the sensor streams. Here, sensor stream data is written to the disk and metadata
+is stored in the database.
+
+Data Collection Overview:
+The Data Collection component of the system is located in the data-collection directory at the root of the repository and
+is the software that runs on a machine which has an interface with a sensor from which data needs to be collected. It also handles
+streaming to the Data Ingestion Layer. Currently the Data Collection software is supported on the Raspberry Pi computer.
 
 
-### Specific Tasks
+### Configuration
+At the root of the repository is the config.json file, which serves as a global configuration file that can be used by 
+any software in the repository. In this file the SERVER_IP_ADDRESS constant should be set to the IP address of the server
+where the Data Hub and Data Ingestion layer are installed. The Data Ingestion MySQL connection parameters are also configured
+in this file. To configure the Data Hub MySQL connection parameters, the connection parameters in config.py at the root of the 
+repository can configured, or environment variables can be used (see Set-up instructions document for more detail).
 
-1. Create a free [AWS Lightsail](https://aws.amazon.com/s/lp/epid1014-b/?trk=ps_a131L000005Of2gQAC&trkCampaign=ACQ_Amazon_Lightsail&sc_channel=ps&sc_campaign=acquisition_US&sc_publisher=google&sc_category=lightsail&sc_country=US&sc_geo=NAMER&sc_outcome=acquisition&sc_medium=ACQ-P|PS-GO|Brand|Desktop|SU|Compute|Lightsail|US|EN|Text|Lightsail&sc_content=lightsail_bmm&s_kwcid=AL!4422!3!301788508043!b!!g!!%2Blightsail&ef_id=EAIaIQobChMI37fkxPj25gIVRtbACh3l_g6BEAAYASAAEgIdkfD_BwE:G:s) instance or configure one of your machines as a web-server to start with.
-2. Create a very simple [Flask App](https://pythonspot.com/flask-web-app-with-python/) that allow people to access the web-server. A nice [flask app example](https://github.com/miguelgrinberg/microblog) is here.
-3. Capture [audio](https://github.com/miguelgrinberg/socketio-examples/blob/master/audio/audio.py) and video from users that access the page.
-4. [Stream the video](https://blog.miguelgrinberg.com/post/flask-video-streaming-revisited) that is captured onto the FlaskApp page. [This repo](https://github.com/miguelgrinberg/flask-video-streaming/tree/v1) has an example about how to do that.
-5. Allow multiple cameras video to be streamed at once. Send alone the GPS coordinates as well.
-6. Enable other sensors (temperature and humidity) stream to the site as well. [See here for example.](https://blog.miguelgrinberg.com/post/micropython-and-the-internet-of-things-part-i-welcome) Make sure you let me know what I should order.
+### Running the software
 
+Running the data hub application (Flask web application):
 
-
-### Project Description
-
-The laboratory for the study of human dynamics will be based out of Engineering 3155. To the naked eye, the laboratory will look like a newly renovated meeting space but underneath the surface, the room will be equipped with a comprehensive array of sensor technologies that will monitor the behavior of the individuals within it. These sensors are to include, but are not necessarily limited to: (1) cameras, (2) microphones, (3) thermal sensors and (4) position sensors. 
-
-You goal will be to develop the computational infrastructure and software that will allow for data from the sensors to be streamed to a server, stored, and analyzed by researchers.
-
-### Project Expectations
-
-<u>Weekly Meeting:</u> Capstone team will meet every Thursday in Prof. Ghassemi's office, Engineering Building #3147
-
-<u>[Project Notebook](notebook.md):</u> You will be expcted to commit a one paragraph update, in advance of our weekly meeting, describing what the team has been working on for that week. You can find that notebook in this repo.
-
-<u>Thoughtfully Comment Your Code:</u> All code is expected to be thoughtfully commented. Your code must be both readable and usable by others in the laboratory, and the general community.  You goal should be to write software that can be extended with minimal effort.  Below we provide an illustrative example of how to comment your code.
-
+1. Ensure you are in the root of the repository and then enter the Python virtual environment:
 ```python
-###############################################
-# My Function   : <DESCRIPTION OF FUNCTION> 
-# Input         : <data type> - <description>
-# Outputs       : <data type> - <description>
-###############################################
-def my_function(input_arg = 'standard_input' ):
-	#------------------------------------------
-	# Desciption of A Code Block
-	#------------------------------------------
-	# Description of line
-	a = function_1(x = input_arg)
-	
-	#------------------------------------------
-	# Desciption of Another Code Block
-	#------------------------------------------
-	# Description of Line
-	d = function_4(x = c)
-	
-	return d
+source venv/bin/activate
 ```
 
-### Capstone Team
+2. Run the website with the provided Bash script:
+```python
+sh run.sh
+```
 
-Devolder, Rainier (KEY):      <devolde2@msu.edu>;
-Seeger, Ben (KEY):                <seegerbe@msu.edu>;
-Whitacre, Taylor R. (KEY):     <whitacr5@msu.edu>;
-Shu, Lianghao (KEY):             <shulian1@msu.edu>;
-Marderosian, Merryn (KEY):  <mardero6@msu.edu>;
+Running the data collection layer (sensor software):
 
-### Other Resources:
+1. Ensure you are in the data-collection folder of the repository and then run the software with:
+```python
+python3 main.py
+```
 
-* [Audio and Video Streaming Using a Pi](https://kamranicus.com/guides/raspberry-pi-3-baby-monitor)
+Running the data ingestion layer:
 
+1. Ensure you are in the root of the repository and then enter the Python virtual environment:
+```python
+source venv/bin/activate
+```
 
+2. Navigate to the data ingestion folder:
+```python
+cd data-ingestion
+```
 
+3. Run the application:
+```python
+python3 main.py
+```
 
+# Extending the Software
+The back-end Data Hub logic uses the Model-View-Controller (MVC) web design pattern for organization. To handle additional user actions,
+the appropriate controller class should be used or created based on the primary area of concern of the user action. The controller classes
+should inherit from the base Controller class, where functionality common to all controllers can be defined.
 
+The Data Hub uses a combination of View classes with the templatting engine Jinja to render the markup pages to be served to the browser.
+View classes contain the logic to fetch and organize data which is either returned as a JSON response directly or fed into a Jinja page
+and then served. Supporting additional pages on the website should be done by extending the existing View classes and creating new ones,
+all of which inherit from the base View class. Additional Jinja pages should be added to the templates directory in the Data Hub's directory.
 
+The Data Collection component of the system supports plug-and-play collection of sensor hardware as long as the sensor interface 
+is written and a streaming method is defined. Each sensor interface, or component of a sensor interface, should be defined in 
+its own class and inherit from Python's Thread class (threading module) so that collection and streaming of each type of sensor data can 
+happen independently without interference. The main.py file in the data-collection directory can then be used to define which sensor 
+interfaces should be activated on whichever system the software is installed on. The current version of the main.py assumes usage on a Raspberry 
+Pi computer and uses sensor interfaces for a Samsung Go Mic, Sense HAT, and PiCamera.
+
+The Data Ingestion layer follows a similar design to the Data Collection component and uses multi-threading HTTP servers to handle ingestion as 
+well as runnable instances through the Thread class. Essentially, either an HTTP request handling class or a Thread-inheriting object can be passed
+to the Thread class, which will run the logic in parallel with any other Threads defined in the data-ingestion directory's main.py file.
+HTTP request handling classes are easy construct by inherting from the Listener class that is provided.
