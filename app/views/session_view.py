@@ -14,7 +14,7 @@ class SessionView(View):
         self.database_cursor.execute(sql, (session_id,))
         session_sensors = self.database_cursor.fetchall()
 
-        session_sensors_serialized = json.dumps(session_sensors, separators=(',', ':'))
+        session_sensors_serialized = json.dumps(session_sensors, separators=(",", ":"))
 
         session_start_time = -1
         session_end_time = -1
@@ -34,7 +34,7 @@ class SessionView(View):
             sensor_type = session_sensor[4]
             sensor_name = session_sensor[1]
 
-            if sensor_type == 'PiCamera':
+            if sensor_type == "PiCamera":
                 sql = """SELECT LastFrameNumber FROM VideoFrames WHERE FirstFrameTimestamp = (SELECT MAX(FirstFrameTimestamp) FROM VideoFrames WHERE SensorId = %s);"""
                 self.database_cursor.execute(sql, (session_sensor[0],))
                 result = self.database_cursor.fetchone()
@@ -49,7 +49,7 @@ class SessionView(View):
                     name = sensor_name
                 )
                 cameras.append(camera_view_data)
-            elif sensor_type == 'Microphone':
+            elif sensor_type == "Microphone":
                 sql = """SELECT LastSegmentNumber FROM AudioSegments WHERE FirstSegmentTimestamp = (SELECT MAX(FirstSegmentTimestamp) FROM AudioSegments WHERE SensorId = %s);"""
                 self.database_cursor.execute(sql, (session_sensor[0],))
                 result = self.database_cursor.fetchone()
@@ -76,14 +76,14 @@ class SessionView(View):
         list_index = 1
         for sensor in (cameras + microphones + sense_hats):
             sensor_selections.append(dict(
-                sensor_id = sensor['sensor_id'],
-                sensor_type = sensor['sensor_type'],
-                sensor_name = sensor['name'],
+                sensor_id = sensor["sensor_id"],
+                sensor_type = sensor["sensor_type"],
+                sensor_name = sensor["name"],
                 index = list_index
             ))
             list_index = list_index + 1
 
-        return self.render('session.html',
+        return self.render("session.html",
             session_id = session_id,
             session_sensors_serialized = session_sensors_serialized,
             session_start_time = session_start_time,

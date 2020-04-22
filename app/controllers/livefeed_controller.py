@@ -7,14 +7,14 @@ from datetime import datetime
 
 class LivefeedController(Controller):
     def store_configuration(self, form):
-        config_tokens = form['livestream_config'].split('&')
+        config_tokens = form["livestream_config"].split("&")
         config_json = {
-            'cameras': [],
-            'microphones': [],
-            'sense_hats': []
+            "cameras": [],
+            "microphones": [],
+            "sense_hats": []
         }
 
-        if len(form['livestream_config']) == 0:
+        if len(form["livestream_config"]) == 0:
             return jsonify()
 
         index = 0
@@ -23,43 +23,43 @@ class LivefeedController(Controller):
             value = token.split("=")[1].replace("%20", " ")
 
             print(key + ": " + value)
-            if 'cam-ip-input' in token:
+            if "cam-ip-input" in token:
                 name = config_tokens[index + 1].split("=")[1].replace("%20", " ")
 
-                metadata = {'name': name, 'ip': value}
-                config_json['cameras'].append(metadata)
-            elif 'mic-ip-input' in token:
+                metadata = {"name": name, "ip": value}
+                config_json["cameras"].append(metadata)
+            elif "mic-ip-input" in token:
                 name = config_tokens[index + 1].split("=")[1].replace("%20", " ")
-                metadata = {'name': name, 'ip': value}
-                config_json['microphones'].append(metadata)
-            elif 'sen-ip-input' in token:
+                metadata = {"name": name, "ip": value}
+                config_json["microphones"].append(metadata)
+            elif "sen-ip-input" in token:
                 name = config_tokens[index + 1].split("=")[1].replace("%20", " ")
-                metadata = {'name': name, 'ip': value}
-                config_json['sense_hats'].append(metadata)
+                metadata = {"name": name, "ip": value}
+                config_json["sense_hats"].append(metadata)
 
             index = index + 1
         
-        compacted_json = json.dumps(config_json, separators=(',', ':'))
+        compacted_json = json.dumps(config_json, separators=(",", ":"))
         # Instantiating an object that can execute SQL statements
         self.database_cursor.execute("""SELECT id FROM Session WHERE id = (SELECT MAX(id) FROM Session)""")
         result = self.database_cursor.fetchone()
         session_id = 1 if result == None else result[0] + 1
 
-        for metadata in config_json['cameras']:
-            ip = metadata['ip']
-            name = metadata['name']
+        for metadata in config_json["cameras"]:
+            ip = metadata["ip"]
+            name = metadata["name"]
             sql = "INSERT INTO SessionSensor (`IP`, `Name`, `SessionId`, `SensorType`) VALUES (INET_ATON(%s), %s, %s, %s);"
             self.database_cursor.execute(sql, (ip, name, session_id, "PiCamera"))
         
-        for metadata in config_json['microphones']:
-            ip = metadata['ip']
-            name = metadata['name']
+        for metadata in config_json["microphones"]:
+            ip = metadata["ip"]
+            name = metadata["name"]
             sql = "INSERT INTO SessionSensor (`IP`, `Name`, `SessionId`, `SensorType`) VALUES (INET_ATON(%s), %s, %s, %s);"
             self.database_cursor.execute(sql, (ip, name, session_id, "Microphone"))
         
-        for metadata in config_json['sense_hats']:
-            ip = metadata['ip']
-            name = metadata['name']
+        for metadata in config_json["sense_hats"]:
+            ip = metadata["ip"]
+            name = metadata["name"]
             sql = "INSERT INTO SessionSensor (`IP`, `Name`, `SessionId`, `SensorType`) VALUES (INET_ATON(%s), %s, %s, %s);"
             self.database_cursor.execute(sql, (ip, name, session_id, "SenseHat"))
 

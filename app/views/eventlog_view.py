@@ -6,7 +6,7 @@ import pytz
 
 class EventlogView(View):
     def get_closest_items(self, time, adjustment, mintime):
-        user_id = session.get('user_id')
+        user_id = session.get("user_id")
 
         # Query for the event log entries for this user at the time given
         sql = """
@@ -26,5 +26,5 @@ class EventlogView(View):
         for alert in results :
             alerts.append("{} at {}".format(alert[0], alert[1]))
         
-        return self.render('snippets/eventlog_snippet.html', messages=alerts)
+        return self.render("snippets/eventlog_snippet.html", messages=alerts)
 

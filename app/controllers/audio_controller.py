@@ -23,37 +23,37 @@ class AudioController(Controller):
 
         if segments_record is None:
             response = Response()
-            response.headers.add('segment-number', segment)
-            response.headers.add('found', 'no')
+            response.headers.add("segment-number", segment)
+            response.headers.add("found", "no")
             return response
 
         segments_metadata = json.loads(segments_record[7])
-        base_path = os.path.dirname(__file__) + '/../../data-ingestion/'
+        base_path = os.path.dirname(__file__) + "/../../data-ingestion/"
 
         segment_metadata = segments_metadata[str(segment)]
-        timestamp = int(segment_metadata['time'])
-        path = base_path + segment_metadata['path']
+        timestamp = int(segment_metadata["time"])
+        path = base_path + segment_metadata["path"]
 
         response_bytes = bytes()
-        with open(path, 'rb') as segment_file:
+        with open(path, "rb") as segment_file:
             response_bytes = segment_file.read()
         
         response = Response(
             response_bytes,
             200,
-            mimetype='audio/mpeg',
+            mimetype="audio/mpeg",
             direct_passthrough=True,
         )
-        response.headers.add('segment-number', segment)
-        response.headers.add('segment-time', timestamp)
-        response.headers.add('found', 'yes')
+        response.headers.add("segment-number", segment)
+        response.headers.add("segment-time", timestamp)
+        response.headers.add("found", "yes")
 
         return response
     
     def get_sensor_info(self):
         self.database_cursor.execute("""SELECT MAX(id) FROM Session""")
         session_id = self.database_cursor.fetchone()[0]
-        identifier = request.form['identifier']
+        identifier = request.form["identifier"]
 
         sql = """SELECT id FROM SessionSensor WHERE SessionId = %s AND Name = %s"""
         self.database_cursor.execute(sql, (session_id, identifier))

@@ -22,16 +22,16 @@ class SenseView(View):
         
         if result is not None:
             data = {
-                'temperature': result[0],
-                'pressure': result[1],
-                'humidity': result[2]
+                "temperature": result[0],
+                "pressure": result[1],
+                "humidity": result[2]
             }
         
         return jsonify(data)
 
     def get_most_recent_sense_data(self):
         # The IP Address of the Sense HAT
-        ip = request.form['ip']
+        ip = request.form["ip"]
 
         # The initial measurements until set
         roomTemperature = 0
@@ -57,4 +57,4 @@ class SenseView(View):
         except Exception as e:
             pass
         
-        return jsonify({'roomTemperature' : roomTemperature, 'airPressure': airPressure, 'airHumidity': airHumidity})
+        return jsonify({"roomTemperature" : roomTemperature, "airPressure": airPressure, "airHumidity": airHumidity})
