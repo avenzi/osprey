@@ -22,7 +22,7 @@ class Database():
             user=config["DATA_INGESTION_MYSQL_USER"],
             password=config["DATA_INGESTION_MYSQL_PASSWORD"],
             db=config["DATA_INGESTION_MYSQL_DATABASE"],
-            charset='utf8mb4',
+            charset="utf8mb4",
             cursorclass=pymysql.cursors.DictCursor,
             autocommit=True
         )

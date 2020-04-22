@@ -7,8 +7,8 @@ class Thread(threading.Thread):
         self.queue = Queue()
         self.daemon = True
         self.data = data
-        self.http_server = data['http_server'] if 'http_server' in data else None
-        self.runnable_instance = data['runnable_instance'] if 'runnable_instance' in data else None
+        self.http_server = data["http_server"] if "http_server" in data else None
+        self.runnable_instance = data["runnable_instance"] if "runnable_instance" in data else None
     
     def run(self):
         if self.http_server:

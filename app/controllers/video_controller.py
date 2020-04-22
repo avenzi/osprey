@@ -16,9 +16,9 @@ class VideoController(Controller):
 
         response_frames = []
         frame_metadata = frames_metadata[str(frame)]
-        base_path = os.path.dirname(__file__) + '/../../data-ingestion/'
-        path = base_path + frame_metadata['path']
-        with open(path, 'rb') as frame_file:
+        base_path = os.path.dirname(__file__) + "/../../data-ingestion/"
+        path = base_path + frame_metadata["path"]
+        with open(path, "rb") as frame_file:
             response_frames.append(frame_file.read())
         
         response_bytes = b"".join(response_frames)
@@ -26,9 +26,9 @@ class VideoController(Controller):
         response = Response(
             response_bytes,
             200,
-            mimetype='image/jpeg',
+            mimetype="image/jpeg",
             direct_passthrough=True,
         )
-        response.headers.add('Accept-Ranges', 'bytes')
+        response.headers.add("Accept-Ranges", "bytes")
 
         return response

@@ -57,6 +57,30 @@ get_sense_data(sense_num, time_start = "", time_end = ""): Gets temperature, pre
         [{"Time": datetime.datetime(2020, 3, 24, 22, 40, 24, 448000), "Temp": 71.74, "Press": 989.02, "Humid": 26.69}, 
         {"Time": datetime.datetime(2020, 3, 24, 22, 40, 25, 537000), "Temp": 71.55, "Press": 989.02, "Humid": 26.53}, 
         {"Time": datetime.datetime(2020, 3, 24, 22, 40, 26, 613000), "Temp": 71.74, "Press": 989.01, "Humid": 27.03}]
+
+
+def get_video_data(ip): Gets video data for a specified camera
+    Args:
+        ip (str): The IP address for the camera
+
+    Returns:
+        dict: A dictionary containing video data at at this point in time
+
+
+def get_pix_intensity_percentage(metadata): Gets pixel intensity percentage for video data
+    Args:
+        metadata (dict): A dictionary containing video data
+
+    Returns:
+        str: The pixel intensity percentage
+    
+
+def get_pix_intensity_value(metadata): Gets pixel intensity value for video data
+    Args:
+        metadata (dict): A dictionary containing video data
+
+    Returns:
+        str: The pixel intensity value
 """
 
 # AVAILABLE IMPORTS
@@ -67,13 +91,15 @@ import datahub
 # THIS LINE IS NECESSARY TO ENSURE THAT THE ALGORITHM STOPS WHEN TURNED OFF MANUALLY
 while datahub.get_algorithm_status(__file__):
 
-    # TESTING LIGHT INTENSITY FROM VIDEO FEED
-    intensity = datahub.get_pix_intensity_percentage(datahub.get_video_data("68.62.53.255"))
-    datahub.update_eventlog(__file__, "Intensity Alert", str(intensity))
 
-    # TESTING SENSE DATA
-    # if datahub.get_sense_data("35.9.42.110")[0]["Temp"] > 70.00:
-    #     datahub.update_eventlog(__file__, "Temperature Alert", "The temperature on Sense 1 has exceeded 70.00 F")
+    # EX) LIGHT INTENSITY PERCENTAGE FROM VIDEO FEED
+    # intensity = datahub.get_pix_intensity_percentage(datahub.get_video_data("##.##.##.###"))
+    # datahub.update_eventlog(__file__, "Intensity Alert", str(intensity))
+
+    # EX) SENSE HAT DATA
+    # if datahub.get_sense_data("##.##.##.###")[0]["Temp"] > 70.00:
+    #     datahub.update_eventlog(__file__, "Temperature Alert", "The temperature on ______ has exceeded 70.00 F")
  
+
     # THIS LINE IS NECESSARY TO ENSURE INFINITE LOOPS DO NOT OCCUR
     time.sleep(1)

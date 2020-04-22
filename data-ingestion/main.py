@@ -24,31 +24,31 @@ session = session_handler.block_until_new_session()
 
 db_connection, cursor = Database().get_connection()
 sql = """SELECT id, INET_NTOA(IP), SessionId, SensorType FROM SessionSensor WHERE SessionId = %s;"""
-cursor.execute(sql, (session['id'],))
+cursor.execute(sql, (session["id"],))
 session_sensors = cursor.fetchall()
 
 sense_listener_thread = Thread({
-    'http_server': HTTPServer(('0.0.0.0', 5510), SenseListener)
+    "http_server": HTTPServer(("0.0.0.0", 5510), SenseListener)
 })
 sense_listener_thread.start()
 
 audio_listener_thread = Thread({
-    'http_server': HTTPServer(('0.0.0.0', 5515), AudioListener) # Thread serves the HTTPServer instance forever
+    "http_server": HTTPServer(("0.0.0.0", 5515), AudioListener) # Thread serves the HTTPServer instance forever
 })
 audio_listener_thread.start()
 
 workers = []
 for session_sensor in session_sensors:
-    if session_sensor['SensorType'] == "PiCamera":
-        url = 'http://%s:%s/stream.mjpg' % (session_sensor['INET_NTOA(IP)'], 8000)
+    if session_sensor["SensorType"] == "PiCamera":
+        url = "http://%s:%s/stream.mjpg" % (session_sensor["INET_NTOA(IP)"], 8000)
         
         video_ingester_thread = Thread({
-            'runnable_instance': VideoIngester({ # Thread executes .run() on the provided object when .start() is called on the Thread
-                    'url': url,
-                    'session_id': session['id'],
-                    'session_sensor': session_sensor
+            "runnable_instance": VideoIngester({ # Thread executes .run() on the provided object when .start() is called on the Thread
+                    "url": url,
+                    "session_id": session["id"],
+                    "session_sensor": session_sensor
                 }),
-            'session_sensor': session_sensor
+            "session_sensor": session_sensor
         })
         workers.append(video_ingester_thread)
 

@@ -45,6 +45,7 @@ global loginStatus
 loginStatus = True
 
 
+"""TODO: ADD ROUTING COMMENT"""
 @app.route("/", methods = ["GET","POST"])
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -53,10 +54,14 @@ def login():
     else:
         return LoginView().get_rendered_template()
 
+
+"""TODO: ADD ROUTING COMMENT"""
 @app.route("/home", methods=["GET"])
 def home():
     return HomeView().get_rendered_template()
 
+
+"""TODO: ADD ROUTING COMMENT"""
 @app.route("/registration", methods=["GET", "POST"])
 def registration():
     if request.method == "POST" and RegistrationForm().validate_on_submit():
@@ -65,6 +70,7 @@ def registration():
         return RegistrationView().get_rendered_template()
 
 
+"""TODO: ADD ROUTING COMMENT"""
 @app.route("/livefeed", methods=["GET", "POST"])
 def livefeed():
     if session.get("username") == True:
@@ -75,62 +81,75 @@ def livefeed():
 
     return LivefeedView().get_rendered_template()
 
-@app.route('/end_session/<int:session_id>', methods=['POST'])
+
+"""TODO: ADD ROUTING COMMENT"""
+@app.route("/end_session/<int:session_id>", methods=["POST"])
 def end_session(session_id):
     return SessionController().end_session(session_id)
 
+
+"""TODO: ADD ROUTING COMMENT"""
 @app.route("/delete_session/<int:session_id>", methods=["POST"])
 def delete_session(session_id):
     return SessionController().delete_session(session_id)
 
+
+"""TODO: ADD ROUTING COMMENT"""
 @app.route("/session/<int:session_id>")
 def archived_session(session_id):
     return SessionView().serve_session(session_id)
 
 
+"""TODO: ADD ROUTING COMMENT"""
 @app.route("/livestream_config", methods=["GET", "POST"])
 def livestream_config():
     return LivefeedController().store_configuration(request.form)
 
 
+"""TODO: ADD ROUTING COMMENT"""
 @app.route("/update_sense", methods=["GET", "POST"])
 def update_sense():
     SenseController().monitor_sense_data()
     return SenseView().get_most_recent_sense_data()
 
 
-"""route is used to collect trigger settings from the live stream page"""
+"""Route used to collect trigger settings from the livefeed page"""
 @app.route("/update_triggersettings", methods=["POST"])
 def update_triggersettings():
     return TriggerSettingsController().update_triggersettings()
 
 
-"""route is used to retrieve items from the event log"""
+"""Route used to retrieve items from the event log in the livefeed and archives page for a session"""
 @app.route("/retrieve_eventlog/<int:time>/<int:adjustment>/<int:mintime>", methods=["GET"])
 def retrieve_eventlog(time, adjustment, mintime):
     return EventlogView().get_closest_items(time, adjustment, mintime)
 
 
-"""route is used to retrieve items from the event log"""
+"""Route used to retrieve Sense HAT data for use in the archives page for a session"""
 @app.route("/retrieve_sense/<int:time>/<int:adjustment>/<int:session_id>/<int:sensor_id>", methods=["GET"])
 def retrieve_sense(time, adjustment, session_id, sensor_id):
     return SenseView().get_by_time(time, adjustment, session_id, sensor_id)
 
 
+"""TODO: ADD ROUTING COMMENT"""
 @app.route("/videoframefetch/<frame>/<session>/<sensor>")
 def videoframefetch(frame, session, sensor):
     return VideoController().serve_frame(int(frame), session, sensor)
 
+
+"""TODO: ADD ROUTING COMMENT"""
 @app.route("/getaudioinfo", methods=["POST"])
 def getaudioinfo():
     return AudioController().get_sensor_info()
 
+
+"""TODO: ADD ROUTING COMMENT"""
 @app.route("/audiosegmentfetch/<timestamp>/<segment>/<session>/<sensor>")
 def audiosegmentfetch(timestamp, segment, session, sensor):
     return AudioController().serve_segment(int(timestamp), int(segment), session, sensor)
 
 
-"""route is used to upload algorithms"""
+"""Route used to upload algorithms and view them"""
 @app.route("/algorithm_upload", methods=["GET", "POST"])
 def algorithm_upload():
     if request.method == "POST":
@@ -139,13 +158,13 @@ def algorithm_upload():
         return AlgorithmView().get_uploads_snippet()
 
 
-"""route is used for downloading boilerplate code"""
+"""Route used for downloading boilerplate code"""
 @app.route("/download_boilerplate")
 def download_boilerplate():
     return AlgorithmController().download_boilerplate()
 
 
-"""route is used to handle uploaded algorithms"""
+"""Route used to handle uploaded algorithms"""
 @app.route("/algorithm_handler", methods=["POST"])
 def algorithm_handler():
     return AlgorithmController().handle_algorithm()

@@ -4,7 +4,7 @@ import json
 import requests
 import os
 #import cv2 # pip install opencv-python (also installs numpy)
-# also 'sudo apt install python3-opencv' <- 800+ MB package
+# also "sudo apt install python3-opencv" <- 800+ MB package
 import numpy as np
 from database import Database
 
@@ -18,10 +18,10 @@ class VideoIngester:
     chunk_size = 1024
 
     def __init__(self, data):
-        self.url = data['url']
-        self.session_id = data['session_id']
-        self.session_sensor = data['session_sensor']
-        self.sensor_id = self.session_sensor['id']
+        self.url = data["url"]
+        self.session_id = data["session_id"]
+        self.session_sensor = data["session_sensor"]
+        self.sensor_id = self.session_sensor["id"]
 
         self.data_directory_name = self.filepath_format.split("/")[0]
         self.has_data_dir = False
@@ -42,7 +42,7 @@ class VideoIngester:
     def write_frames_record(self, session_id, sensor_id, first_frame_timestamp, last_frame_timestamp,
         first_frame_number, last_frame_number, frames_metadata):
         
-        compacted_json = json.dumps(frames_metadata, separators=(',', ':'), sort_keys=True)
+        compacted_json = json.dumps(frames_metadata, separators=(",", ":"), sort_keys=True)
         #print(compacted_json)
 
         sql = """INSERT INTO `VideoFrames` (`FirstFrameTimestamp`, `LastFrameTimestamp`, `FirstFrameNumber`, `LastFrameNumber`, `SessionId`, `SensorId`, `FramesMetadata`)
@@ -83,7 +83,7 @@ class VideoIngester:
         return self.filepath_format % (session_id, sensor_id, directory_number, self.filename_format % jpg_number)
     
     def fetch_mjpg(self):
-        response = requests.get(self.url, stream=True) # TODO: add authentication #response = requests.get(self.url, auth=('user', 'password'), stream=True)
+        response = requests.get(self.url, stream=True) # TODO: add authentication #response = requests.get(self.url, auth=("user", "password"), stream=True)
         if (response.status_code != 200):
             print("Failed to connect to video stream at %s" % self.url)
             return
@@ -102,8 +102,8 @@ class VideoIngester:
         for chunk in response.iter_content(chunk_size=self.chunk_size):
             chunk_bytes += chunk
 
-            a = chunk_bytes.find(b'\xff\xd8')
-            b = chunk_bytes.find(b'\xff\xd9')
+            a = chunk_bytes.find(b"\xff\xd8")
+            b = chunk_bytes.find(b"\xff\xd9")
 
             if a != -1 and b != -1:
                 jpg_bytes = chunk_bytes[a:b+2]
@@ -112,7 +112,7 @@ class VideoIngester:
                 
                 header_name = "Timestamp: "
                 frame_timestamp = header[header.find(header_name) + len(header_name):]
-                frame_timestamp = float(frame_timestamp[:frame_timestamp.find('\n')].strip())
+                frame_timestamp = float(frame_timestamp[:frame_timestamp.find("\n")].strip())
                 #print(frame_timestamp)
 
                 current_directory_frames_total = current_directory_frames_total + 1
@@ -122,9 +122,9 @@ class VideoIngester:
 
                 frame_path = self.get_and_ensure_filepath(self.session_id, self.sensor_id, directory_number, total_jpgs)
                 frame_metadata = {
-                    'path': frame_path,
-                    'time': frame_timestamp,
-                    'frame_number': total_jpgs
+                    "path": frame_path,
+                    "time": frame_timestamp,
+                    "frame_number": total_jpgs
                 }
                 frames_metadata[total_jpgs] = frame_metadata
 
@@ -132,11 +132,11 @@ class VideoIngester:
                     first_frame_timestamp = frame_timestamp
                     first_frame_number = total_jpgs
                 
-                #print(frame_metadata['frame_number'])
+                #print(frame_metadata["frame_number"])
                 #print(frame_path)
                 
                 # Write the frame to the disk
-                with open(frame_path, 'wb') as frame_file:
+                with open(frame_path, "wb") as frame_file:
                     frame_file.write(jpg_bytes)
                 
 

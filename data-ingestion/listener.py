@@ -16,7 +16,7 @@ class Listener(BaseHTTPRequestHandler):
         pass
 
     def do_POST(self):
-        content_length = int(self.headers['Content-Length']) # gets the size of data being sent in the request
+        content_length = int(self.headers["Content-Length"]) # gets the size of data being sent in the request
         data = self.rfile.read(content_length)
 
         self.ensure_database_connection()

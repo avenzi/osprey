@@ -82,7 +82,7 @@ def get_sense_data(ip, time_start = "", time_end = ""):
             (default is "")
 
     Returns:
-        list: a list of dictionaries containing sense data at a point in time
+        list: A list of dictionaries containing sense data at a point in time
     """
 
     #-------------------------------------------------------------------------------------------------
@@ -138,13 +138,13 @@ def get_sense_data(ip, time_start = "", time_end = ""):
         return cursor.fetchall()
 
 def get_video_data(ip):
-    """
+    """Gets video data for a specified camera
 
     Args:
         ip (str): The IP address for the camera
 
     Returns:
-        ...: ...
+        dict: A dictionary containing video data at at this point in time
     """
 
     sql = """
@@ -156,16 +156,17 @@ def get_video_data(ip):
     """
     cursor.execute(sql, (ip,))
     metadata = cursor.fetchone()
+
     return metadata
 
 def get_pix_intensity_percentage(metadata):
-    """
+    """Gets pixel intensity percentage for video data
 
     Args:
-        metadata (dict): ...
+        metadata (dict): A dictionary containing video data
 
     Returns:
-        ...: ...
+        str: The pixel intensity percentage
     """
 
     first_frame_number = metadata["FirstFrameNumber"]               
@@ -181,10 +182,12 @@ def get_pix_intensity_percentage(metadata):
     intensities = []                                                
 
     for i in range (first_frame_number, last_frame_number + 1):
+
+        # Getting the path of a segment
         path = json_frames_metadata[str(i)]["path"]    
         full_path = "/root/capstone-site/data-ingestion/" + path
 
-        # Get mean of each frame in a segment, and add it to the intensities list
+        # Getting the mean of each frame in a segment, and add it to the intensities list
         image = io.imread(full_path)
         image = img_as_float(image)
         mean =  np.mean(image)
@@ -193,15 +196,14 @@ def get_pix_intensity_percentage(metadata):
     # Return the mean of the means of each frame in a segment
     return str(round(np.mean(intensities) * 100, 2)) + " %"
 
-
 def get_pix_intensity_value(metadata):
-    """
+    """Gets pixel intensity value for video data
 
     Args:
-        metadata (dict): ...
+        metadata (dict): A dictionary containing video data
 
     Returns:
-        ...: ...
+        str: The pixel intensity value
     """
 
     first_frame_number = metadata["FirstFrameNumber"]               
@@ -217,10 +219,12 @@ def get_pix_intensity_value(metadata):
     intensities = []                                                
 
     for i in range (first_frame_number, last_frame_number + 1):
+
+        # Getting the path of a segment
         path = json_frames_metadata[str(i)]["path"]    
         full_path = "/root/capstone-site/data-ingestion/" + path
 
-        # Get mean of each frame in a segment, and add it to the intensities list
+        # Getting the mean of each frame in a segment, and add it to the intensities list
         image = io.imread(full_path)
         mean =  np.mean(image)
         intensities.append(mean)

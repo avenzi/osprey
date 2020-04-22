@@ -483,7 +483,7 @@ $(document).ready(function() {
         createHandlers(camNumber, senData);
 
         // Starting the timer
-        var timer = document.getElementById('timer');
+        var timer = document.getElementById("timer");
         var watch = new ElapsedTime(timer);
         watch.start();
 
@@ -577,7 +577,7 @@ function createHandlers(numCams, senData) {
     // Generate onclick handlers for each Audio player
     for (var i = 1; i <= micData.get("micNumber"); i++) {
         var audio_el = $(`#audio-${i}`);
-        var sensor_name = audio_el.attr('name');
+        var sensor_name = audio_el.attr("name");
         audio_players.push(new AudioPlayer(-1, -1, sensor_name, i));
     }
 }

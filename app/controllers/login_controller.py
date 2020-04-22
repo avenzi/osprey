@@ -15,29 +15,29 @@ class LoginController(Controller):
 
         result = self.database_cursor.fetchone()
         if result == None:
-            return self.redirect('login')
+            return self.redirect("login")
 
         hashed_pw_from_db = result[2]
         user_input_pw = form.password.data
         correction_password = bcrypt.check_password_hash(hashed_pw_from_db, user_input_pw)
 
         if correction_password == False:
-            return self.redirect('login')
+            return self.redirect("login")
         else:
             # Storing the username of a user in the session
-            session['username'] = form.username.data
+            session["username"] = form.username.data
 
             global loginStatus
             loginStatus = True
 
             # Storing the id of the user that is logging in in the session
             self.database_cursor.execute("SELECT id FROM user WHERE username = "+"'"+session.get('username')+"'")
-            session['user_id'] = self.database_cursor.fetchone()[0]
+            session["user_id"] = self.database_cursor.fetchone()[0]
 
             # Creating session variables for the scalar trigger settings
-            session['triggerSettings_temperature'] = ''
-            session['triggerSettings_pressure'] = ''
-            session['triggerSettings_humidity'] = ''
+            session["triggerSettings_temperature"] = ""
+            session["triggerSettings_pressure"] = ""
+            session["triggerSettings_humidity"] = ""
 
             # Creating the eventlog table if it does not exist. The eventlog table keeps track of all trigger events
             sql = """CREATE TABLE IF NOT EXISTS eventlog(
@@ -64,4 +64,4 @@ class LoginController(Controller):
             self.database_cursor.execute(sql)
             self.database_connection.commit()
             
-            return self.redirect('home')
+            return self.redirect("home")

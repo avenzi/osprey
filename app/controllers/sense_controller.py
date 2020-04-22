@@ -5,18 +5,18 @@ from app.controllers.controller import Controller
 class SenseController(Controller):
     def monitor_sense_data(self):
         # The IP Address of the Sense HAT
-        ip = request.form['ip']
+        ip = request.form["ip"]
 
         # The name of the Sense HAT
-        name = request.form['name'].replace("%20", " ")
+        name = request.form["name"].replace("%20", " ")
 
         # The scalar trigger settings for temperature, pressure, and humidity
-        triggerSettings_temperature = session.get('triggerSettings_temperature')
-        triggerSettings_pressure = session.get('triggerSettings_pressure')
-        triggerSettings_humidity = session.get('triggerSettings_humidity')
+        triggerSettings_temperature = session.get("triggerSettings_temperature")
+        triggerSettings_pressure = session.get("triggerSettings_pressure")
+        triggerSettings_humidity = session.get("triggerSettings_humidity")
 
         # The id of the logged in user
-        user_id = session.get('user_id')
+        user_id = session.get("user_id")
 
         # The initial measurements until set
         roomTemperature = 0
@@ -41,7 +41,7 @@ class SenseController(Controller):
             airHumidity = "{:.2f}".format(humid)
             
             try:
-                if (triggerSettings_temperature != '') and (float(roomTemperature) > float(triggerSettings_temperature)):
+                if (triggerSettings_temperature != "") and (float(roomTemperature) > float(triggerSettings_temperature)):
                     # Write temperature data to database
                     sql = """
                         INSERT INTO eventlog 
@@ -58,7 +58,7 @@ class SenseController(Controller):
                 pass
 
             try:
-                if (triggerSettings_pressure != '') and (float(airPressure) > float(triggerSettings_pressure)):
+                if (triggerSettings_pressure != "") and (float(airPressure) > float(triggerSettings_pressure)):
                     # Write pressure data to database
                     sql = """
                         INSERT INTO eventlog 
@@ -76,7 +76,7 @@ class SenseController(Controller):
             
             
             try:
-                if (triggerSettings_humidity != '') and (float(airHumidity) > float(triggerSettings_humidity)):
+                if (triggerSettings_humidity != "") and (float(airHumidity) > float(triggerSettings_humidity)):
                     # Write humidity data to database
                     sql = """
                         INSERT INTO eventlog 

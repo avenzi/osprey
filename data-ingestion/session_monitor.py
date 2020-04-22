@@ -14,7 +14,7 @@ class SessionMonitor():
         sql = """SELECT MAX(StartDate) FROM Session;"""
         self.database_cursor.execute(sql)
         result = self.database_cursor.fetchone()
-        self.latest_session_start_time = -1 if result == None else result['MAX(StartDate)']
+        self.latest_session_start_time = -1 if result == None else result["MAX(StartDate)"]
     
     def block_until_new_session(self):
         print("-- Waiting until a new Session is started --")
@@ -24,7 +24,7 @@ class SessionMonitor():
             try:
                 self.database_cursor.execute(sql)
                 session_record = self.database_cursor.fetchone()
-                max_start_time = session_record['StartDate']
+                max_start_time = session_record["StartDate"]
             except:
                 max_start_time = None
 
@@ -42,7 +42,7 @@ class SessionMonitor():
             try:
                 self.database_cursor.execute(sql, (session["id"],))
                 session_record = self.database_cursor.fetchone()
-                end_date = session_record['EndDate']
+                end_date = session_record["EndDate"]
             except:
                 pass
             if end_date != None:

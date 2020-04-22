@@ -10,11 +10,11 @@ class RegistrationController(Controller):
 
         if form.password.data != form.password_confirm.data:
             flash("Password confirmation and password need to be the same")
-            return self.redirect('registration')
+            return self.redirect("registration")
 
         # Hash the supplied password
         inputted_password = form.password.data
-        pw_hash = bcrypt.generate_password_hash(inputted_password).decode('utf-8')
+        pw_hash = bcrypt.generate_password_hash(inputted_password).decode("utf-8")
 
         username = form.username.data
 
@@ -23,4 +23,4 @@ class RegistrationController(Controller):
         self.database_cursor.execute(sql, (username, pw_hash))
         self.database_connection.commit()
 
-        return self.redirect('login')
+        return self.redirect("login")

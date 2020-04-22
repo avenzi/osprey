@@ -22,12 +22,12 @@ class AudioListener(Listener):
         sql = """SELECT * FROM Session WHERE StartDate = (SELECT MAX(StartDate) FROM Session)"""
         self.cursor.execute(sql)
         active_session = self.cursor.fetchone()
-        AudioListener.session_id = active_session['id']
+        AudioListener.session_id = active_session["id"]
     
     def get_sensor_data(self):
         sql = """SELECT id FROM SessionSensor WHERE SessionId = %s AND IP = INET_ATON(%s) AND SensorType = 'Microphone';"""
         self.cursor.execute(sql, (AudioListener.session_id, self.client_address[0]))
-        AudioListener.sensor_id = self.cursor.fetchone()['id']
+        AudioListener.sensor_id = self.cursor.fetchone()["id"]
         self.ensure_sensor_data()
     
     def init(self):
@@ -81,7 +81,7 @@ class AudioListener(Listener):
     def write_frames_record(self, session_id, sensor_id, first_frame_timestamp, last_frame_timestamp,
         first_frame_number, last_frame_number, frames_metadata):
         
-        compacted_json = json.dumps(frames_metadata, separators=(',', ':'), sort_keys=True)
+        compacted_json = json.dumps(frames_metadata, separators=(",", ":"), sort_keys=True)
 
         sql = """INSERT INTO `AudioSegments` (`FirstSegmentTimestamp`, `LastSegmentTimestamp`, `FirstSegmentNumber`, `LastSegmentNumber`, `SessionId`, `SensorId`, `SegmentsMetadata`)
             VALUES (FROM_UNIXTIME(%s * 0.001), FROM_UNIXTIME(%s * 0.001), %s, %s, %s, %s, %s)"""
@@ -116,7 +116,7 @@ class AudioListener(Listener):
         self.ensure_init()
         self.get_sensor_data()
 
-        frame_timestamp = float(headers['timestamp'])
+        frame_timestamp = float(headers["timestamp"])
         
         AudioListener.current_directory_frames_total[self.sensor_id] = AudioListener.current_directory_frames_total[self.sensor_id] + 1
         if AudioListener.current_directory_frames_total[self.sensor_id] > AudioListener.frames_per_directory:
@@ -125,9 +125,9 @@ class AudioListener(Listener):
         
         frame_path = self.get_and_ensure_filepath(AudioListener.session_id, AudioListener.sensor_id, AudioListener.directory_number[self.sensor_id], AudioListener.total_frames[self.sensor_id])
         frame_metadata = {
-            'path': frame_path,
-            'time': frame_timestamp,
-            'frame_number': AudioListener.total_frames[self.sensor_id]
+            "path": frame_path,
+            "time": frame_timestamp,
+            "frame_number": AudioListener.total_frames[self.sensor_id]
         }
 
         AudioListener.frames_metadata[self.sensor_id][AudioListener.total_frames[self.sensor_id]] = frame_metadata
@@ -137,7 +137,7 @@ class AudioListener(Listener):
             AudioListener.first_frame_number[self.sensor_id] = AudioListener.total_frames[self.sensor_id]
         
         # Write the frame to the disk
-        with open(frame_path, 'wb') as frame_file:
+        with open(frame_path, "wb") as frame_file:
             frame_file.write(data)
         
         AudioListener.current_record_frames_total[self.sensor_id] = AudioListener.current_record_frames_total[self.sensor_id] + 1

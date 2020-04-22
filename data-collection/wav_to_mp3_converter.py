@@ -14,7 +14,7 @@ class WavToMp3Converter(threading.Thread):
     mp3_file_format = "mp3-segments/mp3_%d.mp3"
 
     # WAV filepath format based on unique identifier
-    wav_file_format = 'audio-segments/wav-segment%d.wav'
+    wav_file_format = "audio-segments/wav-segment%d.wav"
 
     sample_rate = 44100
 
@@ -36,15 +36,15 @@ class WavToMp3Converter(threading.Thread):
                 return
             
             audio_wav_file_path = self.write_to_file(queue_data)
-            audio_mp3_file_path = self.convert_to_mp3(audio_wav_file_path, queue_data['segment_number'])
-            self.audio_streamer_thread.queue.put({'wav': audio_wav_file_path, 'mp3': audio_mp3_file_path})
+            audio_mp3_file_path = self.convert_to_mp3(audio_wav_file_path, queue_data["segment_number"])
+            self.audio_streamer_thread.queue.put({"wav": audio_wav_file_path, "mp3": audio_mp3_file_path})
     
     def write_to_file(self, data):
-        segment_number = data['segment_number']
-        frames = data['frames']
+        segment_number = data["segment_number"]
+        frames = data["frames"]
         wav_file_path = self.wav_file_format % segment_number
         
-        wavefile=wave.open(wav_file_path, 'wb')
+        wavefile=wave.open(wav_file_path, "wb")
         wavefile.setnchannels(self.channels)
         wavefile.setsampwidth(2)
         wavefile.setframerate(self.sample_rate)
@@ -55,7 +55,7 @@ class WavToMp3Converter(threading.Thread):
 
     def convert_to_mp3(self, wave_file_path, segment_number):
         new_mp3_file_path = self.mp3_file_format % segment_number
-        ffmpeg_cmd = 'ffmpeg -i %s %s' % (wave_file_path, new_mp3_file_path)
+        ffmpeg_cmd = "ffmpeg -i %s %s" % (wave_file_path, new_mp3_file_path)
         ffmpeg_pid = subprocess.Popen(ffmpeg_cmd, shell=True)
         ffmpeg_pid.communicate()
         

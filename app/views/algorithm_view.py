@@ -6,7 +6,7 @@ class AlgorithmView(View):
     def get_uploads_snippet(self):
         algorithms = []
         runningAlgorithms = []
-        user_id = session.get('user_id')
+        user_id = session.get("user_id")
 
         # Search Algorithm table for filenames of algorithms pertaining to a user
         sql = """
@@ -22,7 +22,7 @@ class AlgorithmView(View):
                 runningAlgorithms.append(alg[1])
             algorithms.append(alg[1])
 
-        return self.render('snippets/uploads_list_snippet.html', 
+        return self.render("snippets/uploads_list_snippet.html", 
             algorithms=algorithms,
             runningAlgorithms=runningAlgorithms)
 

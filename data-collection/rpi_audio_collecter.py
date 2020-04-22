@@ -23,7 +23,7 @@ class RaspberryPiAudioCollecter(threading.Thread):
     channels = 2
 
     # The name of the audio device to match when searching the system's audio devices
-    device_name = 'GoMic' # Configured for Samsung GoMic (stereo)
+    device_name = "GoMic" # Configured for Samsung GoMic (stereo)
 
     def __init__(self, queue, args=(), kwargs=None):
         threading.Thread.__init__(self, args=(), kwargs=None)
@@ -33,11 +33,11 @@ class RaspberryPiAudioCollecter(threading.Thread):
     
     # Ensures the temporary directories where the data is held for processing exist
     def ensure_temporary_directories(self):
-        if not os.path.exists('mp3-segments'):
-            os.mkdir('mp3-segments')
+        if not os.path.exists("mp3-segments"):
+            os.mkdir("mp3-segments")
         
-        if not os.path.exists('audio-segments'):
-            os.mkdir('audio-segments')
+        if not os.path.exists("audio-segments"):
+            os.mkdir("audio-segments")
 
     def start_recording(self):
         form_1 = pyaudio.paInt16
@@ -46,12 +46,12 @@ class RaspberryPiAudioCollecter(threading.Thread):
 
         # Find the audio device
         info = self.audio.get_host_api_info_by_index(0)
-        numdevices = info.get('deviceCount')
+        numdevices = info.get("deviceCount")
         audio_device_id = -1
 
         for device_id in range(0, numdevices):
-            if (self.audio.get_device_info_by_host_api_device_index(0, device_id).get('maxInputChannels')) > 0:
-                device_name = self.audio.get_device_info_by_host_api_device_index(0, device_id).get('name')
+            if (self.audio.get_device_info_by_host_api_device_index(0, device_id).get("maxInputChannels")) > 0:
+                device_name = self.audio.get_device_info_by_host_api_device_index(0, device_id).get("name")
                 if self.device_name in device_name:
                     audio_device_id = device_id
         
@@ -82,8 +82,8 @@ class RaspberryPiAudioCollecter(threading.Thread):
                 segment_number = segment_number + 1
 
                 self.audio_converter_thread.queue.put({
-                    'segment_number': segment_number,
-                    'frames': frames.copy()
+                    "segment_number": segment_number,
+                    "frames": frames.copy()
                 })
                 frames.clear()
             frames.append(data)

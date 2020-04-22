@@ -82,7 +82,7 @@ class AudioPlayer {
         fetch(segment_request_url).then(response => {
             var found = response.headers.get("found");
 
-            if (found === 'no'){
+            if (found === "no"){
                 that.segment_to_fetch = parseInt(response.headers.get("segment-number"));
                 return null;
             }

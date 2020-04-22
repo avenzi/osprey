@@ -18,12 +18,12 @@ output = None
 A multi-threading HTTP server for serving Raspberry Pi video. Requires the PiCamera device.
 """
 class RaspberryPiVideoStream(threading.Thread):
-    resolution = '640x480'
+    resolution = "640x480"
     framerate = 16
 
     # Camera rotation in degrees
     rotation = 180
-    address = ''
+    address = ""
     port = 8000
 
     def __init__(self, queue, args=(), kwargs=None):
@@ -39,7 +39,7 @@ class RaspberryPiVideoStream(threading.Thread):
                 output = StreamingOutput()
                 # Change camera rotation  
                 camera.rotation = self.rotation
-                camera.start_recording(output, format='mjpeg')
+                camera.start_recording(output, format="mjpeg")
                 
                 # Serve until local error
                 try:
@@ -62,7 +62,7 @@ class StreamingOutput(object):
         self.condition = Condition()
 
     def write(self, buf):
-        if buf.startswith(b'\xff\xd8'):
+        if buf.startswith(b"\xff\xd8"):
             # New frame, copy the existing buffer's content and notify all of availability
             self.buffer.truncate()
             with self.condition:
@@ -77,12 +77,12 @@ class StreamingOutput(object):
 ############################################################
 class StreamingHandler(server.BaseHTTPRequestHandler):
     def do_GET(self):
-        if self.path == '/stream.mjpg':
+        if self.path == "/stream.mjpg":
             self.send_response(200)
-            self.send_header('Age', 0)
-            self.send_header('Cache-Control', 'no-cache, private')
-            self.send_header('Pragma', 'no-cache')
-            self.send_header('Content-Type', 'multipart/x-mixed-replace; boundary=FRAME')
+            self.send_header("Age", 0)
+            self.send_header("Cache-Control", "no-cache, private")
+            self.send_header("Pragma", "no-cache")
+            self.send_header("Content-Type", "multipart/x-mixed-replace; boundary=FRAME")
             self.end_headers()
             
             # Serve mjpg frame
@@ -94,17 +94,17 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
 
                     time = datetime.datetime.now()
                     timestamp = (time - epoch).total_seconds() * 1000.0
-                    self.wfile.write(b'--FRAME\r\n')
-                    self.send_header('Content-Type', 'image/jpeg')
-                    self.send_header('Content-Length', len(frame))
-                    self.send_header('Timestamp', timestamp)
+                    self.wfile.write(b"--FRAME\r\n")
+                    self.send_header("Content-Type", "image/jpeg")
+                    self.send_header("Content-Length", len(frame))
+                    self.send_header("Timestamp", timestamp)
                     self.end_headers()
                     self.wfile.write(frame)
-                    self.wfile.write(b'\r\n')
+                    self.wfile.write(b"\r\n")
             
             except Exception as e:
                 logging.warning(
-                    'Removed streaming client %s: %s',
+                    "Removed streaming client %s: %s",
                     self.client_address, str(e))
         
         else:
