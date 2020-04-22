@@ -35,45 +35,61 @@ class SenseController(Controller):
             self.database_cursor.execute(sql, (ip,))
             temp, press, humid, time = self.database_cursor.fetchone()
 
-            # Convert to JQueryable objects
+            # Convert to proper formatting
             roomTemperature = "{:.2f}".format(temp)
             airPressure = "{:.2f}".format(press)
             airHumidity = "{:.2f}".format(humid)
+            
+            try:
+                if (triggerSettings_temperature != '') and (float(roomTemperature) > float(triggerSettings_temperature)):
+                    # Write temperature data to database
+                    sql = """
+                        INSERT INTO eventlog 
+                        (user_id, alert_time, alert_type, alert_message) 
+                        VALUES (%s, NOW(), %s, %s);
+                    """
+                    message = name + " Temperature exceeded " + triggerSettings_temperature + " F"
+    
+                    self.database_cursor.execute(sql, (user_id, "Temperature", message))
+                    self.database_connection.commit()
+            
+            except:
+                # Catch and continue on invalid literal to convert to float errors in trigger settings
+                pass
 
-            if (triggerSettings_temperature != '') and (float(roomTemperature) > float(triggerSettings_temperature)):
-                # Write temperature data to database
-                sql = """
-                    INSERT INTO eventlog 
-                    (user_id, alert_time, alert_type, alert_message) 
-                    VALUES (%s, NOW(), %s, %s);
-                """
-                message = name + " Temperature exceeded " + triggerSettings_temperature + " F"
-
-                self.database_cursor.execute(sql, (user_id, "Temperature", message))
-                self.database_connection.commit()
-
-            if (triggerSettings_pressure != '') and (float(airPressure) > float(triggerSettings_pressure)):
-                # Write pressure data to database
-                sql = """
-                    INSERT INTO eventlog 
-                    (user_id, alert_time, alert_type, alert_message) 
-                    VALUES (%s, NOW(), %s, %s);
-                """
-                message = name + " Pressure exceeded " + triggerSettings_pressure + " millibars"
-
-                self.database_cursor.execute(sql, (user_id, "Pressure", message))
-                self.database_connection.commit()
-
-            if (triggerSettings_humidity != '') and (float(airHumidity) > float(triggerSettings_humidity)):
-                # Write humidity data to database
-                sql = """
-                    INSERT INTO eventlog 
-                    (user_id, alert_time, alert_type, alert_message) 
-                    VALUES (%s, NOW(), %s, %s);
-                """
-                message = name + " Humidity exceeded " + triggerSettings_humidity + " %"
-                self.database_cursor.execute(sql, (user_id, "Humidity", message))
-                self.database_connection.commit()
+            try:
+                if (triggerSettings_pressure != '') and (float(airPressure) > float(triggerSettings_pressure)):
+                    # Write pressure data to database
+                    sql = """
+                        INSERT INTO eventlog 
+                        (user_id, alert_time, alert_type, alert_message) 
+                        VALUES (%s, NOW(), %s, %s);
+                    """
+                    message = name + " Pressure exceeded " + triggerSettings_pressure + " millibars"
+    
+                    self.database_cursor.execute(sql, (user_id, "Pressure", message))
+                    self.database_connection.commit()
+                    
+            except:
+                # Catch and continue on invalid literal to convert to float errors in trigger settings
+                pass
+            
+            
+            try:
+                if (triggerSettings_humidity != '') and (float(airHumidity) > float(triggerSettings_humidity)):
+                    # Write humidity data to database
+                    sql = """
+                        INSERT INTO eventlog 
+                        (user_id, alert_time, alert_type, alert_message) 
+                        VALUES (%s, NOW(), %s, %s);
+                    """
+                    message = name + " Humidity exceeded " + triggerSettings_humidity + " %"
+                    self.database_cursor.execute(sql, (user_id, "Humidity", message))
+                    self.database_connection.commit()
+                    
+            except:
+                # Catch and continue on invalid literal to convert to float errors in trigger settings
+                pass
 
         except Exception as e:
             pass
