@@ -1,6 +1,6 @@
 from app.controllers.controller import Controller
 
-from flask import Response
+from flask import Response, jsonify, request
 import json
 import os.path
 
@@ -22,7 +22,10 @@ class AudioController(Controller):
         segments_record = self.database_cursor.fetchone()
 
         if segments_record is None:
-            return Response()
+            response = Response()
+            response.headers.add('segment-number', segment)
+            response.headers.add('found', 'no')
+            return response
 
         segments_metadata = json.loads(segments_record[7])
         base_path = os.path.dirname(__file__) + '/../../data-ingestion/'
@@ -43,5 +46,17 @@ class AudioController(Controller):
         )
         response.headers.add('segment-number', segment)
         response.headers.add('segment-time', timestamp)
+        response.headers.add('found', 'yes')
 
         return response
+    
+    def get_sensor_info(self):
+        self.database_cursor.execute("""SELECT MAX(id) FROM Session""")
+        session_id = self.database_cursor.fetchone()[0]
+        identifier = request.form['identifier']
+
+        sql = """SELECT id FROM SessionSensor WHERE SessionId = %s AND Name = %s"""
+        self.database_cursor.execute(sql, (session_id, identifier))
+        sensor_id = self.database_cursor.fetchone()[0]
+
+        return jsonify({"session_id": session_id, "sensor_id": sensor_id})

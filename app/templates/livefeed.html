@@ -201,6 +201,11 @@
 
     <script src="../static/JS/elapsed_time.js"></script>
     <script src="../static/JS/generate.js"></script>
+    <script src="../static/JS/mp3_degapper.js"></script>
+    <script src="../static/JS/audio_player.js"></script>
     <script src="../static/JS/livefeed.js"></script>
+    <script>
+        var AUDIO_REQUEST_URL = "{{url_for('audiosegmentfetch', timestamp='TIMESTAMP', segment='SEGMENT', session='SESSION', sensor='SENSOR')}}";
+    </script>
 
 {% endblock %}

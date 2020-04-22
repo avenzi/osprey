@@ -106,7 +106,7 @@ document.addEventListener("DOMContentLoaded", async function() {
         $.get(`/retrieve_eventlog/${parseInt(slider.value)}/4/${SESSION_START_TIME}`, function(data) {
             $("#eventLog").html(data);
         }).always(function() {
-            setTimeout(doPoll, 850);
+            setTimeout(update_eventlog, 800);
         });
     }
     update_eventlog();

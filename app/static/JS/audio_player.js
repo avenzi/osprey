@@ -4,13 +4,22 @@
  */
 
 class AudioPlayer {
-    constructor(session_id, sensor_id) {
+    constructor(session_id, sensor_id, sensor_name, player_id) {
         this.sensor_id = sensor_id;
         this.session_id = session_id;
+        this.sensor_name = sensor_name;
+        this.player_id = player_id;
+        this.determine_config()
+    }
 
+    init() {
         this.mp3_degapper = new MP3Degapper();
 
-        this.audio_element = document.getElementById(`audio-${this.sensor_id}`);
+        if (this.sensor_name === undefined) {
+            this.audio_element = document.getElementById(`audio-${this.sensor_id}`);
+        } else {
+            this.audio_element = document.getElementById(`audio-${this.player_id}`);
+        }
         this.media_source = new MediaSource();
         var that = this;
         this.media_source.addEventListener("sourceopen", function() {
@@ -23,7 +32,7 @@ class AudioPlayer {
         this.paused = false;
         this.playing = false;
         this.current_segment = 1;
-        this.last_segment_number = this.audio_element.getAttribute("last-segment-number");
+        this.last_segment_number = this.player_id ? 9999999 : this.audio_element.getAttribute("last-segment-number");
 
         // Buffering control variables
         this.fetching = false;
@@ -71,13 +80,34 @@ class AudioPlayer {
 
         // Fetch the audio segment
         fetch(segment_request_url).then(response => {
+            var found = response.headers.get("found");
+
+            if (found === 'no'){
+                that.segment_to_fetch = parseInt(response.headers.get("segment-number"));
+                return null;
+            }
             that.last_fetched_segment_number = response.headers.get("segment-number");
             that.last_fetched_segment_time = response.headers.get("segment-time");
             return response.arrayBuffer();
         }).then(function(buffer) {
-            that.receive_frame(buffer, that.last_fetched_segment_number, that.last_fetched_segment_time);
-            that.fetching = false;
+            if (buffer != null) {
+                that.receive_frame(buffer, that.last_fetched_segment_number, that.last_fetched_segment_time);
+                that.fetching = false;
+            }
         });
+    }
+
+    determine_config() {
+        if (this.session_id === -1) {
+            var that = this;
+            $.post(`getaudioinfo`, {identifier: this.sensor_name}, function(result) {
+                that.session_id = result["session_id"];
+                that.sensor_id = result["sensor_id"];
+                that.init();
+            });
+        } else {
+            this.init();
+        }
     }
 
     play() {

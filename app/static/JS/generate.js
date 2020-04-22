@@ -300,13 +300,13 @@ $(document).ready(function() {
         var queryList = queryString.split("&");
 
         // A map containing camera data submitted from sensorForm
-        var camData = new Map();
+        camData = new Map();
 
         // A map containing Sense HAT data submitted from sensorForm
-        var senData = new Map();
+        senData = new Map();
 
         // A map containing microphone data submitted from sensorForm
-        var micData = new Map();
+        micData = new Map();
 
         // Sending form data to livestream_config in routes.py
         $.post("livestream_config", {livestream_config: queryString});
@@ -437,6 +437,8 @@ $(document).ready(function() {
         } 
 
         if (micNumber > 0) {
+            // Adding number of microphones to the micData map
+            micData.set("micNumber", micNumber);
 
             // Adding IP addresses and names of microphones to the micData map to be used when creating microphone cards
             for (var i = 0; i <= queryList.length - 1; i++) {
@@ -465,7 +467,7 @@ $(document).ready(function() {
                             <div class="card-body p-1">
                                 <div class="row">
                                     <div class="col">
-                                        <audio id="audio" class="audio-player" controls>
+                                        <audio id="audio-${i}" name="${decodeURI(name)}" class="audio-player" controls autoplay>
                                             Your browser doesn't support HTML audio element.
                                         </audio>
                                     </div>
@@ -571,4 +573,16 @@ function createHandlers(numCams, senData) {
     for (var i = 1; i <= senData.get("numSense"); i++) {
         $(`#senseSwitch${i}`).on("click", generateSenseHatHandler(i, senData.get(`sen-ip-input-${i}`), senData.get(`sen-name-input-${i}`)));
     }
+
+    // Generate onclick handlers for each Audio player
+    for (var i = 1; i <= micData.get("micNumber"); i++) {
+        var audio_el = $(`#audio-${i}`);
+        var sensor_name = audio_el.attr('name');
+        audio_players.push(new AudioPlayer(-1, -1, sensor_name, i));
+    }
 }
+
+var micData = new Map();
+var senData = new Map();
+var camData = new Map();
+var audio_players = [];

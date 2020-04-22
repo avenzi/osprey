@@ -121,6 +121,9 @@ def retrieve_sense(time, adjustment, session_id, sensor_id):
 def videoframefetch(frame, session, sensor):
     return VideoController().serve_frame(int(frame), session, sensor)
 
+@app.route("/getaudioinfo", methods=["POST"])
+def getaudioinfo():
+    return AudioController().get_sensor_info()
 
 @app.route("/audiosegmentfetch/<timestamp>/<segment>/<session>/<sensor>")
 def audiosegmentfetch(timestamp, segment, session, sensor):
