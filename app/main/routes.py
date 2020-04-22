@@ -42,7 +42,7 @@ from app.controllers.audio_controller import AudioController
 LOG = logging.getLogger(__name__)
 # Variable to disable logging in
 global loginStatus
-loginStatus = True # Avoid login for DECS -- should be false
+loginStatus = False
 
 
 @app.route("/", methods = ["GET","POST"])
