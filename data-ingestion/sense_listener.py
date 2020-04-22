@@ -14,7 +14,7 @@ class SenseListener(Listener, object):
     ###############################################
     def post_request(self, headers, data):
         # Interpret data for the database
-        data_str = data.decode('utf-8')
+        data_str = data.decode("utf-8")
         list_data = [d.split("=") for d in data_str.split("&")]
         temp = round(float(list_data[0][1]), 4)
         press = round(float(list_data[1][1]), 4)
@@ -25,7 +25,7 @@ class SenseListener(Listener, object):
         sql = """SELECT * FROM Session WHERE StartDate = (SELECT MAX(StartDate) FROM Session)"""
         self.cursor.execute(sql)
         result = self.cursor.fetchone()
-        session_id = result['id']
+        session_id = result["id"]
 
         sql = """SELECT * FROM SessionSensor WHERE SessionId = %s AND SensorType = 'SenseHat'"""
         self.cursor.execute(sql, (session_id))
@@ -34,7 +34,7 @@ class SenseListener(Listener, object):
         if result is None:
             return
 
-        sensor_id = result['id']
+        sensor_id = result["id"]
         # Write data to database
         sql = "INSERT INTO `Sense` (`Time`, `IP`, `Temp`, `Press`, `Humid`, `SessionId`, `SensorId`) VALUES (NOW(3), INET_ATON(%s), %s, %s, %s, %s, %s)"
         self.cursor.execute(sql, (ip, temp, press, humid, session_id, sensor_id))

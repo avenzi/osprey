@@ -24,8 +24,8 @@ class AudioStreamer(threading.Thread):
             if val is None:
                 return
             
-            mp3_path = val['mp3']
-            wav_path = val['wav']
+            mp3_path = val["mp3"]
+            wav_path = val["wav"]
             self.send_data(mp3_path)
             self.remove_segment(mp3_path, wav_path)
 
@@ -34,7 +34,7 @@ class AudioStreamer(threading.Thread):
             with open(mp3_file_path, "rb") as mp3_file:
                 mp3_file_bytes = mp3_file.read()
                 timestamp = str((datetime.datetime.now() - self.epoch).total_seconds() * 1000.0)
-                custom_headers = {'filename': mp3_file_path, 'timestamp': timestamp}
+                custom_headers = {"filename": mp3_file_path, "timestamp": timestamp}
 
                 try:
                     requests.post(self.server, 

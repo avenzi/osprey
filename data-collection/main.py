@@ -24,13 +24,13 @@ CONFIG = Utils().get_config()
 Utils().clear_temporary_data()
 
 # Initialize the audio collection, converting, and streaming
-audio_endpoint = 'http://%s:%d' % (CONFIG['SERVER_IP_ADDRESS'], 5515)
+audio_endpoint = "http://%s:%d" % (CONFIG["SERVER_IP_ADDRESS"], 5515)
 audio_streamer_thread = AudioStreamer(Queue(), args=(audio_endpoint,))
 audio_converter_thread = WavToMp3Converter(Queue(), args=(audio_streamer_thread,))
 audio_collection_thread = RaspberryPiAudioCollector(Queue(), args=(audio_converter_thread,))
 
 # Initialize the sense hat sensor interface and streamer
-sense_endpoint = 'http://%s:%d' % (CONFIG['SERVER_IP_ADDRESS'], 5510)
+sense_endpoint = "http://%s:%d" % (CONFIG["SERVER_IP_ADDRESS"], 5510)
 sense_hat_stream = SenseStream(Queue(), args=(sense_endpoint,))
 
 

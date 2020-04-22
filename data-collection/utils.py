@@ -8,7 +8,7 @@ class Utils():
         pass
 
     def get_config(self):
-        with open(os.path.dirname(__file__) + '/../config.json') as config_file:
+        with open(os.path.dirname(__file__) + "/../config.json") as config_file:
             return json.loads(config_file.read())
     
     def clear_temporary_data(self):
