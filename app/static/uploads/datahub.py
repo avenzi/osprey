@@ -10,10 +10,6 @@ import json
 import pymysql.cursors
 from datetime import datetime
 
-# TO INSTALL SKIMAGE AS ITS DEPENDENCIES AND NUMPY, GO TO: https://scikit-image.org/docs/stable/install.html
-# INSTALL ALL REQUIRED DEPENDENCIES: sudo apt-get install python3-matplotlib python3-numpy python3-pil python3-scipy python3-tk
-# INSTALL SUITABLE COMPILERS: sudo apt-get install build-essential cython3
-# PIP INSTALLATION: pip3 install scikit-image
 from skimage import io, img_as_float
 import numpy as np
 

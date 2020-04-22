@@ -1,4 +1,8 @@
 import pymysql.cursors
+import json
+
+# Utility imports
+from utils import Utils
 
 class Database():
     tables = [
@@ -8,17 +12,16 @@ class Database():
         "Session",
         "SessionSensor"
     ]
-
-    def __init__(self):
-        pass
     
     def get_connection(self):
-        # Set up Database Connection
+        config = Utils().get_config()
+
+        # Set up Database Connection using configured connection parameters
         db_connection = pymysql.connect(
-            host='localhost',
-            user='CapstoneMySQLUser',
-            password='CapstoneMySQLUserDbPw',
-            db='CapstoneData',
+            host=config["DATA_INGESTION_MYSQL_HOST"],
+            user=config["DATA_INGESTION_MYSQL_USER"],
+            password=config["DATA_INGESTION_MYSQL_PASSWORD"],
+            db=config["DATA_INGESTION_MYSQL_DATABASE"],
             charset='utf8mb4',
             cursorclass=pymysql.cursors.DictCursor,
             autocommit=True

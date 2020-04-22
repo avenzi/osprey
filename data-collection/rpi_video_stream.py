@@ -14,7 +14,18 @@ from http import server
 epoch = datetime.datetime.utcfromtimestamp(0)
 output = None
 
-class VideoStream(threading.Thread):
+"""
+A multi-threading HTTP server for serving Raspberry Pi video. Requires the PiCamera device.
+"""
+class RaspberryPiVideoStream(threading.Thread):
+    resolution = '640x480'
+    framerate = 16
+
+    # Camera rotation in degrees
+    rotation = 180
+    address = ''
+    port = 8000
+
     def __init__(self, queue, args=(), kwargs=None):
         threading.Thread.__init__(self, args=(), kwargs=None)
         self.queue = queue
@@ -23,16 +34,16 @@ class VideoStream(threading.Thread):
     def run(self):
         # Start camera recording
         try:
-            with picamera.PiCamera(resolution='640x480', framerate=16) as camera:
+            with picamera.PiCamera(resolution=self.resolution, framerate=self.framerate) as camera:
                 global output
                 output = StreamingOutput()
                 # Change camera rotation  
-                camera.rotation = 180
+                camera.rotation = self.rotation
                 camera.start_recording(output, format='mjpeg')
                 
                 # Serve until local error
                 try:
-                    address = ('', 8000)
+                    address = (self.address, self.port)
                     server = StreamingServer(address, StreamingHandler)
                     server.serve_forever()
                 finally:
@@ -52,8 +63,7 @@ class StreamingOutput(object):
 
     def write(self, buf):
         if buf.startswith(b'\xff\xd8'):
-            # New frame, copy the existing buffer's content and notify all
-            # clients it's available
+            # New frame, copy the existing buffer's content and notify all of availability
             self.buffer.truncate()
             with self.condition:
                 self.frame = self.buffer.getvalue()

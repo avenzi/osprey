@@ -1,4 +1,7 @@
 {
-    "Hello": 34,
-    "SERVER_IP_ADDRESS": "192.99.151.151"
+    "SERVER_IP_ADDRESS": "192.99.151.151",
+    "DATA_INGESTION_MYSQL_HOST": "localhost",
+    "DATA_INGESTION_MYSQL_USER": "CapstoneMySQLUser",
+    "DATA_INGESTION_MYSQL_PASSWORD": "CapstoneMySQLUserDbPw",
+    "DATA_INGESTION_MYSQL_DATABASE": "CapstoneData"
 }
