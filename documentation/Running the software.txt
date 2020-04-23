@@ -1,4 +1,3 @@
-
 Running the data hub application (Flask web application):
 
 	1. Ensure you are in the root of the repository and then enter the Python virtual environment:
@@ -9,7 +8,7 @@ Running the data hub application (Flask web application):
 
 Running the data collection layer (sensor software):
 
-	1. Ensure you are in the data-collection folder of the repository and then run the software with:
+	1. Ensure you are in the data-collection folder of the repository on the Raspberry Pi with the correct sensors attached and then run the software with:
 	python3 main.py
 
 Running the data ingestion layer:
