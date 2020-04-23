@@ -22,7 +22,6 @@ class LivefeedController(Controller):
             key = token.split("=")[0]
             value = token.split("=")[1].replace("%20", " ")
 
-            print(key + ": " + value)
             if "cam-ip-input" in token:
                 name = config_tokens[index + 1].split("=")[1].replace("%20", " ")
 

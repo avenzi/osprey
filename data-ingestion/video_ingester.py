@@ -43,15 +43,12 @@ class VideoIngester:
         first_frame_number, last_frame_number, frames_metadata):
         
         compacted_json = json.dumps(frames_metadata, separators=(",", ":"), sort_keys=True)
-        #print(compacted_json)
 
         sql = """INSERT INTO `VideoFrames` (`FirstFrameTimestamp`, `LastFrameTimestamp`, `FirstFrameNumber`, `LastFrameNumber`, `SessionId`, `SensorId`, `FramesMetadata`)
             VALUES (FROM_UNIXTIME(%s * 0.001), FROM_UNIXTIME(%s * 0.001), %s, %s, %s, %s, %s)"""
         
         self.cursor.execute(sql, (first_frame_timestamp, last_frame_timestamp, first_frame_number, last_frame_number, session_id, sensor_id, compacted_json))
         self.db_connection.commit()
-
-        print("Committed record to database")
     
     def ensure_directories(self, session_id, sensor_id, directory_number):
         if not self.has_data_dir:
@@ -113,7 +110,6 @@ class VideoIngester:
                 header_name = "Timestamp: "
                 frame_timestamp = header[header.find(header_name) + len(header_name):]
                 frame_timestamp = float(frame_timestamp[:frame_timestamp.find("\n")].strip())
-                #print(frame_timestamp)
 
                 current_directory_frames_total = current_directory_frames_total + 1
                 if current_directory_frames_total > frames_per_directory:
@@ -131,9 +127,6 @@ class VideoIngester:
                 if len(frames_metadata) == 1:
                     first_frame_timestamp = frame_timestamp
                     first_frame_number = total_jpgs
-                
-                #print(frame_metadata["frame_number"])
-                #print(frame_path)
                 
                 # Write the frame to the disk
                 with open(frame_path, "wb") as frame_file:
