@@ -3,8 +3,6 @@ import time
 import json
 import requests
 import os
-#import cv2 # pip install opencv-python (also installs numpy)
-# also "sudo apt install python3-opencv" <- 800+ MB package
 import numpy as np
 from database import Database
 
