@@ -43,7 +43,7 @@ sh run.sh
 
 Running the data collection layer (sensor software):
 
-1. Ensure you are in the data-collection folder of the repository and then run the software with:
+	1. Ensure you are in the data-collection folder of the repository on the Raspberry Pi with the correct sensors attached and then run the software with:
 ```python
 python3 main.py
 ```
