@@ -8,7 +8,6 @@ from database import Database
 
 # MySQL imports
 import pymysql.cursors
-# https://github.com/PyMySQL/PyMySQL
 
 class VideoIngester:
     filepath_format = "data/%d/%d/%d/%s"
