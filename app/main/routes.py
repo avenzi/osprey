@@ -39,6 +39,15 @@ from app.controllers.video_controller import VideoController
 from app.controllers.audio_controller import AudioController
 
 
+# Login middleware
+@app.before_request
+def before_request_func():
+    if not '.css' in request.path and not '.js' in request.path and request.path != '/login' and request.path != '/registration':
+        try:
+            logged_in = (session["username"] == True)
+        except:
+            return redirect(url_for("login"))
+
 """Route used for login"""
 @app.route("/", methods = ["GET","POST"])
 @app.route("/login", methods=["GET", "POST"])
