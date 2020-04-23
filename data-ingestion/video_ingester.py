@@ -78,7 +78,7 @@ class VideoIngester:
         return self.filepath_format % (session_id, sensor_id, directory_number, self.filename_format % jpg_number)
     
     def fetch_mjpg(self):
-        response = requests.get(self.url, stream=True) # TODO: add authentication #response = requests.get(self.url, auth=("user", "password"), stream=True)
+        response = requests.get(self.url, stream=True)
         if (response.status_code != 200):
             print("Failed to connect to video stream at %s" % self.url)
             return
