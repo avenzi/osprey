@@ -20,26 +20,6 @@ class SenseStream(threading.Thread):
     
     def validate_setup(self):
         try:
-            """
-            class SenseHatFake:
-                def __init__(self):
-                    self.counter = 0.0
-
-                def get_val(self):
-                    self.counter += 1.0
-                    return self.counter
-
-                def get_temperature(self):
-                    return self.get_val()
-                
-                def get_pressure(self):
-                    return self.get_val()
-                
-                def get_humidity(self):
-                    return self.get_val()
-                self.sense = SenseHatFake()
-            """
-
             self.sense = SenseHat()
             print("Sense HAT: detected")
             return True
