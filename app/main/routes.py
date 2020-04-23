@@ -45,7 +45,7 @@ global loginStatus
 loginStatus = True
 
 
-"""TODO: ADD ROUTING COMMENT"""
+"""Route used for login"""
 @app.route("/", methods = ["GET","POST"])
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -55,13 +55,13 @@ def login():
         return LoginView().get_rendered_template()
 
 
-"""TODO: ADD ROUTING COMMENT"""
+"""Route used for the home page"""
 @app.route("/home", methods=["GET"])
 def home():
     return HomeView().get_rendered_template()
 
 
-"""TODO: ADD ROUTING COMMENT"""
+"""Route used for registration"""
 @app.route("/registration", methods=["GET", "POST"])
 def registration():
     if request.method == "POST" and RegistrationForm().validate_on_submit():
@@ -70,7 +70,7 @@ def registration():
         return RegistrationView().get_rendered_template()
 
 
-"""TODO: ADD ROUTING COMMENT"""
+"""Route used for the livefeed page"""
 @app.route("/livefeed", methods=["GET", "POST"])
 def livefeed():
     if session.get("username") == True:
@@ -82,31 +82,31 @@ def livefeed():
     return LivefeedView().get_rendered_template()
 
 
-"""TODO: ADD ROUTING COMMENT"""
+"""Route used to end a session"""
 @app.route("/end_session/<int:session_id>", methods=["POST"])
 def end_session(session_id):
     return SessionController().end_session(session_id)
 
 
-"""TODO: ADD ROUTING COMMENT"""
+"""Route used to delete a session"""
 @app.route("/delete_session/<int:session_id>", methods=["POST"])
 def delete_session(session_id):
     return SessionController().delete_session(session_id)
 
 
-"""TODO: ADD ROUTING COMMENT"""
+"""Route used for serving sessions"""
 @app.route("/session/<int:session_id>")
 def archived_session(session_id):
     return SessionView().serve_session(session_id)
 
 
-"""TODO: ADD ROUTING COMMENT"""
+"""Route used to get the configuration of the livefeed page"""
 @app.route("/livestream_config", methods=["GET", "POST"])
 def livestream_config():
     return LivefeedController().store_configuration(request.form)
 
 
-"""TODO: ADD ROUTING COMMENT"""
+"""Route used to retrieve Sense HAT data as well as check it against trigger settings"""
 @app.route("/update_sense", methods=["GET", "POST"])
 def update_sense():
     SenseController().monitor_sense_data()
@@ -131,19 +131,19 @@ def retrieve_sense(time, adjustment, session_id, sensor_id):
     return SenseView().get_by_time(time, adjustment, session_id, sensor_id)
 
 
-"""TODO: ADD ROUTING COMMENT"""
+"""Route used to fetch a video frame"""
 @app.route("/videoframefetch/<frame>/<session>/<sensor>")
 def videoframefetch(frame, session, sensor):
     return VideoController().serve_frame(int(frame), session, sensor)
 
 
-"""TODO: ADD ROUTING COMMENT"""
+"""Route used to get audio sensor information"""
 @app.route("/getaudioinfo", methods=["POST"])
 def getaudioinfo():
     return AudioController().get_sensor_info()
 
 
-"""TODO: ADD ROUTING COMMENT"""
+"""Route used to fetch an audio segment"""
 @app.route("/audiosegmentfetch/<timestamp>/<segment>/<session>/<sensor>")
 def audiosegmentfetch(timestamp, segment, session, sensor):
     return AudioController().serve_segment(int(timestamp), int(segment), session, sensor)
