@@ -9,6 +9,8 @@ this module is running in.
 import json
 import pymysql.cursors
 from datetime import datetime
+import os
+import os.path
 
 from skimage import io, img_as_float
 import numpy as np
@@ -185,7 +187,7 @@ def get_pix_intensity_percentage(metadata):
 
         # Getting the path of a segment
         path = json_frames_metadata[str(i)]["path"]    
-        full_path = "/root/capstone-site/data-ingestion/" + path
+        full_path = os.path.dirname(__file__) + '/../../../data-ingestion/' + path
 
         # Getting the mean of each frame in a segment, and add it to the intensities list
         image = io.imread(full_path)
@@ -221,8 +223,8 @@ def get_pix_intensity_value(metadata):
     for i in range (first_frame_number, last_frame_number + 1):
 
         # Getting the path of a segment
-        path = json_frames_metadata[str(i)]["path"]    
-        full_path = "/root/capstone-site/data-ingestion/" + path
+        path = json_frames_metadata[str(i)]["path"]
+        full_path = os.path.dirname(__file__) + '/../../../data-ingestion/' + path
 
         # Getting the mean of each frame in a segment, and add it to the intensities list
         image = io.imread(full_path)
