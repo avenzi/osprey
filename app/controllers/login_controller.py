@@ -27,9 +27,6 @@ class LoginController(Controller):
             # Storing the username of a user in the session
             session["username"] = form.username.data
 
-            global loginStatus
-            loginStatus = True
-
             # Storing the id of the user that is logging in in the session
             self.database_cursor.execute("SELECT id FROM user WHERE username = "+"'"+session.get('username')+"'")
             session["user_id"] = self.database_cursor.fetchone()[0]

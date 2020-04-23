@@ -39,12 +39,6 @@ from app.controllers.video_controller import VideoController
 from app.controllers.audio_controller import AudioController
 
 
-LOG = logging.getLogger(__name__)
-# Variable to disable logging in
-global loginStatus
-loginStatus = True
-
-
 """Route used for login"""
 @app.route("/", methods = ["GET","POST"])
 @app.route("/login", methods=["GET", "POST"])
@@ -76,7 +70,7 @@ def livefeed():
     if session.get("username") == True:
         return redirect(url_for("login"))
 
-    if loginStatus != True:
+    else:
         return redirect(url_for("login"))
 
     return LivefeedView().get_rendered_template()
