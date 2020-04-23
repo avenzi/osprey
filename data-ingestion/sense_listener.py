@@ -4,14 +4,7 @@ import json
 import pymysql.cursors
 
 
-###############################################
-# SenseListener  : Listener class to handle SENSE Hat stream from Raspberry Pi
-###############################################
 class SenseListener(Listener, object):
-
-    ###############################################
-    # post_request  : handle post call from the SENSE Hat stream
-    ###############################################
     def post_request(self, headers, data):
         # Interpret data for the database
         data_str = data.decode("utf-8")
