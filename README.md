@@ -1,4 +1,4 @@
-# MSU Capstone: Spring 2020
+# Data Hub
 
 ### Project Components Overview
 This repository contains the computational infrastructure to allow for data from sensors to be streamed to a server. The sensor data 
