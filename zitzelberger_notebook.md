@@ -26,14 +26,17 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
-
-
-May 12th, 2020:
-* 
-*
-
 May 11th, 2020:
-* activity 1
-* activity 2
+Discussed amazon purchases with Dr. Ghassemi, and placed an order for a Raspberry Pi, an accompanying camera, and a cheap keyboard & mouse, totalling $153.60.
+Researched necessary parts for the project from OpenBCI, and compiled a preliminary list of possible purchases.
+Emailed OpenBCI with questions, and will modify the list before purchase if necessary.
+Preliminary OpenBCI Purchase List:
+* Ultracortex Mark IV EEG Headset (Unassembled, Large, 16 channels): $700
+* Cyton + Daisy Biosensing Board  (16 channels): $950
+* Pulse Sensor: $25
+* Dry EEG Comb Electrodes (30/pack): $30
+* EMG/ECG Foam Solid Gel Electrodes (30/pack) (2x): $13 x2
+* EMG/ECG Snap Electrode Cables: (x2) $40 x2
+* Total cost: ~$1,811
 
 
