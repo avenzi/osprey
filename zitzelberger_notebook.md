@@ -25,11 +25,16 @@ By working on this project you are agreeing to abide by the following expectatio
 
 
 ### Daily Updates:
+May 12th, 2020:
+Sent an application to join the OpenBCI forums, and emailed OpenBCI asking whether their software is capable of simultaneously steaming over 16 channels of data at once. I received a response to both today. Evidently the answer to my quetion was definitely 'No', but I was accepted into their forum. 
+I suggested to Dr. Ghassemi that we still purchase the 16 channel head set, as it would give us the option of both monitoring the brain fully, or various muscle groups with fewer brain channels. 
+Received an update from Amazon saying that the keyboard and mouse has been shipped.
 
 May 11th, 2020:
 Discussed amazon purchases with Dr. Ghassemi, and placed an order for a Raspberry Pi, an accompanying camera, and a cheap keyboard & mouse, totalling $153.60.
 Researched necessary parts for the project from OpenBCI, and compiled a preliminary list of possible purchases.
 Emailed OpenBCI with questions, and will modify the list before purchase if necessary.
+
 Preliminary OpenBCI Purchase List:
 * Ultracortex Mark IV EEG Headset (Unassembled, Large, 16 channels): $700
 * Cyton + Daisy Biosensing Board  (16 channels): $950
