@@ -4,7 +4,7 @@
 You will work to develop and run experiments within a Psychophysics Lab. The lab is a sensor embedded room (many cameras, microphones, temperature sensors, etc.) where individual activity is characterized and streamed to a centralized server for research and analysis. For this project specifically, you will build (or aquire) an Electroencephalograph (EEG) headset and extend this repository to live stream EEG data to the sensor data hub. You will then develop machine learning models that use the EEG data stream to predict human activities as measured by the other sensors.
 
 ### Contact Information
-* Mohammad Ghassemi, ghassem3@msu.edu
+* Mohammad Ghassemi, ghassem3@msu.edu, 617-599-6010
 * Aven Zitzelberger, zitzelbe@msu.edu
 
 
