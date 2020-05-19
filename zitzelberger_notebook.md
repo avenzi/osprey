@@ -33,6 +33,8 @@ By working on this project you are agreeing to abide by the following expectatio
 
 
 ### Daily Updates:
+May 19th, 2020: I received the go-ahead from Dr. Ayres to submit our project proposal to the MSGC, along with some additional specifications which I am currently working on. I have also received the raspberry pi. I initially had some issues getting it to recognize MSU's network, but I eventually got it to work via ethernet. I also encountered a problem causing the file system to crash after restarting the system, but I believe I have it working after a full-upgrade. I now have another problem installing MySQL due to my Raspbian Buster installation not being supported. I have found no solution and will contact Dr. Ghassemi.
+
 May 18th, 2020: I have not received the raspberry pi yet. I have been going over the code given to me by Dr. Ghassemi.
 
 May 16th, 2020: I received the first amazon package - the keyboard and mouse. The raspberry pi and camera was due to arrive, but appears to have been delayed. 
