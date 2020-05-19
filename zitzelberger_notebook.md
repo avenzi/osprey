@@ -3,9 +3,17 @@
 ### Project Description:
 You will work to develop and run experiments within a Psychophysics Lab. The lab is a sensor embedded room (many cameras, microphones, temperature sensors, etc.) where individual activity is characterized and streamed to a centralized server for research and analysis. For this project specifically, you will build (or aquire) an Electroencephalograph (EEG) headset and extend this repository to live stream EEG data to the sensor data hub. You will then develop machine learning models that use the EEG data stream to predict human activities as measured by the other sensors.
 
+### Contact Information
+* Mohammad Ghassemi, ghassem3@msu.edu
+* Aven Zitzelberger, zitzelbe@msu.edu
+
+
 ### Specific Tasks:
-1. Review and familiarize yourself with the data-hub codebase. Make sure that you can launch the data hub, stream and visualize data.
-2. Stream EEG data from the Open BCI device (or an alternative) to the datahub. 
+
+1. [Due June 1st] Student will review and familiarize himself with the existing Ghassemi lab data-hub codebase. Student will ensure they can launch the data hub, stream data to the database, and visualize data in the front end.
+2. [Due July 1st] Stream EEG data from the Open BCI device to the datahub, and visualize data from EEG and other sensors concurrently.
+3. [Due August 1st] Collect data on proof of concept visual stimulus task (TBD), and train machine learning model to reverse engineer visual stimulus from the raw EEG data.
+
 
 Additional tasks will be added at a future date.
 
