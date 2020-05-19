@@ -25,6 +25,8 @@ By working on this project you are agreeing to abide by the following expectatio
 
 
 ### Daily Updates:
+May 18th, 2020: I have not received the raspberry pi yet. I have been going over the code given to me by Dr. Ghassemi.
+
 May 16th, 2020: I received the first amazon package - the keyboard and mouse. The raspberry pi and camera was due to arrive, but appears to have been delayed. 
 
 May 15th, 2020: I received the email from Dr. Ayres, and submitted the proposal to the D2L Dropbox as instructed.
