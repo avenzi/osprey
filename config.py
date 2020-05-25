@@ -16,5 +16,5 @@ class Config(object):
 
     # Replace /root/capstone-site with the absolute path of where
     # the repository is installed on the system.
-    UPLOADS_FOLDER = os.environ.get("UPLOADS_FOLDER") or "/root/capstone-site/app/static/uploads/"
-    DOWNLOADS_FOLDER = os.environ.get("DOWNLOADS_FOLDER") or "/root/capstone-site/app/static/downloads/"
+    UPLOADS_FOLDER = os.environ.get("UPLOADS_FOLDER") or "~/data-hub/app/static/uploads/"
+    DOWNLOADS_FOLDER = os.environ.get("DOWNLOADS_FOLDER") or "~/data-hub/app/static/downloads/"
