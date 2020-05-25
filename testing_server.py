@@ -1,12 +1,10 @@
 import socket
 
-host = ''
-port = 80
-enc = "utf-8"
+host = ''           # allow any connection
+port = 80           # TCP port 80
+enc = "utf-8"       # byte-style encoding
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-    print("Socket Created")
-    
     print("Binding to {}:{}".format(host, port))
     s.bind((host, port))
     
@@ -18,14 +16,16 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 
     with conn:
         print('Connected by', addr)
-        while True:
+        while True:  # loop while data is being received
             data = conn.recv(1024)
             if not data:
                 break
 
             print("Received: \n", data.decode(enc))
+
+            # add message to send back
             data = data.decode(enc) + "\n THIS LINE WAS SENT FROM THE SERVER"
-            data = data.encode(enc)
+            data = data.encode(enc)  # encode back into byte object
 
             conn.sendall(data)
             print("Sent: \n", data.decode(enc))
