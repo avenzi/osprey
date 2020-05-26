@@ -25,8 +25,9 @@ class SessionMonitor():
                 self.database_cursor.execute(sql)
                 session_record = self.database_cursor.fetchone()
                 max_start_time = session_record["StartDate"]
-            except:
+            except Exception as e:
                 max_start_time = None
+                print(e)
 
             if max_start_time != None:
                 if max_start_time > self.latest_session_start_time:
