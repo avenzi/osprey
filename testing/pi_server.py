@@ -4,7 +4,7 @@ import struct
 from PIL import Image
 
 host = ''           # allow any connection
-port = 8000         # TCP port 80
+port = 80        # TCP port 80
 
 sock = socket.socket()     # socket object
 sock.bind((host, port))    # bind to any ip with given port

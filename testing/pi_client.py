@@ -5,7 +5,7 @@ import time
 import picamera
 
 host = "3.136.140.191"  # public ip of Ubuntu server
-port = 8000             # TCP port 80
+port = 80             # TCP port 80
 
 sock = socket.socket()      # socket object
 sock.connect((host, port))  # bind to ip:port
