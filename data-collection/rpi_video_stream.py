@@ -40,15 +40,19 @@ class RaspberryPiVideoStream(threading.Thread):
                 # Change camera rotation  
                 camera.rotation = self.rotation
                 camera.start_recording(output, format="mjpeg")
-                
+                print("Started Video Stream")
+
                 # Serve until local error
                 try:
                     address = (self.address, self.port)
                     server = StreamingServer(address, StreamingHandler)
+                    print("Streaming on {}:{}".format(self.address, self.port))
                     server.serve_forever()
                 finally:
                     camera.stop_recording()
+                    print("Stopped Recording")
         except:
+            print("Exiting camera hosting script")
             return
     
     

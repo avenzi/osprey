@@ -10,7 +10,7 @@ from queue import Queue
 Collects segmented audio from a Samsung Go microphone through PyAudio
 and passes it to another thread for processing. Requires PyAudio.
 """
-class RaspberryPiAudioCollector(threading.Thread):
+class RaspberryPiAudioCollecter(threading.Thread):
     samp_rate = 44100
 
     # The number of bytes of data to read from the microphone before processing the chunk
