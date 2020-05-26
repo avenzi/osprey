@@ -2,7 +2,7 @@ import socket
 
 host = ''           # allow any connection
 port = 80           # TCP port 80
-enc = "utf-8"       # byte-style encoding
+enc = "utf-8"       # byte encoding
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     print("Binding to {}:{}".format(host, port))
