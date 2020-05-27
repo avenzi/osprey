@@ -48,11 +48,13 @@ class RaspberryPiVideoStream(threading.Thread):
                     server = StreamingServer(address, StreamingHandler)
                     print("Streaming on {}:{}".format(self.address, self.port))
                     server.serve_forever()
+                except Exception as e:
+                    print("Exception in inner try-except:", e)
                 finally:
                     camera.stop_recording()
                     print("Stopped Recording")
-        except:
-            print("Exiting camera hosting script")
+        except Exception as e:
+            print("Exception in outer try-except:", e)
             return
     
     
