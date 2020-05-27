@@ -37,7 +37,7 @@ print("Databse set up")
 workers = []
 for session_sensor in session_sensors:
     if session_sensor["SensorType"] == "PiCamera":
-        url = "http://%s:%s/stream.mjpg" % (session_sensor["INET_NTOA(IP)"], 80)
+        url = "http://%s:%s/stream.mjpg" % (session_sensor["INET_NTOA(IP)"], 8000)
         print("URL: ", url)
         
         video_ingester_thread = Thread({
