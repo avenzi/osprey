@@ -25,7 +25,7 @@ try:
         
         image_stream.seek(0)  # go back to beginning of stream
         image = Image.open(image_stream)
-
+        
         try:  # check for image corruption
             image.verify()
             print("Image received")
