@@ -1,15 +1,19 @@
 import io
+import os
 import picamera
 import logging
 import socketserver
 from threading import Condition
 from http import server
+from requests import get
+
+PORT = 8000  # port on which to host the stream
 
 PAGE = """\
 <html>
-<head><title>picamera MJPEG streaming demo</title></head>
+<head><title>Picam</title></head>
 <body>
-<h1>PiCamera MJPEG Streaming Demo</h1>
+<h1>RasPi MJPEG Streaming</h1>
 <img src="stream.mjpg" width="640" height="480" />
 </body>
 </html>
@@ -79,10 +83,17 @@ class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
 
 with picamera.PiCamera(resolution='640x480', framerate=24) as camera:
     output = StreamingOutput()
+    
     camera.start_recording(output, format='mjpeg')
+    print("Started Recording")
+
     try:
-        address = ('', 8000)  # host on *:8000
+        
+        address = ('', PORT)
         server = StreamingServer(address, StreamingHandler)
+        ip = get('http://ipinfo.io/ip').text.replace('\n','')
+        print("Starting Server:  {}:{}".format(ip, PORT))
         server.serve_forever()
     finally:
         camera.stop_recording()  # stop recording on error or termination
+        print("Stopped Recording.")
