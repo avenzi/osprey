@@ -7,15 +7,6 @@ You will work to develop and run experiments within a Psychophysics Lab. The lab
 * Mohammad Ghassemi, ghassem3@msu.edu, 617-599-6010
 * Aven Zitzelberger, zitzelbe@msu.edu, 248-404-5522, 919 East Shaw Ln. (East Holmes Hall)
 
-##### Previous Team 
-* "Seeger, Ben" <seegerbe@msu.edu>
-* "Johnson, Ryan" <john3842@msu.edu>,
-* "Devolder, Rainier" <devolde2@msu.edu>,
-* "Marderosian, Merryn" <mardero6@msu.edu>,
-* "Shu, Lianghao" <shulian1@msu.edu>,
-* "Whitacre, Taylor Richard" <whitacr5@msu.edu>,
-
-
 
 ### Specific Tasks:
 
