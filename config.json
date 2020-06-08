@@ -1,7 +1,4 @@
 {
     "SERVER_IP_ADDRESS": "3.136.140.191",
-    "DATA_INGESTION_MYSQL_HOST": "localhost",
-    "DATA_INGESTION_MYSQL_USER": "CapstoneMySQLUser",
-    "DATA_INGESTION_MYSQL_PASSWORD": "CapstoneMySQLUserDbPw",
-    "DATA_INGESTION_MYSQL_DATABASE": "CapstoneData"
+	"PORT": "8000"
 }

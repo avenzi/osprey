@@ -10,14 +10,8 @@ data/*
 # Ignore Log file
 *.Log
 
-# Ignore Visual Studio Code
-.vscode/*
-
 # Ignore User uploaded files
 app/static/uploads/*
-
-# Do not ignore datahub module
-!app/static/uploads/datahub.py
 
 
 # Raspberry Pi .gitignore
