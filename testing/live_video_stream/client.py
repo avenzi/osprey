@@ -76,6 +76,11 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
         else:
             self.send_error(404)  # couldn't find it
             self.end_headers()
+        
+        
+    def handle(self):
+        self.data = self.request.recv()
+        print(self.data)
 
 class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
     allow_reuse_address = True
