@@ -70,17 +70,25 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                     self.wfile.write(frame)
                     self.wfile.write(b'\r\n')
             except Exception as e:
-                logging.warning(
-                    'Removed streaming client %s: %s',
-                    self.client_address, str(e))
+                logging.warning('Removed streaming client %s: %s',self.client_address, str(e))
         else:
             self.send_error(404)  # couldn't find it
             self.end_headers()
         
         
+    # Handler for direct connection requests from the server
     def handle(self):
-        self.data = self.request.recv()
-        print(self.data)
+        try:
+            while True:  # write individual frames
+                with output.condition:
+                    output.condition.wait()
+                    frame = output.frame
+                print('writing frame:', len(frame), frame)
+                #self.wfile.write(str(len(frame)).encode())  # send length of frame
+                self.wfile.write(frame)
+                #self.wfile.write(b'\r\n')  # message terminator?
+        except Exception as e:
+            logging.warning(str(e))
 
 class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
     allow_reuse_address = True
