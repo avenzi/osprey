@@ -38,6 +38,8 @@ class StreamingOutput(object):
 
 class StreamingHandler(server.BaseHTTPRequestHandler):
     """ Passed into StreamingServer to handle requests """
+
+    # Handles request from a web browser
     def do_GET(self):
         # Set page headers based on location
         if self.path == '/':
@@ -59,7 +61,7 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
             self.send_header('Content-Type', 'multipart/x-mixed-replace; boundary=FRAME')
             self.end_headers()
             try:
-                while True:  # write individual frames
+                while True:  # continually write individual frames
                     with output.condition:
                         output.condition.wait()
                         frame = output.frame
@@ -74,8 +76,7 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
         else:
             self.send_error(404)  # couldn't find it
             self.end_headers()
-        
-        
+
     # Handler for direct connection requests from the server
     def handle(self):
         try:
@@ -84,15 +85,18 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                     output.condition.wait()
                     frame = output.frame
                 print('writing frame:', len(frame), frame)
-                #self.wfile.write(str(len(frame)).encode())  # send length of frame
+                self.wfile.write(str(len(frame)).encode())  # send proto (length of header)
+                self.wfile.write()
                 self.wfile.write(frame)
                 #self.wfile.write(b'\r\n')  # message terminator?
         except Exception as e:
             logging.warning(str(e))
 
+
 class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
     allow_reuse_address = True
     daemon_threads = True
+
 
 with picamera.PiCamera(resolution='640x480', framerate=24) as camera:
     output = StreamingOutput()
@@ -101,7 +105,6 @@ with picamera.PiCamera(resolution='640x480', framerate=24) as camera:
     print("Started Recording")
 
     try:
-        
         address = ('', PORT)
         server = StreamingServer(address, StreamingHandler)
         ip = get('http://ipinfo.io/ip').text.replace('\n','')
