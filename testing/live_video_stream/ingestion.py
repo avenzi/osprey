@@ -7,12 +7,8 @@ port = 8000           # TCP port 8000
 handler = ServerHandler(ip, port)
 handler.connect()
 
-i = 0
-while i < 10:
-    handler.read()  # read from TCP stream
-    i += 1
-
 try:
-    pass
+    while True:
+        handler.read()  # read from TCP stream
 finally:
     handler.close()  # close connection

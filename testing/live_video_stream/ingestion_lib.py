@@ -3,6 +3,7 @@ import json
 import struct
 import socket
 from PIL import Image
+from time import strftime
 
 
 def encode_json(obj, encoding):
@@ -32,10 +33,12 @@ class ServerHandler:
         self.header = None    # header
         self.content = None   # message content
 
+        self.num = 0   # number of images received
+
     def connect(self):
-        """ Create and connect to socket via given address """
+        """ Create and connect to socket via given address. """
         try:   # create socket object
-            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
             print("Socket Created")
         except Exception as e:
             raise Exception("Failed to create socket: \n{}".format(e))
@@ -70,12 +73,12 @@ class ServerHandler:
         proto_len = 2      # length of proto-header
 
         # Complete proto not yet received
-        if len(self.in_buffer.getvalue()) < proto_len:
+        if len(self.in_buffer) < proto_len:
             return
 
-        # '>H' = big-endian unsigned short
-        self.proto = struct.unpack('>H', self.in_buffer[:proto_len])[0]  # parse proto
+        self.proto = struct.unpack('>H', self.in_buffer[:proto_len])[0]  # parse proto (big unsigned short)
         self.in_buffer = self.in_buffer[proto_len:]  # move down the buffer
+        # print("Got proto:", self.proto)
 
     def parse_header(self):
         """ Parse the header from the start of the buffer """
@@ -85,17 +88,18 @@ class ServerHandler:
         if len(self.in_buffer) < self.proto:
             return
 
-        self.header = decode_json(self.in_buffer[:header_len])  # parse header
+        self.header = decode_json(self.in_buffer[:header_len], 'utf-8')  # parse header
         self.in_buffer = self.in_buffer[header_len:]  # move down the buffer
+        # print("Got header:", self.header)
 
         # validate header
-        for info in ("byteorder","content-length","content-type","content-encoding"):
+        for info in ("byteorder", "length", "type", "encoding"):
             if info not in self.header:
                 raise ValueError('Missing required header "{}"'.format(info))
 
     def parse_content(self):
         """ Parse content from the start of the buffer """
-        content_len = self.header["content-length"]
+        content_len = self.header["length"]
 
         # Complete content not yet received
         if len(self.in_buffer) < content_len:
@@ -105,22 +109,22 @@ class ServerHandler:
         self.in_buffer = self.in_buffer[content_len:]  # move down buffer
 
         # handle content
-        if self.header['content-type'] == 'text/json':
-            encoding = self.header["content-encoding"]
+        if self.header['type'] == 'text/json':
+            encoding = self.header["encoding"]
             self.content = decode_json(data, encoding)
-            print("Received text response from [{}:{}]: \n{}",  self.ip, self.port, repr(self.content))
+            # print("Received text response from [{}:{}]: \n{}",  self.ip, self.port, repr(self.content))
             # self.process_json_content()
 
-        elif self.header["content-type"] == 'image/jpeg':
+        elif self.header["type"] == 'image/jpeg':
             stream = io.BytesIO(data)  # convert received data into bytesIO object for PIL
             img = Image.open(stream)  # open object as JPEG
-            print("Received image. Length: {}, Size: {}".format(len(data), img.size))
-            # img.save("./images/test_{}.png".format(i))  # save image
-            # print("saved image {}".format(i))
+            # print("Received image. Length: {}, Size: {}".format(len(data), img.size))
+            # img.save("./images/img_{}.png".format(strftime('%Y-%m-%d_%H-%M-%S')))  # save image
+            self.num += 1  # received another image
 
         else:  # Binary or unknown content-type
             self.content = data
-            print('Received {} response from [{}:{}}', self.header["content-type"], self.ip, self.port)
+            print('Received {} response from [{}:{}}', self.header["type"], self.ip, self.port)
             # self.process_binary_content()
 
         self.reset()
@@ -135,3 +139,4 @@ class ServerHandler:
         """ Disconnect """
         self.socket.close()
         print("Disconnected")
+        print("Frames received:", self.num)
