@@ -1,14 +1,10 @@
 import io
-import os
-import picamera
 import logging
 import socketserver
 from threading import Condition
 from http import server
-from requests import get
 
-PORT = 8000  # port on which to host the stream
-
+# html for the web browser stream
 PAGE = """\
 <html>
 <head><title>Picam</title></head>
@@ -19,8 +15,12 @@ PAGE = """\
 </html>
 """
 
+
 class StreamingOutput(object):
-    """ Class passed into the picam's start_recording() method) """
+    """
+    Used by Picam's start_recording() method.
+    Writes frames to a buffer to be sent to the client
+    """
     def __init__(self):
         self.frame = None
         self.buffer = io.BytesIO()
@@ -36,11 +36,11 @@ class StreamingOutput(object):
             self.buffer.seek(0)
         return self.buffer.write(buf)
 
+
 class StreamingHandler(server.BaseHTTPRequestHandler):
     """ Passed into StreamingServer to handle requests """
-
-    # Handles request from a web browser
     def do_GET(self):
+        """ Handles requests from a web browser """
         # Set page headers based on location
         if self.path == '/':
             self.send_response(301)  # incorrect location
@@ -77,8 +77,8 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
             self.send_error(404)  # couldn't find it
             self.end_headers()
 
-    # Handler for direct connection requests from the server
     def handle(self):
+        """ Handles requests from a direct TCP connection to the server (data ingestion) """
         try:
             while True:  # write individual frames
                 with output.condition:
@@ -94,22 +94,6 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
 
 
 class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
+    """ Server class that will call serve_forever() in collection.py """
     allow_reuse_address = True
     daemon_threads = True
-
-
-with picamera.PiCamera(resolution='640x480', framerate=24) as camera:
-    output = StreamingOutput()
-    
-    camera.start_recording(output, format='mjpeg')
-    print("Started Recording")
-
-    try:
-        address = ('', PORT)
-        server = StreamingServer(address, StreamingHandler)
-        ip = get('http://ipinfo.io/ip').text.replace('\n','')
-        print("Starting Server:  {}:{}".format(ip, PORT))
-        server.serve_forever()
-    finally:
-        camera.stop_recording()  # stop recording on error or termination
-        print("Stopped Recording.")
