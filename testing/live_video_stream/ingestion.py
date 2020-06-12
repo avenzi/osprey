@@ -1,8 +1,9 @@
 from time import time, strftime, sleep
-from ingestion_lib import ServerHandler
+from requests import get
+from ingestion_lib import StreamHandler
 
-ip = '35.20.136.146'  # ip of raspberry pi
-port = 8000           # TCP port 8000
+port = 5000           # TCP port
 
-handler = ServerHandler(ip, port)
+print("IP:", get('http://ipinfo.io/ip').text.strip())
+handler = StreamHandler(port)
 handler.stream()

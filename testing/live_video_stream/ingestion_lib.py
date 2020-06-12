@@ -4,6 +4,7 @@ import struct
 import socket
 from PIL import Image
 from time import strftime
+from requests import get
 
 
 def encode_json(obj, encoding):
@@ -19,14 +20,17 @@ def decode_json(json_bytes, encoding):
     return obj
 
 
-class ServerHandler:
+class StreamHandler:
     """
     Handler for the socket and TCP stream for the server
     """
-    def __init__(self, ip, port):
-        self.ip = ip
-        self.port = port
-        self.socket = None
+    def __init__(self, port, ip='', debug=False):
+        self.ip = ip         # host ip
+        self.port = port     # host port
+        self.pi_ip = None    # RasPi ip
+        self.pi_port = None  # RasPi port
+
+        self.socket = None   # socket object
 
         self.in_buffer = b''  # intake buffer as bytes object
         self.proto = None     # proto-header, denoting the size of the actual header
@@ -36,6 +40,9 @@ class ServerHandler:
         self.number_received = 0       # number of images received
         self.number_sent = 0           # number of images sent from the pi (sent in header)
 
+        self.exit = False   # flag to signal clean termination
+        self.debug = debug  # activates full output
+
     def stream(self):
         """
         Create and connect to socket,
@@ -44,31 +51,40 @@ class ServerHandler:
         """
         self.connect()
         try:
+            print("Streaming...")
             while True:
                 self.read()
+                if self.exit:
+                    break
         finally:
-            self.close()
-            print("Frames Received: {}/{}".format(self.number_received, self.number_sent))
+            self.disconnect()
+            print("> Frames Received: {}/{}".format(self.number_received, self.number_sent))
 
     def connect(self):
-        """ Create and connect to socket via given address. """
-        try:   # create socket object
-            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
-            print("Socket Created...")
+        """ Create and connect to socket via given address """
+        try:   # Create initial socket object
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
+            print("> Socket Created...")
         except Exception as e:
             raise Exception("Failed to create socket: \n{}".format(e))
 
-        try:  # connect socket to given address
-            self.socket.connect((self.ip, self.port))
-            print("Socket Connected...")
+        try:  # Bind socket to ip and port
+            sock.bind((self.ip, self.port))
+            print("> Socket Bound...")
         except Exception as e:
-            raise Exception("Failed to connect to socket on {}:{} \n{}".format(self.ip, self.port, e))
+            raise Exception("Failed to bind socket to {}:{} \n{}".format(self.ip, self.port, e))
 
-        # Send custom request method CLIENTSTREAM to let the server know that this is the ingestion client.
-        # The rest of the data sent is to just to fulfill the request syntax.
-        # The two newlines add a blank line to the request, denoting that its a complete packet
-        self.socket.sendall(b'CLIENTSTREAM /index.html HTTP/1.1 \r\n\n')
-        print('Sent Stream Request...')
+        try:  # Listen for connection
+            print("> Listening for Connection on {}:{}".format(self.ip, self.port))
+            sock.listen()
+        except Exception as e:
+            raise Exception("Error while listening on {}:{} \n{}".format(self.ip, self.port, e))
+
+        try:  # Accept connection. Accept() returns a new socket object that can send and receive data.
+            self.socket, (self.pi_ip, self.pi_port) = sock.accept()
+            print("> Accepted Connection From {}:{}".format(self.pi_ip, self.pi_port))
+        except Exception as e:
+            raise Exception("Failed to accept connection from {}:{} \n{}".format(self.pi_ip, self.pi_port, e))
 
     def read(self):
         """ read from the TCP stream one time """
@@ -79,8 +95,9 @@ class ServerHandler:
         else:
             if data:  # if received data
                 self.in_buffer += data  # append to in-buffer
-            else:
-                raise Exception('Stream Disconnected')
+            else:  # stream disconnected
+                self.exit = True
+                return
 
         if self.proto is None:      # haven't gotten proto yet
             self.parse_proto()
@@ -99,7 +116,7 @@ class ServerHandler:
 
         self.proto = struct.unpack('>H', self.in_buffer[:proto_len])[0]  # parse proto (big unsigned short)
         self.in_buffer = self.in_buffer[proto_len:]  # move down the buffer
-        # print("Got proto:", self.proto)
+        self.log("Got proto:", self.proto)
 
     def parse_header(self):
         """ Parse the header from the start of the buffer, stores in self.header """
@@ -111,7 +128,7 @@ class ServerHandler:
 
         self.header = decode_json(self.in_buffer[:header_len], 'utf-8')  # parse header
         self.in_buffer = self.in_buffer[header_len:]  # move down the buffer
-        # print("Got header:", self.header)
+        self.log("Got header:", self.header)
 
         # validate header
         for info in ('length', 'number'):
@@ -132,7 +149,7 @@ class ServerHandler:
         # Decode image data
         stream = io.BytesIO(data)  # convert received data into bytesIO object for PIL
         img = Image.open(stream)  # open object as JPEG
-        # print("Received image. Length: {}, Size: {}".format(len(data), img.size))
+        self.log("Received image. Length: {}, Size: {}".format(len(data), img.size))
         # img.save("./images/img_{}.png".format(strftime('%Y-%m-%d_%H-%M-%S')))  # save image
 
         self.number_received += 1  # received another image
@@ -144,8 +161,14 @@ class ServerHandler:
         self.proto = None
         self.header = None
         self.content = None
+        self.log("Reset proto, header, and content")
 
-    def close(self):
+    def disconnect(self):
         """ Disconnect """
         self.socket.close()
-        print("Disconnected")
+        print("> Stream Disconnected")
+
+    def log(self, *args):
+        """ Prints message if debug is set to True """
+        if self.debug:
+            print(*args)
