@@ -62,6 +62,8 @@ class StreamHandler:
 
     def connect(self):
         """ Create and connect to socket via given address """
+        print("IP:", get('http://ipinfo.io/ip').text.strip())  # display this machine's IP
+
         try:   # Create initial socket object
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
             print("> Socket Created...")
@@ -96,6 +98,7 @@ class StreamHandler:
             if data:  # if received data
                 self.in_buffer += data  # append to in-buffer
             else:  # stream disconnected
+                print("> Collection Stream Disconnected ({}:{})".format(self.pi_ip, self.pi_port))
                 self.exit = True
                 return
 
@@ -166,7 +169,7 @@ class StreamHandler:
     def disconnect(self):
         """ Disconnect """
         self.socket.close()
-        print("> Stream Disconnected")
+        print("> Connection Closed")
 
     def log(self, *args):
         """ Prints message if debug is set to True """

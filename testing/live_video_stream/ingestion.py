@@ -1,9 +1,11 @@
-from time import time, strftime, sleep
-from requests import get
+import json
 from ingestion_lib import StreamHandler
 
-port = 5000           # TCP port
+# get configured settings
+with open('config.json') as file:
+    config = json.load(file)
 
-print("IP:", get('http://ipinfo.io/ip').text.strip())
+port = config['PORT']
+
 handler = StreamHandler(port)
 handler.stream()
