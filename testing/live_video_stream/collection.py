@@ -3,16 +3,16 @@ import struct
 from time import strftime
 from requests import get
 
-#from collection_lib import StreamingOutput, StreamingServer, StreamingHandler
-from ingestion_lib import encode_json, decode_json
-
-PORT = 8000  # port on which to host the stream
-
 import io
 import logging
 import socketserver
 from threading import Condition
 from http import server
+
+from ingestion_lib import encode_json, decode_json
+
+
+PORT = 8000  # port on which to host the stream
 
 # html for the web browser stream
 PAGE = """\
