@@ -7,12 +7,11 @@ import io
 import logging
 import socket
 from threading import Condition
-from http import server
 
 from ingestion_lib import encode_json, decode_json
 
 
-class Streamer():
+class Streamer:
     """ Connects to the remote server and streams the data """
     
     def __init__(self, ip, port, resolution='640x480', framerate=24, debug=False):

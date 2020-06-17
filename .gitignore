@@ -5,13 +5,8 @@ __pycache__
 # Ignore virtual environment
 venv/*
 
-data/*
-
 # Ignore Log file
 *.Log
-
-# Ignore User uploaded files
-app/static/uploads/*
 
 
 # Raspberry Pi .gitignore

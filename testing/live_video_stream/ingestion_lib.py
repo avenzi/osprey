@@ -50,12 +50,16 @@ class StreamHandler:
         disconnecting on error.
         """
         self.connect()
+
+        msg = False  # flag for displaying the streaming notification
         try:
-            print("Streaming...")
             while True:
                 self.read()
                 if self.exit:
                     break
+                if self.number_received == 1 and not msg:
+                    msg = True
+                    print("Streaming...")
         finally:
             self.disconnect()
             print("> Frames Received: {}/{}".format(self.number_received, self.number_sent))

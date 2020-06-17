@@ -2,4 +2,3 @@ numpy==1.18.1
 Pillow==7.0.0
 requests==2.23.0
 scikit-image==0.16.2
-Flask==1.1.2
