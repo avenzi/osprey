@@ -151,12 +151,14 @@ class StreamBase:
         line = "{} {} {}\r\n".format(method, path, version)
         self.wfile.write(line.encode(self.encoding))
         self.wfile.flush()
+        self.log("Sent request line '{}'".format(line), level='debug')
         
     def add_header(self, keyword, value):
         """ add a MIME header to the headers buffer. Does not send to stream. """
         text = "{}: {}\r\n".format(keyword, value)   # text to be sent
         data = text.encode(self.encoding, 'strict')  # convert text to bytes
         self.header_buffer.append(data)              # add to buffer
+        self.log("Added header '{}':{}".format(keyword, value), level='debug')
         '''
         if keyword.lower() == 'connection':
             if value.lower() == 'close':
@@ -171,6 +173,7 @@ class StreamBase:
         self.wfile.write(b"".join(self.header_buffer))  # combine all headers and send
         self.header_buffer = []                         # clear header buffer
         self.wfile.flush()
+        self.log("Sent headers", level='debug')
 
     def send_content(self, content):
         """ Sends content to the stream """
@@ -182,6 +185,7 @@ class StreamBase:
             self.error("Content format not accounted for", type(content))
         self.wfile.write(content)
         self.wfile.flush()
+        self.log("Sent content of length: {}".format(len(content)), level='debug')
 
     def close(self):
         """ Closes the connection """
