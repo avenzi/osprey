@@ -8,16 +8,16 @@ from time import sleep, strftime
 
 
 class StreamBase:
-    def __init__(self, debug=False):
-        self.host = None    # server host ip
-        self.port = None    # server port
+    def __init__(self, ip, port, debug=False):
+        self.ip = ip         # ip to bind/connect socket to
+        self.port = port     # server port
 
-        self.pi_ip = None   # RasPi ip
-        self.pi_port = None # RasPi port
+        self.pi_ip = None    # RasPi ip
+        self.pi_port = None  # RasPi port
 
-        self.socket = None  # socket object
-        self.rfile = None   # incoming file object to read from
-        self.wfile = None   # outgoing file object to write to
+        self.socket = None   # socket object
+        self.rfile = None    # incoming file object to read from
+        self.wfile = None    # outgoing file object to write to
 
         self.header_buffer = []  # outgoing header buffer
 
@@ -202,25 +202,28 @@ class StreamBase:
 
 
 class StreamServer(StreamBase):
+    def __init__(self, port, debug=False):
+        super().__init__('', port, debug)  # accept any ip on this port
+
     def setup(self):
         """ Create socket and bind to local address then wait for connection from client """
-        self.log("IP:", get('http://ipinfo.io/ip').text.strip())  # display this machine's IP
+        self.log("IP:", get('http://ipinfo.io/ip').text.strip())  # show this machine's public ip
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
         self.log("Socket Created")
 
         try:  # Bind socket to ip and port
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # allow socket to reuse address
-            sock.bind((self.host, self.port))
+            sock.bind((self.ip, self.port))  # accept any ip on this port
             self.log("Socket Bound")
         except Exception as e:
-            self.error("Failed to bind socket to {}:{}".format(self.host, self.port), e)
+            self.error("Failed to bind socket to {}:{}".format(self.ip, self.port), e)
 
         try:  # Listen for connection
-            self.log("Listening for Connection on {}:{}".format(self.host, self.port))
+            self.log("Listening for Connection on {}:{}".format(self.ip, self.port))
             sock.listen()
         except Exception as e:
-            self.error("Error while listening on {}:{}".format(self.host, self.port), e)
+            self.error("Error while listening on {}:{}".format(self.ip, self.port), e)
 
         try:  # Accept connection. Accept() returns a new socket object that can send and receive data.
             self.socket, (self.pi_ip, self.pi_port) = sock.accept()
@@ -255,8 +258,8 @@ class StreamServer(StreamBase):
 
 
 class StreamClient(StreamBase):
-    def __init__(self, resolution='640x480', framerate=24):
-        super().__init__()
+    def __init__(self, ip, port, resolution='640x480', framerate=24, debug=False):
+        super().__init__(ip, port, debug)
 
         self.camera = None              # picam object
         self.resolution = resolution    # resolution of stream
@@ -269,8 +272,8 @@ class StreamClient(StreamBase):
         self.log("Socket Created")
 
         try:  # connect socket to given address
-            self.log("Attempting to connect to {}:{}".format(self.host, self.port))
-            self.socket.connect((self.host, self.port))
+            self.log("Attempting to connect to {}:{}".format(self.ip, self.port))
+            self.socket.connect((self.ip, self.port))
             self.log("Socket Connected")
         except Exception as e:
             self.error("Failed to connect to server", e)
