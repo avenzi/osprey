@@ -1,6 +1,10 @@
+import io
 import sys
 import socket
+import picamera
+from threading import Condition
 from requests import get
+from time import sleep, strftime
 
 
 class StreamBase:
@@ -25,7 +29,8 @@ class StreamBase:
         self.content = None      # content received
 
         # misc.
-        self.num_frames = (0, 0)      # number of images (received, sent) (sent in header)
+        self.frames_sent = 0      # number of frames sent to server (Sent in header)
+        self.frames_received = 0  # number of frames received by server
 
         self.exit = False             # flag to signal clean termination
         self.encoding = 'iso-8859-1'  # encoding for data stream
@@ -132,6 +137,15 @@ class StreamBase:
             self.content = data.decode(self.encoding)
         # TODO: What if request has a payload without a specified length?
 
+    def reset(self):
+        """ Resets variables associated with a single request """
+        self.method = None
+        self.path = None
+        self.version = None
+        self.header = None
+        self.content = None
+        self.log("Reset request variables", level='debug')
+
     def add_header(self, keyword, value):
         """ add a MIME header to the headers buffer. Does not send to stream. """
         text = "{}: {}\r\n".format(keyword, value)   # text to be sent
@@ -152,7 +166,7 @@ class StreamBase:
         self.header_buffer = []                         # clear header buffer
         self.wfile.flush()
 
-    def send(self, content):
+    def send_content(self, content):
         """ Sends content to the stream """
         if type(content) == str:
             data = content.encode(self.encoding)
@@ -162,15 +176,6 @@ class StreamBase:
             self.error("Content format not accounted for", type(content))
         self.wfile.write(content)
         self.wfile.flush()
-
-    def reset(self):
-        """ Resets variables associated with a single request """
-        self.method = None
-        self.path = None
-        self.version = None
-        self.header = None
-        self.content = None
-        self.log("Reset request variables", level='debug')
 
     def close(self):
         """ Closes the connection """
@@ -231,22 +236,33 @@ class StreamServer(StreamBase):
         msg = False  # flag for displaying the streaming notification
         while not self.exit:  # run until exit status is set
             self.handle()  # parse and handle all incoming requests
-            if self.num_frames[0] == 1 and not msg:  # just for displaying the Streaming message
+            if self.frames_received == 1 and not msg:  # just for displaying the Streaming message
                 msg = True
                 self.log("Streaming...", level='status')
 
     def finish(self):
         """ Executes on termination """
-        self.log("Frames Received: {}/{}".format(self.num_frames[0], self.num_frames[1]))
+        self.log("Frames Received: {}/{}".format(self.frames_received, self.frames_sent))
 
     def INGEST(self):
         """ Handle image data received from Pi """
+        frame = self.content
+        self.frames_received += 1
+        self.frames_sent = self.header['frames-sent']
 
     def GET(self):
         """ Handle request from web browser """
 
 
 class StreamClient(StreamBase):
+    def __init__(self, resolution='640x480', framerate=24):
+        super().__init__()
+
+        self.camera = None              # picam object
+        self.resolution = resolution    # resolution of stream
+        self.framerate = framerate      # camera framerate
+        self.output = None              # file-like object buffer for the camera to stream to
+
     def setup(self):
         """ Create socket and connect to server ip """
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
@@ -261,12 +277,57 @@ class StreamClient(StreamBase):
 
     def stream(self):
         self.start_recording()
-        self.log("Streaming...", level='status')
+        msg = False  # flag for displaying the streaming notification
+        while not self.exit:  # run until exit status is set
+            self.send_images()
+            if self.frames_sent == 1 and not msg:  # just for displaying the Streaming message
+                msg = True
+                self.log("Streaming...", level='status')
 
-        while not self.exit:
-            self.handle()
+    def send_images(self):
+        """ Handle sending images to the stream """
+        with self.output.condition:
+            self.output.condition.wait()
+            frame = self.output.frame  # get next frame from picam
+
+        self.frames_sent += 1
+        self.add_header("content-length", len(frame))
+        self.add_header("frames-sent", self.frames_sent)
+        self.send_headers()
+        self.send_content(frame)
 
     def finish(self):
         """ Executes on termination """
         self.stop_recording()  # stop recording
-        self.close()  # disconnect socket
+
+    def start_recording(self):
+        self.camera = picamera.PiCamera(resolution=self.resolution, framerate=self.framerate)
+        self.output = StreamOutput()  # file-like output object for the picamera to write to
+        self.camera.start_recording(self.output, format='mjpeg')
+        self.log("Started Recording: {}".format(strftime('%Y/%m/%d %H:%M:%S')))
+        sleep(2)
+
+    def stop_recording(self):
+        self.camera.stop_recording()
+        self.log("Stopped Recording: {}".format(strftime('%Y/%m/%d %H:%M:%S')))
+
+
+class StreamOutput(object):
+    """
+    Used by Picam's start_recording() method.
+    Writes frames to a buffer to be sent to the client
+    """
+    def __init__(self):
+        self.frame = None
+        self.buffer = io.BytesIO()
+        self.condition = Condition()
+
+    def write(self, buf):
+        if buf.startswith(b'\xff\xd8'):
+            # New frame, copy the existing buffer's content
+            self.buffer.truncate()
+            with self.condition:
+                self.frame = self.buffer.getvalue()
+                self.condition.notify_all()  # notify all clients that it's available
+            self.buffer.seek(0)
+        return self.buffer.write(buf)
