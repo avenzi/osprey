@@ -41,6 +41,10 @@ class StreamBase:
         self.setup()  # initialize socket object and connect
         try:
             self.stream()  # main streaming loop
+        except ConnectionResetError:
+            self.log("Server Disconnected")
+        except KeyboardInterrupt:
+            self.log("Manual Termination")
         finally:
             self.finish()  # final executions
             self.close()   # close server
