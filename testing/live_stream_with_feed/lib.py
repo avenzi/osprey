@@ -5,7 +5,6 @@ class StreamBase:
     """
     Base class for both Server and Client classes.
     Provides the ability to send and read HTTP requests.
-    After initialization, call server() to start the server
     Methods that are overwritten in Server and Client classes:
         - setup(): initializes socket connection
         - stream(): continually performs read/write action to TCP stream
@@ -190,12 +189,14 @@ class StreamBase:
         """ sends an HTTP request line to the stream """
         line = "{} {} {}\r\n".format(method, path, version)
         self.socket.sendall(line.encode(self.encoding))
+        self.log("Sent request line '{}'".format(line), level='debug')
 
     def add_header(self, keyword, value):
         """ add a MIME header to the headers buffer. Does not send to stream. """
         text = "{}: {}\r\n".format(keyword, value)   # text to be sent
         data = text.encode(self.encoding, 'strict')  # convert text to bytes
         self.header_buffer.append(data)              # add to buffer
+        self.log("Added header '{}':{}".format(keyword, value), level='debug')
         '''
         if keyword.lower() == 'connection':
             if value.lower() == 'close':
@@ -209,6 +210,7 @@ class StreamBase:
         self.header_buffer.append(b"\r\n")              # append blank like
         self.socket.sendall(b"".join(self.header_buffer))  # combine all headers and send
         self.header_buffer = []                         # clear header buffer
+        self.log("Sent headers", level='debug')
 
     def send_content(self, content):
         """ Sends content to the stream """
@@ -220,6 +222,7 @@ class StreamBase:
             self.error("Content format not accounted for", type(content))
             return
         self.socket.sendall(content)
+        self.log("Sent content of length: {}".format(len(content)), level='debug')
 
     def close(self):
         """ Closes the connection """

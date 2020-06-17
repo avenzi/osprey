@@ -10,7 +10,7 @@ port = config['PORT']
 
 laptop_ip = '35.11.244.179'  # public ip of Aven's laptop
 
-streamer = StreamClient(laptop_ip, port)
+streamer = StreamClient(laptop_ip, port, debug=True)
 streamer.serve()
 
 
