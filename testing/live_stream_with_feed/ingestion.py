@@ -1,5 +1,5 @@
 import json
-from lib import StreamServer
+from ingestion_lib import StreamServer
 
 # get configured settings
 with open('config.json') as file:
@@ -8,4 +8,5 @@ with open('config.json') as file:
 port = config['PORT']
 
 server = StreamServer(port)
+server.serve()
 

@@ -9,20 +9,23 @@ class StreamServer(StreamBase):
 
     def setup(self):
         """ Create socket and bind to local address then wait for connection from client """
-        self.log("IP:", get('http://ipinfo.io/ip').text.strip())  # show this machine's public ip
+        self.log("IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
         self.log("Socket Created")
 
         try:  # Bind socket to ip and port
-            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # allow socket to reuse address
+            #self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # allow socket to reuse address
             sock.bind((self.ip, self.port))  # accept any ip on this port
-            self.log("Socket Bound")
+            if self.ip == '':
+                self.log("Socket Bound to *:{}".format(self.port))
+            else:
+                self.log("Socket Bound to {}:{}".format(self.ip, self.port))
         except Exception as e:
             self.error("Failed to bind socket to {}:{}".format(self.ip, self.port), e)
 
         try:  # Listen for connection
-            self.log("Listening for Connection on {}:{}".format(self.ip, self.port))
+            self.log("Listening for Connection...")
             sock.listen()
         except Exception as e:
             self.error("Error while listening on {}:{}".format(self.ip, self.port), e)

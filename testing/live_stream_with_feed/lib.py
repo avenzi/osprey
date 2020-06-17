@@ -5,10 +5,12 @@ class StreamBase:
     """
     Base class for both Server and Client classes.
     Provides the ability to send and read HTTP requests.
+    After initialization, call server() to start the server
     Methods that are overwritten in Server and Client classes:
         - setup(): initializes socket connection
         - stream(): continually performs read/write action to TCP stream
         - finish(): executes before termination of connection
+
     """
     def __init__(self, ip, port, debug=False):
         self.ip = ip         # ip to bind/connect socket to
@@ -27,7 +29,7 @@ class StreamBase:
         self.method = None       # HTTP request method
         self.path = None         # HTTP request path
         self.version = None      # HTTP request version
-        self.header = None       # incoming header dictionary
+        self.header = {}         # incoming header dictionary
         self.content = None      # content received
 
         # misc.
@@ -37,9 +39,6 @@ class StreamBase:
         self.exit = False             # flag to signal clean termination
         self.encoding = 'iso-8859-1'  # encoding for data stream
         self.debug = debug            # specifies debug mode
-
-        # funcs
-        self.serve()
 
     def serve(self):
         """ Start the server """
@@ -135,7 +134,7 @@ class StreamBase:
         """ Parse request payload, if any """
         length = self.header.get("content-length")
         if length:  # if content length was sent
-            data = self.rfile.read(length)
+            data = self.rfile.read(int(length))
             self.content = data.decode(self.encoding)
         # TODO: What if request has a payload without a specified length?
 
@@ -144,7 +143,7 @@ class StreamBase:
         self.method = None
         self.path = None
         self.version = None
-        self.header = None
+        self.header = {}
         self.content = None
         self.log("Reset request variables", level='debug')
 
@@ -191,7 +190,7 @@ class StreamBase:
         elif level == 'status':  # always show as important message
             print("[{}]".format(message))
         elif level == 'error':  # always show as error
-            print("[ERROR]: {}")
+            print("[ERROR]: {}".format(message))
             if cause:
                 print("[CAUSE]: {}".format(cause))
         elif level == 'debug' and self.debug:  # only show in debug mode
@@ -199,5 +198,5 @@ class StreamBase:
 
     def error(self, message, cause=None):
         """ Throw error and halt """
-        self.log(message, cause)
+        self.log(message, cause=cause, level='error')
         sys.exit()
