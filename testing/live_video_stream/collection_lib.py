@@ -39,8 +39,8 @@ class Streamer():
         try:
             while True:
                 self.write()  # write individual frames
-        except Exception as e:
-            print('> Ingestion Stream Disconnected ({}:{}) -- {}'.format(self.ip, self.port, str(e)))
+        except Exception:
+            print('> Ingestion Stream Disconnected ({}:{})'.format(self.ip, self.port))
         finally:
             self.stop()  # stop recording
             self.disconnect()  # disconnect socket
