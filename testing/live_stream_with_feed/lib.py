@@ -1,13 +1,15 @@
-import io
 import sys
-import socket
-import picamera
-from threading import Condition
-from requests import get
-from time import sleep, strftime
 
 
 class StreamBase:
+    """
+    Base class for both Server and Client classes.
+    Provides the ability to send and read HTTP requests.
+    Methods that are overwritten in Server and Client classes:
+        - setup(): initializes socket connection
+        - stream(): continually performs read/write action to TCP stream
+        - finish(): executes before termination of connection
+    """
     def __init__(self, ip, port, debug=False):
         self.ip = ip         # ip to bind/connect socket to
         self.port = port     # server port
@@ -199,138 +201,3 @@ class StreamBase:
         """ Throw error and halt """
         self.log(message, cause)
         sys.exit()
-
-
-class StreamServer(StreamBase):
-    def __init__(self, port, debug=False):
-        super().__init__('', port, debug)  # accept any ip on this port
-
-    def setup(self):
-        """ Create socket and bind to local address then wait for connection from client """
-        self.log("IP:", get('http://ipinfo.io/ip').text.strip())  # show this machine's public ip
-
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
-        self.log("Socket Created")
-
-        try:  # Bind socket to ip and port
-            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # allow socket to reuse address
-            sock.bind((self.ip, self.port))  # accept any ip on this port
-            self.log("Socket Bound")
-        except Exception as e:
-            self.error("Failed to bind socket to {}:{}".format(self.ip, self.port), e)
-
-        try:  # Listen for connection
-            self.log("Listening for Connection on {}:{}".format(self.ip, self.port))
-            sock.listen()
-        except Exception as e:
-            self.error("Error while listening on {}:{}".format(self.ip, self.port), e)
-
-        try:  # Accept connection. Accept() returns a new socket object that can send and receive data.
-            self.socket, (self.pi_ip, self.pi_port) = sock.accept()
-            self.log("Accepted Connection From {}:{}".format(self.pi_ip, self.pi_port))
-        except Exception as e:
-            self.error("Failed to accept connection from {}:{}".format(self.pi_ip, self.pi_port), e)
-
-        # if self.timeout is not None:  # is this needed?
-        #    self.socket.settimeout(self.timeout)
-
-    def stream(self):
-        """ Read from the TCP continually, disconnecting on error. """
-        msg = False  # flag for displaying the streaming notification
-        while not self.exit:  # run until exit status is set
-            self.handle()  # parse and handle all incoming requests
-            if self.frames_received == 1 and not msg:  # just for displaying the Streaming message
-                msg = True
-                self.log("Streaming...", level='status')
-
-    def finish(self):
-        """ Executes on termination """
-        self.log("Frames Received: {}/{}".format(self.frames_received, self.frames_sent))
-
-    def INGEST(self):
-        """ Handle image data received from Pi """
-        frame = self.content
-        self.frames_received += 1
-        self.frames_sent = self.header['frames-sent']
-
-    def GET(self):
-        """ Handle request from web browser """
-
-
-class StreamClient(StreamBase):
-    def __init__(self, ip, port, resolution='640x480', framerate=24, debug=False):
-        super().__init__(ip, port, debug)
-
-        self.camera = None              # picam object
-        self.resolution = resolution    # resolution of stream
-        self.framerate = framerate      # camera framerate
-        self.output = None              # file-like object buffer for the camera to stream to
-
-    def setup(self):
-        """ Create socket and connect to server ip """
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
-        self.log("Socket Created")
-
-        try:  # connect socket to given address
-            self.log("Attempting to connect to {}:{}".format(self.ip, self.port))
-            self.socket.connect((self.ip, self.port))
-            self.log("Socket Connected")
-        except Exception as e:
-            self.error("Failed to connect to server", e)
-
-    def stream(self):
-        self.start_recording()
-        msg = False  # flag for displaying the streaming notification
-        while not self.exit:  # run until exit status is set
-            self.send_images()
-            if self.frames_sent == 1 and not msg:  # just for displaying the Streaming message
-                msg = True
-                self.log("Streaming...", level='status')
-
-    def send_images(self):
-        """ Handle sending images to the stream """
-        with self.output.condition:
-            self.output.condition.wait()
-            frame = self.output.frame  # get next frame from picam
-
-        self.frames_sent += 1
-        self.add_header("content-length", len(frame))
-        self.add_header("frames-sent", self.frames_sent)
-        self.send_headers()
-        self.send_content(frame)
-
-    def finish(self):
-        """ Executes on termination """
-        self.stop_recording()  # stop recording
-
-    def start_recording(self):
-        self.camera = picamera.PiCamera(resolution=self.resolution, framerate=self.framerate)
-        self.output = StreamOutput()  # file-like output object for the picamera to write to
-        self.camera.start_recording(self.output, format='mjpeg')
-        self.log("Started Recording: {}".format(strftime('%Y/%m/%d %H:%M:%S')))
-        sleep(2)
-
-    def stop_recording(self):
-        self.camera.stop_recording()
-        self.log("Stopped Recording: {}".format(strftime('%Y/%m/%d %H:%M:%S')))
-
-
-class StreamOutput(object):
-    """
-    Used by Picam's start_recording() method.
-    Writes frames to a buffer to be sent to the client
-    """
-    def __init__(self):
-        self.frame = None
-        self.buffer = io.BytesIO()
-        self.condition = Condition()
-
-    def write(self, buf):
-        if buf.startswith(b'\xff\xd8'):
-            # New frame, copy the existing buffer's content
-            self.buffer.truncate()
-            with self.condition:
-                self.frame = self.buffer.getvalue()
-                self.condition.notify_all()  # notify all clients that it's available
-            self.buffer.seek(0)
-        return self.buffer.write(buf)
