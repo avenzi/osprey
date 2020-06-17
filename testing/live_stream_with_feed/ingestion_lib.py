@@ -44,7 +44,7 @@ class StreamServer(StreamBase):
         msg = False  # flag for displaying the streaming notification
         while not self.exit:  # run until exit status is set
             self.handle()  # parse and handle all incoming requests
-            if self.frames_received == 1 and not msg:  # just for displaying the Streaming message
+            if self.frames_received == 5 and not msg:  # just for displaying the Streaming message
                 msg = True
                 self.log("Streaming...", level='status')
 

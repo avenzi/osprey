@@ -18,10 +18,8 @@ class StreamBase:
         self.pi_ip = None    # RasPi ip
         self.pi_port = None  # RasPi port
 
-        self.socket = None   # socket object
-        self.rfile = None    # incoming file object to read from
-        self.wfile = None    # outgoing file object to write to
-
+        self.socket = None       # socket object
+        self.buffer = b''        # incoming stream buffer to read from
         self.header_buffer = []  # outgoing header buffer
 
         # variables for each request
@@ -42,16 +40,11 @@ class StreamBase:
     def serve(self):
         """ Start the server """
         self.setup()  # initialize socket object and connect
-
-        # Create read/write file stream objects from socket
-        self.rfile = self.socket.makefile('rb')
-        self.wfile = self.socket.makefile('wb')
-
         try:
-            self.stream()
+            self.stream()  # main streaming loop
         finally:
-            self.finish()
-            self.close()
+            self.finish()  # final executions
+            self.close()   # close server
 
     def setup(self):
         """
@@ -76,35 +69,80 @@ class StreamBase:
         pass
 
     def handle(self):
-        """ Parse and handle a single request as it is streamed """
+        """ Receive, parse, and handle a single request as it is streamed """
+        try:
+            data = self.socket.recv(4096)  # receive data from pi (size arbitrary?)
+        except BlockingIOError:  # Temporarily unavailable (errno EWOULDBLOCK)
+            pass
+        else:
+            if data:  # if received data
+                self.buffer += data  # append to data buffer
+                # TODO: Implement max buffer size? Will need to be well over JPEG image size (~100,000)
+            else:  # stream disconnected
+                self.log("Client Disconnected {}:{}".format(self.pi_ip, self.pi_port))
+                self.exit = True  # signal to disconnect
+                return
+
         if not self.method:  # request-line not yet received
             self.parse_request_line()
         elif not self.header:  # header not yet received
             self.parse_header()
         elif not self.content:  # content not yet received
             self.parse_content()
+        else:  # all parts received
             if not hasattr(self, self.method):  # if a method for the request doesn't exist
                 self.error('Unsupported Method', self.method)
-
+                return
             method_func = getattr(self, self.method)  # get class method that matches name of request method
             method_func()  # call it to handle the request
             self.reset()  # reset all request variables
+
+    def read(self, length, line=False):
+        """
+        If line is False:
+            - Reads exactly <length> amount from stream.
+            - Returns everything including any whitespace
+        If line is True:
+            - Read from stream buffer until CLRF encountered
+            - Returns single decoded line without the trailing CLRF
+            - Returns '' if the line received was itself only a CLRF (blank line)
+            - Returns None if whole line has not yet been received (buffer not at <length> yet)
+            - if no CLRF before <length> reached, stop reading and throw error
+        """
+        if not line:  # exact length specified
+            if len(self.buffer) < length:  # not enough data received to read this amount
+                return
+            data = self.buffer[:length].decode(self.encoding)  # slice exact amount
+            self.buffer = self.buffer[length:]  # move down the buffer
+            return data
+
+        # else, grab a single line, denoted by CLRF
+        CLRF = "\r\n".encode(self.encoding)
+        loc = self.buffer.find(CLRF)  # find first CLRF
+        if loc > length or (loc == -1 and len(self.buffer) > length):  # no CLRF found before max length reached
+            self.error("buffer too long before CLRF (max length: {})".format(length), self.buffer.decode(self.encoding))
+            return
+        elif loc == -1:  # CLRF not found, but we may just have not received it yet.
+            return
+
+        line = self.buffer[:loc+2]  # slice including CLRF
+        self.buffer = self.buffer[loc+2:]  # move buffer past CLRF
+        return line.decode(self.encoding).strip()  # decode and strip whitespace including CLRF
 
     def parse_request_line(self):
         """ Parses the Request-line of an HTTP request, finding the request method, path, and version strings """
         max_len = 1024  # max length of request-line before error (arbitrary choice)
 
-        raw_line = self.rfile.readline(max_len+1)  # read raw byte stream first line
-        if not raw_line:  # nothing yet
+        line = self.read(max_len, line=True)  # read first line from stream
+        if line is None:  # nothing yet
             return
-        if len(raw_line) > max_len:  # too long
-            self.error("Request-Line too long", "Length: {}".format(len(raw_line)))
+        self.log("Received Request-Line: '{}'".format(line), level='debug')
 
-        line = str(raw_line, self.encoding)  # decode raw
         words = line.split()
         if len(words) != 3:
             err = "Request-Line must conform to HTTP Standard (METHOD /path HTTP/X.X\\r\\n)"
             self.error(err, line)
+            return
 
         self.method = words[0]
         self.path = words[1]
@@ -115,26 +153,28 @@ class StreamBase:
         max_num = 32    # max number of headers (arbitrary choice)
         max_len = 1024  # max length of headers (arbitrary choice)
         for _ in range(max_num):
-            raw_line = self.rfile.readline(max_len+1)  # read next line in stream
-            if not raw_line:  # nothing yet
+            line = self.read(max_len, line=True)  # read next line in stream
+            if line is None:  # nothing yet
                 return
-            if len(raw_line) > max_len:  # too long
-                self.error("Header too long", "Length: {}".format(len(raw_line)))
-
-            line = str(raw_line, 'iso-8859-1')  # decode raw
-            if line == '\r\n':  # empty line signaling end of headers
+            if line == '':  # empty line signaling end of headers
+                self.log("All headers received", level='debug')
                 break
             key, val = line.split(':', 1)  # extract field and value by splitting at first colon
             self.header[key] = val.strip()  # remove extra whitespace from value
+            self.log("Received Header '{}':{}".format(key, val), level='debug')
         else:
-            self.error("Too many headers", ">= {}".format(max_num))
+            self.error("Too many headers", "> {}".format(max_num))
 
     def parse_content(self):
         """ Parse request payload, if any """
         length = self.header.get("content-length")
         if length:  # if content length was sent
-            data = self.rfile.read(int(length))
-            self.content = data.decode(self.encoding)
+            content = self.read(int(length))
+            if content:
+                self.content = content
+                self.log("Received Content of length: {}".format(len(self.content)), level='debug')
+            else:  # not yet fully received
+                return
         # TODO: What if request has a payload without a specified length?
 
     def reset(self):
@@ -149,8 +189,7 @@ class StreamBase:
     def send_request_line(self, method, path='/', version='HTTP/1.1'):
         """ sends an HTTP request line to the stream """
         line = "{} {} {}\r\n".format(method, path, version)
-        self.wfile.write(line.encode(self.encoding))
-        self.wfile.flush()
+        self.socket.sendall(line.encode(self.encoding))
 
     def add_header(self, keyword, value):
         """ add a MIME header to the headers buffer. Does not send to stream. """
@@ -168,9 +207,8 @@ class StreamBase:
     def send_headers(self):
         """ Adds a blank line ending the MIME headers, then sends the header buffer to the stream """
         self.header_buffer.append(b"\r\n")              # append blank like
-        self.wfile.write(b"".join(self.header_buffer))  # combine all headers and send
+        self.socket.sendall(b"".join(self.header_buffer))  # combine all headers and send
         self.header_buffer = []                         # clear header buffer
-        self.wfile.flush()
 
     def send_content(self, content):
         """ Sends content to the stream """
@@ -180,8 +218,8 @@ class StreamBase:
             data = content
         else:
             self.error("Content format not accounted for", type(content))
-        self.wfile.write(content)
-        self.wfile.flush()
+            return
+        self.socket.sendall(content)
 
     def close(self):
         """ Closes the connection """
@@ -202,6 +240,6 @@ class StreamBase:
             print("[debug]: {}".format(message))
 
     def error(self, message, cause=None):
-        """ Throw error and halt """
+        """ Throw error and signal to disconnect"""
         self.log(message, cause=cause, level='error')
-        sys.exit()
+        self.exit = True
