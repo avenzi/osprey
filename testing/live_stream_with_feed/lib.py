@@ -10,7 +10,6 @@ class StreamBase:
         - setup(): initializes socket connection
         - stream(): continually performs read/write action to TCP stream
         - finish(): executes before termination of connection
-
     """
     def __init__(self, ip, port, debug=False):
         self.ip = ip         # ip to bind/connect socket to
@@ -146,6 +145,12 @@ class StreamBase:
         self.header = {}
         self.content = None
         self.log("Reset request variables", level='debug')
+
+    def send_request_line(self, method, path='/', version='HTTP/1.1'):
+        """ sends an HTTP request line to the stream """
+        line = "{} {} {}\r\n".format(method, path, version)
+        self.wfile.write(line.encode(self.encoding))
+        self.wfile.flush()
 
     def add_header(self, keyword, value):
         """ add a MIME header to the headers buffer. Does not send to stream. """
