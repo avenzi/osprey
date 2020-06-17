@@ -37,9 +37,7 @@ class StreamBase:
         self.exit = False             # flag to signal clean termination
         self.encoding = 'iso-8859-1'  # encoding for data stream
         self.debug = debug            # specifies debug mode
-
-        # funcs
-        self.serve()
+        
 
     def serve(self):
         """ Start the server """
@@ -148,6 +146,12 @@ class StreamBase:
         self.content = None
         self.log("Reset request variables", level='debug')
 
+    def send_request_line(self, method, path='/', version='HTTP/1.1'):
+        """ sends an HTTP request line to the stream """
+        line = "{} {} {}\r\n".format(method, path, version)
+        self.wfile.write(line.encode(self.encoding))
+        self.wfile.flush()
+        
     def add_header(self, keyword, value):
         """ add a MIME header to the headers buffer. Does not send to stream. """
         text = "{}: {}\r\n".format(keyword, value)   # text to be sent
@@ -191,7 +195,7 @@ class StreamBase:
         elif level == 'status':  # always show as important message
             print("[{}]".format(message))
         elif level == 'error':  # always show as error
-            print("[ERROR]: {}")
+            print("[ERROR]: {}".format(message))
             if cause:
                 print("[CAUSE]: {}".format(cause))
         elif level == 'debug' and self.debug:  # only show in debug mode
@@ -199,5 +203,5 @@ class StreamBase:
 
     def error(self, message, cause=None):
         """ Throw error and halt """
-        self.log(message, cause)
+        self.log(message, cause=cause, level='error')
         sys.exit()

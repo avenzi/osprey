@@ -35,7 +35,7 @@ class StreamClient(StreamBase):
             if self.frames_sent == 1 and not msg:  # just for displaying the Streaming message
                 msg = True
                 self.log("Streaming...", level='status')
-
+    
     def send_images(self):
         """ Handle sending images to the stream """
         with self.output.condition:
@@ -43,6 +43,7 @@ class StreamClient(StreamBase):
             frame = self.output.frame  # get next frame from picam
 
         self.frames_sent += 1
+        self.send_request_line('INGEST')
         self.add_header("content-length", len(frame))
         self.add_header("frames-sent", self.frames_sent)
         self.send_headers()
