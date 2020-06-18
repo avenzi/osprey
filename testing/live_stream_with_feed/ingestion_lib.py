@@ -1,4 +1,5 @@
 import socket
+import select
 from requests import get
 from lib import StreamBase
 
@@ -43,12 +44,15 @@ class StreamServer(StreamBase):
 
         try:  # Accept connection. Accept() returns a new socket object that can send and receive data.
             self.socket, (self.pi_ip, self.pi_port) = sock.accept()
+            self.socket.setblocking(False)  # non-blocking means that socket.recv() doesn't hang if no data is sent
             self.log("Accepted Connection From {}:{}".format(self.pi_ip, self.pi_port))
         except Exception as e:
             self.error("Failed to accept connection from {}:{}".format(self.pi_ip, self.pi_port), e)
 
         # if self.timeout is not None:  # is this needed?
         #    self.socket.settimeout(self.timeout)
+
+
 
     def stream(self):
         """ Read from the TCP continually, disconnecting on error. """
@@ -74,27 +78,36 @@ class StreamServer(StreamBase):
 
     def GET(self):
         """ Handle request from web browser """
-        ip, port = self.client_address
+        self.log("Received Web Browser Request", level='debug')
 
         if self.path == '/':
-            #self.send_response(301)  # redirect
+            self.log("Handling request fore '/'. Redirected to index.html", level='debug')
+            self.add_response(301)  # redirect
             self.add_header('Location', '/index.html')  # redirect to index.html
             self.send_headers()
+
         elif self.path == '/favicon.ico':
-            #self.send_response(200)  # success
+            self.log("Handling request for favicon")
+            self.add_response(200)  # success
             self.add_header('Content-Type', 'image/x-icon')  # favicon
             self.send_headers()
             with open('favicon.ico', 'rb') as fout:  # send favicon image
+                data = fout.read()
+                print(type(data))
                 self.send_content(fout.read())
+
         elif self.path == '/index.html':
+            self.log("Handling request for /index.html, sending page html", level='debug')
             content = PAGE.encode(self.encoding)
-            #self.send_response(200)  # success
+            self.add_response(200)  # success
             self.add_header('Content-Type', 'text/html')
             self.add_header('Content-Length', len(content))
             self.send_headers()
             self.send_content(content)  # write html content to page
+
         elif self.path == '/stream.mjpg':
-            #self.send_response(200)  # success
+            self.log("Handling request for stream.mjpeg", level='debug')
+            self.add_response(200)  # success
             self.add_header('Age', 0)
             self.add_header('Cache-Control', 'no-cache, private')
             self.add_header('Pragma', 'no-cache')
@@ -115,4 +128,5 @@ class StreamServer(StreamBase):
         else:
             #self.send_error(404)  # couldn't find it
             #self.end_headers()
+            self.log("GET request not accounted for", level='debug')
             return

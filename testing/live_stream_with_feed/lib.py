@@ -1,75 +1,90 @@
 import io
-from threading import Condition
+import socket
+from requests import get
+import threading
 
 
-class StreamBase:
+class Base:
     """
-    Base class for both Server and Client classes.
-    Provides the ability to send and read HTTP requests.
-    Methods that are overwritten in Server and Client classes:
-        - setup(): initializes socket connection
-        - stream(): continually performs read/write action to TCP stream
-        - finish(): executes before termination of connection
+    Base class from which all others inherit.
+    Implements basic logging functionality
     """
-    def __init__(self, ip, port, debug=False):
-        self.ip = ip         # ip to bind/connect socket to
-        self.port = port     # server port
+    def __init__(self, debug=False):
+        self.debug_mode = debug  # Whether debug mode is active
+        self.exit = False        # Used to exit program and handle errors
 
-        self.pi_ip = None    # RasPi ip
-        self.pi_port = None  # RasPi port
+    def log(self, message, cause=None, level='log'):
+        """ Outputs a message according to debug level """
+        if level == 'log':  # always show message
+            print("> {}".format(message))
+        elif level == 'status':  # always show as important message
+            print("[{}]".format(message))
+        elif level == 'error':  # always show as error
+            print("[ERROR]: {}".format(message))
+            print("[THREAD]: {}".format(threading.currentThread().getName()))
+            if cause:
+                print("[CAUSE]: {}".format(cause))  # show cause if given
+        elif level == 'debug' and self.debug_mode:  # only show in debug mode
+            # (debug) [thread_name]: message content
+            print("(debug) [{}]: {}".format(threading.currentThread().getName(), message))
 
-        self.socket = None        # socket object
-        self.buffer = b''         # incoming stream buffer to read from
-        self.header_buffer = []   # outgoing header buffer
-        self.frame_buffer = FrameBuffer()  # FrameBuffer() object to hold frames
+    def debug(self, message):
+        """ Sends a debug level message """
+        self.log(message, level='debug')
 
-        # variables for each request
-        self.method = None       # HTTP request method
-        self.path = None         # HTTP request path
-        self.version = None      # HTTP request version
-        self.header = {}         # incoming header dictionary
-        self.content = None      # content received
+    def error(self, message, cause=None):
+        """ Throw error and signal to disconnect """
+        self.log(message, cause=cause, level='error')
+        self.exit = True
 
-        # misc.
-        self.frames_sent = 0      # number of frames sent to server (Sent in header)
-        self.frames_received = 0  # number of frames received by server
 
-        self.exit = False             # flag to signal clean termination
+class ConnectionBase(Base):
+    """
+    Object the represents a single connection.
+    Holds the socket and associated buffers.
+    Runs on it's own thread in the Stream class.
+    setup() is overwritten by the ServerConnection and ClientConnection classes
+    """
+    def __init__(self, ip, port, debug):
+        super().__init__(debug)
+
+        self.thread = None  # thread that this connection will run on
+
+        self.host = Address(ip, port)  # address of server
+        self.client = None     # address of client
+        self.socket = None     # socket object to read/write to
+
+        self.buffer = b''        # incoming stream buffer to read from
+        self.header_buffer = []  # outgoing header buffer
+
+        # variables for each incoming request
+        self.method = None   # HTTP request method
+        self.path = None     # HTTP request path
+        self.version = None  # HTTP request version
+        self.header = {}     # header dictionary
+        self.content = None  # content received
+
         self.encoding = 'iso-8859-1'  # encoding for data stream
-        self.debug = debug            # specifies debug mode
-
-    def serve(self):
-        """ Start the server """
-        try:
-            self.setup()   # create and connect/bind socket
-            self.stream()  # main streaming loop
-        except ConnectionResetError:
-            self.log("Server Disconnected")
-        except KeyboardInterrupt:
-            self.log("Manual Termination", level='status')
-        finally:
-            self.finish()  # final executions
-            self.close()   # close server
 
     def setup(self):
         """
-        Overwritten in Server and Client classes to create the socket object.
+        Overwritten by server and client.
+        Initializes socket objects and connections.
         """
-        pass
 
     def stream(self):
         """
-        Overwritten by Server and Client classes.
+        Overwritten by Server and Client.
         Main method called after class instance creation.
+        Must run on it's own thread.
         Continually reads/writes to file streams.
-        Calls handle_request() in a loop.
         """
         pass
 
     def finish(self):
         """
-        Overwritten in Server and Client classes.
-        Execute any last processes before termination
+        Overwritten in Server and Client.
+        Execute any last processes before termination.
         """
         pass
 
@@ -187,7 +202,8 @@ class StreamBase:
                 self.log("Received Content of length: {}".format(len(self.content)), level='debug')
             else:  # not yet fully received
                 return
-        # TODO: What if request has a payload without a specified length?
+        else:  # no content length specified - assuming no content sent
+            self.content = True  # mark content as 'received'
 
     def reset(self):
         """ Resets variables associated with a single request """
@@ -237,28 +253,114 @@ class StreamBase:
         self.socket.sendall(content)
         self.log("Sent content of length: {}".format(len(content)), level='debug')
 
+    def add_response(self, code):
+        """ Sends a response line back. Must be sent with send_headers()"""
+        version = "HTTP/1.1"
+        message = 'MESSAGE'
+        response_line = "{} {} {}\r\n".format(version, code, message)
+
+        self.log("Added response headers with code {}".format(code), level='debug')
+        self.header_buffer.append(response_line.encode(self.encoding))
+        self.add_header('Server', 'BaseHTTP/0.6 Python/3.7.3')
+        self.add_header('Date', 'Thu, 18 Jun 2020 16:05:22 GMT')  # placeholders
+
     def close(self):
         """ Closes the connection """
         self.socket.close()
         self.log("Connection Closed")
 
-    def log(self, message, cause=None, level='log'):
-        """ Outputs a message according to debug level """
-        if level == 'log':  # always show message
-            print("> {}".format(message))
-        elif level == 'status':  # always show as important message
-            print("[{}]".format(message))
-        elif level == 'error':  # always show as error
-            print("[ERROR]: {}".format(message))
-            if cause:
-                print("[CAUSE]: {}".format(cause))
-        elif level == 'debug' and self.debug:  # only show in debug mode
-            print("[debug]: {}".format(message))
 
-    def error(self, message, cause=None):
-        """ Throw error and signal to disconnect"""
-        self.log(message, cause=cause, level='error')
-        self.exit = True
+class ServerConnection(ConnectionBase):
+    def setup(self):
+        """ Create socket and bind to local address then wait for connection from a client """
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
+        try:  # Bind socket to ip and port
+            # self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # allow socket to reuse address
+            sock.bind(self.host.tup)  # bind to host address
+            self.debug("Socket Bound to {}".format(self.host))
+        except Exception as e:
+            self.error("Failed to bind socket to {}".format(self.host), e)
+
+        try:  # Listen for connection
+            self.debug("Listening for Connection...")
+            sock.listen()
+        except Exception as e:
+            self.error("While listening on {}".format(self.host), e)
+
+        try:  # Accept connection. Accept() returns a new socket object that can send and receive data.
+            self.socket, (ip, port) = sock.accept()
+            self.client = Address(ip, port)
+            self.debug("Accepted Socket Connection From {}".format(self.client))
+        except Exception as e:
+            self.error("Failed to accept connection from {}".format(self.client), e)
+
+        self.log("New Connection From: {}".format(self.client))
+        # if self.timeout is not None:  # is this needed?
+        #    self.socket.settimeout(self.timeout)
+
+
+class ClientConnection(ConnectionBase):
+    def setup(self):
+        """ Create socket and connect to a server ip """
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
+        try:  # connect socket to given address
+            self.debug("Attempting to connect to {}".format(self.host))
+            self.socket.connect(self.host.tup)
+            self.debug("Socket Connected")
+        except Exception as e:
+            self.error("Failed to connect to server", e)
+
+
+class Stream:
+    """
+    Base class for both Server and Client classes.
+    Provides the ability to send and read HTTP requests.
+    Methods that are overwritten in Server and Client classes:
+        - setup(): initializes socket connection
+        - stream(): continually performs read/write action to TCP stream
+        - finish(): executes before termination of connection
+    """
+    def __init__(self, ip, port, debug=False):
+        self.pi_ip = None    # RasPi ip
+        self.pi_port = None  # RasPi port
+
+        self.in_sockets = []      # sockets for receiving data streams
+        self.out_sockets = []     # sockets for sending data streams
+
+        # misc.
+        self.frames_sent = 0      # number of frames sent to server (Sent in header)
+        self.frames_received = 0  # number of frames received by server
+
+    def serve(self):
+        """ Start the server """
+        self.log("IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
+        try:
+            self.setup()   # create and connect/bind sockets
+            self.stream()  # main streaming loop
+        except ConnectionResetError:
+            self.log("Server Disconnected")
+        except KeyboardInterrupt:
+            self.log("Manual Termination", level='status')
+        finally:
+            self.finish()  # final executions
+            self.close()   # close server
+
+
+class Address:
+    """
+    Basic class to display ip addresses with port number.
+    I got tired of formatting strings.
+    """
+    def __init__(self, ip, port):
+        self.ip = ip
+        self.port = port
+        if self.ip in ['', '*', '0.0.0.0']:
+            self.ip = ''
+        self.rep = '{}:{}'.format(self.ip, self.port)  # string representation
+        self.tup = (self.ip, self.port)  # tuple of (ip, port)
+
+    def __repr__(self):
+        return self.rep
 
 
 class FrameBuffer(object):
