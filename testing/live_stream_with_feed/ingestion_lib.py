@@ -2,6 +2,17 @@ import socket
 from requests import get
 from lib import StreamBase
 
+# html for the web browser stream
+PAGE = """\
+<html>
+<head><title>Picam</title></head>
+<body>
+    <h1>RasPi MJPEG Streaming</h1>
+    <img src="stream.mjpg" width="640" height="480" />
+</body>
+</html>
+"""
+
 
 class StreamServer(StreamBase):
     def __init__(self, port, debug=False):
@@ -54,9 +65,54 @@ class StreamServer(StreamBase):
 
     def INGEST(self):
         """ Handle image data received from Pi """
-        frame = self.content
+        frame = self.content  # bytes
         self.frames_received += 1
         self.frames_sent = self.header['frames-sent']
 
+        # write current frame to buffer so that it can be sent to a web browser feed
+        self.frame_buffer.write(frame)
+
     def GET(self):
         """ Handle request from web browser """
+        ip, port = self.client_address
+
+        if self.path == '/':
+            #self.send_response(301)  # redirect
+            self.add_header('Location', '/index.html')  # redirect to index.html
+            self.send_headers()
+        elif self.path == '/favicon.ico':
+            #self.send_response(200)  # success
+            self.add_header('Content-Type', 'image/x-icon')  # favicon
+            self.send_headers()
+            with open('favicon.ico', 'rb') as fout:  # send favicon image
+                self.send_content(fout.read())
+        elif self.path == '/index.html':
+            content = PAGE.encode(self.encoding)
+            #self.send_response(200)  # success
+            self.add_header('Content-Type', 'text/html')
+            self.add_header('Content-Length', len(content))
+            self.send_headers()
+            self.send_content(content)  # write html content to page
+        elif self.path == '/stream.mjpg':
+            #self.send_response(200)  # success
+            self.add_header('Age', 0)
+            self.add_header('Cache-Control', 'no-cache, private')
+            self.add_header('Pragma', 'no-cache')
+            self.add_header('Content-Type', 'multipart/x-mixed-replace; boundary=FRAME')
+            self.send_headers()
+            try:
+                while True:  # continually write individual frames to page
+                    with self.frame_buffer.condition:
+                        self.frame_buffer.condition.wait()
+                        frame = self.frame_buffer.frame
+                    self.send_content(b'--FRAME\r\n')
+                    self.add_header('Content-Type', 'image/jpeg')
+                    self.add_header('Content-Length', len(frame))
+                    self.send_headers()
+                    self.send_content(frame)
+            except Exception as e:
+                self.error('Browser Stream Disconnected ({}:{})'.format(ip, port), e)
+        else:
+            #self.send_error(404)  # couldn't find it
+            #self.end_headers()
+            return

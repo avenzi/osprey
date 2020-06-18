@@ -55,8 +55,7 @@ class StreamClient(StreamBase):
 
     def start_recording(self):
         self.camera = picamera.PiCamera(resolution=self.resolution, framerate=self.framerate)
-        self.output = StreamOutput()  # file-like output object for the picamera to write to
-        self.camera.start_recording(self.output, format='mjpeg')
+        self.camera.start_recording(self.frame_buffer, format='mjpeg')
         self.log("Started Recording: {}".format(strftime('%Y/%m/%d %H:%M:%S')))
         sleep(2)
 
@@ -64,23 +63,3 @@ class StreamClient(StreamBase):
         self.camera.stop_recording()
         self.log("Stopped Recording: {}".format(strftime('%Y/%m/%d %H:%M:%S')))
 
-
-class StreamOutput(object):
-    """
-    Used by Picam's start_recording() method.
-    Writes frames to a buffer to be sent to the client
-    """
-    def __init__(self):
-        self.frame = None
-        self.buffer = io.BytesIO()
-        self.condition = Condition()
-
-    def write(self, buf):
-        if buf.startswith(b'\xff\xd8'):
-            # New frame, copy the existing buffer's content
-            self.buffer.truncate()
-            with self.condition:
-                self.frame = self.buffer.getvalue()
-                self.condition.notify_all()  # notify all clients that it's available
-            self.buffer.seek(0)
-        return self.buffer.write(buf)

@@ -7,6 +7,6 @@ with open('config.json') as file:
 
 port = config['PORT']
 
-server = StreamServer(port, debug=True)
+server = StreamServer(port)
 server.serve()
 

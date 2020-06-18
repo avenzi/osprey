@@ -1,4 +1,5 @@
-import sys
+import io
+from threading import Condition
 
 
 class StreamBase:
@@ -17,9 +18,10 @@ class StreamBase:
         self.pi_ip = None    # RasPi ip
         self.pi_port = None  # RasPi port
 
-        self.socket = None       # socket object
-        self.buffer = b''        # incoming stream buffer to read from
-        self.header_buffer = []  # outgoing header buffer
+        self.socket = None        # socket object
+        self.buffer = b''         # incoming stream buffer to read from
+        self.header_buffer = []   # outgoing header buffer
+        self.frame_buffer = FrameBuffer()  # FrameBuffer() object to hold frames
 
         # variables for each request
         self.method = None       # HTTP request method
@@ -38,13 +40,13 @@ class StreamBase:
 
     def serve(self):
         """ Start the server """
-        self.setup()  # initialize socket object and connect
         try:
+            self.setup()   # create and connect/bind socket
             self.stream()  # main streaming loop
         except ConnectionResetError:
             self.log("Server Disconnected")
         except KeyboardInterrupt:
-            self.log("Manual Termination")
+            self.log("Manual Termination", level='status')
         finally:
             self.finish()  # final executions
             self.close()   # close server
@@ -100,7 +102,7 @@ class StreamBase:
             method_func()  # call it to handle the request
             self.reset()  # reset all request variables
 
-    def read(self, length, line=False):
+    def read(self, length, line=False, decode=True):
         """
         If line is False:
             - Reads exactly <length> amount from stream.
@@ -111,13 +113,17 @@ class StreamBase:
             - Returns '' if the line received was itself only a CLRF (blank line)
             - Returns None if whole line has not yet been received (buffer not at <length> yet)
             - if no CLRF before <length> reached, stop reading and throw error
+        Decode specifies whether to decode the data from bytes to string. If true, also strip whitespace
         """
         if not line:  # exact length specified
             if len(self.buffer) < length:  # not enough data received to read this amount
                 return
-            data = self.buffer[:length].decode(self.encoding)  # slice exact amount
+            data = self.buffer[:length]
             self.buffer = self.buffer[length:]  # move down the buffer
-            return data
+            if decode:
+                return data.decode(self.encoding)  # slice exact amount
+            else:
+                return data
 
         # else, grab a single line, denoted by CLRF
         CLRF = "\r\n".encode(self.encoding)
@@ -130,7 +136,10 @@ class StreamBase:
 
         line = self.buffer[:loc+2]  # slice including CLRF
         self.buffer = self.buffer[loc+2:]  # move buffer past CLRF
-        return line.decode(self.encoding).strip()  # decode and strip whitespace including CLRF
+        if decode:
+            return line.decode(self.encoding).strip()  # decode and strip whitespace including CLRF
+        else:
+            return line
 
     def parse_request_line(self):
         """ Parses the Request-line of an HTTP request, finding the request method, path, and version strings """
@@ -172,7 +181,7 @@ class StreamBase:
         """ Parse request payload, if any """
         length = self.header.get("content-length")
         if length:  # if content length was sent
-            content = self.read(int(length))
+            content = self.read(int(length), decode=False)  # read raw bytes from stream
             if content:
                 self.content = content
                 self.log("Received Content of length: {}".format(len(self.content)), level='debug')
@@ -250,3 +259,24 @@ class StreamBase:
         """ Throw error and signal to disconnect"""
         self.log(message, cause=cause, level='error')
         self.exit = True
+
+
+class FrameBuffer(object):
+    """
+    Object used as a buffer containing a single frame.
+    Can be written to by the picam.
+    """
+    def __init__(self):
+        self.frame = None
+        self.buffer = io.BytesIO()
+        self.condition = Condition()
+
+    def write(self, buf):
+        if buf.startswith(b'\xff\xd8'):
+            # New frame, copy the existing buffer's content
+            self.buffer.truncate()
+            with self.condition:
+                self.frame = self.buffer.getvalue()
+                self.condition.notify_all()  # notify all clients that it's available
+            self.buffer.seek(0)
+        return self.buffer.write(buf)
