@@ -33,6 +33,10 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### June 18th, 2020:
+
+Alright so I had to take a step back today and figure out which methods I am going to use to both stream to a browser and stream from multiple devices. One option is to use non-blocking sockets paired with the python select module for multiplexing. The other option is to use blocking sockets but on different threads. After some experimenting in little testing programs, I have decided on the latter. This is for multiple reasons: I understood the threading method better in my testing, threading has a much broader scope of applications, and I need experience with it. The idea is that the server will run a thread that creates new sockets and accepts connections, then delegates a separate thread to handle the stream on that connection. I have begun to write a class to represent that connection, which will then be inherited by the ServerConnection and ClientConnection classes. I also rewrote some of my logging functions because I'm too stubborn to use the logging module. 
+
 ##### June 17th, 2020:
 
 I have rewritten my program in terms of HTTP requests, and it is functioning just as it was before. I also added some more error catching functionality, including the ability to catch interrupts and disconnections and exit smoothly. The problem now is to get the browser video feed working, which is not as simple as I originally thought. There was some interactions with the threading and condition modules that I'm not sure about, so tomorrow I will be looking into how those work to make the live feed possible. I have moved the (previously StreamOutput) FrameBuffer class to lib.py, where both the server and client child classes can access it. Previously, only the client class was using it for the picam to write to, but I think I will need it as a buffer from which to stream to a web browser. 
