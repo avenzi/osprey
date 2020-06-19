@@ -17,15 +17,19 @@ class Server(Base):
     """
     Handles incoming connections
     """
-    def __init__(self, port, ip='', debug=False):
+    def __init__(self, port, ip='', name='Server', debug=False):
         super().__init__(debug)
         self.ip = ip
         self.port = port
+        self.name = name
 
     def serve(self):
         """ Listens for new connections, then starts then on their own thread """
-        conn = ServerConnection(self.ip, self.port, self.debug_mode)
-        Thread(target=conn.serve(), daemon=True)  # serve incoming connections on new thread
+
+        while True:
+            # wait for a new connection, then run it on a new thread
+            conn = ServerConnection(self.ip, self.port, self.name, self.debug_mode)
+            Thread(target=conn.serve(), daemon=True).start()
 
 
 class ServerConnection(ServerConnectionBase):
@@ -33,8 +37,8 @@ class ServerConnection(ServerConnectionBase):
     Initialized for every incoming connection to the server
     Should be able to handle any stream type
     """
-    def __init__(self, ip, port, debug):
-        super().__init__(ip, port, debug)
+    def __init__(self, ip, port, name, debug):
+        super().__init__(ip, port, name, debug)
 
         self.frames_sent = 0
         self.frames_received = 0

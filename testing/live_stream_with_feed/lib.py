@@ -51,7 +51,7 @@ class ConnectionBase(Base):
     Holds the socket and associated buffers.
     Runs on it's own thread in the Stream class.
     """
-    def __init__(self, ip, port, debug, host):
+    def __init__(self, ip, port, name, host, debug):
         super().__init__(debug)
 
         self.server = Address(ip, port)  # address of the server
@@ -69,6 +69,7 @@ class ConnectionBase(Base):
         self.header = {}     # header dictionary
         self.content = None  # content received
 
+        self.name = name       # name of connection - usually sent in headers
         self.encoding = 'iso-8859-1'  # encoding for data stream
 
     def setup(self):
@@ -111,6 +112,7 @@ class ConnectionBase(Base):
     def handle(self):
         """ Receive, parse, and handle a single request as it is streamed """
         try:
+            self.debug("Waiting to receive data...")
             data = self.socket.recv(4096)  # receive data from pi (size arbitrary?)
         except BlockingIOError:  # Temporarily unavailable (errno EWOULDBLOCK)
             pass
@@ -265,7 +267,8 @@ class ConnectionBase(Base):
         '''
 
     def send_headers(self):
-        """ Adds a blank line ending the headers buffer, then sends the buffer to the stream """
+        """ Adds extra headers then a blank line ending the headers buffer, then sends the buffer to the stream """
+        self.add_header("name", self.name)
         self.header_buffer.append(b"\r\n")                 # append blank like
         self.socket.sendall(b"".join(self.header_buffer))  # combine all headers and send
         self.header_buffer = []                            # clear header buffer
@@ -291,8 +294,8 @@ class ConnectionBase(Base):
 
 class ServerConnectionBase(ConnectionBase):
     """ Create instance to host server on """
-    def __init__(self, ip, port, debug):
-        super().__init__(ip, port, debug, True)
+    def __init__(self, ip, port, name, debug):
+        super().__init__(ip, port, name, True, debug)
 
     def setup(self):
         """ Create socket and bind to local address then wait for connection from a client """
@@ -324,16 +327,16 @@ class ServerConnectionBase(ConnectionBase):
 
 class ClientConnectionBase(ConnectionBase):
     """ Create instance to connect to server """
-    def __init__(self, ip, port, debug):
-        super().__init__(ip, port, debug, False)
+    def __init__(self, ip, port, name, debug):
+        super().__init__(ip, port, name, False, debug)
 
     def setup(self):
         """ Create socket and connect to a server ip """
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
         try:  # connect socket to given address
-            self.debug("Attempting to connect to {}".format(self.server))
+            self.log("Attempting to connect to {}".format(self.server))
             self.socket.connect(self.server.tup)
-            self.debug("Socket Connected")
+            self.log("Socket Connected")
         except Exception as e:
             self.error("Failed to connect to server", e)
 

@@ -7,6 +7,6 @@ with open('config.json') as file:
 
 port = config['PORT']
 
-server = Server(port, debug=True)
+server = Server(port, name="Server", debug=True)
 server.serve()
 

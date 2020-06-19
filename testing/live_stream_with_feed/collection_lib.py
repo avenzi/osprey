@@ -5,8 +5,8 @@ from lib import ClientConnectionBase, FrameBuffer
 
 
 class VideoClient(ClientConnectionBase):
-    def __init__(self, ip, port, resolution='640x480', framerate=24, debug=False):
-        super().__init__(ip, port, debug)
+    def __init__(self, ip, port, name='Client', resolution='640x480', framerate=24, debug=False):
+        super().__init__(ip, port, name, debug)
 
         self.camera = None                # picam object
         self.resolution = resolution      # resolution of stream
@@ -37,6 +37,7 @@ class VideoClient(ClientConnectionBase):
         self.send_request_line('INGEST')
         self.add_header("content-length", len(frame))
         self.add_header("frames-sent", self.frames_sent)
+        self.add_header("client-name", self.name)
         self.send_headers()
         self.send_content(frame)
 
