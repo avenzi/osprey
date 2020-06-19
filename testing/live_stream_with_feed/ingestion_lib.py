@@ -19,12 +19,12 @@ class Server(Base):
     """
     def __init__(self, port, ip='', debug=False):
         super().__init__(debug)
-
-        self.address = Address(ip, port)  # address on which to host a connection
+        self.ip = ip
+        self.port = port
 
     def serve(self):
         """ Listens for new connections, then starts then on their own thread """
-        conn = ServerConnection(self.address, self.debug_mode)
+        conn = ServerConnection(self.ip, self.port, self.debug_mode)
         Thread(target=conn.serve(), daemon=True)  # serve incoming connections on new thread
 
 
@@ -33,10 +33,9 @@ class ServerConnection(ServerConnectionBase):
     Initialized for every incoming connection to the server
     Should be able to handle any stream type
     """
-    def __init__(self, address, debug):
-        super().__init__(address, debug)
+    def __init__(self, ip, port, debug):
+        super().__init__(ip, port, debug)
 
-        # video stream
         self.frames_sent = 0
         self.frames_received = 0
         self.frame_buffer = FrameBuffer()

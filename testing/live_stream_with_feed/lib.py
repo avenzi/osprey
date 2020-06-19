@@ -51,13 +51,13 @@ class ConnectionBase(Base):
     Holds the socket and associated buffers.
     Runs on it's own thread in the Stream class.
     """
-    def __init__(self, address, debug, host):
+    def __init__(self, ip, port, debug, host):
         super().__init__(debug)
 
-        self.host = host       # whether this is the server (true) or client (false)
-        self.server = address  # address of the server
-        self.client = None     # address of client
+        self.server = Address(ip, port)  # address of the server
+        self.client = None               # address of client
         self.socket = None     # socket object to read/write to
+        self.host = host       # whether this is the server (true) or client (false)
 
         self.buffer = b''        # incoming stream buffer to read from
         self.header_buffer = []  # outgoing stream buffer
@@ -291,8 +291,8 @@ class ConnectionBase(Base):
 
 class ServerConnectionBase(ConnectionBase):
     """ Create instance to host server on """
-    def __init__(self, address, debug):
-        super().__init__(address, debug, True)
+    def __init__(self, ip, port, debug):
+        super().__init__(ip, port, debug, True)
 
     def setup(self):
         """ Create socket and bind to local address then wait for connection from a client """
@@ -324,8 +324,8 @@ class ServerConnectionBase(ConnectionBase):
 
 class ClientConnectionBase(ConnectionBase):
     """ Create instance to connect to server """
-    def __init__(self, address, debug):
-        super().__init__(address, debug, False)
+    def __init__(self, ip, port, debug):
+        super().__init__(ip, port, debug, False)
 
     def setup(self):
         """ Create socket and connect to a server ip """
