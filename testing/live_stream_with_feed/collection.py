@@ -1,5 +1,5 @@
 import json
-from collection_lib import StreamClient
+from collection_lib import VideoClient
 
 # get configured settings
 with open('config.json') as file:
@@ -10,7 +10,7 @@ port = config['PORT']
 
 laptop_ip = '35.11.244.179'  # public ip of Aven's laptop
 
-streamer = StreamClient(laptop_ip, port)
+streamer = VideoClient(laptop_ip, port)
 streamer.serve()
 
 

@@ -1,40 +1,31 @@
 import io
 import picamera
-import socket
-from threading import Condition
-from time import sleep, strftime
-from lib import StreamBase
+from time import sleep
+from lib import ClientConnectionBase, FrameBuffer
 
 
-class StreamClient(StreamBase):
+class VideoClient(ClientConnectionBase):
     def __init__(self, ip, port, resolution='640x480', framerate=24, debug=False):
         super().__init__(ip, port, debug)
 
-        self.camera = None              # picam object
-        self.resolution = resolution    # resolution of stream
-        self.framerate = framerate      # camera framerate
-        self.output = None              # file-like object buffer for the camera to stream to
+        self.camera = None                # picam object
+        self.resolution = resolution      # resolution of stream
+        self.framerate = framerate        # camera framerate
+        self.frame_buffer = FrameBuffer   # file-like object buffer for the camera to stream to
 
-    def setup(self):
-        """ Create socket and connect to server ip """
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
-        self.log("Socket Created")
+        self.frames_sent = 0              # number of frames sent
 
-        try:  # connect socket to given address
-            self.log("Attempting to connect to {}:{}".format(self.ip, self.port))
-            self.socket.connect((self.ip, self.port))
-            self.log("Socket Connected")
-        except Exception as e:
-            self.error("Failed to connect to server", e)
+    def start(self):
+        """ Executes on initialization """
+        self.camera = picamera.PiCamera(resolution=self.resolution, framerate=self.framerate)
+        self.camera.start_recording(self.frame_buffer, format='mjpeg')
+        self.log("Started Recording: {}".format(self.date()))
+        sleep(2)
 
-    def stream(self):
-        self.start_recording()
-        msg = False  # flag for displaying the streaming notification
-        while not self.exit:  # run until exit status is set
-            self.send_images()
-            if self.frames_sent == 1 and not msg:  # just for displaying the Streaming message
-                msg = True
-                self.log("Streaming...", level='status')
+    def finish(self):
+        """ Executes on termination """
+        self.camera.stop_recording()
+        self.log("Stopped Recording: {}".format(self.date()))
     
     def send_images(self):
         """ Handle sending images to the stream """
@@ -49,17 +40,11 @@ class StreamClient(StreamBase):
         self.send_headers()
         self.send_content(frame)
 
-    def finish(self):
-        """ Executes on termination """
-        self.stop_recording()  # stop recording
-
-    def start_recording(self):
-        self.camera = picamera.PiCamera(resolution=self.resolution, framerate=self.framerate)
-        self.camera.start_recording(self.frame_buffer, format='mjpeg')
-        self.log("Started Recording: {}".format(strftime('%Y/%m/%d %H:%M:%S')))
-        sleep(2)
-
-    def stop_recording(self):
-        self.camera.stop_recording()
-        self.log("Stopped Recording: {}".format(strftime('%Y/%m/%d %H:%M:%S')))
-
+    def START(self):
+        """ Request method START """
+        msg = False  # flag for displaying the streaming notification
+        while not self.exit:  # run until exit status is set
+            self.send_images()
+            if self.frames_sent == 1 and not msg:  # just for displaying the Streaming message
+                msg = True
+                self.log("Streaming...", level='status')

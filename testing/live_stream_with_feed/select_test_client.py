@@ -24,8 +24,6 @@ def create(n, port):
             else:
                 print("Received at {}: {}\n".format(n, data.decode(enc)))
                 break
-                
-
 
 
 for n in [1, 2, 3, 4, 5]:
