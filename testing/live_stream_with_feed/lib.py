@@ -12,6 +12,9 @@ class Base:
     """
     def __init__(self, debug=False):
         self.debug_mode = debug  # Whether debug mode is active
+        self.overlay_msg = ''    # to keep track of the last overlay message
+        self.overlay_count = 0   # counter of how many times an output message was overlayed on the same line
+
         self.exit = False        # Used to exit program and handle errors
 
     def date(self):
@@ -20,28 +23,42 @@ class Base:
         year, month, day, hh, mm, ss, x, y, z = time.localtime(now)
         return "{}/{}/{} {}:{}:{} UTC".format(day, month, year, hh, mm, ss)
 
-    def log(self, message, cause=None, level='log'):
-        """ Outputs a message according to debug level """
-        if level == 'log':  # always show message
-            print("> {}".format(message))
-        elif level == 'status':  # always show as important message
+    def log(self, message, important=False):
+        """ Outputs a log message """
+        if important:
             print("[{}]".format(message))
-        elif level == 'error':  # always show as error
-            print("[ERROR]: {}".format(message))
-            print("[THREAD]: {}".format(threading.currentThread().getName()))
-            if cause:
-                print("[CAUSE]: {}".format(cause))  # show cause if given
-        elif level == 'debug' and self.debug_mode:  # only show in debug mode
-            # (debug) [thread_name]: message content
-            print("(debug) [{}]: {}".format(threading.currentThread().getName(), message))
+        else:
+            print("> {}".format(message))
 
-    def debug(self, message):
+    def debug(self, message, overlay=False):
         """ Sends a debug level message """
-        self.log(message, level='debug')
+        if not self.debug_mode:
+            return
+        if overlay:  # write an overlayable message
+            self.overlay_msg = message
+            self.overlay_count += 1  # increment
+            beg = ''
+            end = '\r'
+            count = '[{}]'.format(self.overlay_count)
+        else:
+            end = '\n'
+            count = ''
+            self.overlay_msg = ''
+            if self.overlay_count > 0:  # stop overlaying
+                self.overlay_count = 0  # reset count
+                beg = '\n'  # skip a line - don't overlay last message
+            else:   # regular message
+                beg = ''
+
+        # (debug) [thread_name]: message content [overlay_count]
+        print("{}(debug) [{}]: {} {}".format(beg, threading.currentThread().getName(), message, count), end=end)
 
     def error(self, message, cause=None):
         """ Throw error and signal to disconnect """
-        self.log(message, cause=cause, level='error')
+        print("[ERROR]: {}".format(message))
+        print("[THREAD]: {}".format(threading.currentThread().getName()))
+        if cause:
+            print("[CAUSE]: {}".format(cause))  # show cause if given
         self.exit = True
 
 
@@ -72,6 +89,12 @@ class ConnectionBase(Base):
         self.name = name       # name of connection - usually sent in headers
         self.encoding = 'iso-8859-1'  # encoding for data stream
 
+    def run(self):
+        """ Main method to call after instantiation """
+        self.setup()  # wait for connection then create socket
+        new_thread = threading.Thread(target=self.serve, daemon=True)
+        new_thread.start()
+
     def setup(self):
         """
         Overwritten by server and client connection base classes.
@@ -89,7 +112,7 @@ class ConnectionBase(Base):
     def finish(self):
         """
         Overwritten by connection classes
-        Executes before connection closes
+        Executes before connection terminates
         """
         pass
 
@@ -97,23 +120,22 @@ class ConnectionBase(Base):
         """
         Start all processes on connection.
         """
-        self.log("IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
         try:
-            self.setup()   # create and connect/bind sockets
             self.start()   # user-defined startup
             while not self.exit:  # run until exit status is set
                 self.handle()  # parse and handle all incoming requests
         except KeyboardInterrupt:
-            self.log("Manual Termination", level='status')
+            self.log("Manual Termination", True)
         finally:
+            self.finish()  # user-defined final execution
             self.close()   # close server
 
     # The following methods implement reading from the stream
     def handle(self):
         """ Receive, parse, and handle a single request as it is streamed """
         try:
-            self.debug("Waiting to receive data...")
-            data = self.socket.recv(4096)  # receive data from pi (size arbitrary?)
+            self.debug("Waiting to receive data...", True)
+            data = self.socket.recv(4096)  # receive data from stream (size arbitrary?)
         except BlockingIOError:  # Temporarily unavailable (errno EWOULDBLOCK)
             pass
         else:
@@ -132,9 +154,6 @@ class ConnectionBase(Base):
         elif not self.content:  # content not yet received
             self.parse_content()
         else:  # all parts received
-            if not hasattr(self, self.method):  # if a method for the request doesn't exist
-                self.error('Unsupported Request Method', self.method)
-                return
             method_func = getattr(self, self.method)  # get class method that matches name of request method
             method_func()  # call method to handle the request
             self.reset()   # reset all request variables
@@ -165,7 +184,7 @@ class ConnectionBase(Base):
         CLRF = "\r\n".encode(self.encoding)
         loc = self.buffer.find(CLRF)  # find first CLRF
         if loc > length or (loc == -1 and len(self.buffer) > length):  # no CLRF found before max length reached
-            self.error("Couldn't read a line from the stream - max length reached ({})".format(length), self.buffer.decode(self.encoding))
+            self.error("Couldn't read a line from the stream - max length reached (loc:{}, max:{}, length:{})".format(loc, length, len(self.buffer)), self.buffer)
             return
         elif loc == -1:  # CLRF not found, but we may just have not received it yet (max length not reached)
             return
@@ -178,7 +197,7 @@ class ConnectionBase(Base):
 
     def parse_request_line(self):
         """ Parses the Request-line of an HTTP request, finding the request method, path, and version strings """
-        max_len = 1024  # max length of request-line before error (arbitrary choice)
+        max_len = 256  # max length of request-line before error (arbitrary choice)
 
         line = self.read(max_len, line=True)  # read first line from stream
         if line is None:  # full line not yet received
@@ -211,6 +230,10 @@ class ConnectionBase(Base):
             self.debug("Received Header '{}':{}".format(key, val))
         else:
             self.error("Too many headers", "> {}".format(max_num))
+
+        if not hasattr(self, self.method):  # if a method for the request doesn't exist
+            self.error('Unsupported Request Method', "'{}'".format(self.method))
+            return
 
     def parse_content(self):
         """ Parse request payload, if any """
@@ -257,7 +280,7 @@ class ConnectionBase(Base):
         text = "{}: {}\r\n".format(keyword, value)   # text to be sent
         data = text.encode(self.encoding, 'strict')  # convert text to bytes
         self.header_buffer.append(data)              # add to buffer
-        self.debug("Added header '{}':{}".format(keyword, value))
+        self.debug("Added header '{}:{}'".format(keyword, value))
         '''
         if keyword.lower() == 'connection':
             if value.lower() == 'close':
@@ -331,7 +354,7 @@ class ClientConnectionBase(ConnectionBase):
         super().__init__(ip, port, name, False, debug)
 
     def setup(self):
-        """ Create socket and connect to a server ip """
+        """ Create socket and try to connect to a server ip """
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
         try:  # connect socket to given address
             self.log("Attempting to connect to {}".format(self.server))

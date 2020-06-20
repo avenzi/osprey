@@ -1,5 +1,5 @@
 from lib import Base, ServerConnectionBase, FrameBuffer, Address
-from threading import Thread
+from requests import get
 
 # html for the web browser stream
 PAGE = """\
@@ -25,11 +25,10 @@ class Server(Base):
 
     def serve(self):
         """ Listens for new connections, then starts then on their own thread """
-
+        self.log("IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
         while True:
-            # wait for a new connection, then run it on a new thread
             conn = ServerConnection(self.ip, self.port, self.name, self.debug_mode)
-            Thread(target=conn.serve(), daemon=True).start()
+            conn.run()  # wait for connection then start handling on a new thread
 
 
 class ServerConnection(ServerConnectionBase):
@@ -49,11 +48,15 @@ class ServerConnection(ServerConnectionBase):
         self.add_request('START')
         self.send_headers()
 
+    def finish(self):
+        """ Executes before termination """
+        self.log("Frames Received: {}/{}".format(self.frames_received, self.frames_sent))
+
     def INGEST_VIDEO(self):
         """ Handle image data received from Pi """
         frame = self.content  # bytes
         self.frames_received += 1
-        self.frames_sent = self.header['frames-sent']
+        self.frames_sent = int(self.header['frames-sent'])
         diff = abs(self.frames_sent - self.frames_received)
         if diff > 10:
             self.log("Warning: Some frames were lost ({})".format(diff))
