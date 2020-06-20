@@ -24,7 +24,7 @@ class Server(Base):
         self.name = name
 
     def serve(self):
-        """ Listens for new connections, then starts then on their own thread """
+        """ Listens for new connections, then starts them on their own thread """
         self.log("IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
         while True:
             conn = ServerConnection(self.ip, self.port, self.name, self.debug_mode)
@@ -46,7 +46,7 @@ class ServerConnection(ServerConnectionBase):
     def start(self):
         """ Executes on startup """
         self.add_request('START')
-        self.send_headers()
+        self.end_headers()
 
     def finish(self):
         """ Executes before termination """
@@ -72,17 +72,17 @@ class ServerConnection(ServerConnectionBase):
             self.log("Handling request fore '/'. Redirected to index.html", level='debug')
             self.add_response(301)  # redirect
             self.add_header('Location', '/index.html')  # redirect to index.html
-            self.send_headers()
+            self.end_headers()
 
         elif self.path == '/favicon.ico':
             self.log("Handling request for favicon")
             self.add_response(200)  # success
             self.add_header('Content-Type', 'image/x-icon')  # favicon
-            self.send_headers()
+            self.end_headers()
             with open('favicon.ico', 'rb') as fout:  # send favicon image
                 data = fout.read()
                 print(type(data))
-                self.send_content(fout.read())
+                self.add_content(fout.read())
 
         elif self.path == '/index.html':
             self.log("Handling request for /index.html, sending page html", level='debug')
@@ -90,8 +90,8 @@ class ServerConnection(ServerConnectionBase):
             self.add_response(200)  # success
             self.add_header('Content-Type', 'text/html')
             self.add_header('Content-Length', len(content))
-            self.send_headers()
-            self.send_content(content)  # write html content to page
+            self.end_headers()
+            self.add_content(content)  # write html content to page
 
         elif self.path == '/stream.mjpg':
             self.log("Handling request for stream.mjpeg", level='debug')
@@ -100,7 +100,7 @@ class ServerConnection(ServerConnectionBase):
             self.add_header('Cache-Control', 'no-cache, private')
             self.add_header('Pragma', 'no-cache')
             self.add_header('Content-Type', 'multipart/x-mixed-replace; boundary=FRAME')
-            self.send_headers()
+            self.end_headers()
             try:
                 while True:  # continually write individual frames to page
                     with self.frame_buffer.condition:
@@ -109,8 +109,8 @@ class ServerConnection(ServerConnectionBase):
                     self.send_content(b'--FRAME\r\n')
                     self.add_header('Content-Type', 'image/jpeg')
                     self.add_header('Content-Length', len(frame))
-                    self.send_headers()
-                    self.send_content(frame)
+                    self.end_headers()
+                    self.add_content(frame)
             except Exception as e:
                 self.error('Browser Stream Disconnected ({})'.format(self.client), e)
         else:

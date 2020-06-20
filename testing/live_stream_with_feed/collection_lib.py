@@ -37,8 +37,8 @@ class VideoClient(ClientConnectionBase):
         self.add_request('INGEST_VIDEO')
         self.add_header("content-length", len(frame))
         self.add_header("frames-sent", self.frames_sent)
-        self.send_headers()
-        self.send_content(frame)
+        self.end_headers()
+        self.add_content(frame)
 
     def START(self):
         """ Request method START """
