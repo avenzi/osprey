@@ -89,11 +89,14 @@ class ConnectionBase(Base):
         self.name = name       # name of connection - usually sent in headers
         self.encoding = 'iso-8859-1'  # encoding for data stream
 
-    def run(self):
-        """ Main method to call after instantiation """
+    def run(self, thread=False):
+        """ Main entry point to call after instantiation """
         self.setup()  # wait for connection then create socket
-        new_thread = threading.Thread(target=self.serve, daemon=True)
-        new_thread.start()  # call main service loop on new thread
+        if thread:
+            new_thread = threading.Thread(target=self.serve, daemon=True)
+            new_thread.start()  # call main service loop on new thread
+        else:
+            self.serve()
 
     def setup(self):
         """
@@ -144,7 +147,7 @@ class ConnectionBase(Base):
             if data:  # received data
                 self.in_buffer += data  # append data to incoming buffer
             else:  # stream disconnected
-                self.log("Peer Disconnected (is this error showing?) {}".format(self.client if self.host else self.server))
+                self.log("Peer Disconnected: {}".format(self.client if self.host else self.server))
                 self.exit = True
                 # TODO: not sure whether I should try to put this errot in the main loop with the others. It's not an exception, though
 
