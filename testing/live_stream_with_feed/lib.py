@@ -76,8 +76,8 @@ class ConnectionBase(Base):
         self.socket = None     # socket object to read/write to
         self.host = host       # whether this is the server (true) or client (false)
 
-        self.buffer = b''        # incoming stream buffer to read from
-        self.header_buffer = []  # outgoing stream buffer
+        self.in_buffer = b''     # incoming stream buffer to read from
+        self.out_buffer = b''    # outgoing stream buffer to write to
 
         # variables for each incoming request
         self.method = None   # HTTP request method
@@ -93,7 +93,7 @@ class ConnectionBase(Base):
         """ Main method to call after instantiation """
         self.setup()  # wait for connection then create socket
         new_thread = threading.Thread(target=self.serve, daemon=True)
-        new_thread.start()
+        new_thread.start()  # call main service loop on new thread
 
     def setup(self):
         """
@@ -117,13 +117,13 @@ class ConnectionBase(Base):
         pass
 
     def serve(self):
-        """
-        Start all processes on connection.
-        """
+        """ Main loop - Start all processes on connection """
         try:
-            self.start()   # user-defined startup
+            self.start()        # user-defined startup function
             while not self.exit:  # run until exit status is set
-                self.handle()  # parse and handle all incoming requests
+                self.pull()    # fill in_buffer from stream
+                self.handle()  # parse and handle any incoming requests
+                self.push()    # send out_buffer to stream
         except KeyboardInterrupt:
             self.log("Manual Termination", True)
         except ConnectionResetError:
@@ -134,23 +134,29 @@ class ConnectionBase(Base):
             self.finish()  # user-defined final execution
             self.close()   # close server
 
-    # The following methods implement reading from the stream
-    def handle(self):
-        """ Receive, parse, and handle a single request as it is streamed """
+    def pull(self):
+        """ Receive raw bytes from the stream and adds to the in_buffer """
         try:
-            self.debug("Waiting to receive data...", True)
-            data = self.socket.recv(4096)  # receive data from stream (size arbitrary?)
-        except BlockingIOError:  # Temporarily unavailable (errno EWOULDBLOCK)
+            data = self.socket.recv(4096)  # Receive data from stream
+        except BlockingIOError:  # catch no data on non-blocking socket
             pass
         else:
-            if data:  # if received data
-                self.buffer += data  # append to data buffer
-                # TODO: Implement max buffer size? Would need to be well over JPEG image size (~100,000)
+            if data:  # received data
+                self.in_buffer += data  # append data to incoming buffer
             else:  # stream disconnected
-                self.log("Peer Disconnected {}".format(self.client if self.host else self.server))
-                self.exit = True  # signal to disconnect
-                return
+                self.log("Peer Disconnected (is this error showing?) {}".format(self.client if self.host else self.server))
+                self.exit = True
+                # TODO: not sure whether I should try to put this errot in the main loop with the others. It's not an exception, though
 
+    def push(self):
+        """ Attempts to send the out_buffer to the stream """
+        try:
+            self.socket.sendall(self.out_buffer)
+        except BlockingIOError:  # no response when non-blocking socket used
+            pass
+
+    def handle(self):
+        """ Parse and handle a single request from the buffers """
         if not self.method:  # request-line not yet received
             self.parse_request_line()
         elif not self.header:  # header not yet received
@@ -164,6 +170,7 @@ class ConnectionBase(Base):
 
     def read(self, length, line=False, decode=True):
         """
+        Read data from the incoming buffer
         If <line> is False:
             - Reads exactly <length> amount from stream.
             - Returns everything including any whitespace
@@ -176,31 +183,31 @@ class ConnectionBase(Base):
         Decode specifies whether to decode the data from bytes to string. If true, also strips whitespace
         """
         if not line:  # exact length specified
-            if len(self.buffer) < length:  # not enough data received to read this amount
+            if len(self.in_buffer) < length:  # not enough data received to read this amount
                 return
-            data = self.buffer[:length]
-            self.buffer = self.buffer[length:]  # move down the buffer
+            data = self.in_buffer[:length]
+            self.in_buffer = self.in_buffer[length:]  # move down the buffer
             if decode:
                 data = data.decode(self.encoding)
             return data
 
         # else, grab a single line, denoted by CLRF
         CLRF = "\r\n".encode(self.encoding)
-        loc = self.buffer.find(CLRF)  # find first CLRF
-        if loc > length or (loc == -1 and len(self.buffer) > length):  # no CLRF found before max length reached
-            self.error("Couldn't read a line from the stream - max length reached (loc:{}, max:{}, length:{})".format(loc, length, len(self.buffer)), self.buffer)
+        loc = self.in_buffer.find(CLRF)  # find first CLRF
+        if loc > length or (loc == -1 and len(self.in_buffer) > length):  # no CLRF found before max length reached
+            self.error("Couldn't read a line from the stream - max length reached (loc:{}, max:{}, length:{})".format(loc, length, len(self.in_buffer)), self.in_buffer)
             return
         elif loc == -1:  # CLRF not found, but we may just have not received it yet (max length not reached)
             return
 
-        line = self.buffer[:loc+2]  # slice data including CLRF
-        self.buffer = self.buffer[loc+2:]  # move buffer past CLRF
+        line = self.in_buffer[:loc+2]  # slice data including CLRF
+        self.in_buffer = self.in_buffer[loc+2:]  # move buffer past CLRF
         if decode:
             line = line.decode(self.encoding).strip()  # decode and strip whitespace including CLRF
         return line
 
     def parse_request_line(self):
-        """ Parses the Request-line of an HTTP request, finding the request method, path, and version strings """
+        """ Parses the Request-line of a request, finding the request method, path, and version strings """
         max_len = 256  # max length of request-line before error (arbitrary choice)
 
         line = self.read(max_len, line=True)  # read first line from stream
@@ -261,64 +268,54 @@ class ConnectionBase(Base):
         self.content = None
         self.debug("Reset request variables")
 
-    # The following methods implement writing to the stream
     def add_request(self, method, path='/', version='HTTP/1.1'):
-        """ adds a request line to the header buffer. Buffer sent with send_headers() """
+        """ Add a standard HTTP request line to the outgoing buffer """
         line = "{} {} {}\r\n".format(method, path, version)
+        self.out_buffer += line.encode(self.encoding)
         self.debug("Added request line '{}'".format(line))
-        self.header_buffer.append(line.encode(self.encoding))
 
     def add_response(self, code):
-        """ Add a response line to the header buffer. Buffer sent with send_headers() """
+        """ Add a response line to the header buffer. Used to respond to web browsers. """
         version = "HTTP/1.1"
-        message = 'MESSAGE'
-        response_line = "{} {} {}\r\n".format(version, code, message)
+        message = 'MESSAGE'  # TODO: make this dynamic according to the code sent (not really that necessary yet)
+        response_line = "{} {} {}\r\n".format(version, code, message)  # text to be sent
 
-        self.debug("Added response headers with code {}".format(code))
-        self.header_buffer.append(response_line.encode(self.encoding))
+        self.debug("Added response with code {}".format(code))
+        self.out_buffer += response_line.encode(self.encoding)  # convert to bytes and add to buffer
         self.add_header('Server', 'Streaming Server Python/3.7.3')
         self.add_header('Date', self.date)
 
     def add_header(self, keyword, value):
-        """ add a header to the header buffer. Buffer sent with send_headers() """
-        text = "{}: {}\r\n".format(keyword, value)   # text to be sent
-        data = text.encode(self.encoding, 'strict')  # convert text to bytes
-        self.header_buffer.append(data)              # add to buffer
+        """ Add a standard HTTP header to the outgoing buffer """
+        text = "{}: {}\r\n".format(keyword, value)      # text to be sent
+        self.out_buffer += text.encode(self.encoding)   # convert to bytes and add to buffer
         self.debug("Added header '{}:{}'".format(keyword, value))
+
+        # this bit may be necessary at some point in the future
         '''
         if keyword.lower() == 'connection':
             if value.lower() == 'close':
-                self.close_connection = True
+                self.exit = True
             elif value.lower() == 'keep-alive':
-                self.close_connection = False
+                ?????
         '''
 
-    def send_headers(self):
-        """ Adds extra headers then a blank line ending the headers buffer, then sends the buffer to the stream """
-        self.add_header("name", self.name)
-        self.header_buffer.append(b"\r\n")                 # append blank like
-        self.send(b"".join(self.header_buffer))  # combine all headers and send
-        self.header_buffer = []                            # clear header buffer
-        self.debug("Sent headers",)
+    def end_headers(self):
+        """ Adds any extra headers then a blank line ending the header section """
+        self.add_header("name", self.name)  # name of this client
+        self.out_buffer += b'\r\n'          # blank like
+        self.debug("Ended headers")
 
-    def send_content(self, content):
-        """ Sends content to the stream """
+    def add_content(self, content):
+        """ Add content to the buffer AFTER all end_headers() has been called """
         if type(content) == str:
             data = content.encode(self.encoding)  # encode if string
         elif type(content) == bytes:
             data = content
-        else:
-            self.error("Cannot send content - format not accounted for.", type(content))
+        else:  # type conversion not implemented
+            self.error("Cannot send content - type not accounted for.", type(content))
             return
-        self.send(content)
         self.debug("Sent content of length: {}".format(len(content)))
-
-    def send(self, data):
-        """ Sends raw bytes data to the stream """
-        try:
-            self.socket.sendall(data)
-        except BlockingIOError:  # no response when non-blocking socket used
-            pass
 
     def close(self):
         """ Closes the connection """
