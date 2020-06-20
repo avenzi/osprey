@@ -47,4 +47,4 @@ class VideoClient(ClientConnectionBase):
             self.send_images()
             if self.frames_sent == 1 and not msg:  # just for displaying the Streaming message
                 msg = True
-                self.log("Streaming...", level='status')
+                self.log("Streaming...", True)

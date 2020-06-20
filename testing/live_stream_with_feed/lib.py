@@ -1,7 +1,6 @@
 import io
 import socket
 import time
-from requests import get
 import threading
 
 
@@ -140,12 +139,12 @@ class ConnectionBase(Base):
     def pull(self):
         """ Receive raw bytes from the stream and adds to the in_buffer """
         try:
-            self.debug("Pulling from stream...", True)
             data = self.socket.recv(4096)  # Receive data from stream
         except BlockingIOError:  # catch no data on non-blocking socket
             pass
         else:
             if data:  # received data
+                self.debug("Pulled data from stream")
                 self.in_buffer += data  # append data to incoming buffer
             else:  # stream disconnected
                 self.log("Peer Disconnected: {}".format(self.client if self.host else self.server))
@@ -155,10 +154,11 @@ class ConnectionBase(Base):
     def push(self):
         """ Attempts to send the out_buffer to the stream """
         try:
-            self.debug("Pushing to stream...", True)
             self.socket.sendall(self.out_buffer)
         except BlockingIOError:  # no response when non-blocking socket used
             pass
+        else:
+            self.debug("Pushed buffer to stream")
 
     def handle(self):
         """ Parse and handle a single request from the buffers """
@@ -355,6 +355,8 @@ class ServerConnectionBase(ConnectionBase):
             self.debug("Accepted Socket Connection From {}".format(self.client))
         except Exception as e:
             self.error("Failed to accept connection from {}".format(self.client))
+
+        self.socket.setblocking(False)
 
         self.log("New Connection From: {}".format(self.client))
         # if self.timeout is not None:  # is this needed?
