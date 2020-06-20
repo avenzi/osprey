@@ -8,5 +8,5 @@ with open('config.json') as file:
 port = config['PORT']
 
 server = Server(port, name="Server", debug=True)
-server.serve()
+server.run()
 

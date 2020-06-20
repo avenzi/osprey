@@ -23,12 +23,12 @@ class Server(Base):
         self.port = port
         self.name = name
 
-    def serve(self):
+    def run(self):
         """ Listens for new connections, then starts them on their own thread """
         self.log("IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
         while True:
             conn = ServerConnection(self.ip, self.port, self.name, self.debug_mode)
-            conn.run()  # wait for connection then start handling on a new thread
+            conn.run(thread=True)  # wait for connection then start handling on a new thread
 
 
 class ServerConnection(ServerConnectionBase):

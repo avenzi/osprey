@@ -11,6 +11,6 @@ port = config['PORT']
 laptop_ip = '35.11.244.179'  # public ip of Aven's laptop
 
 streamer = VideoClient(laptop_ip, port, name="Video Client", debug=True)
-streamer.serve()
+streamer.run()
 
 

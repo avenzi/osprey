@@ -140,6 +140,7 @@ class ConnectionBase(Base):
     def pull(self):
         """ Receive raw bytes from the stream and adds to the in_buffer """
         try:
+            self.debug("Pulling from stream...", True)
             data = self.socket.recv(4096)  # Receive data from stream
         except BlockingIOError:  # catch no data on non-blocking socket
             pass
@@ -154,6 +155,7 @@ class ConnectionBase(Base):
     def push(self):
         """ Attempts to send the out_buffer to the stream """
         try:
+            self.debug("Pushing to stream...", True)
             self.socket.sendall(self.out_buffer)
         except BlockingIOError:  # no response when non-blocking socket used
             pass
@@ -374,7 +376,7 @@ class ClientConnectionBase(ConnectionBase):
         except Exception as e:
             self.error("Failed to connect to server", e)
 
-        #self.socket.setblocking(False)
+        self.socket.setblocking(False)
 
 
 class Address:
