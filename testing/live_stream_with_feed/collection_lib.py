@@ -8,10 +8,10 @@ class VideoClient(ClientConnectionBase):
     def __init__(self, ip, port, name='Client', resolution='640x480', framerate=24, debug=False):
         super().__init__(ip, port, name, debug)
 
-        self.camera = None                # picam object
-        self.resolution = resolution      # resolution of stream
-        self.framerate = framerate        # camera framerate
-        self.frame_buffer = FrameBuffer   # file-like object buffer for the camera to stream to
+        self.camera = None                 # picam object
+        self.resolution = resolution       # resolution of stream
+        self.framerate = framerate         # camera framerate
+        self.frame_buffer = FrameBuffer()  # file-like object buffer for the camera to stream to
 
         self.frames_sent = 0              # number of frames sent
 
@@ -29,15 +29,14 @@ class VideoClient(ClientConnectionBase):
     
     def send_images(self):
         """ Handle sending images to the stream """
-        with self.output.condition:
-            self.output.condition.wait()
-            frame = self.output.frame  # get next frame from picam
+        with self.frame_buffer.condition:
+            self.frame_buffer.condition.wait()
+            frame = self.frame_buffer.frame  # get next frame from picam
 
         self.frames_sent += 1
-        self.send_request_line('INGEST')
+        self.add_request('INGEST_VIDEO')
         self.add_header("content-length", len(frame))
         self.add_header("frames-sent", self.frames_sent)
-        self.add_header("client-name", self.name)
         self.send_headers()
         self.send_content(frame)
 

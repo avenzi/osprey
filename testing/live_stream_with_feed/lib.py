@@ -105,6 +105,10 @@ class ConnectionBase(Base):
                 self.handle()  # parse and handle all incoming requests
         except KeyboardInterrupt:
             self.log("Manual Termination", level='status')
+        except ConnectionResetError:
+            self.log("Peer Disconnected", level='status')
+        except BrokenPipeError:
+            self.log("Peer Disconnected", level='status')
         finally:
             self.close()   # close server
 
@@ -270,7 +274,7 @@ class ConnectionBase(Base):
         """ Adds extra headers then a blank line ending the headers buffer, then sends the buffer to the stream """
         self.add_header("name", self.name)
         self.header_buffer.append(b"\r\n")                 # append blank like
-        self.socket.sendall(b"".join(self.header_buffer))  # combine all headers and send
+        self.send(b"".join(self.header_buffer))  # combine all headers and send
         self.header_buffer = []                            # clear header buffer
         self.debug("Sent headers",)
 
@@ -283,8 +287,15 @@ class ConnectionBase(Base):
         else:
             self.error("Cannot send content - format not accounted for.", type(content))
             return
-        self.socket.sendall(content)
+        self.send(content)
         self.debug("Sent content of length: {}".format(len(content)))
+        
+    def send(self, data):
+        """ Sends raw bytes data to the stream """
+        try:
+            self.socket.sendall(data)
+        except BlockingIOError:  # no response when non-blocking socket used
+            pass
 
     def close(self):
         """ Closes the connection """
@@ -339,6 +350,8 @@ class ClientConnectionBase(ConnectionBase):
             self.log("Socket Connected")
         except Exception as e:
             self.error("Failed to connect to server", e)
+            
+        #self.socket.setblocking(False)
 
 
 class Address:
