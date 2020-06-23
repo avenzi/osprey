@@ -1,5 +1,4 @@
-from lib import Handler, FrameBuffer
-from requests import get
+from lib import Handler
 
 # html for the web browser stream
 PAGE = """\
@@ -18,8 +17,8 @@ class ServerHandler(Handler):
     Initialized for every incoming connection to the server
     Should be able to handle any stream type
     """
-    def __init__(self, port, name, debug):
-        super().__init__(port, name, debug)
+    def __init__(self, *args):
+        super().__init__(*args)
 
         self.frames_sent = 0
         self.frames_received = 0

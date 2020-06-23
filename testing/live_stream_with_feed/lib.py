@@ -88,7 +88,7 @@ class Server(Base):
             self.error("Failed to bind socket to *:{}".format(self.port), e)
 
         try:  # Set as listening connection
-            self.debug("Listening for Connection...")
+            self.debug("Set to listening socket")
             self.listener.listen()
         except Exception as e:
             self.error("Failed to set as listening socket", e)
@@ -96,6 +96,7 @@ class Server(Base):
     def accept(self):
         """ Listen for new connection, then return socket for that connection """
         try:  # Accept() returns a new socket object that can send and receive data.
+            self.log("Listening for connections...")
             sock, (ip, port) = self.listener.accept()
             sock.setblocking(False)
             self.log("New Connection From: {}:{}".format(ip, port))
@@ -422,22 +423,3 @@ class Packet:
         self.header = {}
         self.content = b''
 
-
-class FrameBuffer(object):
-    """
-    Object used as a buffer containing a single frame.
-    Can be written to by the picam.
-    """
-    def __init__(self):
-        self.frame = None
-        self.buffer = io.BytesIO()
-        self.condition = threading.Condition()
-
-    def write(self, buf):
-        if buf.startswith(b'\xff\xd8'):  # jpeg image
-            self.buffer.truncate()
-            with self.condition:
-                self.frame = self.buffer.getvalue()
-                self.condition.notify_all()  # make available to other threads
-            self.buffer.seek(0)
-        return self.buffer.write(buf)

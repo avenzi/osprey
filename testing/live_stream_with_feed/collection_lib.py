@@ -1,6 +1,7 @@
 import io
 import picamera
 from time import sleep
+import threading
 from threading import Thread
 from lib import Handler
 
@@ -58,3 +59,24 @@ class VideoClientHandler(Handler):
         """ Request method STOP """
         self.active = False  # deactivate stream
         self.log("Stopped Stream...")
+
+
+class FrameBuffer(object):
+    """
+    A thread-safe buffer to store frames in
+    The write() method can be used by a Picam
+    """
+    def __init__(self):
+        self.frame = None
+        self.buffer = io.BytesIO()
+        self.condition = threading.Condition()
+
+    def write(self, buf):
+        if buf.startswith(b'\xff\xd8'):  # jpeg image
+            self.buffer.truncate()
+            with self.condition:
+                self.frame = self.buffer.getvalue()
+                self.condition.notify_all()  # make available to other threads
+            self.buffer.seek(0)
+        return self.buffer.write(buf)
+
