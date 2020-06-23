@@ -13,9 +13,9 @@ class Base:
     """
     def __init__(self, debug=False):
         self.debug_mode = debug  # Whether debug mode is active
-        self.overlay_msg = ''    # to keep track of the last overlay message
-        self.overlay_count = 0   # counter of how many times an output message was overlayed on the same line
-
+        self.last_msg = ''       # to keep track of the last output message
+        self.overlay_count = 1   # counter of how many times an output message was overlayed on the same line
+        
         self.exit = False        # Used to exit program and handle errors
 
     def date(self):
@@ -23,43 +23,40 @@ class Base:
         now = time.time()
         year, month, day, hh, mm, ss, x, y, z = time.localtime(now)
         return "{}/{}/{} {}:{}:{} UTC".format(day, month, year, hh, mm, ss)
-
+    
+    def display(self, msg):
+        """ display a message """
+        counter = ''
+        if self.last_msg == msg:  # same message
+            begin = '\r'
+            self.overlay_count += 1  # increment
+            if self.overlay_count >= 2:
+                counter = ' [{}]'.format(self.overlay_count)
+        else:  # different message
+            begin = '\n'  # don't overwrite
+            self.overlay_count = 1  # reset count
+        self.last_msg = msg
+        print("{}{} {}".format(begin, msg, counter), end='')
+        
     def log(self, message, important=False):
         """ Outputs a log message """
-        if important:
-            print("[{}]".format(message))
-        else:
-            print("> {}".format(message))
+        if important:  # important message just meant to stand out from the rest
+            self.display("[{}]".format(message))
+        else:  # normal log emssage
+            self.display("> {}".format(message))
 
-    def debug(self, message, overlay=False):
+    def debug(self, msg):
         """ Sends a debug level message """
         if not self.debug_mode:
             return
-        if overlay:  # write an overlayable message
-            self.overlay_msg = message
-            self.overlay_count += 1  # increment
-            beg = ''
-            end = '\r'
-            count = '[{}]'.format(self.overlay_count)
-        else:
-            end = '\n'
-            count = ''
-            self.overlay_msg = ''
-            if self.overlay_count > 0:  # stop overlaying
-                self.overlay_count = 0  # reset count
-                beg = '\n'  # skip a line - don't overlay last message
-            else:   # regular message
-                beg = ''
-
-        # (debug) [thread_name]: message content [overlay_count]
-        print("{}(debug) [{}]: {} {}".format(beg, threading.currentThread().getName(), message, count), end=end)
+        self.display("(debug)[{}]: {}".format(threading.currentThread().getName(), msg))
 
     def error(self, message, cause=None):
         """ Throw error and signal to disconnect """
-        print("[ERROR]: {}".format(message))
-        print("[THREAD]: {}".format(threading.currentThread().getName()))
+        self.display("[ERROR]: {}".format(message))
+        self.display("[THREAD]: {}".format(threading.currentThread().getName()))
         if cause:
-            print("[CAUSE]: {}".format(cause))  # show cause if given
+            self.display("[CAUSE]: {}".format(cause))  # show cause if given
         self.exit = True
 
 
@@ -132,10 +129,10 @@ class Client(Base):
         self.HandlerClass = HandlerClass
 
     def create(self):
-        """ Create socket object """
+        """ Create socket object and try to connect to server """
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
         try:  # connect socket to given address
-            self.log("Attempting to connect to {}".format(self.ip, self.port))
+            self.log("Attempting to connect to {}:{}".format(self.ip, self.port))
             self.socket.connect((self.ip, self.port))
             self.log("Socket Connected")
         except Exception as e:
@@ -146,6 +143,7 @@ class Client(Base):
     def run(self):
         """ Listens for new connections, then starts them on their own thread """
         self.log("Client IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
+        self.create()
         conn = self.HandlerClass(self.socket, self)  # create new connection for the client
         conn.run()  # Only one connection, so no need to thread
 
@@ -177,9 +175,11 @@ class Handler(Base):
         try:
             self.start()  # user-defined startup function
             while not self.exit:  # run until exit status is set
-                self.pull()  # fill in_buffer from stream
-                self.handle()  # parse and handle any incoming requests
-                self.push()  # send out_buffer to stream
+                self.pull()       # fill in_buffer from stream
+                if not self.exit:
+                    self.handle() # parse and handle any incoming requests
+                if not self.exit:
+                    self.push()   # send out_buffer to stream
         except KeyboardInterrupt:
             self.log("Manual Termination", True)
         except ConnectionResetError:
@@ -219,7 +219,7 @@ class Handler(Base):
                 self.debug("Pulled data from stream")
                 self.in_buffer += data  # append data to incoming buffer
             else:  # stream disconnected
-                self.log("Peer Disconnected: '{}'".format(self.socket.getfqdn()))
+                self.log("Peer Disconnected: {}:{}".format(*self.socket.getpeername()), True)
                 self.exit = True
                 # TODO: not sure whether I should try to put this error in the main loop with the others. It's not an exception, though
 
