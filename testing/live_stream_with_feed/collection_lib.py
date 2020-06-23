@@ -6,12 +6,12 @@ from lib import Handler
 
 
 class VideoClientHandler(Handler):
-    def __init__(self, ip, port, name='Client', resolution='640x480', framerate=24, debug=False):
-        super().__init__(ip, port, name, False, debug)
+    def __init__(self, *args):
+        super().__init__(*args)
 
         self.camera = None                 # picam object
-        self.resolution = resolution       # resolution of stream
-        self.framerate = framerate         # camera framerate
+        self.resolution = '640x480'        # resolution of stream
+        self.framerate = 24                # camera framerate
         self.frame_buffer = FrameBuffer()  # file-like object buffer for the camera to stream to
 
         self.frames_sent = 0    # number of frames sent
