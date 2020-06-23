@@ -20,6 +20,10 @@ PAGE = """\
 class StreamingHandler(server.BaseHTTPRequestHandler):
     """ Passed into StreamingServer to handle requests """
 
+    def do_INGEST_VIDEO(self):
+        """ Handles stream from video client"""
+
+
     def do_GET(self):
         """ Handles stream requests from a web browser """
         ip, port = self.client_address

@@ -2,6 +2,8 @@ import io
 import socket
 import time
 import threading
+from threading import Thread
+from requests import get
 
 
 class Base:
@@ -61,71 +63,122 @@ class Base:
         self.exit = True
 
 
-class ConnectionBase(Base):
+class Server(Base):
     """
-    Object the represents a single connection.
-    Holds the socket and associated buffers.
-    Runs on it's own thread in the Stream class.
+    Handles incoming connections to the server.
+    HandlerClass is used to handle individual requests.
+    call run() to start.
     """
-    def __init__(self, ip, port, name, host, debug):
+    def __init__(self, HandlerClass, port, name='Server', debug=False):
         super().__init__(debug)
+        self.name = name
+        self.ip = ''          # ip to bind to
+        self.port = port      # port to bind to
+        self.listener = None  # socket that accepts new connections
+        self.HandlerClass = HandlerClass
 
-        self.server = Address(ip, port)  # address of the server
-        self.client = None               # address of client
-        self.socket = None     # socket object to read/write to
-        self.host = host       # whether this is the server (true) or client (false)
+    def create(self):
+        """ Create a listening socket object """
+        self.listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
+        try:  # Bind socket to ip and port
+            # self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # allow socket to reuse address?
+            self.listener.bind((self.ip, self.port))  # bind to host address
+            self.debug("Socket Bound to *:{}".format(self.port))
+        except Exception as e:
+            self.error("Failed to bind socket to *:{}".format(self.port), e)
+
+        try:  # Set as listening connection
+            self.debug("Listening for Connection...")
+            self.listener.listen()
+        except Exception as e:
+            self.error("Failed to set as listening socket", e)
+
+    def accept(self):
+        """ Listen for new connection, then return socket for that connection """
+        try:  # Accept() returns a new socket object that can send and receive data.
+            sock, (ip, port) = self.listener.accept()
+            sock.setblocking(False)
+            self.log("New Connection From: {}:{}".format(ip, port))
+            return sock
+        except Exception as e:
+            self.error("Failed to accept connection", e)
+            return
+
+    def run(self):
+        """ Main entry point. Starts each new connections on their own thread """
+        self.log("Server IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
+        self.create()  # create listener socket
+        while True:
+            sock = self.accept()  # wait/accept new connection
+            if sock:
+                conn = self.HandlerClass(sock, self)  # create connection with socket
+                thread = Thread(target=conn.run, daemon=True)
+                thread.start()  # run connection on new thread
+
+
+class Client(Base):
+    """
+    Makes a connection to the server.
+    HandlerClass is used to handle individual requests.
+    call run() to start.
+    """
+    def __init__(self, HandlerClass, ip, port, name='Client', debug=False):
+        super().__init__(debug)
+        self.name = name
+        self.ip = ip
+        self.port = port
+        self.socket = None   # socket object
+        self.HandlerClass = HandlerClass
+
+    def create(self):
+        """ Create socket object """
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
+        try:  # connect socket to given address
+            self.log("Attempting to connect to {}".format(self.ip, self.port))
+            self.socket.connect((self.ip, self.port))
+            self.log("Socket Connected")
+        except Exception as e:
+            self.error("Failed to connect to server", e)
+
+        self.socket.setblocking(False)
+
+    def run(self):
+        """ Listens for new connections, then starts them on their own thread """
+        self.log("Client IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
+        conn = self.HandlerClass(self.socket, self)  # create new connection for the client
+        conn.run()  # Only one connection, so no need to thread
+
+
+class Handler(Base):
+    """
+    Object that represents a single connection between server and client
+    Handles incoming requests on a single socket.
+    Holds the socket and associated buffers
+    Holds a reference to whatever created it (Server or Client). Used to share data between connections
+    """
+    def __init__(self, sock, parent):
+        super().__init__(parent.debug_mode)
+
+        self.socket = sock       # socket object to read/write to
+        self.parent = parent     # object that created this connection (either the Server or Client)
 
         self.in_buffer = b''     # incoming stream buffer to read from
         self.out_buffer = b''    # outgoing stream buffer to write to
 
-        # variables for each incoming request
-        self.method = None   # HTTP request method
-        self.path = None     # HTTP request path
-        self.version = None  # HTTP request version
-        self.header = {}     # header dictionary
-        self.content = None  # content received
+        self.packet = Packet()   # current packet being created
+        self.packet_buffer = []  # parsed data ready to be handled
 
-        self.name = name       # name of connection - usually sent in headers
-        self.encoding = 'iso-8859-1'  # encoding for data stream
+        self.name = parent.name  # name of connection - usually sent in headers
+        self.encoding = 'iso-8859-1'  # encoding for data stream (latin-1)
 
-    def run(self, thread=False):
-        """ Main entry point to call after instantiation """
-        self.setup()  # wait for connection then create socket
-        if thread:
-            new_thread = threading.Thread(target=self.serve, daemon=True)
-            new_thread.start()  # call main service loop on new thread
-        else:
-            self.serve()
-
-    def setup(self):
-        """
-        Overwritten by server and client connection base classes.
-        Initializes socket objects and connections.
-        """
-        pass
-
-    def start(self):
-        """
-        Overwritten by connection classes
-        Executes on startup after setup() completed
-        """
-        pass
-
-    def finish(self):
-        """
-        Overwritten by connection classes
-        Executes before connection terminates
-        """
-        pass
-
-    def serve(self):
-        """ Main loop - Start all processes on connection """
+    def run(self):
+        """ Main entry point - called by parent """
         try:
-            self.start()        # user-defined startup function
+            self.start()  # user-defined startup function
             while not self.exit:  # run until exit status is set
-                self.pull()    # fill in_buffer from stream
+                self.pull()  # fill in_buffer from stream
                 self.handle()  # parse and handle any incoming requests
-                self.push()    # send out_buffer to stream
+                self.push()  # send out_buffer to stream
         except KeyboardInterrupt:
             self.log("Manual Termination", True)
         except ConnectionResetError:
@@ -134,10 +187,28 @@ class ConnectionBase(Base):
             self.log("Peer Disconnected", True)
         finally:
             self.finish()  # user-defined final execution
-            self.close()   # close server
+            self.close()  # close server
+
+    def start(self):
+        """
+        Temporary until user interface is created
+        Executes when the connection is established
+        Overwritten by user
+        """
+        # TODO: Remove this when a manual user interface is created
+        pass
+
+    def finish(self):
+        """
+        Temporary until user interface is created
+        Executes before connection terminates
+        Overwritten by user
+        """
+        # TODO: Remove this when a manual user interface is created
+        pass
 
     def pull(self):
-        """ Receive raw bytes from the stream and adds to the in_buffer """
+        """ Receive raw bytes from the socket stream and adds to the in_buffer """
         try:
             data = self.socket.recv(4096)  # Receive data from stream
         except BlockingIOError:  # catch no data on non-blocking socket
@@ -147,9 +218,9 @@ class ConnectionBase(Base):
                 self.debug("Pulled data from stream")
                 self.in_buffer += data  # append data to incoming buffer
             else:  # stream disconnected
-                self.log("Peer Disconnected: {}".format(self.client if self.host else self.server))
+                self.log("Peer Disconnected: '{}'".format(self.socket.getfqdn()))
                 self.exit = True
-                # TODO: not sure whether I should try to put this errot in the main loop with the others. It's not an exception, though
+                # TODO: not sure whether I should try to put this error in the main loop with the others. It's not an exception, though
 
     def push(self):
         """ Attempts to send the out_buffer to the stream """
@@ -158,19 +229,23 @@ class ConnectionBase(Base):
         except BlockingIOError:  # no response when non-blocking socket used
             pass
         else:
+            self.out_buffer = b''  # clear buffer
             self.debug("Pushed buffer to stream")
 
     def handle(self):
         """ Parse and handle a single request from the buffers """
-        if not self.method:  # request-line not yet received
-            self.parse_request_line()
-        elif not self.header:  # header not yet received
-            self.parse_header()
-        elif not self.content:  # content not yet received
-            self.parse_content()
-        else:  # all parts received
-            method_func = getattr(self, self.method)  # get class method that matches name of request method
-            method_func()  # call method to handle the request
+        if not self.packet.method:  # request-line not yet received
+            if not self.parse_request_line():
+                return  # didn't get anything
+        if not self.packet.header:  # header not yet received
+            if not self.parse_header():
+                return  # didn't get anything
+        if not self.packet.content:  # content not yet received
+            self.parse_content()  # may or may not have content
+
+            method_func = getattr(self, self.packet.method)  # get handler method that matches name of request method
+            method_thread = threading.Thread(target=method_func, name="{}-Thread".format(method_func.__name__), daemon=True)
+            method_thread.start()  # call method in new thread to handle the request
             self.reset()   # reset all request variables
 
     def read(self, length, line=False, decode=True):
@@ -212,7 +287,10 @@ class ConnectionBase(Base):
         return line
 
     def parse_request_line(self):
-        """ Parses the Request-line of a request, finding the request method, path, and version strings """
+        """
+        Parses the Request-line of a request, finding the request method, path, and version strings.
+        Returns True if request-line received, none otherwise.
+        """
         max_len = 256  # max length of request-line before error (arbitrary choice)
 
         line = self.read(max_len, line=True)  # read first line from stream
@@ -226,12 +304,20 @@ class ConnectionBase(Base):
             self.error(err, line)
             return
 
-        self.method = words[0]
-        self.path = words[1]
-        self.version = words[2]
+        self.packet.method = words[0]
+        self.packet.path = words[1]
+        self.packet.version = words[2]
+
+        if not hasattr(self, self.packet.method):  # if a method for the request doesn't exist
+            self.error('Unsupported Request Method', "'{}'".format(self.packet.method))
+            return
+        return True
 
     def parse_header(self):
-        """ Fills the header dictionary from the received header text """
+        """
+        Fills the header dictionary from the received header text.
+        Returns True if header received, none otherwise.
+        """
         max_num = 32    # max number of headers (arbitrary choice)
         max_len = 1024  # max length each header (arbitrary choice)
         for _ in range(max_num):
@@ -242,36 +328,35 @@ class ConnectionBase(Base):
                 self.debug("All headers received")
                 break
             key, val = line.split(':', 1)   # extract field and value by splitting at first colon
-            self.header[key] = val.strip()  # remove extra whitespace from value
+            self.packet.header[key] = val.strip()  # remove extra whitespace from value
             self.debug("Received Header '{}':{}".format(key, val))
         else:
             self.error("Too many headers", "> {}".format(max_num))
-
-        if not hasattr(self, self.method):  # if a method for the request doesn't exist
-            self.error('Unsupported Request Method', "'{}'".format(self.method))
             return
+        return True
 
     def parse_content(self):
-        """ Parse request payload, if any """
-        length = self.header.get("content-length")
+        """
+        Parse request payload, if any.
+        Returns True if content received, none otherwise.
+        """
+        length = self.packet.header.get("content-length")
         if length:  # if content length was sent
             content = self.read(int(length), decode=False)  # read raw bytes from stream
             if content:
-                self.content = content
-                self.debug("Received Content of length: {}".format(len(self.content)))
+                self.packet.content = content
+                self.debug("Received Content of length: {}".format(len(self.packet.content)))
+                return True
             else:  # not yet fully received
                 return
         else:  # no content length specified - assuming no content sent
-            self.content = True  # mark content as 'received'
+            return  # TODO: Is there a way to determine for sure whether a request has only a header?
 
     def reset(self):
-        """ Resets variables associated with a single request """
-        self.method = None
-        self.path = None
-        self.version = None
-        self.header = {}
-        self.content = None
-        self.debug("Reset request variables")
+        """ Get ready for a new packet and push the current one onto the packet buffer """
+        self.packet_buffer.append(self.packet)
+        self.packet = Packet()
+        self.debug("Reset packet")
 
     def add_request(self, method, path='/', version='HTTP/1.1'):
         """ Add a standard HTTP request line to the outgoing buffer """
@@ -328,74 +413,14 @@ class ConnectionBase(Base):
         self.log("Connection Closed")
 
 
-class ServerConnectionBase(ConnectionBase):
-    """ Create instance to host server on """
-    def __init__(self, ip, port, name, debug):
-        super().__init__(ip, port, name, True, debug)
-
-    def setup(self):
-        """ Create socket and bind to local address then wait for connection from a client """
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
-        try:  # Bind socket to ip and port
-            # self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # allow socket to reuse address
-            sock.bind(self.server.tup)  # bind to host address
-            self.debug("Socket Bound to {}".format(self.server))
-        except Exception as e:
-            self.error("Failed to bind socket to {}".format(self.server), e)
-
-        try:  # Listen for connection
-            self.debug("Listening for Connection...")
-            sock.listen()
-        except Exception as e:
-            self.error("While listening on {}".format(self.server), e)
-
-        try:  # Accept connection. Accept() returns a new socket object that can send and receive data.
-            self.socket, (ip, port) = sock.accept()
-            self.client = Address(ip, port)
-            self.debug("Accepted Socket Connection From {}".format(self.client))
-        except Exception as e:
-            self.error("Failed to accept connection from {}".format(self.client))
-
-        self.socket.setblocking(False)
-
-        self.log("New Connection From: {}".format(self.client))
-        # if self.timeout is not None:  # is this needed?
-        #    self.socket.settimeout(self.timeout)
-
-
-class ClientConnectionBase(ConnectionBase):
-    """ Create instance to connect to server """
-    def __init__(self, ip, port, name, debug):
-        super().__init__(ip, port, name, False, debug)
-
-    def setup(self):
-        """ Create socket and try to connect to a server ip """
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
-        try:  # connect socket to given address
-            self.log("Attempting to connect to {}".format(self.server))
-            self.socket.connect(self.server.tup)
-            self.log("Socket Connected")
-        except Exception as e:
-            self.error("Failed to connect to server", e)
-
-        self.socket.setblocking(False)
-
-
-class Address:
-    """
-    Basic class to display ip addresses with port number.
-    I got tired of formatting strings.
-    """
-    def __init__(self, ip, port):
-        self.ip = ip
-        self.port = port
-        if self.ip in ['', '*', '0.0.0.0']:
-            self.ip = ''
-        self.rep = '{}:{}'.format(self.ip, self.port)  # string representation
-        self.tup = (self.ip, self.port)  # tuple of (ip, port)
-
-    def __repr__(self):
-        return self.rep
+class Packet:
+    """ Holds all data from one request """
+    def __init__(self):
+        self.method = None
+        self.path = None
+        self.version = None
+        self.header = {}
+        self.content = b''
 
 
 class FrameBuffer(object):

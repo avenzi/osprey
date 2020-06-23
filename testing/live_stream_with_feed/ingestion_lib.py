@@ -1,4 +1,4 @@
-from lib import Base, ServerConnectionBase, FrameBuffer, Address
+from lib import Handler, FrameBuffer
 from requests import get
 
 # html for the web browser stream
@@ -13,31 +13,13 @@ PAGE = """\
 """
 
 
-class Server(Base):
-    """
-    Handles incoming connections
-    """
-    def __init__(self, port, ip='', name='Server', debug=False):
-        super().__init__(debug)
-        self.ip = ip
-        self.port = port
-        self.name = name
-
-    def run(self):
-        """ Listens for new connections, then starts them on their own thread """
-        self.log("IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
-        while True:
-            conn = ServerConnection(self.ip, self.port, self.name, self.debug_mode)
-            conn.run(thread=True)  # wait for connection then start handling on a new thread
-
-
-class ServerConnection(ServerConnectionBase):
+class ServerHandler(Handler):
     """
     Initialized for every incoming connection to the server
     Should be able to handle any stream type
     """
-    def __init__(self, ip, port, name, debug):
-        super().__init__(ip, port, name, debug)
+    def __init__(self, port, name, debug):
+        super().__init__(port, name, debug)
 
         self.frames_sent = 0
         self.frames_received = 0
@@ -50,7 +32,7 @@ class ServerConnection(ServerConnectionBase):
 
     def finish(self):
         """ Executes before termination """
-        self.log("Frames Received: {}/{}".format(self.frames_received, self.frames_sent))
+        self.debug("Frames Received: {}/{}".format(self.frames_received, self.frames_sent))
 
     def INGEST_VIDEO(self):
         """ Handle image data received from Pi """
@@ -63,6 +45,7 @@ class ServerConnection(ServerConnectionBase):
 
         # write current frame to buffer so that it can be sent to a web browser feed
         self.frame_buffer.write(frame)
+        self.debug("Wrote frame to buffer")
 
     def GET(self):
         """ Handle request from web browser """
@@ -81,7 +64,6 @@ class ServerConnection(ServerConnectionBase):
             self.end_headers()
             with open('favicon.ico', 'rb') as fout:  # send favicon image
                 data = fout.read()
-                print(type(data))
                 self.add_content(fout.read())
 
         elif self.path == '/index.html':
@@ -103,6 +85,8 @@ class ServerConnection(ServerConnectionBase):
             self.end_headers()
             try:
                 while True:  # continually write individual frames to page
+                    self.debug("in get loop", True)
+                    '''
                     with self.frame_buffer.condition:
                         self.frame_buffer.condition.wait()
                         frame = self.frame_buffer.frame
@@ -111,6 +95,7 @@ class ServerConnection(ServerConnectionBase):
                     self.add_header('Content-Length', len(frame))
                     self.end_headers()
                     self.add_content(frame)
+                    '''
             except Exception as e:
                 self.error('Browser Stream Disconnected ({})'.format(self.client), e)
         else:
@@ -118,3 +103,6 @@ class ServerConnection(ServerConnectionBase):
             #self.end_headers()
             self.debug("GET request not accounted for")
             return
+
+
+

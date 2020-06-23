@@ -1,5 +1,6 @@
 import json
-from ingestion_lib import Server
+from lib import Server
+from ingestion_lib import ServerHandler
 
 # get configured settings
 with open('config.json') as file:
@@ -7,6 +8,6 @@ with open('config.json') as file:
 
 port = config['PORT']
 
-server = Server(port, name="Server", debug=True)
+server = Server(ServerHandler, port, name="Server", debug=True)
 server.run()
 
