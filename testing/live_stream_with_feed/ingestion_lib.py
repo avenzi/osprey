@@ -22,7 +22,7 @@ class ServerHandler(Handler):
 
         self.frames_sent = 0
         self.frames_received = 0
-        self.frame_buffer = FrameBuffer()
+        #self.frame_buffer = FrameBuffer()
 
     def start(self):
         """ Executes on startup """
@@ -33,20 +33,20 @@ class ServerHandler(Handler):
         """ Executes before termination """
         self.debug("Frames Received: {}/{}".format(self.frames_received, self.frames_sent))
 
-    def INGEST_VIDEO(self):
+    def INGEST_VIDEO(self, request):
         """ Handle image data received from Pi """
-        frame = self.content  # bytes
+        frame = request.content  # bytes
         self.frames_received += 1
-        self.frames_sent = int(self.header['frames-sent'])
+        self.frames_sent = int(request.header['frames-sent'])
         diff = abs(self.frames_sent - self.frames_received)
         if diff > 10:
             self.log("Warning: Some frames were lost ({})".format(diff))
 
         # write current frame to buffer so that it can be sent to a web browser feed
-        self.frame_buffer.write(frame)
-        self.debug("Wrote frame to buffer")
+        #self.frame_buffer.write(frame)
+        self.debug("ingested video")
 
-    def GET(self):
+    def GET(self, request):
         """ Handle request from web browser """
         self.debug("Received Web Browser Request")
 

@@ -28,7 +28,7 @@ class Base:
         """ display a message """
         counter = ''
         if self.last_msg == msg:  # same message
-            begin = '\r'
+            begin = '\r'  # overwrite
             self.overlay_count += 1  # increment
             if self.overlay_count >= 2:
                 counter = ' [{}]'.format(self.overlay_count)
@@ -106,12 +106,15 @@ class Server(Base):
         """ Main entry point. Starts each new connections on their own thread """
         self.log("Server IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
         self.create()  # create listener socket
-        while True:
+        while not self.exit:
             sock = self.accept()  # wait/accept new connection
-            if sock:
+            try:
                 conn = self.HandlerClass(sock, self)  # create connection with socket
                 thread = Thread(target=conn.run, daemon=True)
                 thread.start()  # run connection on new thread
+            except Exception as e:
+                self.error("Failed to handle request", e)
+                sock.close()
 
 
 class Client(Base):
@@ -174,21 +177,23 @@ class Handler(Base):
         """ Main entry point - called by parent """
         try:
             self.start()  # user-defined startup function
-            while not self.exit:  # run until exit status is set
-                self.pull()       # fill in_buffer from stream
+            while not self.exit:   # run until exit status is set
+                self.pull()        # fill in_buffer from stream
                 if not self.exit:
-                    self.handle() # parse and handle any incoming requests
+                    self.handle()  # parse and handle any incoming requests
                 if not self.exit:
-                    self.push()   # send out_buffer to stream
+                    self.push()    # send out_buffer to stream
         except KeyboardInterrupt:
             self.log("Manual Termination", True)
         except ConnectionResetError:
             self.log("Peer Disconnected", True)
         except BrokenPipeError:
             self.log("Peer Disconnected", True)
+        except Exception as e:  # any other error
+            self.error(e)
         finally:
             self.finish()  # user-defined final execution
-            self.close()  # close server
+            self.close()   # close server
 
     def start(self):
         """
@@ -225,13 +230,14 @@ class Handler(Base):
 
     def push(self):
         """ Attempts to send the out_buffer to the stream """
+        if self.out_buffer == b'':  # nothing to send
+            return
         try:
             self.socket.sendall(self.out_buffer)
-        except BlockingIOError:  # no response when non-blocking socket used
-            pass
-        else:
             self.out_buffer = b''  # clear buffer
             self.debug("Pushed buffer to stream")
+        except BlockingIOError:  # no response when non-blocking socket used
+            pass
 
     def handle(self):
         """ Parse and handle a single request from the buffers """
@@ -245,7 +251,7 @@ class Handler(Base):
             self.parse_content()  # may or may not have content
 
             method_func = getattr(self, self.packet.method)  # get handler method that matches name of request method
-            method_thread = threading.Thread(target=method_func, name="{}-Thread".format(method_func.__name__), daemon=True)
+            method_thread = threading.Thread(target=method_func, args=(self.packet,), name="{}-Thread".format(method_func.__name__), daemon=True)
             method_thread.start()  # call method in new thread to handle the request
             self.reset()   # reset all request variables
 
@@ -355,7 +361,7 @@ class Handler(Base):
 
     def reset(self):
         """ Get ready for a new packet and push the current one onto the packet buffer """
-        self.packet_buffer.append(self.packet)
+        #self.packet_buffer.append(self.packet)
         self.packet = Packet()
         self.debug("Reset packet")
 
@@ -363,7 +369,7 @@ class Handler(Base):
         """ Add a standard HTTP request line to the outgoing buffer """
         line = "{} {} {}\r\n".format(method, path, version)
         self.out_buffer += line.encode(self.encoding)
-        self.debug("Added request line '{}'".format(line))
+        self.debug("Added request line '{}'".format(line.strip()))
 
     def add_response(self, code):
         """ Add a response line to the header buffer. Used to respond to web browsers. """
