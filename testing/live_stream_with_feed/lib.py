@@ -14,8 +14,19 @@ class Base:
     """
     debug_mode = False  # Whether debug mode is active.
     last_msg = ''       # to keep track of the last output message
-    repeats = 1   # counter of how many times an output message was overlayed on the same line
     exit = False        # Used to exit program and handle errors
+
+    def info(self):
+        """ prints out startup info """
+        if Base.debug_mode:
+            print()
+            print("---------------------------")
+            print(":: RUNNING IN DEBUG MODE ::")
+            print("---------------------------")
+
+    def set_debug(self, debug):
+        """ Sets the global debug mode """
+        Base.debug_mode = debug
 
     def date(self):
         """ Return the current formatted time """
@@ -25,21 +36,10 @@ class Base:
     
     def display(self, msg):
         """ display a log message """
-        if Base.debug_mode:
-            if Base.last_msg == msg:  # same message
-                if Base.repeats < 999:
-                    Base.repeats += 1
-                print("\r{:<3}".format(Base.repeats), end='')  # overwrite last prefix with number
-            else:  # new message
-                Base.last_msg = msg
-                Base.repeats = 1
-                print("\n{:<3}| {}".format('', msg), end='')
-
-        else:  # not debug mode
-            if Base.last_msg == msg:  # same message
-                return  # Ignore duplicate messages
-            Base.last_msg = msg
-            print(msg)
+        if Base.last_msg == msg:  # same message
+            return  # Ignore duplicate messages
+        Base.last_msg = msg
+        print(msg)
 
     def log(self, message, important=False):
         """ Outputs a log message """
@@ -79,7 +79,9 @@ class Server(Base):
         self.port = port      # port to bind to
         self.name = name      # server name (sent in request headers)
         self.listener = None     # socket that accepts new connections
-        Base.debug_mode = debug  # set global debug mode
+
+        self.set_debug(debug)  # set global debug mode
+        self.info()
 
     def create(self):
         """ Create a listening socket object """
@@ -136,7 +138,9 @@ class Client(Base):
         self.port = port     # server port to connect through
         self.name = name     # name of client (sent in headers)
         self.socket = None   # socket object
-        Base.debug_mode = debug  # set global debug mode
+
+        self.set_debug(debug)  # set global debug mode
+        self.info()
 
     def create(self):
         """ Create socket object and try to connect to server """
