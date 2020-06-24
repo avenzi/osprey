@@ -2,8 +2,8 @@ import io
 import picamera
 from time import sleep
 import threading
-from threading import Thread
-from lib import Handler
+from threading import Thread, Condition
+from lib import Handler, Request
 
 
 class VideoClientHandler(Handler):
@@ -16,7 +16,6 @@ class VideoClientHandler(Handler):
         self.frame_buffer = FrameBuffer()  # file-like object buffer for the camera to stream to
 
         self.frames_sent = 0    # number of frames sent
-
         self.active = False     # toggled by server to activate the stream
 
     def start(self):
@@ -30,32 +29,29 @@ class VideoClientHandler(Handler):
         """ Executes on termination """
         self.camera.stop_recording()
         self.log("Stopped Recording: {}".format(self.date()))
-    
-    def send_images(self):
-        """ Handle sending images to the stream """
-        while self.active:  # stream until toggled
-            with self.frame_buffer.condition:
-                self.frame_buffer.condition.wait()
-                frame = self.frame_buffer.frame  # get next frame from picam
 
-            self.frames_sent += 1
-            self.add_request('INGEST_VIDEO')
-            self.add_header("content-length", len(frame))
-            self.add_header("frames-sent", self.frames_sent)
-            self.end_headers()
-            self.add_content(frame)
-
-    def START(self):
+    def START(self, request):
         """ Request method START. Start Streaming continually on a new thread."""
         if self.active:
             self.log("Stream already Started")
             return
         self.active = True  # activate stream
-        stream_thread = Thread(target=self.send_images, name="Stream-Thread", daemon=True)
-        stream_thread.start()
         self.log("Started Stream...")
 
-    def STOP(self):
+        while self.active:  # stream until toggled
+            with self.frame_buffer.condition:
+                self.frame_buffer.condition.wait()
+                frame = self.frame_buffer.frame  # get next frame from picam
+
+            response = Request()  # new request object to send
+            response.frames_sent += 1
+            response.add_request('INGEST_VIDEO')
+            response.add_header("content-length", len(frame))
+            response.add_header("frames-sent", self.frames_sent)
+            response.add_content(frame)
+            self.send(response)  # send request to outgoing buffer
+
+    def STOP(self, request):
         """ Request method STOP """
         self.active = False  # deactivate stream
         self.log("Stopped Stream...")
@@ -69,14 +65,14 @@ class FrameBuffer(object):
     def __init__(self):
         self.frame = None
         self.buffer = io.BytesIO()
-        self.condition = threading.Condition()
+        self.condition = Condition()
 
     def write(self, buf):
         if buf.startswith(b'\xff\xd8'):  # jpeg image
             self.buffer.truncate()
             with self.condition:
                 self.frame = self.buffer.getvalue()
-                self.condition.notify_all()  # make available to other threads
+                self.condition.notify_all()  # wake any waiting threads
             self.buffer.seek(0)
         return self.buffer.write(buf)
 

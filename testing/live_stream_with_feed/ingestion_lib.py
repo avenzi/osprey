@@ -1,4 +1,4 @@
-from lib import Handler
+from lib import Handler, Request
 
 # html for the web browser stream
 PAGE = """\
