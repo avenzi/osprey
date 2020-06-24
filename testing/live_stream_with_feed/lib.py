@@ -131,6 +131,7 @@ class Client(Base):
         self.port = port     # server port to connect through
         self.name = name     # name of client (sent in headers)
         self.socket = None   # socket object
+        Base.debug_mode = debug  # set global debug mode
 
     def create(self):
         """ Create socket object and try to connect to server """
@@ -358,7 +359,8 @@ class Handler(Base):
             else:  # not yet fully received
                 return
         else:  # no content length specified - assuming no content sent
-            return  # TODO: Is there a way to determine for sure whether a request has only a header?
+            self.request.content_received = True  # mark content as received
+            return  # TODO: Is there a better way to determine for sure whether a request has only a header?
 
     def reset(self):
         """ Get ready for a new request and push the current one onto the request buffer """
@@ -378,7 +380,7 @@ class Request(Base):
     Used by Handler class to store incoming/outgoing requests.
     """
     def __init__(self):
-        self.encoding = None    # byte encoding
+        self.encoding = 'iso-8859-1'  # byte encoding
 
         self.method = None      # request method (GET, POST, etc..)
         self.path = None        # request path

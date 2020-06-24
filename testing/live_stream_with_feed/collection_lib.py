@@ -43,8 +43,9 @@ class VideoClientHandler(Handler):
                 self.frame_buffer.condition.wait()
                 frame = self.frame_buffer.frame  # get next frame from picam
 
+            self.frames_sent += 1
+            
             response = Request()  # new request object to send
-            response.frames_sent += 1
             response.add_request('INGEST_VIDEO')
             response.add_header("content-length", len(frame))
             response.add_header("frames-sent", self.frames_sent)
