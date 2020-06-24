@@ -14,7 +14,7 @@ class Base:
     """
     debug_mode = False  # Whether debug mode is active.
     last_msg = ''       # to keep track of the last output message
-    overlay_count = 1   # counter of how many times an output message was overlayed on the same line
+    repeats = 1   # counter of how many times an output message was overlayed on the same line
     exit = False        # Used to exit program and handle errors
 
     def date(self):
@@ -24,19 +24,23 @@ class Base:
         return "{}/{}/{} {}:{}:{} UTC".format(day, month, year, hh, mm, ss)
     
     def display(self, msg):
-        """ display a message """
-        counter = ''
-        if Base.last_msg == msg:  # same message
-            begin = '\r'  # overwrite  TODO: Some interpreters can't handle \r, so I need to find some way to determine that and just not print any successive overwrites.
-            Base.overlay_count += 1  # increment
-            if Base.overlay_count >= 2:
-                counter = ' [{}]'.format(Base.overlay_count)
-        else:  # different message
-            begin = '\n'  # don't overwrite
-            Base.overlay_count = 1  # reset count
-        Base.last_msg = msg
-        print("{}{} {}".format(begin, msg, counter), end='')
-        
+        """ display a log message """
+        if Base.debug_mode:
+            if Base.last_msg == msg:  # same message
+                if Base.repeats < 999:
+                    Base.repeats += 1
+                print("\r{:<3}".format(Base.repeats), end='')  # overwrite last prefix with number
+            else:  # new message
+                Base.last_msg = msg
+                Base.repeats = 1
+                print("\n{:<3}| {}".format('', msg), end='')
+
+        else:  # not debug mode
+            if Base.last_msg == msg:  # same message
+                return  # Ignore duplicate messages
+            Base.last_msg = msg
+            print(msg)
+
     def log(self, message, important=False):
         """ Outputs a log message """
         if important:  # important message just meant to stand out from the rest
@@ -164,12 +168,13 @@ class Handler(Base):
     def __init__(self, sock, parent):
         self.socket = sock       # socket object to read/write to
         self.parent = parent     # object that created this connection (either the Server or Client)
+        self.peer = sock.getpeername()  # address of machine on other end of connection
 
-        self.in_buffer = b''     # incoming stream buffer to read from
-        self.out_buffer = b''    # outgoing stream buffer to write to
+        self.in_buffer = b''      # incoming stream buffer to read from
+        self.out_buffer = b''     # outgoing stream buffer to write to
         self.write_lock = Lock()  # lock for out_buffer
 
-        self.request = Request()   # current request being parsed
+        self.request = Request()  # current request being parsed
 
         self.name = parent.name   # name of connection - usually sent in headers
         self.encoding = 'iso-8859-1'  # encoding for data stream (latin-1)
@@ -187,7 +192,7 @@ class Handler(Base):
         except KeyboardInterrupt:
             self.log("Manual Termination", True)
         except (ConnectionResetError, BrokenPipeError):
-            self.log("Peer Disconnected ({}:{})".format(*self.socket.getpeername()), True)
+            self.log("Peer Disconnected ({}:{})".format(*self.peer), True)
         except Exception as e:  # any other error
             self.traceback()
             self.error(e)
