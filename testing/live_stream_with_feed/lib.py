@@ -26,15 +26,15 @@ class Base:
     def display(self, msg):
         """ display a message """
         counter = ''
-        if self.last_msg == msg:  # same message
+        if Base.last_msg == msg:  # same message
             begin = '\r'  # overwrite
-            self.overlay_count += 1  # increment
-            if self.overlay_count >= 2:
-                counter = ' [{}]'.format(self.overlay_count)
+            Base.overlay_count += 1  # increment
+            if Base.overlay_count >= 2:
+                counter = ' [{}]'.format(Base.overlay_count)
         else:  # different message
             begin = '\n'  # don't overwrite
-            self.overlay_count = 1  # reset count
-        self.last_msg = msg
+            Base.overlay_count = 1  # reset count
+        Base.last_msg = msg
         print("{}{} {}".format(begin, msg, counter), end='')
         
     def log(self, message, important=False):
@@ -46,7 +46,7 @@ class Base:
 
     def debug(self, msg):
         """ Sends a debug level message """
-        if not self.debug_mode:
+        if not Base.debug_mode:
             return
         self.display("(debug)[{}]: {}".format(threading.currentThread().getName(), msg))
 
@@ -55,7 +55,7 @@ class Base:
         self.display("(ERROR)[{}]: {}".format(threading.currentThread().getName(), message))
         if cause:
             self.display("(CAUSE): {}".format(cause))  # show cause if given
-        self.exit = True
+        Base.exit = True
 
     def traceback(self):
         """ Prints out a stack trace """
@@ -249,7 +249,6 @@ class Handler(Base):
         elif not self.request.header_received:  # header not yet fully received
             self.parse_header()
         elif not self.request.content_received:  # content not yet received
-            self.debug(self.in_buffer)
             self.parse_content()  # may or may not have content
         else:   # full request has been received
             method_func = getattr(self, self.request.method)  # get handler method that matches name of request method
