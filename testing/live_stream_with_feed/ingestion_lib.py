@@ -26,8 +26,9 @@ class ServerHandler(Handler):
 
     def start(self):
         """ Executes on startup """
-        self.add_request('START')
-        self.end_headers()
+        req = Request()
+        req.add_request('START')
+        self.send(req)
 
     def finish(self):
         """ Executes before termination """

@@ -27,7 +27,7 @@ class Base:
         """ display a message """
         counter = ''
         if Base.last_msg == msg:  # same message
-            begin = '\r'  # overwrite
+            begin = '\r'  # overwrite  TODO: Some interpreters can't handle \r, so I need to find some way to determine that and just not print any successive overwrites.
             Base.overlay_count += 1  # increment
             if Base.overlay_count >= 2:
                 counter = ' [{}]'.format(Base.overlay_count)
@@ -58,8 +58,9 @@ class Base:
         Base.exit = True
 
     def traceback(self):
-        """ Prints out a stack trace """
-        traceback.print_exc()
+        """ output traceback """
+        if Base.debug_mode:
+            traceback.print_exc()
 
 
 class Server(Base):
@@ -169,7 +170,6 @@ class Handler(Base):
         self.write_lock = Lock()  # lock for out_buffer
 
         self.request = Request()   # current request being parsed
-        self.request_buffer = []  # parsed requests ready to be handled
 
         self.name = parent.name   # name of connection - usually sent in headers
         self.encoding = 'iso-8859-1'  # encoding for data stream (latin-1)
@@ -186,10 +186,8 @@ class Handler(Base):
                     self.push()    # Attempt to push out_buffer to stream
         except KeyboardInterrupt:
             self.log("Manual Termination", True)
-        except ConnectionResetError:
-            self.log("Peer Disconnected", True)
-        except BrokenPipeError:
-            self.log("Peer Disconnected", True)
+        except (ConnectionResetError, BrokenPipeError):
+            self.log("Peer Disconnected ({}:{})".format(*self.socket.getpeername()), True)
         except Exception as e:  # any other error
             self.traceback()
             self.error(e)
@@ -226,9 +224,7 @@ class Handler(Base):
                 self.debug("Pulled data from stream")
                 self.in_buffer += data  # append data to incoming buffer
             else:  # stream disconnected
-                self.log("Peer Disconnected: {}:{}".format(*self.socket.getpeername()), True)
-                self.exit = True
-                # TODO: not sure whether I should try to put this error in the main loop with the others. It's not an exception, though
+                raise BrokenPipeError
 
     def push(self):
         """ Attempts to send the out_buffer to the stream """
@@ -303,11 +299,13 @@ class Handler(Base):
             return
         with self.write_lock:  # get lock
             self.out_buffer += data  # add data to buffer
+            self.debug("Added request to outgoing buffer")
 
     def parse_request_line(self):
         """ Parses the Request-line of a request, finding the request method, path, and version strings. """
         max_len = 256  # max length of request-line before error (arbitrary choice)
 
+        self.debug(len(self.in_buffer))
         line = self.read(max_len, line=True)  # read first line from stream
         if line is None:  # full line not yet received
             return
@@ -363,7 +361,6 @@ class Handler(Base):
 
     def reset(self):
         """ Get ready for a new request and push the current one onto the request buffer """
-        #self.request_buffer.append(self.request)
         self.request = Request()
         self.debug("Reset request packet")
 
@@ -379,7 +376,8 @@ class Request(Base):
     Used by Handler class to store incoming/outgoing requests.
     """
     def __init__(self):
-        self.encoding = 'iso-8859-1'  # byte encoding
+        self.encoding = 'iso-8859-1'    # byte encoding
+        # TODO: make encoding not hard-coded? It's defined again in the Handler class. Maybe there's a nice way to pass it down? putting it in the constructor would not be ideal because the user has to call it in custom request methods.
 
         self.method = None      # request method (GET, POST, etc..)
         self.path = None        # request path
@@ -424,10 +422,19 @@ class Request(Base):
             return
         self.content = data
 
-    def compile(self):
-        """ Formats all data into an encoded HTTP request and returns it """
+    def verify(self):
+        """ Verify that this object meets all requirements and can be safely sent to the stream """
+        if not self.method and not self.code:
+            self.error("You must send either a request method or a response code")
+            return False
         if self.method and self.code:  # trying to send both a response and a request
             self.error("Must send a response or a request, not both", 'You added request method "{}" and response code "{}"'.format(self.method, self.code))
+            return False
+        return True
+
+    def compile(self):
+        """ Formats all data into an encoded HTTP request and returns it """
+        if not self.verify():
             return
         data = b''  # data to be returned
 
@@ -450,8 +457,9 @@ class Request(Base):
         data += b'\r\n'  # add a blank line to denote end of headers
 
         # content
-        data += self.content  # content should already be in bytes
-        self.debug("Sent content of length: {}".format(len(self.content)))
+        if self.content:
+            data += self.content  # content should already be in bytes
+            self.debug("Added content of length: {}".format(len(self.content)))
 
         return data
 
