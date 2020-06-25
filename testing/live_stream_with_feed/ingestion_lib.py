@@ -27,7 +27,8 @@ class ServerHandler(Handler):
     def start(self):
         """ Executes on startup """
         req = Request()
-        req.add_request('START')
+        #req.add_request('START')
+        req.add_request('TEST')
         self.send(req)
 
     def finish(self):
@@ -46,6 +47,8 @@ class ServerHandler(Handler):
         # write current frame to buffer so that it can be sent to a web browser feed
         #self.frame_buffer.write(frame)
         self.debug("ingested video")
+        self.debug("IMAGE {} : {}".format(len(frame), frame))
+        #self.debug("IMAGE DAT {}: {} ... {}".format(len(frame), frame[:4], frame[len(frame)-4:]))
 
     def GET(self, request):
         """ Handle request from web browser """

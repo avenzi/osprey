@@ -192,8 +192,8 @@ class Handler(Base):
             self.start()  # user-defined startup function
             while not self.exit:   # run until exit status is set
                 self.pull()        # Attempt to fill in_buffer from stream
-                if not self.exit:
-                    self.handle()  # parse and handle any incoming requests
+                #if not self.exit:
+                    #self.handle()  # parse and handle any incoming requests
                 if not self.exit:
                     self.push()    # Attempt to push out_buffer to stream
         except KeyboardInterrupt:
@@ -228,19 +228,21 @@ class Handler(Base):
     def pull(self):
         """ Receive raw bytes from the socket stream and adds to the in_buffer """
         try:
-            data = self.socket.recv(4096)  # Receive data from stream
+            data = self.socket.recv(1024)  # Receive data from stream
         except BlockingIOError:  # catch no data on non-blocking socket
             pass
         else:
             if data:  # received data
                 self.debug("Pulled data from stream")
+                self.debug("DATA PULLED: {}".format(data))
                 self.in_buffer += data  # append data to incoming buffer
+                self.debug("TOTAL LEN: {}".format(len(self.in_buffer)))
             else:  # stream disconnected
                 raise BrokenPipeError
 
     def push(self):
         """ Attempts to send the out_buffer to the stream """
-        if self.out_buffer == b'': # nothing to write
+        if self.out_buffer == b'':  # nothing to write
             return
         try:
             with self.write_lock:  # get lock
@@ -473,5 +475,3 @@ class Request(Base):
             self.debug("Added content of length: {}".format(len(self.content)))
 
         return data
-
-
