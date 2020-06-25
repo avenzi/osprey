@@ -29,7 +29,7 @@ class VideoClientHandler(Handler):
         """ Executes on termination """
         self.camera.stop_recording()
         self.log("Stopped Recording: {}".format(self.date()))
-
+        
     def START(self, request):
         """ Request method START. Start Streaming continually on a new thread."""
         if self.active:
@@ -50,6 +50,7 @@ class VideoClientHandler(Handler):
             response.add_header("content-length", len(frame))
             response.add_header("frames-sent", self.frames_sent)
             response.add_content(frame)
+            
             self.send(response)  # send request to outgoing buffer
 
     def STOP(self, request):

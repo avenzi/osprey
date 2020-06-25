@@ -158,8 +158,9 @@ class Client(Base):
         """ Listens for new connections, then starts them on their own thread """
         self.log("Client IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
         self.create()
-        conn = self.HandlerClass(self.socket, self)  # create new connection for the client
-        conn.run()  # Only one connection, so no need to thread
+        if not self.exit:
+            conn = self.HandlerClass(self.socket, self)  # create new connection for the client
+            conn.run()  # Only one connection, so no need to thread
 
 
 class Handler(Base):
@@ -172,11 +173,12 @@ class Handler(Base):
     def __init__(self, sock, parent):
         self.socket = sock       # socket object to read/write to
         self.parent = parent     # object that created this connection (either the Server or Client)
-        self.peer = sock.getpeername()  # address of machine on other end of connection
+        self.peer = None         # address of machine on other end of connection
 
         self.in_buffer = b''      # incoming stream buffer to read from
         self.out_buffer = b''     # outgoing stream buffer to write to
         self.write_lock = Lock()  # lock for out_buffer
+        self.max_out_size = 16000  # size into which to break up outgoing data
 
         self.request = Request()  # current request being parsed
 
@@ -186,6 +188,7 @@ class Handler(Base):
     def run(self):
         """ Main entry point - called by parent """
         try:
+            self.peer = self.socket.getpeername()
             self.start()  # user-defined startup function
             while not self.exit:   # run until exit status is set
                 self.pull()        # Attempt to fill in_buffer from stream
@@ -241,8 +244,8 @@ class Handler(Base):
             return
         try:
             with self.write_lock:  # get lock
-                self.socket.sendall(self.out_buffer)
-                self.out_buffer = b''  # clear buffer
+                sent = self.socket.send(self.out_buffer)  # try to send as much data from the out_buffer
+                self.out_buffer = self.out_buffer[sent:]  # move down buffer according to how much data was sent
                 self.debug("Pushed buffer to stream")
         except BlockingIOError:  # no response when non-blocking socket used
             pass
@@ -303,7 +306,7 @@ class Handler(Base):
 
     def send(self, response):
         """ Compiles the response object then adds it to the out_buffer """
-        data = response.compile()
+        data = response.get_data()
         if not data:  # error which has been caught, hopefully
             return
         with self.write_lock:  # get lock
@@ -314,7 +317,6 @@ class Handler(Base):
         """ Parses the Request-line of a request, finding the request method, path, and version strings. """
         max_len = 256  # max length of request-line before error (arbitrary choice)
 
-        self.debug(len(self.in_buffer))
         line = self.read(max_len, line=True)  # read first line from stream
         if line is None:  # full line not yet received
             return
@@ -441,7 +443,7 @@ class Request(Base):
             return False
         return True
 
-    def compile(self):
+    def get_data(self):
         """ Formats all data into an encoded HTTP request and returns it """
         if not self.verify():
             return
