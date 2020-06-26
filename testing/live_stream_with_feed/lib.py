@@ -29,10 +29,8 @@ class Base:
         Base.debug_mode = debug
 
     def date(self):
-        """ Return the current formatted time """
-        now = time.time()
-        year, month, day, hh, mm, ss, x, y, z = time.localtime(now)
-        return "{}/{}/{} {}:{}:{} UTC".format(day, month, year, hh, mm, ss)
+        """ Return the current time in HTTP Date-header format """
+        return time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime())
     
     def display(self, msg):
         """ display a log message """
@@ -92,7 +90,7 @@ class Server(Base):
         """ Create a listening socket object """
         self.listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
         try:  # Bind socket to ip and port
-            # self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # allow socket to reuse address?
+            # self.listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # allow socket to reuse address?
             self.listener.bind((self.ip, self.port))  # bind to host address
             self.debug("Socket Bound to *:{}".format(self.port))
         except Exception as e:
@@ -255,7 +253,7 @@ class Handler(Base):
             with self.write_lock:  # get lock
                 sent = self.socket.send(self.out_buffer)  # try to send as much data from the out_buffer
                 self.out_buffer = self.out_buffer[sent:]  # move down buffer according to how much data was sent
-                #self.debug("Pushed buffer to stream")
+                self.debug("Pushed buffer to stream")
         except BlockingIOError:  # no response when non-blocking socket used
             pass
 
@@ -460,13 +458,15 @@ class Request(Base):
         if code == 200:
             self.message = 'OK'
         elif code == 301:
-            self.message = "Moved Permanently"
+            self.message = 'Moved Permanently'
+        elif code == 308:
+            self.message = 'Permanent Redirect'
         elif code == 404:
             self.message = 'Not Found'
         else:
             self.message = "MESSAGE"
 
-        self.add_header('Server', 'Streaming Server Python/3.7.3')  # TODO: make this not hard coded (Not really necessary yet)
+        self.add_header('Server', 'StreamingServer Python/3.7.3')  # TODO: make this not hard coded (Not really necessary yet)
         self.add_header('Date', self.date())
 
     def add_header(self, keyword, value):
@@ -515,7 +515,7 @@ class Request(Base):
         for key, value in self.header.items():
             header = "{}: {}\r\n".format(key, value)
             data += header.encode(self.encoding)
-            #self.debug("Added header '{}:{}'".format(key, value))
+            self.debug("Added header '{}:{}'".format(key, value))
         if self.header:
             data += b'\r\n'  # add a blank line to denote end of headers
             self.debug("Added all headers")
@@ -524,6 +524,8 @@ class Request(Base):
         if self.content:
             data += self.content  # content should already be in bytes
             self.debug("Added content of length: {}".format(len(self.content)))
+        else:
+            data += b'\r\n'  # if no content, signal end of transmission
 
         return data
 

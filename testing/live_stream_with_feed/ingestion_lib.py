@@ -43,7 +43,7 @@ class ServerHandler(Handler):
         response = Request()
 
         if request.path == '/':
-            self.debug("Handling request for '/'. Redirected to index.html")
+            self.debug("Handling request for '/'. Redirecting to index.html")
             response.add_response(301)  # redirect
             response.add_header('Location', '/index.html')  # redirect to index.html
             self.send(response)
