@@ -3,7 +3,7 @@ import socket
 import time
 import traceback
 import threading
-from threading import Thread, Lock
+from threading import Thread, Lock, Condition
 from requests import get
 
 
@@ -66,6 +66,11 @@ class Base:
         if Base.debug_mode:
             traceback.print_exc()
 
+    def get_thread_name(self, name):
+        """ Given a name, add a unique number to it """
+        num = threading.active_count()
+        return "Thread[{}]-{}".format(num+1, name)
+
 
 class Server(Base):
     """
@@ -119,7 +124,7 @@ class Server(Base):
             sock = self.accept()  # wait/accept new connection
             try:
                 conn = self.HandlerClass(sock, self)  # create connection with socket
-                thread = Thread(target=conn.run, daemon=True)
+                thread = Thread(target=conn.run, name=self.get_thread_name('Conn'), daemon=True)
                 thread.start()  # run connection on new thread
             except Exception as e:
                 self.error("Failed to handle request", e)
@@ -178,7 +183,6 @@ class Handler(Base):
         self.in_buffer = b''      # incoming stream buffer to read from
         self.out_buffer = b''     # outgoing stream buffer to write to
         self.write_lock = Lock()  # lock for out_buffer
-        self.max_out_size = 16000  # size into which to break up outgoing data
 
         self.request = Request()  # current request being parsed
 
@@ -192,8 +196,8 @@ class Handler(Base):
             self.start()  # user-defined startup function
             while not self.exit:   # run until exit status is set
                 self.pull()        # Attempt to fill in_buffer from stream
-                #if not self.exit:
-                    #self.handle()  # parse and handle any incoming requests
+                if not self.exit:
+                    self.handle()  # parse and handle any incoming requests
                 if not self.exit:
                     self.push()    # Attempt to push out_buffer to stream
         except KeyboardInterrupt:
@@ -228,15 +232,13 @@ class Handler(Base):
     def pull(self):
         """ Receive raw bytes from the socket stream and adds to the in_buffer """
         try:
-            data = self.socket.recv(1024)  # Receive data from stream
+            data = self.socket.recv(4096)  # Receive data from stream
         except BlockingIOError:  # catch no data on non-blocking socket
             pass
         else:
             if data:  # received data
-                self.debug("Pulled data from stream")
-                self.debug("DATA PULLED: {}".format(data))
+                self.debug("Pulled data from stream {}".format(len(data)))
                 self.in_buffer += data  # append data to incoming buffer
-                self.debug("TOTAL LEN: {}".format(len(self.in_buffer)))
             else:  # stream disconnected
                 raise BrokenPipeError
 
@@ -262,7 +264,7 @@ class Handler(Base):
             self.parse_content()  # may or may not have content
         else:   # full request has been received
             method_func = getattr(self, self.request.method)  # get handler method that matches name of request method
-            method_thread = threading.Thread(target=method_func, args=(self.request,), name="{}-Thread".format(method_func.__name__), daemon=True)
+            method_thread = threading.Thread(target=method_func, args=(self.request,),  name=self.get_thread_name(method_func.__name__), daemon=True)
             method_thread.start()  # call method in new thread to handle the request
             self.reset()   # reset all request variables
 
@@ -311,9 +313,13 @@ class Handler(Base):
         data = response.get_data()
         if not data:  # error which has been caught, hopefully
             return
+        self.send_raw(data)
+
+    def send_raw(self, data):
+        """ Sends raw bytes data as-is to the out_buffer """
         with self.write_lock:  # get lock
             self.out_buffer += data  # add data to buffer
-            self.debug("Added request to outgoing buffer")
+            self.debug("Added data to outgoing buffer")
 
     def parse_request_line(self):
         """ Parses the Request-line of a request, finding the request method, path, and version strings. """
@@ -382,11 +388,44 @@ class Handler(Base):
         self.socket.close()
         self.log("Connection Closed\n")
 
+    # extra helpful stuff
+    def send_multipart(self, buffer, content_type, boundary):
+        """
+        Continually creates and sends multipart-type responses to the stream.
+        Used to send an image stream to a browser.
+        <Buffer> is a buffer with a read() method and a threading condition to read data from
+        <content-type> will be put into a content-type header.
+        <boundary> us the separator between "packets"
+        """
+        res = Request()
+        res.add_response(200)
+        res.add_header('Age', 0)
+        res.add_header('Cache-Control', 'no-cache, private')
+        res.add_header('Pragma', 'no-cache')
+        res.add_header('Content-Type', 'multipart/x-mixed-replace; boundary=FRAME')
+        self.send(res)
+
+        # occurs before every main payload
+        header = '--{}\r\n'.format(boundary).encode(self.encoding)
+        header += 'Content-Type: {}\r\n\r\n'.format(content_type).encode(self.encoding)  # single header with a blank line after
+        try:
+            self.debug("Started multipart stream")
+            while True:
+                with buffer.condition:
+                    buffer.condition.wait()
+                    data = buffer.read()
+                packet = header + data + b'\r\n'
+                self.send_raw(packet)
+        except Exception as e:
+            self.error('Browser Stream Disconnected ({}:{})'.format(*self.peer), e)
+
 
 class Request(Base):
     """
     Holds all data from one request.
     Used by Handler class to store incoming/outgoing requests.
+    To use, call the appropriate add_ methods to add parts of the HTTP request,
+        then pass the object to self.send (self referring to the Handler class the request is used in)
     """
     def __init__(self):
         self.encoding = 'iso-8859-1'    # byte encoding
@@ -411,14 +450,21 @@ class Request(Base):
         self.path = path
         self.version = version
 
-    def add_response(self, code, message="MESSAGE"):
+    def add_response(self, code):
         """ Add a response code, message, version, and default headers. Used to respond to web browsers. """
         self.code = code
         self.version = "HTTP/1.1"
-        self.message = message
+        if code == 200:
+            self.message = 'OK'
+        elif code == 301:
+            self.message = "Moved Permanently"
+        elif code == 404:
+            self.message = 'Not Found'
+        else:
+            self.message = "MESSAGE"
 
         self.add_header('Server', 'Streaming Server Python/3.7.3')  # TODO: make this not hard coded (Not really necessary yet)
-        self.add_header('Date', self.date)
+        self.add_header('Date', self.date())
 
     def add_header(self, keyword, value):
         """ Add a single header line """
@@ -437,11 +483,11 @@ class Request(Base):
 
     def verify(self):
         """ Verify that this object meets all requirements and can be safely sent to the stream """
-        if not self.method and not self.code:
-            self.error("You must send either a request method or a response code")
-            return False
         if self.method and self.code:  # trying to send both a response and a request
-            self.error("Must send a response or a request, not both", 'You added request method "{}" and response code "{}"'.format(self.method, self.code))
+            self.error("Cannot send both a response and a request", 'You added request method "{}" and response code "{}"'.format(self.method, self.code))
+            return False
+        if not self.method and not self.code and self.header:
+            self.error("If you send a header, you must include a request or response as well")
             return False
         return True
 
@@ -467,7 +513,9 @@ class Request(Base):
             header = "{}: {}\r\n".format(key, value)
             data += header.encode(self.encoding)
             self.debug("Added header '{}:{}'".format(key, value))
-        data += b'\r\n'  # add a blank line to denote end of headers
+        if self.header:
+            data += b'\r\n'  # add a blank line to denote end of headers
+            self.debug("Ended headers")
 
         # content
         if self.content:
@@ -475,3 +523,24 @@ class Request(Base):
             self.debug("Added content of length: {}".format(len(self.content)))
 
         return data
+
+
+# TODO: Is this the only place that custom buffer classes can go so both collection_lib and ingestion_lib can acces them? I'd rather they be in the same file as the c
+class FrameBuffer(object):
+    """
+    A thread-safe buffer to store frames in
+    The write() method can be used by a Picam
+    """
+    def __init__(self):
+        self.frame = None
+        self.buffer = io.BytesIO()
+        self.condition = Condition()
+
+    def write(self, buf):
+        if buf.startswith(b'\xff\xd8'):  # jpeg image
+            self.buffer.truncate()
+            with self.condition:
+                self.frame = self.buffer.getvalue()
+                self.condition.notify_all()  # wake any waiting threads
+            self.buffer.seek(0)
+        return self.buffer.write(buf)

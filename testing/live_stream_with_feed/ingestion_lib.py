@@ -1,4 +1,4 @@
-from lib import Handler, Request
+from lib import Handler, Request, FrameBuffer
 
 # html for the web browser stream
 PAGE = """\
@@ -22,18 +22,7 @@ class ServerHandler(Handler):
 
         self.frames_sent = 0
         self.frames_received = 0
-        #self.frame_buffer = FrameBuffer()
-
-    def start(self):
-        """ Executes on startup """
-        req = Request()
-        #req.add_request('START')
-        req.add_request('TEST')
-        self.send(req)
-
-    def finish(self):
-        """ Executes before termination """
-        self.debug("Frames Received: {}/{}".format(self.frames_received, self.frames_sent))
+        self.parent.frame_buffer = FrameBuffer()
 
     def INGEST_VIDEO(self, request):
         """ Handle image data received from Pi """
@@ -44,68 +33,46 @@ class ServerHandler(Handler):
         if diff > 10:
             self.log("Warning: Some frames were lost ({})".format(diff))
 
-        # write current frame to buffer so that it can be sent to a web browser feed
-        #self.frame_buffer.write(frame)
+        # write current frame to the server's frame-buffer so that it can be sent with a different connection handler
+        self.parent.frame_buffer.write(frame)
         self.debug("ingested video")
-        self.debug("IMAGE {} : {}".format(len(frame), frame))
-        #self.debug("IMAGE DAT {}: {} ... {}".format(len(frame), frame[:4], frame[len(frame)-4:]))
 
     def GET(self, request):
         """ Handle request from web browser """
         self.debug("Received Web Browser Request")
+        response = Request()
 
-        if self.path == '/':
-            self.log("Handling request fore '/'. Redirected to index.html", level='debug')
-            self.add_response(301)  # redirect
-            self.add_header('Location', '/index.html')  # redirect to index.html
-            self.end_headers()
+        if request.path == '/':
+            self.debug("Handling request for '/'. Redirected to index.html")
+            response.add_response(301)  # redirect
+            response.add_header('Location', '/index.html')  # redirect to index.html
+            self.send(response)
 
-        elif self.path == '/favicon.ico':
-            self.log("Handling request for favicon")
-            self.add_response(200)  # success
-            self.add_header('Content-Type', 'image/x-icon')  # favicon
-            self.end_headers()
+        elif request.path == '/favicon.ico':
+            self.debug("Handling request for favicon")
             with open('favicon.ico', 'rb') as fout:  # send favicon image
-                data = fout.read()
-                self.add_content(fout.read())
+                img = fout.read()
+                response.add_content(img)
+            response.add_response(200)  # success
+            response.add_header('Content-Type', 'image/x-icon')  # favicon
+            response.add_header('Content-Length', len(img))
+            self.send(response)
 
-        elif self.path == '/index.html':
-            self.log("Handling request for /index.html, sending page html", level='debug')
+        elif request.path == '/index.html':
+            self.debug("Handling request for /index.html, sending page html")
             content = PAGE.encode(self.encoding)
-            self.add_response(200)  # success
-            self.add_header('Content-Type', 'text/html')
-            self.add_header('Content-Length', len(content))
-            self.end_headers()
-            self.add_content(content)  # write html content to page
+            response.add_response(200)  # success
+            response.add_header('Content-Type', 'text/html')
+            response.add_header('Content-Length', len(content))
+            response.add_content(content)  # write html content to page
+            self.send(response)
 
-        elif self.path == '/stream.mjpg':
-            self.log("Handling request for stream.mjpeg", level='debug')
-            self.add_response(200)  # success
-            self.add_header('Age', 0)
-            self.add_header('Cache-Control', 'no-cache, private')
-            self.add_header('Pragma', 'no-cache')
-            self.add_header('Content-Type', 'multipart/x-mixed-replace; boundary=FRAME')
-            self.end_headers()
-            try:
-                while True:  # continually write individual frames to page
-                    self.debug("in get loop", True)
-                    '''
-                    with self.frame_buffer.condition:
-                        self.frame_buffer.condition.wait()
-                        frame = self.frame_buffer.frame
-                    self.send_content(b'--FRAME\r\n')
-                    self.add_header('Content-Type', 'image/jpeg')
-                    self.add_header('Content-Length', len(frame))
-                    self.end_headers()
-                    self.add_content(frame)
-                    '''
-            except Exception as e:
-                self.error('Browser Stream Disconnected ({})'.format(self.client), e)
+        elif request.path == '/stream.mjpg':
+            self.debug("Handling request for stream.mjpeg")
+            self.send_multipart(self.parent.frame_buffer, 'image/jpeg', 'FRAME')
         else:
-            #self.send_error(404)  # couldn't find it
-            #self.end_headers()
-            self.debug("GET request not accounted for")
-            return
+            response.add_response(404)  # couldn't find it
+            self.send(response)
+            self.debug("GET requested unknown path", "path: {}".format(request.path))
 
-
-
+        self.debug("done handling GET")
