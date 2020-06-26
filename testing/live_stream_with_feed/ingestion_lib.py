@@ -1,4 +1,4 @@
-from lib import Handler, Request, FrameBuffer
+from lib import Handler, Request, DataBuffer
 
 # html for the web browser stream
 PAGE = """\
@@ -6,7 +6,7 @@ PAGE = """\
 <head><title>Picam</title></head>
 <body>
     <h1>RasPi MJPEG Streaming</h1>
-    <img src="stream.mjpg" width="640" height="480" />
+    <img src="stream.mjpg" width="500" height="500" />
 </body>
 </html>
 """
@@ -22,7 +22,7 @@ class ServerHandler(Handler):
 
         self.frames_sent = 0
         self.frames_received = 0
-        self.parent.frame_buffer = FrameBuffer()
+        self.parent.frame_buffer = DataBuffer()
 
     def INGEST_VIDEO(self, request):
         """ Handle image data received from Pi """

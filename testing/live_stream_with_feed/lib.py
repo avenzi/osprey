@@ -237,7 +237,7 @@ class Handler(Base):
             pass
         else:
             if data:  # received data
-                self.debug("Pulled data from stream {}".format(len(data)))
+                #self.debug("Pulled data from stream {}".format(len(data)))
                 self.in_buffer += data  # append data to incoming buffer
             else:  # stream disconnected
                 raise BrokenPipeError
@@ -250,7 +250,7 @@ class Handler(Base):
             with self.write_lock:  # get lock
                 sent = self.socket.send(self.out_buffer)  # try to send as much data from the out_buffer
                 self.out_buffer = self.out_buffer[sent:]  # move down buffer according to how much data was sent
-                self.debug("Pushed buffer to stream")
+                #self.debug("Pushed buffer to stream")
         except BlockingIOError:  # no response when non-blocking socket used
             pass
 
@@ -328,7 +328,7 @@ class Handler(Base):
         line = self.read(max_len, line=True)  # read first line from stream
         if line is None:  # full line not yet received
             return
-        self.debug("Received Request-Line: '{}'".format(line))
+        self.debug("Received Request-Line: '{}'".format(line.strip()))
 
         words = line.split()
         if len(words) != 3:
@@ -350,7 +350,7 @@ class Handler(Base):
         max_len = 1024  # max length each header (arbitrary choice)
         for _ in range(max_num):
             line = self.read(max_len, line=True)  # read next line in stream
-            self.debug("Read Header '{}'".format(line))
+            #self.debug("Read Header '{}'".format(line))
             if line is None:  # full line not yet received
                 return
             if line == '':  # empty line signaling end of headers
@@ -504,16 +504,16 @@ class Request(Base):
         if self.code:
             response_line = "{} {} {}\r\n".format(self.version, self.code, self.message)
             data += response_line.encode(self.encoding)
-            self.debug("Added response line '{}'".format(response_line))
+            self.debug("Added response line '{}'".format(response_line.strip()))
 
         # headers
         for key, value in self.header.items():
             header = "{}: {}\r\n".format(key, value)
             data += header.encode(self.encoding)
-            self.debug("Added header '{}:{}'".format(key, value))
+            #self.debug("Added header '{}:{}'".format(key, value))
         if self.header:
             data += b'\r\n'  # add a blank line to denote end of headers
-            self.debug("Ended headers")
+            self.debug("Added all headers")
 
         # content
         if self.content:
@@ -524,26 +524,22 @@ class Request(Base):
 
 
 # TODO: Is this the only place that custom buffer classes can go so both collection_lib and ingestion_lib can acces them? I'd rather they be in the same file as the c
-class FrameBuffer(object):
+class DataBuffer(object):
     """
     A thread-safe buffer to store frames in
     The write() method can be used by a Picam
     """
     def __init__(self):
-        self.frame = None
-        self.buffer = io.BytesIO()
+        self.data = b''
+        self.buffer = b''
         self.condition = Condition()
 
     def read(self):
         with self.condition:
             self.condition.wait()
-            return self.frame
+            return self.data
 
-    def write(self, buf):
-        if buf.startswith(b'\xff\xd8'):  # jpeg image
-            self.buffer.truncate()
-            with self.condition:
-                self.frame = self.buffer.getvalue()
-                self.condition.notify_all()  # wake any waiting threads
-            self.buffer.seek(0)
-        return self.buffer.write(buf)
+    def write(self, new_data):
+        with self.condition:
+            self.data = new_data
+            self.condition.notify_all()  # wake any waiting threads
