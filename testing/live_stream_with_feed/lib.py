@@ -393,7 +393,7 @@ class Handler(Base):
         """
         Continually creates and sends multipart-type responses to the stream.
         Used to send an image stream to a browser.
-        <Buffer> is a buffer with a read() method and a threading condition to read data from
+        <Buffer> is a buffer with a read() method to read data from
         <content-type> will be put into a content-type header.
         <boundary> us the separator between "packets"
         """
@@ -411,9 +411,7 @@ class Handler(Base):
         try:
             self.debug("Started multipart stream")
             while True:
-                with buffer.condition:
-                    buffer.condition.wait()
-                    data = buffer.read()
+                data = buffer.read()
                 packet = header + data + b'\r\n'
                 self.send_raw(packet)
         except Exception as e:
@@ -535,6 +533,11 @@ class FrameBuffer(object):
         self.frame = None
         self.buffer = io.BytesIO()
         self.condition = Condition()
+
+    def read(self):
+        with self.condition:
+            self.condition.wait()
+            return self.frame
 
     def write(self, buf):
         if buf.startswith(b'\xff\xd8'):  # jpeg image

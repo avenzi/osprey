@@ -41,10 +41,7 @@ class VideoClientHandler(Handler):
         self.log("Started Stream...")
 
         while self.active:  # stream until toggled
-            with self.frame_buffer.condition:
-                self.frame_buffer.condition.wait()
-                frame = self.frame_buffer.frame  # get next frame from picam
-
+            frame = self.frame_buffer.read()
             self.frames_sent += 1
             
             response = Request()  # new request object to send
