@@ -112,6 +112,9 @@ class Server(Base):
             sock.setblocking(False)
             self.log("New Connection From: {}:{}".format(ip, port))
             return sock
+        except KeyboardInterrupt:
+            self.error("Manual Termination")
+            return
         except Exception as e:
             self.error("Failed to accept connection", e)
             return
@@ -122,6 +125,8 @@ class Server(Base):
         self.create()  # create listener socket
         while not self.exit:
             sock = self.accept()  # wait/accept new connection
+            if self.exit:
+                return
             try:
                 conn = self.HandlerClass(sock, self)  # create connection with socket
                 thread = Thread(target=conn.run, name=self.get_thread_name('Conn'), daemon=True)
