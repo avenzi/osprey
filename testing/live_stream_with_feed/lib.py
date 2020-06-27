@@ -12,21 +12,22 @@ class Base:
     Base class from which all others inherit.
     Implements global logging functionality.
     """
-    debug_mode = False  # Whether debug mode is active.
+    debug_level = 0     # debugging level
     last_msg = ''       # to keep track of the last output message
     exit = False        # Used to exit program and handle errors
+    print_lock = Lock()  # lock on output
 
     def info(self):
         """ prints out startup info """
-        if Base.debug_mode:
+        if Base.debug_level:
             print()
-            print("---------------------------")
-            print(":: RUNNING IN DEBUG MODE ::")
-            print("---------------------------")
+            print("------------------------------")
+            print(":: RUNNING IN DEBUG MODE {} ::".format(Base.debug_level))
+            print("------------------------------")
 
     def set_debug(self, debug):
         """ Sets the global debug mode """
-        Base.debug_mode = debug
+        Base.debug_level = debug
 
     def date(self):
         """ Return the current time in HTTP Date-header format """
@@ -36,8 +37,9 @@ class Base:
         """ display a log message """
         if Base.last_msg == msg:  # same message
             return  # Ignore duplicate messages
-        Base.last_msg = msg
-        print(msg)
+        with Base.print_lock:
+            Base.last_msg = msg
+            print(msg)
 
     def log(self, message, important=False):
         """ Outputs a log message """
@@ -46,11 +48,10 @@ class Base:
         else:  # normal log emssage
             self.display("> {}".format(message))
 
-    def debug(self, msg):
+    def debug(self, msg, level=1):
         """ Sends a debug level message """
-        if not Base.debug_mode:
-            return
-        self.display("(debug)[{}]: {}".format(threading.currentThread().getName(), msg))
+        if Base.debug_level >= level:
+            self.display("(debug)[{}]: {}".format(threading.currentThread().getName(), msg))
 
     def error(self, message, cause=None):
         """ Throw error and signal to disconnect """
@@ -61,8 +62,7 @@ class Base:
 
     def traceback(self):
         """ output traceback """
-        if Base.debug_mode:
-            traceback.print_exc()
+        traceback.print_exc()
 
     def get_thread_name(self, name):
         """ Given a name, add a unique number to it """
@@ -105,7 +105,6 @@ class Server(Base):
     def accept(self):
         """ Listen for new connection, then return socket for that connection """
         try:  # Accept() returns a new socket object that can send and receive data.
-            self.log("Listening for connections...")
             sock, (ip, port) = self.listener.accept()
             sock.setblocking(False)
             self.log("New Connection From: {}:{}".format(ip, port))
@@ -121,6 +120,7 @@ class Server(Base):
         """ Main entry point. Starts each new connections on their own thread """
         self.log("Server IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
         self.create()  # create listener socket
+        self.log("Listening for connections...")
         while not self.exit:
             sock = self.accept()  # wait/accept new connection
             if self.exit:
@@ -240,7 +240,7 @@ class Handler(Base):
             pass
         else:
             if data:  # received data
-                #self.debug("Pulled data from stream {}".format(len(data)))
+                self.debug("Pulled data from stream", 3)
                 self.in_buffer += data  # append data to incoming buffer
             else:  # stream disconnected
                 raise BrokenPipeError
@@ -253,7 +253,7 @@ class Handler(Base):
             with self.write_lock:  # get lock
                 sent = self.socket.send(self.out_buffer)  # try to send as much data from the out_buffer
                 self.out_buffer = self.out_buffer[sent:]  # move down buffer according to how much data was sent
-                self.debug("Pushed buffer to stream")
+                self.debug("Pushed buffer to stream", 3)
         except BlockingIOError:  # no response when non-blocking socket used
             pass
 
@@ -322,7 +322,7 @@ class Handler(Base):
         """ Sends raw bytes data as-is to the out_buffer """
         with self.write_lock:  # get lock
             self.out_buffer += data  # add data to buffer
-            self.debug("Added data to outgoing buffer")
+            self.debug("Added data to outgoing buffer", 3)
 
     def parse_request_line(self):
         """ Parses the Request-line of a request, finding the request method, path, and version strings. """
@@ -331,7 +331,7 @@ class Handler(Base):
         line = self.read(max_len, line=True)  # read first line from stream
         if line is None:  # full line not yet received
             return
-        self.debug("Received Request-Line: '{}'".format(line.strip()))
+        self.debug("Received Request-Line: '{}'".format(line.strip()), 3)
 
         words = line.split()
         if len(words) != 3:
@@ -353,11 +353,11 @@ class Handler(Base):
         max_len = 1024  # max length each header (arbitrary choice)
         for _ in range(max_num):
             line = self.read(max_len, line=True)  # read next line in stream
-            #self.debug("Read Header '{}'".format(line))
+            self.debug("Read Header '{}'".format(line), 3)
             if line is None:  # full line not yet received
                 return
             if line == '':  # empty line signaling end of headers
-                self.debug("All headers received")
+                self.debug("All headers received", 3)
                 self.request.header_received = True  # mark header as received
                 break
             key, val = line.split(':', 1)   # extract field and value by splitting at first colon
@@ -373,7 +373,7 @@ class Handler(Base):
             content = self.read(int(length), decode=False)  # read raw bytes from stream
             if content:
                 self.request.content = content
-                self.debug("Received Content of length: {}".format(len(self.request.content)))
+                self.debug("Received Content of length: {}".format(len(self.request.content)), 3)
                 self.request.content_received = True  # mark content as received
             else:  # not yet fully received
                 return
@@ -384,7 +384,7 @@ class Handler(Base):
     def reset(self):
         """ Get ready for a new request and push the current one onto the request buffer """
         self.request = Request()
-        self.debug("Reset request packet")
+        self.debug("Reset request packet", 3)
 
     def close(self):
         """ Closes the connection """
@@ -412,9 +412,11 @@ class Handler(Base):
         header = '--{}\r\n'.format(boundary).encode(self.encoding)
         header += 'Content-Type: {}\r\n\r\n'.format(content_type).encode(self.encoding)  # single header with a blank line after
         try:
-            self.debug("Started multipart stream")
+            self.debug("Started multipart stream", 2)
             while True:
+                self.debug("PREPARING TO READ")
                 data = buffer.read()
+                self.debug("READ THE FRAME")
                 packet = header + data + b'\r\n'
                 self.send_raw(packet)
         except Exception as e:
@@ -504,26 +506,26 @@ class Request(Base):
         if self.method:
             request_line = "{} {} {}\r\n".format(self.method, self.path, self.version)
             data += request_line.encode(self.encoding)
-            self.debug("Added request line '{}'".format(request_line.strip()))
+            self.debug("Added request line '{}'".format(request_line.strip()), 3)
 
         if self.code:
             response_line = "{} {} {}\r\n".format(self.version, self.code, self.message)
             data += response_line.encode(self.encoding)
-            self.debug("Added response line '{}'".format(response_line.strip()))
+            self.debug("Added response line '{}'".format(response_line.strip()), 3)
 
         # headers
         for key, value in self.header.items():
             header = "{}: {}\r\n".format(key, value)
             data += header.encode(self.encoding)
-            self.debug("Added header '{}:{}'".format(key, value))
+            self.debug("Added header '{}:{}'".format(key, value), 3)
         if self.header:
             data += b'\r\n'  # add a blank line to denote end of headers
-            self.debug("Added all headers")
+            self.debug("Added all headers", 3)
 
         # content
         if self.content:
             data += self.content  # content should already be in bytes
-            self.debug("Added content of length: {}".format(len(self.content)))
+            self.debug("Added content of length: {}".format(len(self.content)), 3)
         else:
             data += b'\r\n'  # if no content, signal end of transmission
 
@@ -538,12 +540,12 @@ class DataBuffer(object):
     """
     def __init__(self):
         self.data = b''
-        self.buffer = b''
         self.condition = Condition()
 
     def read(self):
         with self.condition:
             self.condition.wait()
+            self.condition.notify_all()
             return self.data
 
     def write(self, new_data):

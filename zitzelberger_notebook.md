@@ -33,6 +33,10 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### June 26th, 2020:
+
+Success! I have now gotten the multipart stream to work (on the AWS as well). However I have discovered that Firefox is one of the few browsers that actually supports this particular content type (x-mixed-replace), so it does not work on Chrome, Safari, or Internet Explorer. I spent some time looking to see if there were alternatives to use, but nothing I found was easily compatible with my current program. Some solutions like using HLS or ffmpeg streaming would need a complete overhaul of my code, from what I could tell. Maybe another time. I have also noticed that the stream is only accessible from one browser connection at a time. Any additional connections stops them both. The causes me concern because I thought my program would be able to handle multiple connections - that was the whole point of this threading rewrite. This indicates that there might be something going on that I did not account for, so I will need to fix that before I start anything else. I'll be looking into it on Monday.
+
 ##### June 25th, 2020:
 
 Progress! I believe I have fixed that nasty fragmented-data problem. It had to do with the way that python's socket module implements socket.sendall() versus socket.send(). The former calls the latter repeatedly until it is all sent through. Usually this isn't a problem, but I believe that somehow it was sending repeats when the data was too big. I am now using socket.send() exclusively, manually re-sending, and moving down my outgoing data buffer. It seems to have solved the problem so far. I am immeasurably relieved that something finally worked - I didn't end up emailing Ghassemi, so I'll just mention it at our next meeting. Since I got that figured out earlier in the day, I began working on the browser stream.  I have written a method in the Connection class that implements an HTTP multipart stream, but I haven't yet gotten it to work. There seems to be something I don't quite understand about how a browser sends a request and I will start by looking into what that might be tomorrow.

@@ -1,7 +1,7 @@
 import picamera
 from time import sleep
 from threading import Thread
-from lib import Handler, Request, FrameBuffer
+from lib import Handler, Request, DataBuffer
 
 
 class VideoClientHandler(Handler):
@@ -11,7 +11,7 @@ class VideoClientHandler(Handler):
         self.camera = None                 # picam object
         self.resolution = '640x480'        # resolution of stream
         self.framerate = 24                # camera framerate
-        self.frame_buffer = FrameBuffer()  # file-like object buffer for the camera to stream to
+        self.frame_buffer = DataBuffer()  # file-like object buffer for the camera to stream to
 
         self.frames_sent = 0    # number of frames sent
         self.active = False     # toggled by server to activate the stream

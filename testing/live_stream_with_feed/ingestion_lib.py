@@ -10,6 +10,9 @@ PAGE = """\
 </body>
 </html>
 """
+# TODO: figure out how to force the size of the image to be constant but keep the original aspect ratio.
+# This would be so that the resolution only has to be adjusted in one location - the client video handler class.
+# Ideally, this html would be able to handle any image without needing to be modified.
 
 
 class ServerHandler(Handler):
@@ -43,13 +46,13 @@ class ServerHandler(Handler):
         response = Request()
 
         if request.path == '/':
-            self.debug("Handling request for '/'. Redirecting to index.html")
+            self.debug("Handling request for '/'. Redirecting to index.html", 3)
             response.add_response(301)  # redirect
             response.add_header('Location', '/index.html')  # redirect to index.html
             self.send(response)
 
         elif request.path == '/favicon.ico':
-            self.debug("Handling request for favicon")
+            self.debug("Handling request for favicon", 3)
             with open('favicon.ico', 'rb') as fout:  # send favicon image
                 img = fout.read()
                 response.add_content(img)
@@ -59,7 +62,7 @@ class ServerHandler(Handler):
             self.send(response)
 
         elif request.path == '/index.html':
-            self.debug("Handling request for /index.html, sending page html")
+            self.debug("Handling request for /index.html, sending page html", 3)
             content = PAGE.encode(self.encoding)
             response.add_response(200)  # success
             response.add_header('Content-Type', 'text/html')
@@ -68,11 +71,11 @@ class ServerHandler(Handler):
             self.send(response)
 
         elif request.path == '/stream.mjpg':
-            self.debug("Handling request for stream.mjpeg")
+            self.debug("Handling request for stream.mjpeg", 2)
             self.send_multipart(self.parent.frame_buffer, 'image/jpeg', 'FRAME')
         else:
             response.add_response(404)  # couldn't find it
             self.send(response)
-            self.debug("GET requested unknown path", "path: {}".format(request.path))
+            self.error("GET requested unknown path", "path: {}".format(request.path))
 
-        self.debug("done handling GET")
+        self.debug("done handling GET", 2)

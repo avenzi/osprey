@@ -8,6 +8,6 @@ with open('config.json') as file:
 
 port = config['PORT']
 
-server = Server(ServerHandler, port, name="Server", debug=False)
+server = Server(ServerHandler, port, name="Server", debug=3)
 server.run()
 
