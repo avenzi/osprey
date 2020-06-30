@@ -56,7 +56,7 @@ class Base:
     def error(self, message, cause=None):
         """ Throw error and signal to disconnect """
         self.display("(ERROR)[{}]: {}".format(threading.currentThread().getName(), message))
-        if cause:
+        if cause is not None:
             self.display("(CAUSE): {}".format(cause))  # show cause if given
         Base.exit = True
 
@@ -129,7 +129,7 @@ class Server(Base):
                 return
             try:
                 conn = self.HandlerClass(sock, self)  # create connection with socket
-                address = sock.getpeername()
+                address = "{}:{}".format(*sock.getpeername())
                 self.connections[address] = conn
                 thread = Thread(target=conn.run, name=self.get_thread_name('Conn'), daemon=True)
                 thread.start()  # run connection on new thread
@@ -241,8 +241,9 @@ class HandlerBase(Base):
                     self.push()    # Attempt to push out_buffer to stream
         except KeyboardInterrupt:
             self.log("Manual Termination", True)
-        except (ConnectionResetError, BrokenPipeError):
+        except (ConnectionResetError, BrokenPipeError) as e:
             self.log("Peer Disconnected ({}:{})".format(*self.peer), True)
+            self.debug("Disconnection was due to: {}".format(e))
         except Exception as e:  # any other error
             self.traceback()
             self.error(e)
@@ -252,20 +253,16 @@ class HandlerBase(Base):
 
     def start(self):
         """
-        Temporary until user interface is created
         Executes when the connection is established
         Overwritten by user
         """
-        # TODO: Remove this when a manual user interface is created
         pass
 
     def finish(self):
         """
-        Temporary until user interface is created
         Executes before connection terminates
         Overwritten by user
         """
-        # TODO: Remove this when a manual user interface is created
         pass
 
     def pull(self):
@@ -289,7 +286,7 @@ class HandlerBase(Base):
             with self.write_lock:  # get lock
                 sent = self.socket.send(self.out_buffer)  # try to send as much data from the out_buffer
                 self.out_buffer = self.out_buffer[sent:]  # move down buffer according to how much data was sent
-                self.debug("Pushed buffer to stream", 3)
+                self.debug("Pushed buffer to stream: {}".format(sent), 3)
         except BlockingIOError:  # no response when non-blocking socket used
             pass
 
@@ -354,6 +351,8 @@ class HandlerBase(Base):
         line = self.read(max_len, line=True)  # read first line from stream
         if line is None:  # full line not yet received
             return
+        if line == '':  # blank line
+            return   # skip
         self.debug("Received Request-Line: '{}'".format(line.strip()), 3)
 
         words = line.split()
@@ -407,7 +406,8 @@ class HandlerBase(Base):
     def send(self, response):
         """ Compiles the response object then adds it to the out_buffer """
         data = response.get_data()
-        if not data:  # error which has been caught, hopefully
+        if data is None:  # error which has been caught, hopefully
+            self.error("Request returned no data")
             return
         self.send_raw(data)
 
@@ -436,27 +436,26 @@ class ServerHandler(HandlerBase):
     def INIT(self, request):
         """ Initial request sent by all streaming clients """
         self.name = request.header['name']
-        self.stream_type = request.header['type']
         self.resolution = request.header.get('resolution')
         self.framerate = request.header.get('framerate')
 
         req = Request()         # Send START request
-        req.add_request('START')
-        self.send(req)
-        self.debug("Received INIT from stream", 2)
+        self.send_raw(b'stttttoopppppppp')
+        #req.add_request('START')
+        #req.add_header('useless', 'thing')
+        #self.send(req)
 
     def GET(self, request):
         """ Handle request from web browser """
         response = Request()
+        self.debug("Handling request for: '{}'".format(request.path), 2)
 
         if request.path == '/':
-            self.debug("Handling request for '/'. Redirecting to index.html", 2)
             response.add_response(301)  # redirect
             response.add_header('Location', '/index.html')  # redirect to index.html
             self.send(response)
 
         elif request.path == '/favicon.ico':
-            self.debug("Handling request for favicon", 2)
             with open('favicon.ico', 'rb') as fout:  # send favicon image
                 img = fout.read()
                 response.add_content(img)
@@ -466,7 +465,6 @@ class ServerHandler(HandlerBase):
             self.send(response)
 
         elif request.path == '/index.html':
-            self.debug("Handling request for /index.html, sending page html", 2)
             content = self.server.main_page().encode(self.encoding)
             response.add_response(200)  # success
             response.add_header('Content-Type', 'text/html')
@@ -475,7 +473,6 @@ class ServerHandler(HandlerBase):
             self.send(response)
 
         elif request.path[1:] in self.server.connections.keys:  # path without '/' is a connection ID
-            self.debug("Handling request for a stream page, sending page html", 2)
             content = self.server.stream_page(request.path[1:]).encode(self.encoding)
             response.add_response(200)  # success
             response.add_header('Content-Type', 'text/html')
@@ -484,7 +481,6 @@ class ServerHandler(HandlerBase):
             self.send(response)
 
         elif request.path.endswitH('stream.mjpg'):  # request for stream
-            self.debug("Handling request for stream.mjpeg", 2)
             self.send_multipart()
 
         else:
@@ -543,7 +539,6 @@ class ClientHandler(HandlerBase):
         if resolution:
             req.add_header('resolution', resolution)
         self.send(req)
-        self.debug("Sent INIT to server", 2)
 
     def START(self, request):
         """
