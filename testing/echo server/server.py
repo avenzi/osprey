@@ -1,7 +1,7 @@
 import socket
 
 host = ''           # allow any connection
-port = 5000           # TCP port 80
+port = 5000
 enc = "utf-8"       # byte encoding
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
