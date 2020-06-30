@@ -88,6 +88,8 @@ class Server(Base):
         self.set_debug(debug)  # set global debug mode
         self.info()
 
+        self.max_display_height = 700   # maximum height of images being displayed in a browser stream
+
     def create(self):
         """ Create a listening socket object """
         self.listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
@@ -157,7 +159,7 @@ class Server(Base):
         for address, conn in self.connections.items():
             if not conn.name:  # if name is not specified, this is a browser connection, not a data streaming connection
                 continue
-            page += "<p><a href='/{}'>{} ({})</a></p>b".format(address, conn.name, address)
+            page += "<p><a href='/{}'>{} ({})</a></p>".format(address, conn.name, address)
         page += "</body></html>"
         return page
 
@@ -165,7 +167,7 @@ class Server(Base):
         """ Creates a streaming page """
         conn = self.connections[ID]
         aspect = conn.resolution[0]/conn.resolution[1]
-        # TODO: Force the size of the image to be constant while keeping the original aspect ratio.
+        width = int(aspect * self.max_display_height)
         page = """
         <html>
         <head><title>{name}</title></head>
@@ -175,7 +177,7 @@ class Server(Base):
             <a href='/index'>Back</a>
         </body>
         </html>
-        """.format(name=conn.name, width=conn.resolution[0], height=conn.resolution[1])
+        """.format(name=conn.name, width=width, height=self.max_display_height)
         return page
 
 
@@ -253,7 +255,6 @@ class HandlerBase(Base):
             self.log("Manual Termination", True)
         except (ConnectionResetError, BrokenPipeError) as e:
             self.log("Peer Disconnected ({}:{})".format(*self.peer), True)
-            self.debug("Disconnection was due to: {}".format(e))
         except Exception as e:  # any other error
             self.traceback()
             self.error(e)
@@ -447,7 +448,7 @@ class ServerHandler(HandlerBase):
     def INIT(self, request):
         """ Initial request sent by all streaming clients """
         self.name = request.header['name']
-        self.resolution = request.header.get('resolution')
+        self.resolution = tuple((int(i) for i in request.header.get('resolution').split('x')))
         self.framerate = request.header.get('framerate')
 
         req = Request()         # Send START request

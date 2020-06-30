@@ -8,7 +8,7 @@ class VideoClientHandler(ClientHandler):
         super().__init__(*args)
 
         self.camera = None             # picam object
-        self.resolution = (640, 480)   # resolution of stream
+        self.resolution = '640x480'    # resolution of stream
         self.framerate = 24            # camera framerate
 
         self.frames_sent = 0    # number of frames sent
@@ -23,8 +23,7 @@ class VideoClientHandler(ClientHandler):
             self.log("Stream already Started")
             return
 
-        resolution = '{}x{}'.format(self.resolution[0], self.resolution[1])
-        self.camera = picamera.PiCamera(resolution=resolution, framerate=self.framerate)
+        self.camera = picamera.PiCamera(resolution=self.resolution, framerate=self.framerate)
         self.camera.start_recording(self.data_buffer, format='mjpeg')
         self.log("Started Recording: {}".format(self.date()))
         sleep(2)
