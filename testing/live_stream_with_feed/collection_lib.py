@@ -25,14 +25,14 @@ class VideoClientHandler(ClientHandler):
 
         resolution = '{}x{}'.format(self.resolution[0], self.resolution[1])
         self.camera = picamera.PiCamera(resolution=resolution, framerate=self.framerate)
-        self.camera.start_recording(self.frame_buffer, format='mjpeg')
+        self.camera.start_recording(self.data_buffer, format='mjpeg')
         self.log("Started Recording: {}".format(self.date()))
         sleep(2)
         self.log("Started Stream...")
 
         self.active = True
         while self.active:  # stream until toggled
-            frame = self.frame_buffer.read()
+            frame = self.data_buffer.read()
             self.frames_sent += 1
             
             response = Request()  # new request object to send

@@ -110,13 +110,13 @@ class Server(Base):
             sock, (ip, port) = self.listener.accept()
             sock.setblocking(False)
             self.log("New Connection From: {}:{}".format(ip, port))
-            return sock
+            if self.validate(ip, port):
+                return sock
         except KeyboardInterrupt:
             self.error("Manual Termination")
-            return
         except Exception as e:
             self.error("Failed to accept connection", e)
-            return
+        return
 
     def run(self):
         """ Main entry point. Starts each new connections on their own thread """
@@ -127,6 +127,8 @@ class Server(Base):
             sock = self.accept()  # wait/accept new connection
             if self.exit:
                 return
+            if not sock:  # connection aborted
+                continue
             try:
                 conn = self.HandlerClass(sock, self)  # create connection with socket
                 address = "{}:{}".format(*sock.getpeername())
@@ -136,6 +138,14 @@ class Server(Base):
             except Exception as e:
                 self.error("Failed to handle request", e)
                 sock.close()
+
+    def validate(self, ip, port):
+        """ Validates IP address. Currently just to block a scraping bot that found my ip """
+        banned = ['209.17.96.106']
+        if ip in banned:
+            self.log("Blocked Connection from banned IP: {}".format(ip))
+            return False
+        return True
 
     def main_page(self):
         """ Returns the HTML for the main selection page """
@@ -429,6 +439,7 @@ class ServerHandler(HandlerBase):
     def __init__(self, sock, server):
         super().__init__(sock)
         self.server = server     # Server class that created this handler
+        self.name = server.name
 
         self.data_buffer = DataBuffer()   # raw data from stream
         self.image_buffer = DataBuffer()  # data ready to be visually displayed
@@ -440,10 +451,9 @@ class ServerHandler(HandlerBase):
         self.framerate = request.header.get('framerate')
 
         req = Request()         # Send START request
-        self.send_raw(b'stttttoopppppppp')
-        #req.add_request('START')
-        #req.add_header('useless', 'thing')
-        #self.send(req)
+        req.add_request('START')
+        req.add_header('useless', 'thing')
+        self.send(req)
 
     def GET(self, request):
         """ Handle request from web browser """
@@ -523,6 +533,8 @@ class ClientHandler(HandlerBase):
         super().__init__(sock)
         self.client = client      # Client class that created this handler
         self.name = client.name
+
+        self.data_buffer = DataBuffer()   # raw data from device
 
     def init(self, framerate=None, resolution=None):
         """
