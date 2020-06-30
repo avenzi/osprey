@@ -157,7 +157,7 @@ class Server(Base):
         for address, conn in self.connections.items():
             if not conn.name:  # if name is not specified, this is a browser connection, not a data streaming connection
                 continue
-            page += "<a href='/{}'>{} ({})</a>\n".format(address, conn.name, address)
+            page += "<p><a href='/{}'>{} ({})</a></p>b".format(address, conn.name, address)
         page += "</body></html>"
         return page
 
@@ -482,7 +482,7 @@ class ServerHandler(HandlerBase):
             response.add_content(content)  # write html content to page
             self.send(response)
 
-        elif request.path[1:] in self.server.connections.keys:  # path without '/' is a connection ID
+        elif request.path[1:] in self.server.connections.keys():  # path without '/' is a connection ID
             content = self.server.stream_page(request.path[1:]).encode(self.encoding)
             response.add_response(200)  # success
             response.add_header('Content-Type', 'text/html')
