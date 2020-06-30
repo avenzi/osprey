@@ -491,7 +491,7 @@ class ServerHandler(HandlerBase):
             response.add_content(content)  # write html content to page
             self.send(response)
 
-        elif request.path.endswitH('stream.mjpg'):  # request for stream
+        elif request.path.endswith('stream.mjpg'):  # request for stream
             self.send_multipart()
 
         else:
