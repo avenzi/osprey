@@ -21,6 +21,6 @@ class Handler(ServerHandler):
         if diff > 10:
             self.log("Warning: Some frames were lost ({})".format(diff))
 
-        # write current frame to the server's frame-buffer so that it can be sent with a different connection handler
-        self.frame_buffer.write(frame)
+        self.data_buffer.write(frame)
+        self.image_buffer.write(frame)  # raw data needs no modification - it's already an image
         self.debug("ingested video")
