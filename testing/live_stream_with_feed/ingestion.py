@@ -1,6 +1,6 @@
 import json
 from lib import Server
-from ingestion_lib import ServerHandler
+from ingestion_lib import Handler
 
 # get configured settings
 with open('config.json') as file:
@@ -8,6 +8,6 @@ with open('config.json') as file:
 
 port = config['PORT']
 
-server = Server(ServerHandler, port, name="Server", debug=3)
+server = Server(Handler, port, name="Data Hub Server", debug=2)
 server.run()
 

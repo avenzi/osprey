@@ -81,7 +81,9 @@ class Server(Base):
         self.ip = ''          # ip to bind to
         self.port = port      # port to bind to
         self.name = name      # server name (sent in request headers)
-        self.listener = None     # socket that accepts new connections
+        self.listener = None  # socket that accepts new connections
+
+        self.connections = {}  # index of all connections to the server. (full:address, Handler Object)
 
         self.set_debug(debug)  # set global debug mode
         self.info()
@@ -127,11 +129,44 @@ class Server(Base):
                 return
             try:
                 conn = self.HandlerClass(sock, self)  # create connection with socket
+                address = sock.getpeername()
+                self.connections[address] = conn
                 thread = Thread(target=conn.run, name=self.get_thread_name('Conn'), daemon=True)
                 thread.start()  # run connection on new thread
             except Exception as e:
                 self.error("Failed to handle request", e)
                 sock.close()
+
+    def main_page(self):
+        """ Returns the HTML for the main selection page """
+        page = """
+        <html>
+        <head><title>Main Page</title></head>
+        <body><h1>MainPage</h1>
+        """
+        for address, conn in self.connections.items():
+            if not conn.name:  # if name is not specified, this is a browser connection, not a data streaming connection
+                continue
+            page += "<a href='/{}'>{} ({})</a>\n".format(address, conn.name, address)
+        page += "</body></html>"
+        return page
+
+    def stream_page(self, ID):
+        """ Creates a streaming page """
+        conn = self.connections[ID]
+        aspect = conn.resolution[0]/conn.resolution[1]
+        # TODO: Force the size of the image to be constant while keeping the original aspect ratio.
+        page = """
+        <html>
+        <head><title>{name}</title></head>
+        <body>
+            <h1>{name}</h1>
+            <img src="stream.mjpg" width="{width}" height="{height}" />
+            <a href='/index'>Back</a>
+        </body>
+        </html>
+        """.format(name=conn.name, width=conn.resolution[0], height=conn.resolution[1])
+        return page
 
 
 class Client(Base):
@@ -168,29 +203,30 @@ class Client(Base):
         self.create()
         if not self.exit:
             conn = self.HandlerClass(self.socket, self)  # create new connection for the client
-            conn.run()  # Only one connection, so no need to thread
+            conn.run()   # Only one connection, so no need to thread
 
 
-class Handler(Base):
+class HandlerBase(Base):
     """
-    Object that represents a single connection between server and client
+    Inherited by ServerHandler and ClientHandler.
+    Object that represents a single connection between server and client.
     Handles incoming requests on a single socket.
-    Holds the socket and associated buffers
-    Holds a reference to whatever created it (Server or Client). Used to share data between connections
+    Holds the socket and associated buffers.
     """
-    def __init__(self, sock, parent):
+    def __init__(self, sock):
         self.socket = sock       # socket object to read/write to
-        self.parent = parent     # object that created this connection (either the Server or Client)
         self.peer = None         # address of machine on other end of connection
 
         self.in_buffer = b''      # incoming stream buffer to read from
         self.out_buffer = b''     # outgoing stream buffer to write to
         self.write_lock = Lock()  # lock for out_buffer
-
         self.request = Request()  # current request being parsed
-
-        self.name = parent.name   # name of connection - usually sent in headers
         self.encoding = 'iso-8859-1'  # encoding for data stream (latin-1)
+
+        # Information sent/received in INIT
+        self.name = None              # Name to identify connection. Sent by 'name' header in INIT
+        self.framerate = None         # Frame rate of stream, if any. Can be specified by the 'framerate' header in INIT
+        self.resolution = (640, 480)  # Default resolution of images. Can be changed by the 'resolution' header in INIT
 
     def run(self):
         """ Main entry point - called by parent """
@@ -269,7 +305,7 @@ class Handler(Base):
             method_func = getattr(self, self.request.method)  # get handler method that matches name of request method
             method_thread = threading.Thread(target=method_func, args=(self.request,),  name=self.get_thread_name(method_func.__name__), daemon=True)
             method_thread.start()  # call method in new thread to handle the request
-            self.reset()   # reset all request variables
+            self.request = Request()  # ready for new request
 
     def read(self, length, line=False, decode=True):
         """
@@ -310,19 +346,6 @@ class Handler(Base):
         if decode:
             line = line.decode(self.encoding).strip()  # decode and strip whitespace including CLRF
         return line
-
-    def send(self, response):
-        """ Compiles the response object then adds it to the out_buffer """
-        data = response.get_data()
-        if not data:  # error which has been caught, hopefully
-            return
-        self.send_raw(data)
-
-    def send_raw(self, data):
-        """ Sends raw bytes data as-is to the out_buffer """
-        with self.write_lock:  # get lock
-            self.out_buffer += data  # add data to buffer
-            self.debug("Added data to outgoing buffer", 3)
 
     def parse_request_line(self):
         """ Parses the Request-line of a request, finding the request method, path, and version strings. """
@@ -381,46 +404,162 @@ class Handler(Base):
             self.request.content_received = True  # mark content as received
             return  # TODO: Is there a better way to determine for sure whether a request has only a header?
 
-    def reset(self):
-        """ Get ready for a new request and push the current one onto the request buffer """
-        self.request = Request()
-        self.debug("Reset request packet", 3)
+    def send(self, response):
+        """ Compiles the response object then adds it to the out_buffer """
+        data = response.get_data()
+        if not data:  # error which has been caught, hopefully
+            return
+        self.send_raw(data)
+
+    def send_raw(self, data):
+        """ Sends raw bytes data as-is to the out_buffer """
+        with self.write_lock:  # get lock
+            self.out_buffer += data  # add data to buffer
+            self.debug("Added data to outgoing buffer", 3)
 
     def close(self):
         """ Closes the connection """
         self.socket.close()
         self.log("Connection Closed\n")
 
-    # extra helpful stuff
-    def send_multipart(self, buffer, content_type, boundary):
+
+class ServerHandler(HandlerBase):
+    """ Handles incoming requests to a server class """
+
+    def __init__(self, sock, server):
+        super().__init__(sock)
+        self.server = server     # Server class that created this handler
+
+        self.data_buffer = DataBuffer()   # raw data from stream
+        self.image_buffer = DataBuffer()  # data ready to be visually displayed
+
+    def INIT(self, request):
+        """ Initial request sent by all streaming clients """
+        self.name = request.header['name']
+        self.stream_type = request.header['type']
+        self.resolution = request.header.get('resolution')
+        self.framerate = request.header.get('framerate')
+
+        req = Request()         # Send START request
+        req.add_request('START')
+        self.send(req)
+        self.debug("Received INIT from stream", 2)
+
+    def GET(self, request):
+        """ Handle request from web browser """
+        response = Request()
+
+        if request.path == '/':
+            self.debug("Handling request for '/'. Redirecting to index.html", 2)
+            response.add_response(301)  # redirect
+            response.add_header('Location', '/index.html')  # redirect to index.html
+            self.send(response)
+
+        elif request.path == '/favicon.ico':
+            self.debug("Handling request for favicon", 2)
+            with open('favicon.ico', 'rb') as fout:  # send favicon image
+                img = fout.read()
+                response.add_content(img)
+            response.add_response(200)  # success
+            response.add_header('Content-Type', 'image/x-icon')  # favicon
+            response.add_header('Content-Length', len(img))
+            self.send(response)
+
+        elif request.path == '/index.html':
+            self.debug("Handling request for /index.html, sending page html", 2)
+            content = self.server.main_page().encode(self.encoding)
+            response.add_response(200)  # success
+            response.add_header('Content-Type', 'text/html')
+            response.add_header('Content-Length', len(content))
+            response.add_content(content)  # write html content to page
+            self.send(response)
+
+        elif request.path[1:] in self.server.connections.keys:  # path without '/' is a connection ID
+            self.debug("Handling request for a stream page, sending page html", 2)
+            content = self.server.stream_page(request.path[1:]).encode(self.encoding)
+            response.add_response(200)  # success
+            response.add_header('Content-Type', 'text/html')
+            response.add_header('Content-Length', len(content))
+            response.add_content(content)  # write html content to page
+            self.send(response)
+
+        elif request.path.endswitH('stream.mjpg'):  # request for stream
+            self.debug("Handling request for stream.mjpeg", 2)
+            self.send_multipart()
+
+        else:
+            response.add_response(404)  # couldn't find it
+            self.send(response)
+            self.error("GET requested unknown path", "path: {}".format(request.path))
+
+        self.debug("done handling GET", 3)
+
+    def send_multipart(self):
         """
         Continually creates and sends multipart-type responses to the stream.
-        Used to send an image stream to a browser.
-        <Buffer> is a buffer with a read() method to read data from
-        <content-type> will be put into a content-type header.
-        <boundary> us the separator between "packets"
+        Used to send an image stream to a browser from the image_buffer
         """
         res = Request()
         res.add_response(200)
         res.add_header('Age', 0)
         res.add_header('Cache-Control', 'no-cache, private')
         res.add_header('Pragma', 'no-cache')
+        #res.add_header('Connection', 'keep-alive')
         res.add_header('Content-Type', 'multipart/x-mixed-replace; boundary=FRAME')
         self.send(res)
 
         # occurs before every main payload
-        header = '--{}\r\n'.format(boundary).encode(self.encoding)
-        header += 'Content-Type: {}\r\n\r\n'.format(content_type).encode(self.encoding)  # single header with a blank line after
+        header = '--FRAME\r\n'.encode(self.encoding)
+        header += 'Content-Type:image/jpeg\r\n\r\n'.encode(self.encoding)  # header with a blank line after562+
         try:
             self.debug("Started multipart stream", 2)
             while True:
-                self.debug("PREPARING TO READ")
-                data = buffer.read()
-                self.debug("READ THE FRAME")
+                data = self.image_buffer.read()
                 packet = header + data + b'\r\n'
                 self.send_raw(packet)
         except Exception as e:
             self.error('Browser Stream Disconnected ({}:{})'.format(*self.peer), e)
+
+
+class ClientHandler(HandlerBase):
+    """ Handles incoming requests to a client object """
+    def __init__(self, sock, client):
+        super().__init__(sock)
+        self.client = client      # Client class that created this handler
+        self.name = client.name
+
+    def init(self, framerate=None, resolution=None):
+        """
+        Must call at the end of derived class' __init__ method.
+        Send the initial request that lets the server know what type of stream this is.
+        Server will respond with the START request.
+        May be overwritten, but make sure to include the necessary request line and headers.
+        """
+        req = Request()
+        req.add_request('INIT')  # required
+        req.add_header('name', self.name)  # required
+        if framerate:
+            req.add_header('framerate', framerate)
+        if resolution:
+            req.add_header('resolution', resolution)
+        self.send(req)
+        self.debug("Sent INIT to server", 2)
+
+    def START(self, request):
+        """
+        Overwritten by derived class.
+        Handles the START request from the server.
+        Starts the stream
+        """
+        pass
+
+    def STOP(self, request):
+        """
+        Overwritten by derived class.
+        Handles the STOP request from the server.
+        Stops the stream
+        """
+        pass
 
 
 class Request(Base):
@@ -532,10 +671,9 @@ class Request(Base):
         return data
 
 
-# TODO: Is this the only place that custom buffer classes can go so both collection_lib and ingestion_lib can acces them? I'd rather they be in the same file as the c
 class DataBuffer(object):
     """
-    A thread-safe buffer to store frames in
+    A thread-safe buffer in which to store incoming data
     The write() method can be used by a Picam
     """
     def __init__(self):
@@ -545,10 +683,10 @@ class DataBuffer(object):
     def read(self):
         with self.condition:
             self.condition.wait()
-            self.condition.notify_all()
             return self.data
 
     def write(self, new_data):
         with self.condition:
             self.data = new_data
             self.condition.notify_all()  # wake any waiting threads
+
