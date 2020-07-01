@@ -152,7 +152,7 @@ class Server(Base):
         page = """
         <html>
         <head><title>Main Page</title></head>
-        <body><h1>MainPage</h1>
+        <body><h1>Stream Selection</h1>
         """
         for address, conn in self.connections.items():
             if not conn.name:  # if name is not specified, this is a browser connection, not a data streaming connection
