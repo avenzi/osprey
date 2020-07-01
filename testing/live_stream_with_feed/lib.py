@@ -88,13 +88,13 @@ class Server(Base):
         self.set_debug(debug)  # set global debug mode
         self.info()
 
-        self.max_display_height = 700   # maximum height of images being displayed in a browser stream
+        self.max_display_height = 600   # maximum height of images being displayed in a browser stream
 
     def create(self):
         """ Create a listening socket object """
         self.listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
         try:  # Bind socket to ip and port
-            # self.listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # allow socket to reuse address?
+            self.listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # allow socket to reuse address?
             self.listener.bind((self.ip, self.port))  # bind to host address
             self.debug("Socket Bound to *:{}".format(self.port))
         except Exception as e:
@@ -133,8 +133,6 @@ class Server(Base):
                 continue
             try:
                 conn = self.HandlerClass(sock, self)  # create connection with socket
-                address = "{}:{}".format(*sock.getpeername())
-                self.connections[address] = conn
                 thread = Thread(target=conn.run, name=self.get_thread_name('Conn'), daemon=True)
                 thread.start()  # run connection on new thread
             except Exception as e:
@@ -173,12 +171,18 @@ class Server(Base):
         <head><title>{name}</title></head>
         <body>
             <h1>{name}</h1>
-            <img src="stream.mjpg" width="{width}" height="{height}" />
-            <a href='/index'>Back</a>
+            <img src="/{stream_id}/stream.mjpg" width="{width}" height="{height}" />
+            <a href='/index.html'>Back</a>
         </body>
         </html>
-        """.format(name=conn.name, width=width, height=self.max_display_height)
+        """.format(name=conn.name, stream_id=ID, width=width, height=self.max_display_height)
         return page
+        # TODO: Right now each stream is reached by requesting URL equal to the connection's peer address followed by /stream.mjpg.
+        #  For example: /12.345.678.9:1234/stream.mjpg
+        #  This is because each connection is identified by it's unique address.
+        #  However this is kinda weird, so I would like to implement a different unique identifier that would make this process a but more intuitive.
+        #  When I implement this, the method of finding the connection's image_buffer will need to be changed in StreamHandler.GET() and StreamHandler.send_multipart()
+        #  Maybe use a GET query to identify the right stream?
 
 
 class Client(Base):
@@ -227,7 +231,7 @@ class HandlerBase(Base):
     """
     def __init__(self, sock):
         self.socket = sock       # socket object to read/write to
-        self.peer = None         # address of machine on other end of connection
+        self.peer = "{}:{}".format(*sock.getpeername())  # address of machine on other end of connection
 
         self.in_buffer = b''      # incoming stream buffer to read from
         self.out_buffer = b''     # outgoing stream buffer to write to
@@ -243,7 +247,6 @@ class HandlerBase(Base):
     def run(self):
         """ Main entry point - called by parent """
         try:
-            self.peer = self.socket.getpeername()
             self.start()  # user-defined startup function
             while not self.exit:   # run until exit status is set
                 self.pull()        # Attempt to fill in_buffer from stream
@@ -254,7 +257,7 @@ class HandlerBase(Base):
         except KeyboardInterrupt:
             self.log("Manual Termination", True)
         except (ConnectionResetError, BrokenPipeError) as e:
-            self.log("Peer Disconnected ({}:{})".format(*self.peer), True)
+            self.log("Peer Disconnected ({})".format(self.peer), True)
         except Exception as e:  # any other error
             self.traceback()
             self.error(e)
@@ -440,10 +443,16 @@ class ServerHandler(HandlerBase):
     def __init__(self, sock, server):
         super().__init__(sock)
         self.server = server     # Server class that created this handler
-        self.name = server.name
+        self.name = None         # connection name. Serves also to determine whether this is a data-collection connection. Browser streams do not have a name
 
         self.data_buffer = DataBuffer()   # raw data from stream
         self.image_buffer = DataBuffer()  # data ready to be visually displayed
+
+        self.server.connections[self.peer] = self  # add this connection to the server's index
+        
+    def close(self):
+        super().close()
+        del self.server.connections[self.peer]  # remove this connection from the server's index
 
     def INIT(self, request):
         """ Initial request sent by all streaming clients """
@@ -483,7 +492,7 @@ class ServerHandler(HandlerBase):
             response.add_content(content)  # write html content to page
             self.send(response)
 
-        elif request.path[1:] in self.server.connections.keys():  # path without '/' is a connection ID
+        elif request.path[1:] in self.server.connections.keys():  # if path without '/' is a connection ID
             content = self.server.stream_page(request.path[1:]).encode(self.encoding)
             response.add_response(200)  # success
             response.add_header('Content-Type', 'text/html')
@@ -492,19 +501,20 @@ class ServerHandler(HandlerBase):
             self.send(response)
 
         elif request.path.endswith('stream.mjpg'):  # request for stream
-            self.send_multipart()
+            ID = request.path[1:len(request.path)-len('/stream.mjpg')]  # get connection ID from the path
+            self.send_multipart(ID)
 
         else:
             response.add_response(404)  # couldn't find it
             self.send(response)
-            self.error("GET requested unknown path", "path: {}".format(request.path))
+            self.log("GET requested unknown path", "path: {}".format(request.path))
 
         self.debug("done handling GET", 3)
 
-    def send_multipart(self):
+    def send_multipart(self, ID):
         """
         Continually creates and sends multipart-type responses to the stream.
-        Used to send an image stream to a browser from the image_buffer
+        Used to send an image stream to a browser from the image_buffer of the connection with the given ID
         """
         res = Request()
         res.add_response(200)
@@ -513,19 +523,21 @@ class ServerHandler(HandlerBase):
         res.add_header('Pragma', 'no-cache')
         #res.add_header('Connection', 'keep-alive')
         res.add_header('Content-Type', 'multipart/x-mixed-replace; boundary=FRAME')
+        res.add_content('')
         self.send(res)
-
+        
+        image_buffer = self.server.connections[ID].image_buffer  # image buffer of the stream that's receiving the images
         # occurs before every main payload
         header = '--FRAME\r\n'.encode(self.encoding)
         header += 'Content-Type:image/jpeg\r\n\r\n'.encode(self.encoding)  # header with a blank line after562+
         try:
             self.debug("Started multipart stream", 2)
             while True:
-                data = self.image_buffer.read()
+                data = image_buffer.read()
                 packet = header + data + b'\r\n'
                 self.send_raw(packet)
         except Exception as e:
-            self.error('Browser Stream Disconnected ({}:{})'.format(*self.peer), e)
+            self.error('Browser Stream Disconnected ({})'.format(self.peer), e)
 
 
 class ClientHandler(HandlerBase):
@@ -585,7 +597,7 @@ class Request(Base):
         self.path = None        # request path
         self.version = None     # request version (HTTP/X.X)
         self.header = {}        # dictionary of headers
-        self.content = b''      # request content in bytes
+        self.content = None     # request content in bytes
 
         self.request_received = False  # whether the whole request line has been received
         self.header_received = False   # whether all headers have been received
@@ -670,7 +682,7 @@ class Request(Base):
             self.debug("Added all headers", 3)
 
         # content
-        if self.content:
+        if self.content is not None:
             data += self.content  # content should already be in bytes
             self.debug("Added content of length: {}".format(len(self.content)), 3)
         else:
@@ -697,4 +709,3 @@ class DataBuffer(object):
         with self.condition:
             self.data = new_data
             self.condition.notify_all()  # wake any waiting threads
-
