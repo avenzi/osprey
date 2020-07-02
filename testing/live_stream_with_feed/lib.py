@@ -58,7 +58,7 @@ class Base:
         self.display("(ERROR)[{}]: {}".format(threading.currentThread().getName(), message))
         if cause is not None:
             self.display("(CAUSE): {}".format(cause))  # show cause if given
-        Base.exit = True
+        self.exit = True
 
     def traceback(self):
         """ output traceback """
@@ -257,7 +257,7 @@ class HandlerBase(Base):
         except KeyboardInterrupt:
             self.log("Manual Termination", True)
         except (ConnectionResetError, BrokenPipeError) as e:
-            self.log("Peer Disconnected ({})".format(self.peer), True)
+            self.log("Peer Disconnected ({})".format(self.peer))
         except Exception as e:  # any other error
             self.traceback()
             self.error(e)
@@ -317,6 +317,8 @@ class HandlerBase(Base):
             method_thread = threading.Thread(target=method_func, args=(self.request,),  name=self.get_thread_name(method_func.__name__), daemon=True)
             method_thread.start()  # call method in new thread to handle the request
             self.request = Request()  # ready for new request
+            # TODO: Add a check to see when the thread needs to be stopped.
+            #  If the user hasn't written in a natural stopping point, it may be necessary to forcibly kill the thread.
 
     def read(self, length, line=False, decode=True):
         """
@@ -433,6 +435,8 @@ class HandlerBase(Base):
 
     def close(self):
         """ Closes the connection """
+        self.exit = True  # make sure all threads get exit status
+        #self.socket.shutdown()
         self.socket.close()
         self.log("Connection Closed\n")
 
@@ -507,7 +511,7 @@ class ServerHandler(HandlerBase):
         else:
             response.add_response(404)  # couldn't find it
             self.send(response)
-            self.log("GET requested unknown path", "path: {}".format(request.path))
+            self.log("GET requested unknown path: {}".format(request.path))
 
         self.debug("done handling GET", 3)
 
@@ -531,11 +535,12 @@ class ServerHandler(HandlerBase):
         header = '--FRAME\r\n'.encode(self.encoding)
         header += 'Content-Type:image/jpeg\r\n\r\n'.encode(self.encoding)  # header with a blank line after562+
         try:
-            self.debug("Started multipart stream", 2)
-            while True:
+            self.debug("Started multipart stream", 1)
+            while not self.exit:
                 data = image_buffer.read()
                 packet = header + data + b'\r\n'
                 self.send_raw(packet)
+            self.debug("Ended multipart stream", 1)
         except Exception as e:
             self.error('Browser Stream Disconnected ({})'.format(self.peer), e)
 

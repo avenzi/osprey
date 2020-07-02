@@ -23,4 +23,4 @@ class Handler(ServerHandler):
 
         self.data_buffer.write(frame)
         self.image_buffer.write(frame)  # raw data needs no modification - it's already an image
-        self.debug("ingested video", 2)
+        self.debug("ingested video", 3)
