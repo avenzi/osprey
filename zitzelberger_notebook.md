@@ -33,6 +33,10 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### July 2nd, 2020:
+
+Today wasn't all that productive in terms of writing as I spent most of it looking into python's multiprocessing module. It appears to be syntactically similar to the threading module, but with some restriction. For example, you can only share objects between processes that are picklable, which excludes some custom classes. There are options to give them the ability to be pickled, but I'm still figuring that out. There doesn't seem to be many examples of socket servers run on multiple cores, and none that I found were as complex as the one I am trying to write. This may be a difficult journey ahead. In the mean-time, Dr. Ghassemi will bring me more RasPis to work with and test my program with streaming multiple video feeds at once. I am a little worried, though, because I noticed that my program was using 99.3% of the AWS server's single thread. I bought it up with Dr. Ghassemi, and he said he was happy to upgrade - I suggested that we just move up to a server with maybe 2 cores. If we want to go all-out, the most cost-efficient option would be to build out own machine on campus.
+
 ##### July 1st, 2020:
 
 The issue at the end of yesterday turned out to be a memory leak as a result of one of my connections streaming even when the socket was disconnected. There was an issue with some threads not getting the signal to exit, and I fixed it rather quickly once I figured that out. I would like to figure out how to implement parallel process for different connections rather than just threading, but it looks like the AWS server only has access to one thread. I'll bring it up with Ghassemi when that becomes an issue.
