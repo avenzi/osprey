@@ -9,7 +9,7 @@ def handle(connection, address):
         logger.debug("Connected %r at %r", connection, address)
         while True:
             data = connection.recv(1024)
-            if data == "":
+            if data == b"":
                 logger.debug("Socket closed remotely")
                 break
             logger.debug("Received data %r", data)
