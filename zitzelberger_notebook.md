@@ -33,6 +33,12 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### July 7th, 2020:
+
+I finished implementing the multipart stream from the client. CPU usage didn't change as much as I had hoped, but it was noticeable. I still saw the same behavior of additional Pis connecting only changing the CPU usage by a small amount. I then went ahead and switched over to blocking sockets and rewrote the pull/push loop to be on separate threads. I did not notice any change in CPU usage. I believe the problem may actually be with my pull/push loop itself - I may need to manually slow it down while it's not handling any requests. I will be doing this with a threading condition object on the in_buffer, and any process that needs to read from it must wait until there is content. This will require that each pull from the socket notify all waiting conditions.
+
+I also downloaded SuperPuTTY for my laptop, and am extremely happy with it. It allows me to start up my ssh sessions with all the Pis and the Lightsail instance all at once, and I can easily organize the terminal windows however I want. It's built-in file transfer system using PSCP has a GUI that allows me to easily write code from my laptop, then deploy it to the server for testing. No more code deployment through git :)
+
 ##### July 6th, 2020
 
 I have two ideas about what I could do to speed things up:
