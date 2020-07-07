@@ -33,6 +33,20 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### July 6th, 2020
+
+I have two ideas about what I could do to speed things up:
+
+1) Use blocking sockets instead of non-blocking sockets. It's possible that one of the main inefficiencies is that my program runs in a loop until it receives data from the stream, which could be contributing to CPU usage. However it's also possible that blocking sockets just do that anyway to block - only way to find out would be to test it.
+
+2) Rewrite my program so that the client sends image data in a multipart stream, just like how the server sends images to a browser. Currently, images are sent individually in separate requests, each being run on a separate thread on the server (this is intended behavior because I want the server to handle new requests on new threads). However, I think that starting a new thread for each image is likely very costly, especially since it happens 24 times each second at the current framerate. 
+
+I decided to try working on option 2, since I think it is more likely to be the culprit. It turned out to be much harder than I thought, however, as rewriting my code in this manner completely destroys the nice "user experience" I was going for with my class structure. After much deliberation, I decided to just scrap the nice structure I had and try to get the multipart stream working. If it significantly reduces CPU load, I will then try to work out how to rebuild the class structure nicely. If it doesn't, I can revert to my last commit and try option 1. Hopefully I will finish reworking it by tomorrow and will know by then.
+
+##### July 3rd, 2020
+
+Dr. Ghassemi brought 4 Pis to me today, and I went to work setting them up. I had some of the same setup problems as with the first pi - evidently there was a Raspbian update that went out in November last year that caused upgrades to render the file manager non-functional. I had to do a full-upgrade on each of the Pis. After that I had some trouble ssh-ing into them due to a sneaky newline character at the end of the public key files. Took me longer to find than I'd like to admit. After everything was set up, I started up my program and tried adding a second Pi to the stream - it worked on the first try. However I did notice that the CPU usage on the Lightsail instance only went up by about 3%, even when I added the rest of the Pis. I'm not sure what this means, but it might indicate that something about a different part of my program is just really inefficient... I'll have to look further into it. Also At 3 Pis, there was some lag, and with 4 and 5 the feeds just got further and further behind because they couldn't keep up. I'll do some more testing on Monday to see if I can speed that up.
+
 ##### July 2nd, 2020:
 
 Today wasn't all that productive in terms of writing as I spent most of it looking into python's multiprocessing module. It appears to be syntactically similar to the threading module, but with some restriction. For example, you can only share objects between processes that are picklable, which excludes some custom classes. There are options to give them the ability to be pickled, but I'm still figuring that out. There doesn't seem to be many examples of socket servers run on multiple cores, and none that I found were as complex as the one I am trying to write. This may be a difficult journey ahead. In the mean-time, Dr. Ghassemi will bring me more RasPis to work with and test my program with streaming multiple video feeds at once. I am a little worried, though, because I noticed that my program was using 99.3% of the AWS server's single thread. I bought it up with Dr. Ghassemi, and he said he was happy to upgrade - I suggested that we just move up to a server with maybe 2 cores. If we want to go all-out, the most cost-efficient option would be to build out own machine on campus.
