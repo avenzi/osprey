@@ -33,6 +33,12 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### July 8th, 2020:
+
+I implemented the threading condition on reading from the stream as well as reading from the buffer, and it made a big difference. I am pretty confident that this was the main issue because all of the strange behavior that I could not explain before is gone, for example that changing the framerate or resolution of the images did not affect performance. Now framerate and resolution are the main factors affecting performance, as they should be. I also noticed that increasing the maximum size that the server is allowed to read from the stream at once decreased usage by ~10%, which makes perfect sense. Fewer reads, less time running. To be clear, the CPU usage is still not ideal - a single stream to the server puts it at 80% usage, but this is significantly better than the maxed-out 200% that it was before. Additionally, the Pi that is streaming the data runs at ~10% usage as opposed to ~90% before. There is clearly still room for improvement, but whatever it is, it will be in making the data ingestion process on the server more efficient (for which I already have a few ideas), rather than the program's overall running efficiency. I am going to mess around with it a little more before moving on - hopefully the next step is to start building the EEG kit!
+
+I also rewrote the error-detection system I had in place using threading conditions, which I think is much cleaner than before. 
+
 ##### July 7th, 2020:
 
 I finished implementing the multipart stream from the client. CPU usage didn't change as much as I had hoped, but it was noticeable. I still saw the same behavior of additional Pis connecting only changing the CPU usage by a small amount. I then went ahead and switched over to blocking sockets and rewrote the pull/push loop to be on separate threads. I did not notice any change in CPU usage. I believe the problem may actually be with my pull/push loop itself - I may need to manually slow it down while it's not handling any requests. I will be doing this with a threading condition object on the in_buffer, and any process that needs to read from it must wait until there is content. This will require that each pull from the socket notify all waiting conditions.
