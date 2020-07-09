@@ -9,9 +9,7 @@ with open('config.json') as file:
 ip = config['SERVER_IP_ADDRESS']
 port = config['PORT']
 
-laptop_ip = '35.11.244.179'  # public ip of Aven's laptop
-
-client = Client(VideoClientHandler, ip, port, name="Video Client")
+client = Client(VideoClientHandler, ip, port, name="Video Client", debug=2)
 client.run()
 
 
