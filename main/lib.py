@@ -251,49 +251,11 @@ class HandlerBase(Base):
 
     def run(self):
         """ Main entry point - called by parent """
-        #Thread(target=self.pull, name=self.get_thread_name("PULL"), daemon=True).start()  # start recv thread
-        #Thread(target=self.push, name=self.get_thread_name("PUSH"), daemon=True).start()  # start send thread
         Thread(target=self.handle, name=self.get_thread_name("HANDLE"), daemon=True).start()  # start handler thread
 
         with self.exit_condition:
             self.exit_condition.wait()  # wait for an throw to be thrown
             self.close()   # close server
-
-    def pull(self):
-        """
-        Must be run on it's own thread.
-        Receive raw bytes from the socket stream and adds to the in_buffer
-        """
-        while not self.exit:
-            try:
-                data = self.socket.recv(65536)  # Receive data from stream
-                if not data:  # stream disconnected
-                    raise Exception
-                with self.pull_lock:  # get lock
-                    self.pull_buffer.write(data)   # append data to incoming buffer
-                    self.pull_lock.notify_all()  # wake threads waiting to read
-            except Exception as e:
-                self.debug("Pull failed: {}".format(e), 2)
-                self.halt()
-            else:
-                self.debug("Pulled data from stream of length {}: {} ... {}".format(len(data), data[:10], data[len(data)-10:]), 4)
-
-    def push(self):
-        """
-        Must be run on it's own thread.
-        Attempts to send the out_buffer to the stream
-        """
-        while not self.exit:
-            try:
-                with self.push_lock:  # get lock
-                    while not self.push_buffer:  # wait for push_buffer to be written to
-                        self.push_lock.wait()
-                    sent = self.socket.send(self.push_buffer)  # try to send as much data from the push_buffer
-                    self.debug("Pushed buffer to stream. Length {}: {} ... {}".format(sent, self.push_buffer[:10], self.push_buffer[len(self.push_buffer) - 10:]), 4)
-                    self.push_buffer = self.push_buffer[sent:]  # move down buffer according to how much data was sent
-            except Exception as e:
-                self.debug("Push failed: {}".format(e), 2)
-                self.halt()
 
     def handle(self):
         """
@@ -336,20 +298,25 @@ class HandlerBase(Base):
             #  If the user hasn't written in a natural stopping point, it may be necessary to forcibly kill the thread.
 
     def validate(self):
-        """  Blocks certain user agents. Right now just used to block some random web scraping bot that keeps finding my server """
-        hosts = ['fil.hotti.webredirect.org', 'mir.mia.ddnsfree.com']
+        """
+        Looks for keywords in the Host and User-Agent headers.
+        Right now just used to block some random web scraping bots that keep finding my server
+        """
+        host_keywords = ['webredirect', 'ddnsfree']
         agent_keywords = ['nimbostratus', 'cloudsystemnetworks', 'bot']  # keywords to look for in User-Agent header
-        host = self.request.header.get('host'),
+        host_string = self.request.header.get('host'),
         agent_string = self.request.header.get('user-agent')
         valid = True
-        if host and host in hosts:
-            valid = False
+        if host_string:
+            for keyword in host_keywords:
+                if keyword in host_string:
+                    valid = False
         if agent_string:
             for keyword in agent_keywords:
                 if keyword in agent_string:
                     valid = False
         if not valid:
-            self.throw("Blocked Connection from banned source:\n   Address: {}\n   Host: {}\n   User-Agent: {}".format(self.peer, host, agent_string))
+            self.throw("Blocked Connection from banned source:\n   Address: {}\n   Host: {}\n   User-Agent: {}".format(self.peer, host_string, agent_string))
         return valid
 
     def read(self, length, line=False, decode=True):
@@ -366,31 +333,34 @@ class HandlerBase(Base):
         Decode specifies whether to decode the data from bytes to string. If true, also strips whitespace.
         Returns None on throw.
         """
-        if line:  # read a single line
-            CRLF = b'\r\n'
-            data = self.pull_buffer.readline()  # read from stream
-            while data and data[-2:] != CRLF and not self.exit:  # doesn't end in newline
-                data += self.pull_buffer.readline()  # keep adding
-                data_len = len(data)
-                if data_len > length:  # data too big - newline not found before maximum
-                    prev = 20 if data_len > 40 else int(data_len/2)
-                    self.throw("Couldn't read a line from the stream - maximum length reached (max:{}, length:{})".format(length, data_len), "{} ... {}".format(data[prev:], data[data_len-prev:]))
-                    return
+        try:
+            if line:  # read a single line
+                CRLF = b'\r\n'
+                data = self.pull_buffer.readline()  # read from stream
+                while data and data[-2:] != CRLF and not self.exit:  # doesn't end in newline
+                    data += self.pull_buffer.readline()  # keep adding
+                    data_len = len(data)
+                    if data_len > length:  # data too big - newline not found before maximum
+                        prev = 20 if data_len > 40 else int(data_len/2)
+                        self.throw("Couldn't read a line from the stream - maximum length reached (max:{}, length:{})".format(length, data_len), "{} ... {}".format(data[prev:], data[data_len-prev:]))
+                        return
 
-        else:  # exact length specified
-            data = self.pull_buffer.read(length)
-            data_len = len(data)
-            while data and data_len < length and not self.exit:  # didn't get full length
-                length -= data_len
-                data += self.pull_buffer.read(length)  # pull remaining length
+            else:  # exact length specified
+                data = self.pull_buffer.read(length)
                 data_len = len(data)
+                while data and data_len < length and not self.exit:  # didn't get full length
+                    length -= data_len
+                    data += self.pull_buffer.read(length)  # pull remaining length
+                    data_len = len(data)
 
-        if not data:  # no data read - disconnected
+            if not data:  # no data read - disconnected
+                raise BrokenPipeError
+            if decode:
+                data = data.decode(self.encoding).strip()  # decode and strip whitespace including CLRF
+            return data
+        except (ConnectionResetError, BrokenPipeError) as e:  # disconnected
             self.halt()
             return
-        if decode:
-            data = data.decode(self.encoding).strip()  # decode and strip whitespace including CLRF
-        return data
 
     def parse_request_line(self):
         """
@@ -480,16 +450,19 @@ class HandlerBase(Base):
     def send(self, response):
         """ Compiles the response object then adds it to the out_buffer """
         data = response.get_data()
-        if data is None:  # throw which has been caught, hopefully
+        if data is None:  # error which has been caught, hopefully
             self.throw("Request returned no data")
             return
         self.send_raw(data)
 
     def send_raw(self, data):
         """ Sends raw bytes data as-is to the out_buffer """
-        self.push_buffer.write(data)
-        self.push_buffer.flush()
-        self.debug("Added data to outgoing buffer", 3)
+        try:
+            self.push_buffer.write(data)
+            self.push_buffer.flush()
+            self.debug("Added data to outgoing buffer", 3)
+        except (ConnectionResetError, BrokenPipeError) as e:
+            self.halt()
 
     def send_multipart(self, buffer, request=None):
         """
