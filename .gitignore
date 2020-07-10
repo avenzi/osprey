@@ -1,5 +1,5 @@
 # machine-specific config files
-#config.json
+config.json
 
 # Ignore Python bytecode
 __pycache__

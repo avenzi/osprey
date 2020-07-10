@@ -8,8 +8,9 @@ with open('config.json') as file:
     
 ip = config['SERVER_IP_ADDRESS']
 port = config['PORT']
+name = config['NAME']
 
-client = Client(VideoClientHandler, ip, port, name="Video Client", debug=2)
+client = Client(VideoClientHandler, ip, port, name=name, debug=2)
 client.run()
 
 
