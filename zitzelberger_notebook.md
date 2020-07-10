@@ -33,6 +33,14 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### July 9th, 2020:
+
+I've come to the conclusion that my bytes buffers are the cause of all the CPU usage, or at the very least the cause of the lag that I'm seeing. I did a bunch of research on efficient methods of dealing with byte streams, and it looks like the method I was using is just about the least efficient possible. 
+
+I've tried using an io.BytesIO() object, but the trouble there is that there's no clean way to discard data once it's been read. My solution was to inherit the class and implement a maximum size which, when exceeded, triggers a re-allocation - the current remaining bytes get moved to the front and overwrite the old data. I didn't see a big difference, so I scrapped that and moved on.
+
+I also found that the socket object allows you to make a read and writable file object from it, which (I assume) means I wouldn't need an external buffer. The only problem is that reading individual lines becomes a little tricky because it doesn't have a peek() method. I started to figure out a workaround tonight, and I'll continue that tomorrow morning.
+
 ##### July 8th, 2020:
 
 I implemented the threading condition on reading from the stream as well as reading from the buffer, and it made a big difference. I am pretty confident that this was the main issue because all of the strange behavior that I could not explain before is gone, for example that changing the framerate or resolution of the images did not affect performance. Now framerate and resolution are the main factors affecting performance, as they should be. I also noticed that increasing the maximum size that the server is allowed to read from the stream at once decreased usage by ~10%, which makes perfect sense. Fewer reads, less time running. To be clear, the CPU usage is still not ideal - a single stream to the server puts it at 80% usage, but this is significantly better than the maxed-out 200% that it was before. Additionally, the Pi that is streaming the data runs at ~10% usage as opposed to ~90% before. There is clearly still room for improvement, but whatever it is, it will be in making the data ingestion process on the server more efficient (for which I already have a few ideas), rather than the program's overall running efficiency. I am going to mess around with it a little more before moving on - hopefully the next step is to start building the EEG kit!
