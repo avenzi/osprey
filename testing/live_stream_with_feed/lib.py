@@ -1,4 +1,4 @@
-import io
+from io import BytesIO
 import socket
 import time
 import traceback
@@ -25,7 +25,6 @@ class Base:
             print("------------------------------")
             print(":: RUNNING IN DEBUG MODE {} ::".format(Base.debug_level))
             print("------------------------------")
-
 
     def date(self):
         """ Return the current time in HTTP Date-header format """
@@ -54,7 +53,7 @@ class Base:
     def halt(self):
         """ Signal to end all processes """
         with self.exit_condition:
-            self.exit_condition.notify_all()  # wake waiting throw threads
+            self.exit_condition.notify_all()  # wake waiting error threads
             self.exit = True
 
     def throw(self, message, cause=None):
@@ -234,10 +233,10 @@ class HandlerBase(Base):
         self.socket = sock  # socket object to read/write to
         self.peer = "{}:{}".format(*sock.getpeername())  # address of machine on other end of connection
 
-        self.pull_buffer = b''  # incoming stream buffer to read from
+        self.pull_buffer = sock.makefile('rb')  # incoming stream buffer to read from
         self.pull_lock = Condition()  # lock for pull_buffer
 
-        self.push_buffer = b''  # outgoing stream buffer to write to
+        self.push_buffer = sock.makefile('wb')  # outgoing stream buffer to write to
         self.push_lock = Condition()  # lock for push_buffer
 
         self.request = Request()  # current request being parsed
@@ -252,8 +251,8 @@ class HandlerBase(Base):
 
     def run(self):
         """ Main entry point - called by parent """
-        Thread(target=self.pull, name=self.get_thread_name("PULL"), daemon=True).start()  # start recv thread
-        Thread(target=self.push, name=self.get_thread_name("PUSH"), daemon=True).start()  # start send thread
+        #Thread(target=self.pull, name=self.get_thread_name("PULL"), daemon=True).start()  # start recv thread
+        #Thread(target=self.push, name=self.get_thread_name("PUSH"), daemon=True).start()  # start send thread
         Thread(target=self.handle, name=self.get_thread_name("HANDLE"), daemon=True).start()  # start handler thread
 
         with self.exit_condition:
@@ -271,7 +270,7 @@ class HandlerBase(Base):
                 if not data:  # stream disconnected
                     raise Exception
                 with self.pull_lock:  # get lock
-                    self.pull_buffer += data   # append data to incoming buffer
+                    self.pull_buffer.write(data)   # append data to incoming buffer
                     self.pull_lock.notify_all()  # wake threads waiting to read
             except Exception as e:
                 self.debug("Pull failed: {}".format(e), 2)
@@ -338,9 +337,9 @@ class HandlerBase(Base):
 
     def validate(self):
         """  Blocks certain user agents. Right now just used to block some random web scraping bot that keeps finding my server """
-        hosts = ['fil.hotti.webredirect.org']
+        hosts = ['fil.hotti.webredirect.org', 'mir.mia.ddnsfree.com']
         agent_keywords = ['nimbostratus', 'cloudsystemnetworks', 'bot']  # keywords to look for in User-Agent header
-        host = self.request.header.get('host')
+        host = self.request.header.get('host'),
         agent_string = self.request.header.get('user-agent')
         valid = True
         if host and host in hosts:
@@ -367,35 +366,31 @@ class HandlerBase(Base):
         Decode specifies whether to decode the data from bytes to string. If true, also strips whitespace.
         Returns None on throw.
         """
-        while not self.exit:
-            with self.pull_lock:  # get lock
-                while not self.pull_buffer:  # wait until pull_buffer has been written to
-                    self.pull_lock.wait()
+        if line:  # read a single line
+            CRLF = b'\r\n'
+            data = self.pull_buffer.readline()  # read from stream
+            while data and data[-2:] != CRLF and not self.exit:  # doesn't end in newline
+                data += self.pull_buffer.readline()  # keep adding
+                data_len = len(data)
+                if data_len > length:  # data too big - newline not found before maximum
+                    prev = 20 if data_len > 40 else int(data_len/2)
+                    self.throw("Couldn't read a line from the stream - maximum length reached (max:{}, length:{})".format(length, data_len), "{} ... {}".format(data[prev:], data[data_len-prev:]))
+                    return
 
-            if not line:  # exact length specified
-                if len(self.pull_buffer) < length:  # not enough data received to read this amount
-                    continue
-                data = self.pull_buffer[:length]
-                self.pull_buffer = self.pull_buffer[length:]  # move down the buffer
-                if decode:
-                    data = data.decode(self.encoding)
-                return data
+        else:  # exact length specified
+            data = self.pull_buffer.read(length)
+            data_len = len(data)
+            while data and data_len < length and not self.exit:  # didn't get full length
+                length -= data_len
+                data += self.pull_buffer.read(length)  # pull remaining length
+                data_len = len(data)
 
-            # else, grab a single line, denoted by CLRF
-            CLRF = "\r\n".encode(self.encoding)
-            buf_len = len(self.pull_buffer)
-            loc = self.pull_buffer.find(CLRF)  # find first CLRF
-            if loc > length or (loc == -1 and len(self.pull_buffer) > length):  # no CLRF found before max length reached
-                self.throw("Couldn't read a line from the stream - max length reached (loc:{}, max:{}, length:{})".format(loc, length, len(self.pull_buffer)), "{} ... {}".format(self.pull_buffer[20:], self.pull_buffer[len(self.pull_buffer)-20:]))
-                return
-            elif loc == -1:  # CLRF not found, but we may just have not received it yet (max length not reached)
-                continue
-
-            line = self.pull_buffer[:loc + 2]  # slice data including CLRF
-            self.pull_buffer = self.pull_buffer[loc + 2:]  # move buffer past CLRF
-            if decode:
-                line = line.decode(self.encoding).strip()  # decode and strip whitespace including CLRF
-            return line
+        if not data:  # no data read - disconnected
+            self.halt()
+            return
+        if decode:
+            data = data.decode(self.encoding).strip()  # decode and strip whitespace including CLRF
+        return data
 
     def parse_request_line(self):
         """
@@ -492,9 +487,8 @@ class HandlerBase(Base):
 
     def send_raw(self, data):
         """ Sends raw bytes data as-is to the out_buffer """
-        with self.push_lock:  # get lock
-            self.push_buffer += data  # add data to buffer
-            self.push_lock.notify_all()
+        self.push_buffer.write(data)
+        self.push_buffer.flush()
         self.debug("Added data to outgoing buffer", 3)
 
     def send_multipart(self, buffer, request=None):
@@ -832,3 +826,4 @@ class DataBuffer(object):
         with self.condition:
             self.data = new_data
             self.condition.notify_all()  # wake any waiting threads
+
