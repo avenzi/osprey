@@ -33,6 +33,14 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### July 10th, 2020:
+
+I did it. I solved python.
+
+I got the server's CPU usage with one Pi down to 3%, and it scales exactly as expected up to 15% with 5 Pis. It turns out that I was correct in my assessment of by buffer system, and that using the sockets as file objects eliminated the remaining inefficiencies that I had. I am only disappointed that it took me so long to figure it out. Additionally, it seems even though CPU usage is very low now, the lag problem is completely independent; my guess is that 5 pis (and thus 10 streams) at 24 FPS and a resolution of 640x480 is too much to handle on one core. To test this I tried reducing the resolution and framerate, and sure enough all 5 were able to stream with no lag when both were reduced enough. I believe this problem may only be able to be solved using multiprocessing. Again, using a multipart stream instead of separate requests does not seem to make an impact on lag and only a small impact on CPU usage (~2-3%). However I am not ready to completely switch over just yet, as I am not sold on the benefits outweighing the cost, which is that during a multipart stream, nothing else can be sent from the Pi to the server. Maybe it can be that way, but there's a possibility that down the line I might want a Pi to sent variable requests to the server. Who knows.
+
+
+
 ##### July 9th, 2020:
 
 I've come to the conclusion that my bytes buffers are the cause of all the CPU usage, or at the very least the cause of the lag that I'm seeing. I did a bunch of research on efficient methods of dealing with byte streams, and it looks like the method I was using is just about the least efficient possible. 

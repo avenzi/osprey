@@ -124,7 +124,7 @@ class Server(Base):
         try:
             handler = self.HandlerClass(conn, self)  # create handler with socket
             Thread(target=handler.run, name=self.get_thread_name('Conn'), daemon=True).start()  # run connection on new thread
-            self.debug("Completed creation of new handler", 1)
+            self.debug("Completed creation of new handler", 2)
         except Exception as e:
             self.throw("Failed to handle new connection", e)
             return
@@ -205,7 +205,7 @@ class Client(Base):
 
         try:
             conn = self.HandlerClass(self.socket, self)  # create new connection for the client
-            self.debug("Completed creation of handler", 1)
+            self.debug("Completed creation of handler", 2)
             conn.run()  # Only one connection, so no need to thread
         except KeyboardInterrupt:
             self.throw("Manual Termination")
@@ -215,6 +215,7 @@ class Client(Base):
     def run(self):
         """ Listens for new connections, then starts them on their own thread """
         self.log("Client IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
+        self.log("Name: {}".format(self.name))
         if not self.exit:
             self.create()
 
@@ -331,7 +332,7 @@ class HandlerBase(Base):
             - Returns '' if the line received was itself only a CLRF (blank line)
             - if no CLRF before <length> reached, stop reading and throw throw
         Decode specifies whether to decode the data from bytes to string. If true, also strips whitespace.
-        Returns None on throw.
+        Returns None on error.
         """
         try:
             if line:  # read a single line
@@ -343,7 +344,7 @@ class HandlerBase(Base):
                     if data_len > length:  # data too big - newline not found before maximum
                         prev = 20 if data_len > 40 else int(data_len/2)
                         self.throw("Couldn't read a line from the stream - maximum length reached (max:{}, length:{})".format(length, data_len), "{} ... {}".format(data[prev:], data[data_len-prev:]))
-                        return
+                        raise BrokenPipeError
 
             else:  # exact length specified
                 data = self.pull_buffer.read(length)
@@ -491,14 +492,14 @@ class HandlerBase(Base):
         self.send(request)
 
         try:
-            self.debug("Started multipart stream", 1)
+            self.debug("Started multipart stream", 2)
             self.streaming = True
             while not self.exit and self.streaming:
                 data = buffer.read()
                 length_header = "Content-Length:{}\r\n".format(len(data)).encode(self.encoding)  # content length + blank line
                 packet = chunk_header + length_header + b'\r\n' + data + b'\r\n'
                 self.send_raw(packet)
-            self.debug("Ended multipart stream", 1)
+            self.debug("Ended multipart stream", 2)
         except Exception as e:
             self.throw('Multipart Stream Disconnected ({})'.format(self.peer), e)
         finally:
@@ -588,6 +589,7 @@ class ServerHandler(HandlerBase):
 
     def parse_multipart(self):
         """ parses a multipart stream created by send_multipart. Additionaly calls the given method for each data chunk """
+        self.debug("Receiving multipart stream", 2)
         try:
             boundary = False
             headers = False

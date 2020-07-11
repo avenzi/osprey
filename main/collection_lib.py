@@ -32,7 +32,7 @@ class VideoClientHandler(ClientHandler):
         req = Request()
         req.add_request("INGEST_VIDEO")
 
-        do_separate = True
+        do_separate = True  # for testing purposes - whether to use separate requests for each frame rather than a multipart stream.
         if do_separate:
             while not self.exit:
                 data = self.data_buffer.read()
