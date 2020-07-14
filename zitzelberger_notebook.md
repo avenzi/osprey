@@ -33,6 +33,30 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+#####  July 13th, 2020:
+
+Brainstorming day. Dr. Ghassemi instructed me to begin working on streaming audio and SenseHat data. I first looked into audio, but found that I might need additional hardware - a microphone or something similar. I also have no idea how I would get audio to play in the browser without a few more modules (to handle sycing with the video). Eventually I decided to put the question of audio aside for now. I then started to experiment with the SenseHat module to get a feel for how I might integrate it into my program. In principle it should be easy to make a complete sensor reading at some given frequency and send them in the a data stream, but I need to come up with a game plan before I start working on it. I did some research and have a few implementation ideas:
+
+###### Initiating the stream:
+
+The following options are mostly different in how to set an example for a new user of this program. I want adding a new data stream to be intuitive and only require code in a single file on the server and client.
+
+1) write each Pi to automatically check for an installed SenseHat, and start streaming SenseHat information in separate requests along with the video stream on the same socket, with the method to handle SenseHat data in the main Handler class in collection_lib.py
+
+2) Implement a separate SenseHat streaming method, and leave it up to the user whether to call it on the START signal from the server. 
+
+3) Create a separate Handler class in collection_lib.py that handles only SenseHat data, and run that class in collection.py after the Video Handler. This would also mean that the SenseHat stream would be a completely separate socket connection from the video stream, so it might then be advisable for the server to be able to detect that it's coming from the same device so it could be displayed on the same page as the video  (wouldn't be hard - just have to look at the connecting IP address). I am leaning toward this option, as it would benefit the most from parallelism on both server and client so it might be the first one I try. I think it would also result in the most organized code.
+
+###### Handling the data on the server:
+
+These are separate options regardless of the options above. The main problem for either option is that converting a python plot to a jpeg image for each frame could be costly. It certainly won't be streaming at 10 FPS, much less 24.
+
+1) Store each new data 'frame' to a buffer that keeps some specific length of history, enough to be plotted into and converted into a jpeg image to be streamed to a browser. The problem with this option is that I need to figure out where to store the data that needs to be re-displayed in the browser as time progresses, and the process storing and shifting this data around could be costly. I am debating whether to make the user handle this in collection_lib.py or write a default procedure in lib.py for any kind of pure data stream.
+
+2) Possibly find some method to update and existing plot with new data, not needing to keep any old data. The problem with this method is that I'm not sure there's a nice way to do it using matplotlib. It would, however, eliminate the need to re-plot all the old data each time, which is much more desirable of course.
+
+I began experimenting with ways to implement initiating option #3 with handling option #1, but I'm not liking it so far. I will be doing further research into handling option #2 tomorrow.
+
 ##### July 10th, 2020:
 
 I did it. I solved python.
