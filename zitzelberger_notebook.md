@@ -33,6 +33,10 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### July 14th, 2020:
+
+Today I spent most of my time fiddling around with matplotlib and working out how to implement the Handling option #2 that I detailed from yesterday. I wrote a class that implements a graph that can be added to without needing to store old data anywhere else. I haven't yet implemented discarding data that won't be shown, but I'll worry about that after I get it working inside my program. At the moment I'm trying to untangle some threading issues that I've run into - mainly error catching within the graphing class.
+
 #####  July 13th, 2020:
 
 Brainstorming day. Dr. Ghassemi instructed me to begin working on streaming audio and SenseHat data. I first looked into audio, but found that I might need additional hardware - a microphone or something similar. I also have no idea how I would get audio to play in the browser without a few more modules (to handle sycing with the video). Eventually I decided to put the question of audio aside for now. I then started to experiment with the SenseHat module to get a feel for how I might integrate it into my program. In principle it should be easy to make a complete sensor reading at some given frequency and send them in the a data stream, but I need to come up with a game plan before I start working on it. I did some research and have a few implementation ideas:
