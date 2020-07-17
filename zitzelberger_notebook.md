@@ -33,6 +33,10 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### July 16th, 2020:
+
+I got a preliminary version of the SenseHat streaming to work. It's not pretty, but it works well enough. I'll try to polish it up tomorrow. I'd like to write a more general version of this in preparation for the EEG streaming, so I'll work on that if I have time as well.  There is also a minor mystery with pyplot's savefig() function. For some reason when the image being save exceeds 2^16 bytes, the image being sent to the browser gets cut off. I have no explanation as of yet.
+
 ##### July 15th, 2020:
 
 Unfortunately that tangle of threading issues I mentioned yesterday has turned into a rather knotted mess. It seems that I had been relying on some rather circumstantial structuring when I had only one type of client handler class to worry about. Since adding the SenseHat handler class, I have been struggling to keep my threads in order and to make sure each handler exits properly. Before, the main thread simply ran the handler's run() method, then waited until an exit condition (keyboard interrupt or disconnection) was caught, then properly closed the socket and terminated nicely. Now, however, I cannot use the main thread to run both connection as they must run concurrently, so I have had to restructure everything such that the Client class can be handed multiple handler classes and create a connection on each. Now the main thread will run both handlers on new threads, then wait for an exit condition to be called. The main problem I am trying to solve right now is how to notify the main thread of said exit condition since it is no longer in the scope of the handlers themselves. My solutions so far have not worked.
