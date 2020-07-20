@@ -33,6 +33,14 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### July 20th, 2020:
+
+Today I was able to restructure my Server Handler classes so that each new connection can specify which custom handler should be used for it. I have been thinking about doing this for awhile, and I am glad I finally did it. This allows the user to create a completely separate class in ingestion_lib.py to match the class in collection_lib.py. The INIT request method can now be fully overwritten to include any initial data from the pi. Also, the special HTML() function can now be defined, which returns the HTML for the display page. This is so that each stream type can have a different custom page layout.
+
+This restructure took some doing, but I was able to get it to work by first handling the INIT request on a basic InitServerHandler class which grabs the new Handler class name from the INIT requests and passes the request over to that class. This InitServerHandler class also has a GET method to handle browser requests. 
+
+Tomorrow I will work on figuring out how to chunk the data sent from the pi so that I can increase the amount of data sent without increase the number of images generated, which is very costly.
+
 ##### July 17th, 2020:
 
 No luck on the bug from yesterday. I can't figure out where the image is being truncated - it could be anywhere from pyplot.savefig() to being loaded into the browser. I also rewrote my custom graph and matplotlib Axis wrapper class to accommodate different plot layouts, which I hope will be sufficient when we add EEG data. I also tried to make the framerate a little more flexible, but I'm worried that the speed at which EEG data will be streamed is just too high; I may have to send data in chunks. Unless I can find a quicker way to render a plot into a jpeg image, the browser stream is not going to be very fast at all. I suppose that doesn't really matter in the long run since it's just there for observation purposes. With that in mind, I have been trying to find a way for the program to automatically adjust for slow connections. Possibly a flexible framerate? The problem with that is it would require ignoring some number of requests and keeping track of which ones. This is yet another case where the multipart stream seems like a better idea, but I still want to keep my options open.
