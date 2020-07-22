@@ -33,6 +33,10 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### July 22nd, 2020:
+
+Today I put together the OpenBCI EEG kit and did some tests with the bluetooth stream on my laptop. I had trouble getting the headset to fit correctly - I have quite a lot of hair so I had to mess with the headset a bit to get it to fit. I got it mostly working on my laptop, but have yet to set it up on one of the Pis.
+
 ##### July 21st, 2020:
 
 Most importantly, I finally got the "chunked" data method working for the Sense Stream. However, I ran into a segfault about halfway through the day and didn't get much done beyond that. I believe it's coming from the socket module, which is a C extension. It seems to happen when the rate at which Sense data requests are sent to the server get above some threshold. I have no idea why this would be the case because I have the 24 FPS video stream running at the same time. Regardless, the server can't handle generating plot images at a very high rate, so I've sort of avoided both issues with the chunking method. In the StreamHandler Client class, the self.frames attribute controls how many data points are to be sent per request. There is also a time.sleep(0.001) inside the data collection loop to slow it down, but I would really prefer a way to get around the segfault without that. Tomorrow I am going to start putting the EEG kit together.
