@@ -5,6 +5,13 @@ import traceback
 import threading
 from threading import Thread, Lock, Condition
 from requests import get
+import inspect
+import sys
+
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 class Base:
@@ -52,9 +59,10 @@ class Base:
 
     def halt(self):
         """ Signal to end all processes """
+        self.exit = True
+        self.streaming = False
         with self.exit_condition:
             self.exit_condition.notify_all()  # wake waiting error threads
-            self.exit = True
 
     def throw(self, message, cause=None):
         """ Display an error message and signal to end all processes """
@@ -80,17 +88,16 @@ class Server(Base):
     call run() to start.
     """
 
-    def __init__(self, HandlerClass, port, name='Server', debug=False):
+    def __init__(self, port, name='Server', debug=False):
         super().__init__(debug)
 
-        self.HandlerClass = HandlerClass
-        self.ip = ''  # ip to bind to
+        self.HandlerClass = InitServerHandler   # initial class to handle incoming INIT requests
+        self.ip = ''      # ip to bind to
         self.port = port  # port to bind to
-        self.name = name  # server name (sent in request headers)
+        self.name = name  # server name
         self.listener = None  # socket that accepts new connections
 
         self.connections = {}  # index of all connections to the server. (full:address, Handler Object)
-        self.max_display_height = 600  # maximum height of images being displayed in a browser stream
 
     def create(self):
         """ Create a listening socket object """
@@ -101,6 +108,7 @@ class Server(Base):
             self.debug("Socket Bound to *:{}".format(self.port))
         except Exception as e:
             self.throw("Failed to bind socket to *:{}".format(self.port), e)
+            return
 
         try:  # Set as listening connection
             self.debug("Set to listening socket")
@@ -114,17 +122,13 @@ class Server(Base):
             conn, (ip, port) = self.listener.accept()  # wait for a new connection
             conn.setblocking(True)
             self.log("New Connection From: {}:{}".format(ip, port))
-        except KeyboardInterrupt:
-            self.throw("Manual Termination")
-            return
         except Exception as e:
             self.throw("Failed while accepting new connection", e)
             return
 
         try:
-            handler = self.HandlerClass(conn, self)  # create handler with socket
-            Thread(target=handler.run, name=self.get_thread_name('Conn'), daemon=True).start()  # run connection on new thread
-            self.debug("Completed creation of new handler", 2)
+            handler = self.HandlerClass(conn, self)  # create handler with new socket
+            Thread(target=handler.run, name=self.get_thread_name("INIT-RUN"), daemon=True).start()  # run connection on new thread
         except Exception as e:
             self.throw("Failed to handle new connection", e)
             return
@@ -133,46 +137,37 @@ class Server(Base):
         """ Main entry point """
         self.log("Server IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
         self.create()  # create listener socket
-        self.log("Listening for connections...")
+        if not self.exit:
+            self.log("Listening for connections...")
         while not self.exit:
-            self.accept()
+            try:
+                self.accept()  # accept new connections and handle on new daemon thread
+            except KeyboardInterrupt:
+                self.throw("Manual Termination")
+                self.close()
+                return
+
+    def close(self):
+        """ Makes sure each connection closes before terminating main thread """
+        for handler in list(self.connections.values()):  # force as list instead of iterator because connections remove themselves as they are closed
+            handler.halt()  # signal handler to exit
+            handler.thread.join()  # wait for it to exit
+        self.log("All connections terminated")
 
     def main_page(self):
         """ Returns the HTML for the main selection page """
         page = """
         <html>
-        <head><title>Main Page</title></head>
+        <head><title>Data Hub</title></head>
         <body><h1>Stream Selection</h1>
         """
+        # TODO: Organize connections by host device
         for address, conn in self.connections.items():
             if not conn.name:  # if name is not specified, this is a browser connection, not a data streaming connection
                 continue
             page += "<p><a href='/{}'>{} ({})</a></p>".format(address, conn.name, address)
         page += "</body></html>"
         return page
-
-    def stream_page(self, ID):
-        """ Creates a streaming page """
-        conn = self.connections[ID]
-        aspect = conn.resolution[0] / conn.resolution[1]
-        width = int(aspect * self.max_display_height)
-        page = """
-        <html>
-        <head><title>{name}</title></head>
-        <body>
-            <h1>{name}</h1>
-            <img src="/{stream_id}/stream.mjpg" width="{width}" height="{height}" />
-            <a href='/index.html'>Back</a>
-        </body>
-        </html>
-        """.format(name=conn.name, stream_id=ID, width=width, height=self.max_display_height)
-        return page
-        # TODO: Right now each stream is reached by requesting URL equal to the connection's peer address followed by /stream.mjpg.
-        #  For example: /12.345.678.9:1234/stream.mjpg
-        #  This is because each connection is identified by it's unique address.
-        #  However this is kinda weird, so I would like to implement a different unique identifier that would make this process a but more intuitive.
-        #  When I implement this, the method of finding the connection's image_buffer will need to be changed in StreamHandler.GET()
-        #  Maybe use a GET query to identify the right stream?
 
 
 class Client(Base):
@@ -182,42 +177,67 @@ class Client(Base):
     call run() to start.
     """
 
-    def __init__(self, HandlerClass, ip, port, name='Client', debug=False):
+    def __init__(self, ip, port, name='Unnamed Client', debug=False):
         super().__init__(debug)
 
-        self.HandlerClass = HandlerClass
         self.ip = ip  # server ip address to connect to
         self.port = port  # server port to connect through
-        self.name = name  # name of client (sent in headers)
+        self.name = name  # name of client
         self.socket = None  # socket object
 
-    def create(self):
-        """ Create socket object and try to connect to server """
+        self.connections = []  # list of handlers on this client
+
+    def create(self, handler_class):
+        """ Create socket object and try to connect it to the server, then run the handler class on a new thread. """
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
         try:  # connect socket to given address
-            self.log("Attempting to connect to {}:{}".format(self.ip, self.port))
+            self.debug("Attempting to connect to server", 2)
             self.socket.connect((self.ip, self.port))
             self.socket.setblocking(True)
-            self.log("Socket Connected")
+            self.debug("Socket Connected", 2)
         except Exception as e:
-            self.throw("Failed to connect to server", e)
-            return
+            self.log("Failed to connect to server: {}".format(e))
+            return False
 
         try:
-            conn = self.HandlerClass(self.socket, self)  # create new connection for the client
-            self.debug("Completed creation of handler", 2)
-            conn.run()  # Only one connection, so no need to thread
+            handler = handler_class(self.socket, self)  # create new connection for the client
+            Thread(target=handler.run, name=self.get_thread_name("RUN"), daemon=True).start()  # start handler on new thread
+            self.connections.append(handler)
+            self.debug("Created Handler '{}'".format(handler.name), 2)
+        except Exception as e:
+            self.log("Failed to create new handler: {}".format(e))
+            return False
+        return True
+
+    def run(self, handlers):
+        """
+        Takes in a list of Handler CLasses to use.
+        Creates one instance of each handler type.
+        For each handler class, listens for new connections then starts them on their own thread.
+        """
+        self.log("Name: {}".format(self.name))
+        self.log("Device IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
+        self.log("Server IP: {}".format(self.ip))
+        for handler_class in handlers:
+            if not self.create(handler_class):  # connect to server and handle on new thread
+                self.log("Terminating")
+                return
+        try:
+            with self.exit_condition:
+                self.exit_condition.wait()  # wait until exit condition notified
         except KeyboardInterrupt:
             self.throw("Manual Termination")
         except Exception as e:
-            self.throw("Failed to handle new connection", e)
+            self.throw("Client terminated due exception", e)
+        finally:
+            self.close()  # terminate
 
-    def run(self):
-        """ Listens for new connections, then starts them on their own thread """
-        self.log("Client IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
-        self.log("Name: {}".format(self.name))
-        if not self.exit:
-            self.create()
+    def close(self):
+        """ Makes sure each connection closes before terminating main thread """
+        for handler in self.connections:
+            handler.halt()  # signal handler to exit
+            handler.thread.join()  # wait for it to exit
+        self.log("All connections terminated")
 
 
 class HandlerBase(Base):
@@ -231,44 +251,51 @@ class HandlerBase(Base):
     def __init__(self, sock):
         super().__init__()
 
-        self.socket = sock  # socket object to read/write to
+        self.socket = sock                               # socket object to read/write to
+        self.thread = None                               # thread calling this handler's run() method
+
+        self.ip = "{}:{}".format(*sock.getsockname())    # address of this socket
         self.peer = "{}:{}".format(*sock.getpeername())  # address of machine on other end of connection
+        self.name = None                                 # name of connection
 
         self.pull_buffer = sock.makefile('rb')  # incoming stream buffer to read from
-        self.pull_lock = Condition()  # lock for pull_buffer
+        self.pull_lock = Condition()            # lock for pull_buffer
 
         self.push_buffer = sock.makefile('wb')  # outgoing stream buffer to write to
-        self.push_lock = Condition()  # lock for push_buffer
+        self.push_lock = Condition()            # lock for push_buffer
 
-        self.request = Request()  # current request being parsed
+        self.request = Request()      # current request being parsed
         self.encoding = 'iso-8859-1'  # encoding for data stream (latin-1)
 
-        # Information sent/received in INIT
         self.name = None  # Name to identify connection. Sent by 'name' header in INIT
-        self.framerate = None  # Frame rate of stream, if any. Can be specified by the 'framerate' header in INIT
-        self.resolution = (640, 480)  # Default resolution of images. Can be changed by the 'resolution' header in INIT
-
         self.streaming = False  # flag that indicates whether the connection is currently sending/receiving a multipart stream
 
     def run(self):
-        """ Main entry point - called by parent """
+        """
+        Main entry point.
+        Called by parent as a non-daemon thread.
+        Starts handling on a new thread.
+        Waits for an error to be thrown, then closes socket.
+        """
+        self.thread = threading.current_thread()  # set running thread
         Thread(target=self.handle, name=self.get_thread_name("HANDLE"), daemon=True).start()  # start handler thread
-
-        with self.exit_condition:
-            self.exit_condition.wait()  # wait for an throw to be thrown
-            self.close()   # close server
+        try:
+            with self.exit_condition:
+                self.exit_condition.wait()  # wait for self.halt()
+        except Exception as e:
+            self.debug("Termination in handler: {}".format(e))
+        finally:
+            self.close()
 
     def handle(self):
         """
         Must be run on its own thread.
-        Pull/Push should be running concurrently, and any requests are handled on new threads.
-        Parse requests form the in_buffer, and delegate new threads to handle them.
+        Parse requests form the stream, and delegate new threads to handle them.
         """
         while not self.exit:
-            while self.streaming:
-                with self.pull_lock:
-                    self.pull_lock.wait()  # don't handle while streaming
-
+            #while self.streaming:
+                #with self.pull_lock:
+                    #self.pull_lock.wait()  # don't handle while streaming
             if not self.parse_request_line():
                 continue
             if not self.parse_header():
@@ -278,16 +305,23 @@ class HandlerBase(Base):
             self.parse_content()  # may or may not have content
 
             if self.request.method:  # received request method
+                if not hasattr(self, self.request.method):  # if a method for the request doesn't exist
+                    self.throw('Unsupported Request Method', "'{}'".format(self.request.method))
+                    return
                 content_type = self.request.header.get('content-type')
                 method_func = getattr(self, self.request.method)  # get handler method that matches name of request method
                 if content_type is None:  # no content type - treat method as command
                     self.execute_command(method_func)
+                    if self.request.method == 'INIT':
+                        self.debug("Halting after INIT request", 3)
+                        self.halt()  # stop after INIT method called. Handling is now done in a different class.
                 elif content_type.split(';')[0] == 'multipart/x-mixed-replace':  # multipart stream
                     self.streaming = True
                     Thread(target=self.parse_multipart, name=self.get_thread_name("MULTI"), daemon=True).start()
                 else:
                     self.throw("Unrecognized content type header", 'content type: {}'.format(content_type))
                 self.request = Request()  # ready for new request
+
             elif self.request.code:  # received a response code
                 self.request = Request()  # ready for new request
                 pass  # TODO: handle different response codes from clients
@@ -345,7 +379,6 @@ class HandlerBase(Base):
                         prev = 20 if data_len > 40 else int(data_len/2)
                         self.throw("Couldn't read a line from the stream - maximum length reached (max:{}, length:{})".format(length, data_len), "{} ... {}".format(data[prev:], data[data_len-prev:]))
                         raise BrokenPipeError
-
             else:  # exact length specified
                 data = self.pull_buffer.read(length)
                 data_len = len(data)
@@ -353,7 +386,6 @@ class HandlerBase(Base):
                     length -= data_len
                     data += self.pull_buffer.read(length)  # pull remaining length
                     data_len = len(data)
-
             if not data:  # no data read - disconnected
                 raise BrokenPipeError
             if decode:
@@ -376,14 +408,12 @@ class HandlerBase(Base):
             if line is None:  # error reading
                 return False
             self.debug("Received Request-Line: '{}'".format(line.strip()), 3)
-
         words = line.split()
         if len(words) != 3:
             err = "Request-Line must conform to HTTP Standard ( METHOD /path HTTP/X.X   or   HTTP/X.X STATUS MESSAGE )"
             self.throw(err, line)
             return False
         # TODO: maybe add compatibility with shorter response lines without a version
-
         if words[0].startswith("HTTP/"):  # response
             self.request.version = words[0]
             self.request.code = words[1]
@@ -392,10 +422,6 @@ class HandlerBase(Base):
             self.request.method = words[0]
             self.request.path = words[1]
             self.request.version = words[2]
-
-        if self.request.method and not hasattr(self, self.request.method):  # if a method for the request doesn't exist
-            self.throw('Unsupported Request Method', "'{}'".format(self.request.method))
-            return False
         return True
 
     def parse_header(self):
@@ -461,7 +487,7 @@ class HandlerBase(Base):
         try:
             self.push_buffer.write(data)
             self.push_buffer.flush()
-            self.debug("Added data to outgoing buffer", 3)
+            self.debug("Pushed data to stream", 3)
         except (ConnectionResetError, BrokenPipeError) as e:
             self.halt()
 
@@ -509,83 +535,44 @@ class HandlerBase(Base):
         """ Closes the connection """
         self.exit = True  # set exit status if not set already
         self.socket.close()
-        self.log("Connection Closed ({})\n".format(self.peer))
 
 
 class ServerHandler(HandlerBase):
-    """ Handles incoming requests to a server class """
+    """
+    Base class for all derived Server Handler classes in ingestion_lib.
+    """
 
     def __init__(self, sock, server):
         super().__init__(sock)
         self.server = server  # Server class that created this handler
-        self.name = None  # connection name. Serves also to determine whether this is a data-collection connection. Browser streams do not have a name
+        self.client_name = None  # device name at the other end of this connection
 
-        self.data_buffer = DataBuffer()  # raw data from stream
-        self.image_buffer = DataBuffer()  # data ready to be visually displayed
+        self.data_buffer = DataBuffer()   # raw data from stream
+        self.image_buffer = DataBuffer()  # data ready to be visually displayed in a browser
 
         self.server.connections[self.peer] = self  # add this connection to the server's index
 
-    def close(self):
-        super().close()
-        del self.server.connections[self.peer]  # remove this connection from the server's index
-
     def INIT(self, request):
-        """ Initial request sent by all streaming clients """
-        self.name = request.header['name']
-        self.resolution = tuple((int(i) for i in request.header.get('resolution').split('x')))
-        self.framerate = request.header.get('framerate')
+        """
+        Overwritten in derived classes
+        Handles initial sign-on request from clients.
+        """
+        pass
 
-        req = Request()  # Send START request
-        req.add_request('START')
-        req.add_header('useless', 'thing')
-        self.send(req)
+    def INGEST(self, request):
+        """
+        Overwritten in derived classes
+        Parses the content of the request and stores it in data_buffer.
+        Additionally can create a visual representation of the data to be stored in image_buffer.
+        """
+        pass
 
-    def GET(self, request):
-        """ Handle request from web browser """
-        response = Request()
-        self.debug("Handling request for: '{}'".format(request.path), 2)
-
-        if request.path == '/':
-            response.add_response(301)  # redirect
-            response.add_header('Location', '/index.html')  # redirect to index.html
-            self.send(response)
-
-        elif request.path == '/favicon.ico':
-            with open('favicon.ico', 'rb') as fout:  # send favicon image
-                img = fout.read()
-                response.add_content(img)
-            response.add_response(200)  # success
-            response.add_header('Content-Type', 'image/x-icon')  # favicon
-            response.add_header('Content-Length', len(img))
-            self.send(response)
-
-        elif request.path == '/index.html':
-            content = self.server.main_page().encode(self.encoding)
-            response.add_response(200)  # success
-            response.add_header('Content-Type', 'text/html')
-            response.add_header('Content-Length', len(content))
-            response.add_content(content)  # write html content to page
-            self.send(response)
-
-        elif request.path[1:] in self.server.connections.keys():  # if path without '/' is a connection ID
-            content = self.server.stream_page(request.path[1:]).encode(self.encoding)
-            response.add_response(200)  # success
-            response.add_header('Content-Type', 'text/html')
-            response.add_header('Content-Length', len(content))
-            response.add_content(content)  # write html content to page
-            self.send(response)
-
-        elif request.path.endswith('stream.mjpg'):  # request for stream
-            ID = request.path[1:len(request.path) - len('/stream.mjpg')]  # get connection ID from the path
-            buffer = self.server.connections[ID].image_buffer  # image buffer of connection
-            self.send_multipart(buffer)
-
-        else:
-            response.add_response(404)  # couldn't find it
-            self.send(response)
-            self.log("GET requested unknown path: {}".format(request.path))
-
-        self.debug("done handling GET", 3)
+    def HTML(self):
+        """
+        Overwritten in derived classes
+        Returns the HTML string for a browser page displaying the content being streamed
+        """
+        pass
 
     def parse_multipart(self):
         """ parses a multipart stream created by send_multipart. Additionaly calls the given method for each data chunk """
@@ -629,6 +616,88 @@ class ServerHandler(HandlerBase):
         except Exception as e:
             self.throw("BAD", e)
 
+    def close(self):
+        super().close()  # close connection normally
+        del self.server.connections[self.peer]  # remove this connection from the server's index
+        self.log("Connection Closed: {} ({})".format(self.name, self.peer))
+
+
+class InitServerHandler(HandlerBase):
+    """
+    Class to handle INIT requests from new connections.
+    Uses information from INIT request to hand the connection
+        over to the specified ServerHandler derived class.
+    Also handles GET requests from browsers.
+    """
+    def __init__(self, sock, server):
+        super().__init__(sock)
+        self.server = server  # Server class that created this handler
+
+    def INIT(self, request):
+        """
+        Handle initial request sent by all streaming clients.
+        Pass request onto specified Handler class
+        """
+        handler_name = request.header.get('class')  # connection requests a specific Handler class to be used
+
+        # get the class with name handler_name
+        import ingestion_lib
+        HandlerClass = [member[1] for member in inspect.getmembers(ingestion_lib, inspect.isclass) if (member[1].__module__ == 'ingestion_lib' and member[0] == handler_name)][0]
+        handler = HandlerClass(self.socket, self.server)  # create new handler
+
+        Thread(target=handler.run, name=self.get_thread_name('RUN'), daemon=True).start()  # run new handler
+        Thread(target=handler.INIT, args=(request,), name=self.get_thread_name('INIT'), daemon=True).start()  # pass on this request to the new handler's INIT method
+        self.debug("Initial handler passed request to '{}'".format(handler.__class__.__name__), 2)
+
+    def GET(self, request):
+        """ Handle request from web browser """
+        response = Request()
+        self.debug("Handling request for: '{}'".format(request.path), 1)
+
+        if request.path == '/':
+            response.add_response(301)  # redirect
+            response.add_header('Location', '/index.html')  # redirect to index.html
+            self.send(response)
+
+        elif request.path == '/favicon.ico':
+            with open('favicon.ico', 'rb') as fout:  # send favicon image
+                img = fout.read()
+                response.add_content(img)
+            response.add_response(200)  # success
+            response.add_header('Content-Type', 'image/x-icon')  # favicon
+            self.send(response)
+
+        elif request.path == '/index.html':
+            content = self.server.main_page().encode(self.encoding)
+            response.add_response(200)  # success
+            response.add_header('Content-Type', 'text/html')
+            response.add_content(content)  # write html content to page
+            self.send(response)
+
+        elif request.path[1:] in self.server.connections.keys():  # if path without '/' is a connection ID
+            #                        connections index is ip    custom HTML() page generation
+            content = self.server.connections[request.path[1:]].HTML().encode(self.encoding)
+            response.add_response(200)  # success
+            response.add_header('Content-Type', 'text/html')
+            response.add_content(content)  # write html content to page
+            self.send(response)
+
+        elif request.path.endswith('stream.mjpg'):  # request for stream
+            ID = request.path[1:len(request.path) - len('/stream.mjpg')]  # get connection ID from the path
+            buffer = self.server.connections[ID].image_buffer  # image buffer of connection
+            self.send_multipart(buffer)
+
+        else:
+            response.add_response(404)  # couldn't find it
+            self.send(response)
+            self.log("GET requested unknown path: {}".format(request.path))
+
+        self.debug("done handling GET", 3)
+
+    def close(self):
+        super().close()
+        self.debug("Initial request handler closed", 2)
+
 
 class ClientHandler(HandlerBase):
     """ Handles incoming requests to a client object """
@@ -636,24 +705,19 @@ class ClientHandler(HandlerBase):
     def __init__(self, sock, client):
         super().__init__(sock)
         self.client = client  # Client class that created this handler
-        self.name = client.name
+        self.server_name = None  # name of server at the other end of this connection
 
         self.data_buffer = DataBuffer()  # raw data from device
 
-    def init(self, **headers):
+    def init(self):
         """
-        Call at initialization (or in start() function).
-        specify any headers that are to be sent.
-        Send the initial request that lets the server know what type of stream this is.
+        Overwritten by derived classes.
+        Must call on initialization.
+        Send sign-on request to server.
+        Gives the server necessary information about this connection.
         Server will respond with the START request.
         """
-        req = Request()
-        req.add_request('INIT')
-        req.add_header('name', self.name)
-        for key, val in headers.items():
-            req.add_header(key, val)
-        self.send(req)
-        # TODO: Make this more modular. Allow user to specify what information is being sent?
+        pass
 
     def START(self, request):
         """
@@ -670,6 +734,13 @@ class ClientHandler(HandlerBase):
         Stops the stream
         """
         pass
+
+    def close(self):
+        super().close()
+        self.streaming = False  # stop streaming
+        self.log("Closed {}".format(self.name))
+        with self.client.exit_condition:
+            self.client.exit_condition.notify_all()  # wake waiting thread in client to terminate it
 
 
 class Request(Base):
@@ -734,6 +805,8 @@ class Request(Base):
         else:  # type conversion not implemented
             self.throw("Cannot send content - type not accounted for.", type(content))
             return
+        if content:
+            self.add_header('content-length', len(data))  # add content length header
         self.content = data
 
     def verify(self):
@@ -801,4 +874,121 @@ class DataBuffer(object):
         with self.condition:
             self.data = new_data
             self.condition.notify_all()  # wake any waiting threads
+
+
+class Graph:
+    """
+    Dynamic graph using matplotlib to data can be appended.
+    Used to create and update plot images sent to a browser to be viewed.
+    """
+    def __init__(self, rows, cols, domain):
+        """
+        Initialize a graph with axes arranges in rows, cols.
+        think of this as a wrapper for plt.subplots()
+        Domain is the range of x values that can be seen on the graph before at a time.
+        """
+        self.rows = rows
+        self.cols = cols
+        self.domain = domain
+        matplotlib.rcParams.update({'font.size': 15})
+        matplotlib.rcParams.update({'figure.autolayout': True})  # plt.tight_layout()
+        self.ax = plt.subplots(rows, cols, figsize=(10*cols, 3*rows), dpi=100)[1]
+        self.aspect = {'width': 100*10*cols, 'height': 100*3*rows}  # image dimensions
+
+        self.lock = Condition()  # threading lock for the data
+
+        plt.tight_layout(pad=2)
+        for i in range(rows):
+            for j in range(cols):
+                ax = self.ax[i, j]
+                ax.set_autoscaley_on(True)  # TODO: Add option to set specific y range instead
+                ax.xaxis.set_visible(False)
+                ax.grid(which='major', axis='y')
+                self.ax[i, j] = Axes(ax, self.domain)  # wrap in custom axes object
+
+    def save(self, buffer):
+        """ Save the plot as an image into a DataBuffer """
+        for i in range(self.rows):
+            for j in range(self.cols):
+                self.ax[i, j].rescale()
+        plt.savefig(buffer, format='jpeg', dpi=50, pil_kwargs={'quality':90})
+
+
+class Axes:
+    """
+    Wrapper for matplotlib AxesSubplot
+    Allows for axis data to be dynamically updated and re-drawn.
+    <mode> is the method of dynamically determining the range of the y-axis. Use set_mode() to set.
+        - 'tight' fits the y-axis range to the data currently on the plot
+        - 'max' keeps the y-axis range at the max/min values reached thus far
+        - 'fixed' sets the y-axis to a constant range, set by <yrange>, a tuple of floats.
+    """
+    def __init__(self, ax, domain):
+        self.ax = ax      # matplotlib AxesSubplot object
+        self.lines = {}   # label:line2D
+        self.domain = domain  # int maximum number of x values to plot before removing old data
+        self.mode = 'tight'
+        self.range = ()       # tuple of floats - the range of the y-axis.
+
+    def set_domain(self, domain):
+        """ Set range of x values to keep """
+        self.domain = domain
+
+    def set_mode(self, mode, yrange=None):
+        """ Set the mode of determining the y-axis range """
+        self.mode = mode
+        if mode == 'fixed':
+            self.ax.set_ylim(yrange)  # if in fixed mode, set ylim once
+
+    def set_title(self, title):
+        """ Set axes title """
+        self.ax.set_title(title)
+
+    def set_ylabel(self, title):
+        """ Sets the label on the y-axis """
+        self.ax.set_ylabel(title)
+
+    def rescale(self):
+        """ Rescale axes """
+        if self.mode == 'max':
+            self.ax.set_ylim(self.range)
+        self.ax.relim()
+        self.ax.autoscale_view()
+
+    def update_range(self, y):
+        """ Updates the y-axis range based on the given mode and the new X and Y data (lists) """
+        if self.mode == 'max':
+            if self.range:
+                self.range = (min(self.range[0], min(y)), max(self.range[1], max(y)))
+            else:
+                self.range = (min(y), max(y))
+
+    def add_lines(self, *labels):
+        """ Add a labelled plot to a particular axis location """
+        for label in labels:
+            self.lines[label] = self.ax.plot([], label=label)[0]  # add label:line2D to lines dict
+
+    def add_legend(self):
+        """ Adds a legend to the axis """
+        self.ax.legend(loc='upper left')  # position outside upper right of plot
+
+    def add_data(self, label, x, y):
+        """ Add list of data to plot. X and Y must both be lists"""
+        # TODO: More efficient way to do this? Maybe use a queue.
+        self.update_range(y)  # update y-axis range
+        line = self.lines[label]
+        if len(line.get_xdata()) > self.domain:  # old data out of range
+            xdata = np.roll(line.get_xdata(), -len(x))  # shift data to the left by the length of new data
+            ydata = np.roll(line.get_ydata(), -len(x))
+            for i in range(len(x)):
+                pos = (len(xdata)-len(x)) + i
+                xdata[pos] = x[i]  # set new values
+                ydata[pos] = y[i]
+                ydata[pos] = y[i]
+        else:  # append to data
+            xdata = np.append(line.get_xdata(), x)
+            ydata = np.append(line.get_ydata(), y)
+        line.set_xdata(xdata)
+        line.set_ydata(ydata)
+
 
