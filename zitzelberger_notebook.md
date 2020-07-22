@@ -33,6 +33,10 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### July 21st, 2020:
+
+Most importantly, I finally got the "chunked" data method working for the Sense Stream. However, I ran into a segfault about halfway through the day and didn't get much done beyond that. I believe it's coming from the socket module, which is a C extension. It seems to happen when the rate at which Sense data requests are sent to the server get above some threshold. I have no idea why this would be the case because I have the 24 FPS video stream running at the same time. Regardless, the server can't handle generating plot images at a very high rate, so I've sort of avoided both issues with the chunking method. In the StreamHandler Client class, the self.frames attribute controls how many data points are to be sent per request. There is also a time.sleep(0.001) inside the data collection loop to slow it down, but I would really prefer a way to get around the segfault without that. Tomorrow I am going to start putting the EEG kit together.
+
 ##### July 20th, 2020:
 
 Today I was able to restructure my Server Handler classes so that each new connection can specify which custom handler should be used for it. I have been thinking about doing this for awhile, and I am glad I finally did it. This allows the user to create a completely separate class in ingestion_lib.py to match the class in collection_lib.py. The INIT request method can now be fully overwritten to include any initial data from the pi. Also, the special HTML() function can now be defined, which returns the HTML for the display page. This is so that each stream type can have a different custom page layout.
