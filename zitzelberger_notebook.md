@@ -33,6 +33,10 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### July 23rd, 2020:
+
+I had quite a lot of trouble setting up the EEG streaming on the Pi. It took me awhile to figure out (and through some help on the OpenBCI forums), that I had to compile the python BrainFlow module from source in order to be able to run it on the Pi's 32 bit system. Once I got over that hurdle, I was able to set up the stream from the EEG device to the Pi, and then incorporate that into my streaming program. I was able to stream the EEG data to the remote server with relative ease (thanks to me preparation with the Sense Hat data), however I encountered a bug that I mentioned on  the 16th: When the plot image is too large, the browser seems to cut off the bottom of it. I cannot for the life of me figure out what is causing this. The plt.savefig method seems to be working fine - the full plot can be saved to an image file on the server. I really need to fix this because I can't ignore it by reducing the image size like I did with the Sense data stream. There is simply too much data, and I need to see the full image. 
+
 ##### July 22nd, 2020:
 
 Today I put together the OpenBCI EEG kit and did some tests with the bluetooth stream on my laptop. I had trouble getting the headset to fit correctly - I have quite a lot of hair so I had to mess with the headset a bit to get it to fit. I got it mostly working on my laptop, but have yet to set it up on one of the Pis.
