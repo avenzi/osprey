@@ -33,7 +33,13 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
-##### July 23rd, 2020:
+#### July 27th, 2020:
+
+Progress was awful today. I tried to find the source of the segfault, only to realize it probably isn't where I thought it was for most of the day - I am no longer convinced that it occurs in the socket module. I  originally thought it was because of the timing of the send/receive cycle of my program, but that was proving less and less an issue as I tweaked various settings. The only think that  made a significant difference was changing when and how often a pyplot figure was being saved as a jpeg. This is simple speculation due to  correlation, of course, but after some searching it appears that segfaults are not uncommon when messing with matplotlib. This would certainly explain why the video stream does not have this  bug. I believe it has something to do with the fact that pyplot implements it's own threading, and it might be interfering with the threading in my program. 
+
+I am going to try out some more stuff tomorrow. If I can't fix it by Thursday, I will put together the poster  regardless. Worst case scenario is that I scrap it all and switch to a different plotting module, but that may be risky given the poster deadline this weekend. 
+
+##### July 23rd / 24th, 2020:
 
 I had quite a lot of trouble setting up the EEG streaming on the Pi. It took me awhile to figure out (and through some help on the OpenBCI forums), that I had to compile the python BrainFlow module from source in order to be able to run it on the Pi's 32 bit system. Once I got over that hurdle, I was able to set up the stream from the EEG device to the Pi, and then incorporate that into my streaming program. I was able to stream the EEG data to the remote server with relative ease (thanks to me preparation with the Sense Hat data), however I encountered a bug that I mentioned on  the 16th: When the plot image is too large, the browser seems to cut off the bottom of it. I cannot for the life of me figure out what is causing this. The plt.savefig method seems to be working fine - the full plot can be saved to an image file on the server. I really need to fix this because I can't ignore it by reducing the image size like I did with the Sense data stream. There is simply too much data, and I need to see the full image. 
 
