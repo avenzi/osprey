@@ -33,7 +33,21 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
-#### July 27th, 2020:
+##### July 28th, 2020:
+
+Sadly I was not able to solve the segfault problem with matplotlib. 
+
+However, I have discovered my next obsession: Bokeh. The Bokeh module is made specifically for streaming plots and displaying them using JavaScript. No more converting plots into images! It's taken me the better part of the day to acquaint myself with Bokeh, but so far I am loving it. Sometime tomorrow (hopefully) I should have a working version with the EEG stream. 
+
+My main focus today was digging through the Bokeh module and picking out the right stuff that I need to display and update an image in a browser window. Basically it boils down to:
+
+1) Creating the initial HTML for the page that will display the plot, with a designated div tag that Bokeh recognizes
+
+2) writing the necessary JS to send continual requests to my server, which will respond with updated JSON containing the new data to be plotted each time
+
+Bokeh takes care of the rest. I think I'm in love.
+
+##### July 27th, 2020:
 
 Progress was awful today. I tried to find the source of the segfault, only to realize it probably isn't where I thought it was for most of the day - I am no longer convinced that it occurs in the socket module. I  originally thought it was because of the timing of the send/receive cycle of my program, but that was proving less and less an issue as I tweaked various settings. The only think that  made a significant difference was changing when and how often a pyplot figure was being saved as a jpeg. This is simple speculation due to  correlation, of course, but after some searching it appears that segfaults are not uncommon when messing with matplotlib. This would certainly explain why the video stream does not have this  bug. I believe it has something to do with the fact that pyplot implements it's own threading, and it might be interfering with the threading in my program. 
 
