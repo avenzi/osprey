@@ -33,6 +33,14 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### July 29th, 20020:
+
+I was finally able to get a working version of the Sense and EEG stream working. It took awhile to get the AjaxDataSource() properly working in Bokeh, but once I did it worked like a charm. I also wrote a wrapper class for the graph that allows for a Handler class to input a Bokeh layout object, containing any kind of plot layout. All the user has to do is create figures and glyphs just like in Bokeh, then pass it all into the GraphStream() object. After that, it's just a matter of writing new data to the GraphStream.buffer, and my program takes care of the rest. 
+
+The biggest changes I made today were actually to the way that my handler responds to browser GET requests. I hadn't anticipated rapid-fire requests from a browser, so I had to throw some 'patchwork' code into my program to get it running. After I finish this poster presentation, I will certainly be going back and refactoring quite a bit.
+
+And best of all, that nasty segfault is nowhere in sight.
+
 ##### July 28th, 2020:
 
 Sadly I was not able to solve the segfault problem with matplotlib. 
