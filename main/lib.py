@@ -6,11 +6,16 @@ import threading
 from threading import Thread, Lock, Condition
 from requests import get
 import inspect
-import sys
+import time
+import json
 
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('agg')
 import matplotlib.pyplot as plt
+
+from bokeh.models import AjaxDataSource, CDSView
+from bokeh.embed import json_item
+
 import numpy as np
 
 
@@ -26,7 +31,7 @@ class Base:
     def __init__(self, debug=None):
         self.exit = False  # Flag to signal that processes should end
         self.exit_condition = Condition()   # Used to notify throw handling threads when an throw occurs
-        if debug is not None:  # given as True or False
+        if debug is not None:  # given
             Base.debug_level = debug  # set debug level
             print()  # display message
             print("------------------------------")
@@ -93,6 +98,7 @@ class Server(Base):
 
         self.HandlerClass = InitServerHandler   # initial class to handle incoming INIT requests
         self.ip = ''      # ip to bind to
+        self.host = ''    # public ip
         self.port = port  # port to bind to
         self.name = name  # server name
         self.listener = None  # socket that accepts new connections
@@ -121,7 +127,7 @@ class Server(Base):
         try:
             conn, (ip, port) = self.listener.accept()  # wait for a new connection
             conn.setblocking(True)
-            self.log("New Connection From: {}:{}".format(ip, port))
+            self.debug("New Connection From: {}:{}".format(ip, port), 3)
         except Exception as e:
             self.throw("Failed while accepting new connection", e)
             return
@@ -135,7 +141,8 @@ class Server(Base):
 
     def run(self):
         """ Main entry point """
-        self.log("Server IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
+        self.host = '{}:{}'.format(get('http://ipinfo.io/ip').text.strip(), self.port)
+        self.log("Server Host: {}".format(self.host))  # show this machine's public ip
         self.create()  # create listener socket
         if not self.exit:
             self.log("Listening for connections...")
@@ -162,10 +169,10 @@ class Server(Base):
         <body><h1>Stream Selection</h1>
         """
         # TODO: Organize connections by host device
-        for address, conn in self.connections.items():
+        for id, conn in self.connections.items():
             if not conn.name:  # if name is not specified, this is a browser connection, not a data streaming connection
                 continue
-            page += "<p><a href='/{}'>{} ({})</a></p>".format(address, conn.name, address)
+            page += "<p><a href='/stream?id={}'>{} ({})</a></p>".format(id, conn.name, conn.peer)
         page += "</body></html>"
         return page
 
@@ -254,9 +261,10 @@ class HandlerBase(Base):
         self.socket = sock                               # socket object to read/write to
         self.thread = None                               # thread calling this handler's run() method
 
-        self.ip = "{}:{}".format(*sock.getsockname())    # address of this socket
+        self.ip = "{}:{}".format(*sock.getsockname())    # local address of this socket
         self.peer = "{}:{}".format(*sock.getpeername())  # address of machine on other end of connection
         self.name = None                                 # name of connection
+        self.id = self.peer                              # unique identifier of this connection. Used by browsers to request information from specific connections
 
         self.pull_buffer = sock.makefile('rb')  # incoming stream buffer to read from
         self.pull_lock = Condition()            # lock for pull_buffer
@@ -289,48 +297,55 @@ class HandlerBase(Base):
 
     def handle(self):
         """
-        Must be run on its own thread.
-        Parse requests form the stream, and delegate new threads to handle them.
+        Continually handle requests until exit status set
+        Only one thread at a time can read from the stream.
         """
         while not self.exit:
-            #while self.streaming:
-                #with self.pull_lock:
-                    #self.pull_lock.wait()  # don't handle while streaming
-            if not self.parse_request_line():
-                continue
-            if not self.parse_header():
-                continue
-            if not self.validate():  # validate request headers before parsing content
-                return
-            self.parse_content()  # may or may not have content
+            with self.pull_lock:
+                self.handle_once()
 
-            if self.request.method:  # received request method
-                if not hasattr(self, self.request.method):  # if a method for the request doesn't exist
-                    self.throw('Unsupported Request Method', "'{}'".format(self.request.method))
-                    return
-                content_type = self.request.header.get('content-type')
-                method_func = getattr(self, self.request.method)  # get handler method that matches name of request method
-                if content_type is None:  # no content type - treat method as command
-                    self.execute_command(method_func)
-                    if self.request.method == 'INIT':
-                        self.debug("Halting after INIT request", 3)
-                        self.halt()  # stop after INIT method called. Handling is now done in a different class.
-                elif content_type.split(';')[0] == 'multipart/x-mixed-replace':  # multipart stream
-                    self.streaming = True
-                    Thread(target=self.parse_multipart, name=self.get_thread_name("MULTI"), daemon=True).start()
-                else:
-                    self.throw("Unrecognized content type header", 'content type: {}'.format(content_type))
-                self.request = Request()  # ready for new request
+    def handle_once(self):
+        """
+        Handle a single request.
+        Parse requests form the stream, and delegate new threads to handle them.
+        """
+        if not self.parse_request_line():
+            return
+        if not self.parse_header():
+            return
+        if not self.validate():  # validate request headers before parsing content
+            return
+        self.parse_content()  # may or may not have content
 
-            elif self.request.code:  # received a response code
-                self.request = Request()  # ready for new request
-                pass  # TODO: handle different response codes from clients
-            else:
-                self.request = Request()  # ready for new request
-                self.throw("Unknown request/response type?", "Nether a request method nor a response code were found in the data sent.")
+        if self.request.method:  # received request method
+            self.execute_command(self.request)
+        elif self.request.code:  # received a response code
+            pass
+            # TODO: handle response codes from clients?
+        else:
+            self.throw("Unknown request/response type?", "Nether a request method nor a response code were found in the data sent.")
 
-            # TODO: Add a check to see when the thread needs to be stopped?
-            #  If the user hasn't written in a natural stopping point, it may be necessary to forcibly kill the thread.
+        self.request = Request()  # ready for new request
+        # TODO: Add a check to see when the thread needs to be stopped?
+        #  If the user hasn't written in a natural stopping point, it may be necessary to forcibly kill the thread.
+
+    def execute_command(self, request):
+        """ Executes the specified method function """
+        if not hasattr(self, request.method):  # if a method for the request doesn't exist
+            self.throw('Unsupported Request Method {} for {}'.format(request.method, self.__class__.__name__))
+            return
+        content_type = request.header.get('content-type')
+        method_func = getattr(self, request.method)  # get handler method that matches name of request method
+
+        if content_type is None:  # no content type - treat method as command
+            Thread(target=method_func, args=(request,), name=self.get_thread_name(method_func.__name__), daemon=True).start()  # execute command
+
+        elif content_type.split(';')[0] == 'multipart/x-mixed-replace':  # multipart stream
+            self.streaming = True
+            self.throw("Receiving Multipart stream - not implemented yet.")
+            #Thread(target=self.parse_multipart, name=self.get_thread_name("MULTI"), daemon=True).start()
+        else:
+            self.throw("Unrecognized content type header", 'content type: {}'.format(content_type))
 
     def validate(self):
         """
@@ -418,10 +433,17 @@ class HandlerBase(Base):
             self.request.version = words[0]
             self.request.code = words[1]
             self.request.message = words[2]
-        else:  # request
+        else:                             # request
             self.request.method = words[0]
-            self.request.path = words[1]
             self.request.version = words[2]
+            words[1].strip('?')  # remove any trailing ?
+            query_loc = words[1].find('?')
+            if query_loc != -1:  # found a query
+                path, query = words[1].split('?')
+                self.request.path = path
+                self.request.queries = dict([pair.split('=') for pair in query.split('&')])  # get param dict
+            else:
+                self.request.path = words[1]
         return True
 
     def parse_header(self):
@@ -469,11 +491,6 @@ class HandlerBase(Base):
             return False
             # TODO: Is there a better way to determine for sure whether a request has only a header?
 
-    def execute_command(self, method):
-        """ Calls the given method on a new thread within the connection """
-        method_thread = Thread(target=method, args=(self.request,), name=self.get_thread_name(method.__name__), daemon=True)
-        method_thread.start()
-
     def send(self, response):
         """ Compiles the response object then adds it to the out_buffer """
         data = response.get_data()
@@ -485,11 +502,12 @@ class HandlerBase(Base):
     def send_raw(self, data):
         """ Sends raw bytes data as-is to the out_buffer """
         try:
-            self.push_buffer.write(data)
-            self.push_buffer.flush()
-            self.debug("Pushed data to stream", 3)
+            with self.push_lock:
+                self.push_buffer.write(data)
+                self.push_buffer.flush()
+                self.debug("Pushed data to stream", 3)
         except (ConnectionResetError, BrokenPipeError) as e:
-            self.halt()
+            self.throw("{} Disconnected".format(self.name))
 
     def send_multipart(self, buffer, request=None):
         """
@@ -632,11 +650,55 @@ class InitServerHandler(HandlerBase):
     def __init__(self, sock, server):
         super().__init__(sock)
         self.server = server  # Server class that created this handler
+        self.name = "Init Handler"
+
+    def execute_command(self, request):
+        """ Overwrites default method """
+        method = request.method
+        ID = request.queries.get('id')  # handler ID
+
+        if ID:  # a particular handler was specified to handle this request
+            handler = self.server.connections.get(ID)  # handler with this ID
+            if not handler:  # conenction does not exist
+                response = Request()
+                response.add_response(404)
+                return response
+            if hasattr(handler, method):
+                method_func = getattr(handler, method)
+                response = method_func(request)  # call method of requested handler
+                if type(response) == DataBuffer:  # TODO: for the love of all that is good please find a better way to do this
+                    self.log("returned buffer for stream")
+                    self.send_multipart(response)
+                    return
+                elif response:
+                    self.send(response)  # send given response
+                    self.debug("Response from {} sent.".format(handler.__class__.__name__), 3)
+                    return
+                elif response is False:
+                    # if returned False, fall through to general response from this class's methods
+                    pass
+                elif not response:
+                    return  # if nothing returned, do nothing
+                else:
+                    self.throw("Handler {} returned unhandled value: '{}'".format(handler.__class__.__name__, response))
+                    return
+            self.debug("No response returned from {}. Sending fallback server response.".format(handler.__class__.__name__), 3)
+
+        if not hasattr(self, method):  # doesn't have this method
+            self.throw("Unsupported request method for InitServerHandler.", "'{}'".format(method))
+            return
+        else:
+            method_func = getattr(self, method)
+            response = method_func(request)
+            if response:
+                self.send(response)
+        self.halt()
 
     def INIT(self, request):
         """
         Handle initial request sent by all streaming clients.
-        Pass request onto specified Handler class
+        Creates a new Handler class specified by the request.
+        Passes the request to the new handler class to finish initialization.
         """
         handler_name = request.header.get('class')  # connection requests a specific Handler class to be used
 
@@ -645,19 +707,22 @@ class InitServerHandler(HandlerBase):
         HandlerClass = [member[1] for member in inspect.getmembers(ingestion_lib, inspect.isclass) if (member[1].__module__ == 'ingestion_lib' and member[0] == handler_name)][0]
         handler = HandlerClass(self.socket, self.server)  # create new handler
 
-        Thread(target=handler.run, name=self.get_thread_name('RUN'), daemon=True).start()  # run new handler
-        Thread(target=handler.INIT, args=(request,), name=self.get_thread_name('INIT'), daemon=True).start()  # pass on this request to the new handler's INIT method
+        self.log("New connection from {}: {}".format(handler.__class__.__name__, handler.peer))
+        handler.INIT(request)  # pass on this request to the new handler's INIT method
+        Thread(target=handler.run, name=self.get_thread_name('RUN'), daemon=True).start()  # run new handler to accept subsequent requests on this socket
         self.debug("Initial handler passed request to '{}'".format(handler.__class__.__name__), 2)
+
+        req = Request()  # Send START request back to client
+        req.add_request('START')
+        return req
 
     def GET(self, request):
         """ Handle request from web browser """
         response = Request()
-        self.debug("Handling request for: '{}'".format(request.path), 1)
 
         if request.path == '/':
             response.add_response(301)  # redirect
             response.add_header('Location', '/index.html')  # redirect to index.html
-            self.send(response)
 
         elif request.path == '/favicon.ico':
             with open('favicon.ico', 'rb') as fout:  # send favicon image
@@ -665,38 +730,30 @@ class InitServerHandler(HandlerBase):
                 response.add_content(img)
             response.add_response(200)  # success
             response.add_header('Content-Type', 'image/x-icon')  # favicon
-            self.send(response)
 
         elif request.path == '/index.html':
             content = self.server.main_page().encode(self.encoding)
             response.add_response(200)  # success
             response.add_header('Content-Type', 'text/html')
             response.add_content(content)  # write html content to page
-            self.send(response)
-
-        elif request.path[1:] in self.server.connections.keys():  # if path without '/' is a connection ID
-            #                        connections index is ip    custom HTML() page generation
-            content = self.server.connections[request.path[1:]].HTML().encode(self.encoding)
-            response.add_response(200)  # success
-            response.add_header('Content-Type', 'text/html')
-            response.add_content(content)  # write html content to page
-            self.send(response)
-
-        elif request.path.endswith('stream.mjpg'):  # request for stream
-            ID = request.path[1:len(request.path) - len('/stream.mjpg')]  # get connection ID from the path
-            buffer = self.server.connections[ID].image_buffer  # image buffer of connection
-            self.send_multipart(buffer)
 
         else:
             response.add_response(404)  # couldn't find it
-            self.send(response)
             self.log("GET requested unknown path: {}".format(request.path))
 
         self.debug("done handling GET", 3)
+        return response
+
+    def OPTIONS(self, request):
+        """ Responds to an OPTIONS request """
+        response = Request()
+        response.add_response(204)
+        response.add_header('Allow', 'OPTIONS, GET')
+        return response
 
     def close(self):
         super().close()
-        self.debug("Initial request handler closed", 2)
+        self.debug("Initial request handler closed", 3)
 
 
 class ClientHandler(HandlerBase):
@@ -752,13 +809,19 @@ class Request(Base):
     """
 
     def __init__(self):
+        super().__init__()
         self.encoding = 'iso-8859-1'  # byte encoding
         # TODO: make encoding not hard-coded? It's defined again in the Handler class. Maybe there's a nice way to pass it down? putting it in the constructor would not be ideal because the user has to call it in custom request methods.
 
-        self.method = None  # request method (GET, POST, etc..)
-        self.path = None  # request path
+        self.method = None   # request method (GET, POST, etc..)
+
+        self.path = None     # request path string without queries
+        self.queries = {}    # dict of queries, if any
+
         self.version = None  # request version (HTTP/X.X)
-        self.header = {}  # dictionary of headers
+
+        self.header = {}     # dictionary of headers
+
         self.content = None  # request content in bytes
 
         self.request_received = False  # whether the whole request line has been received
@@ -780,8 +843,12 @@ class Request(Base):
         self.version = "HTTP/1.1"
         if code == 200:
             self.message = 'OK'
+        elif code == 204:
+            self.message = "No Content"
         elif code == 301:
             self.message = 'Moved Permanently'
+        elif code == 304:
+            self.message = 'Not Modified'
         elif code == 308:
             self.message = 'Permanent Redirect'
         elif code == 404:
@@ -860,7 +927,6 @@ class DataBuffer(object):
     A thread-safe buffer in which to store incoming data
     The write() method can be used by a Picam
     """
-
     def __init__(self):
         self.data = b''
         self.condition = Condition()
@@ -876,119 +942,105 @@ class DataBuffer(object):
             self.condition.notify_all()  # wake any waiting threads
 
 
-class Graph:
+class NonBlockingBuffer(object):
+    def __init__(self):
+        self.data = None
+        self.condition = Condition()
+
+    def read(self):
+        """ After any read, subsequent reads return None until written to """
+        with self.condition:
+            if self.data is not None:  # available
+                data = self.data
+                self.data = None
+                return data
+
+    def write(self, new_data):
+        with self.condition:
+            self.data = new_data
+
+
+class GraphStream:
     """
-    Dynamic graph using matplotlib to data can be appended.
-    Used to create and update plot images sent to a browser to be viewed.
+    Object holding the Bokeh plot to dynamically update in a browser
+    <layout> is a layout object with figures created using Bokeh
+    <data_dict> is a dictionary representing the plot structure. Keys are plot titles, values are lists of y-labels.
+    <url> is the url to poll to get new data
+    <interval> is the polling interval in milliseconds
+    <mode> 'append' to data or 'replace' existing data
+    <domain> is the amount of data to keep at each update
     """
-    def __init__(self, rows, cols, domain):
+    def __init__(self, layout, update_url, mode='append', interval=1000, domain=100):
+        self.source = AjaxDataSource(
+            data_url=update_url,
+            polling_interval=interval,
+            mode='append',
+            max_size=domain,
+            method='GET',
+            if_modified=True)  # if_modified ignores responses sent with code 304 and not cached
+        # TODO: make domain a measure of time on the x axis rather than a number of points?
+
+        # set the source of all plots in the layout
+        self.set_source(layout)
+        self.layout = layout
+
+        # Holds JSON data ready to be sent to the AjaxDataSource.
+        # Allow one read per write. All other reads return None.
+        # When reading None, should respond with 304.
+        self.buffer = NonBlockingBuffer()
+
+        '''
+        hover = HoverTool(tooltips=[
+            ("data", "@data"),
+            ("IEX Real-Time Price", "@price")
+            ])
+        '''
+
+    def set_source(self, obj):
+        """ Recursively set data source of plots in the layout object """
+        if hasattr(obj, 'children'):
+            for child in obj.children:
+                self.set_source(child)
+        else:
+            for renderer in obj.renderers:
+                if hasattr(renderer, 'glyph'):
+                    renderer.data_source = self.source
+                    renderer.view = CDSView(source=self.source)
+
+    def stream_page(self):
+        """ Returns the response for the plot page """
+        response = Request()
+        response.add_response(200)
+        response.add_header('content-type', 'text/html')
+
+        with open('plot_page_template.html', 'r') as file:
+            html = file.read()
+        response.add_content(html)  # send initial page html
+        return response
+
+    def plot_json(self):
         """
-        Initialize a graph with axes arranges in rows, cols.
-        think of this as a wrapper for plt.subplots()
-        Domain is the range of x values that can be seen on the graph before at a time.
+        Returns response with full JSON of serialized plot object to be displayed in HTML.
+        This is before any data is updated - it's just the basic plot layout.
         """
-        self.rows = rows
-        self.cols = cols
-        self.domain = domain
-        matplotlib.rcParams.update({'font.size': 15})
-        matplotlib.rcParams.update({'figure.autolayout': True})  # plt.tight_layout()
-        self.ax = plt.subplots(rows, cols, figsize=(10*cols, 3*rows), dpi=100)[1]
-        self.aspect = {'width': 100*10*cols, 'height': 100*3*rows}  # image dimensions
+        response = Request()
+        response.add_response(200)
+        response.add_header('content-type', 'application/json')
+        response.add_content(json.dumps(json_item(self.layout)))  # send plot JSON
+        return response
 
-        self.lock = Condition()  # threading lock for the data
-
-        plt.tight_layout(pad=2)
-        for i in range(rows):
-            for j in range(cols):
-                ax = self.ax[i, j]
-                ax.set_autoscaley_on(True)  # TODO: Add option to set specific y range instead
-                ax.xaxis.set_visible(False)
-                ax.grid(which='major', axis='y')
-                self.ax[i, j] = Axes(ax, self.domain)  # wrap in custom axes object
-
-    def save(self, buffer):
-        """ Save the plot as an image into a DataBuffer """
-        for i in range(self.rows):
-            for j in range(self.cols):
-                self.ax[i, j].rescale()
-        plt.savefig(buffer, format='jpeg', dpi=50, pil_kwargs={'quality':90})
-
-
-class Axes:
-    """
-    Wrapper for matplotlib AxesSubplot
-    Allows for axis data to be dynamically updated and re-drawn.
-    <mode> is the method of dynamically determining the range of the y-axis. Use set_mode() to set.
-        - 'tight' fits the y-axis range to the data currently on the plot
-        - 'max' keeps the y-axis range at the max/min values reached thus far
-        - 'fixed' sets the y-axis to a constant range, set by <yrange>, a tuple of floats.
-    """
-    def __init__(self, ax, domain):
-        self.ax = ax      # matplotlib AxesSubplot object
-        self.lines = {}   # label:line2D
-        self.domain = domain  # int maximum number of x values to plot before removing old data
-        self.mode = 'tight'
-        self.range = ()       # tuple of floats - the range of the y-axis.
-
-    def set_domain(self, domain):
-        """ Set range of x values to keep """
-        self.domain = domain
-
-    def set_mode(self, mode, yrange=None):
-        """ Set the mode of determining the y-axis range """
-        self.mode = mode
-        if mode == 'fixed':
-            self.ax.set_ylim(yrange)  # if in fixed mode, set ylim once
-
-    def set_title(self, title):
-        """ Set axes title """
-        self.ax.set_title(title)
-
-    def set_ylabel(self, title):
-        """ Sets the label on the y-axis """
-        self.ax.set_ylabel(title)
-
-    def rescale(self):
-        """ Rescale axes """
-        if self.mode == 'max':
-            self.ax.set_ylim(self.range)
-        self.ax.relim()
-        self.ax.autoscale_view()
-
-    def update_range(self, y):
-        """ Updates the y-axis range based on the given mode and the new X and Y data (lists) """
-        if self.mode == 'max':
-            if self.range:
-                self.range = (min(self.range[0], min(y)), max(self.range[1], max(y)))
-            else:
-                self.range = (min(y), max(y))
-
-    def add_lines(self, *labels):
-        """ Add a labelled plot to a particular axis location """
-        for label in labels:
-            self.lines[label] = self.ax.plot([], label=label)[0]  # add label:line2D to lines dict
-
-    def add_legend(self):
-        """ Adds a legend to the axis """
-        self.ax.legend(loc='upper left')  # position outside upper right of plot
-
-    def add_data(self, label, x, y):
-        """ Add list of data to plot. X and Y must both be lists"""
-        # TODO: More efficient way to do this? Maybe use a queue.
-        self.update_range(y)  # update y-axis range
-        line = self.lines[label]
-        if len(line.get_xdata()) > self.domain:  # old data out of range
-            xdata = np.roll(line.get_xdata(), -len(x))  # shift data to the left by the length of new data
-            ydata = np.roll(line.get_ydata(), -len(x))
-            for i in range(len(x)):
-                pos = (len(xdata)-len(x)) + i
-                xdata[pos] = x[i]  # set new values
-                ydata[pos] = y[i]
-                ydata[pos] = y[i]
-        else:  # append to data
-            xdata = np.append(line.get_xdata(), x)
-            ydata = np.append(line.get_ydata(), y)
-        line.set_xdata(xdata)
-        line.set_ydata(ydata)
-
+    def update_json(self):
+        """
+        Returns response with JSON containing data to update the plot with.
+        """
+        response = Request()
+        response.add_header('content-type', 'application/json')
+        response.add_header('Cache-Control', 'no-store')  # don't store old data or it will try to write it again when 304 code is received.
+        data = self.buffer.read()
+        if data is not None:  # new data
+            response.add_response(200)
+            response.add_content(data)
+        else:
+            response.add_response(304)  # not modified
+        return response
 

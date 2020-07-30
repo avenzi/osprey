@@ -1,5 +1,0 @@
-matplotlib
-numpy==1.19.0
-Pillow==7.1.2
-requests==2.24.0
-scikit-image==0.17.2
