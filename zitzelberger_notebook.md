@@ -33,6 +33,10 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### July 31st, 2020:
+
+Today I spent my time rewriting some of my program in preparation for parallelism. Moving forward, I think it is prudent at this time to implement multiprocessing rather than threading. I think this will take some time for me to figure out, but now that EnSURE is coming to an end I believe I will have the time.
+
 ##### July 30th, 2020:
 
 Today I spent most of my time writing up my project outline and putting my poster presentation together, which I will present at MidSURE next week. I got a really nice demonstration of the EEG stream with eye-blinks.
