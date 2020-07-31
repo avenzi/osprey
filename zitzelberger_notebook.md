@@ -33,6 +33,10 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### July 30th, 2020:
+
+Today I spent most of my time writing up my project outline and putting my poster presentation together, which I will present at MidSURE next week. I got a really nice demonstration of the EEG stream with eye-blinks.
+
 ##### July 29th, 20020:
 
 I was finally able to get a working version of the Sense and EEG stream working. It took awhile to get the AjaxDataSource() properly working in Bokeh, but once I did it worked like a charm. I also wrote a wrapper class for the graph that allows for a Handler class to input a Bokeh layout object, containing any kind of plot layout. All the user has to do is create figures and glyphs just like in Bokeh, then pass it all into the GraphStream() object. After that, it's just a matter of writing new data to the GraphStream.buffer, and my program takes care of the rest. 
