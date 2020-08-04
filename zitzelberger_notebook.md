@@ -33,6 +33,21 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### August 4th, 2020:
+
+Did more research to answer my questions from yesterday:
+
+1) Yes. 
+	On UNIX:  os.sched_setaffinity(pid, mask). 
+	On Windows: ctypes.windll.kernel32.SetProcessAffinityMask(pid, cpu_mask)
+I'm not sure if the pid on the Windows version is actually the pid or something else. Doesn't matter, though, since this is going to be run on Ubuntu. I have also noticed that not manually setting the cpu affinity results in everything being run on one core. Apparently this is because some modules like numpy mess with cpu affinity. I will have to be sure to watch out for this.
+
+2) I can run more processes than CPU cores available, and it looks like the extra processed are just scheduled as if they were threads, but on the machine level rather than on the Python level. I couldn't find a complete answer, but from what I have read I believe that running threads on each process would be less costly that running extra processes.
+
+3) It looks like it is best practice to avoid sharing data between processes, which means that I should most likely find a way to move the socket itself to another process. On Windows, python's socket module provides a way to serialize sockets to be transmitted to another process. On UNIX, sockets can already be passed to child processed due to the fact that os.fork() exists, which allows processes to share file descriptors. I don't *entirely* know why file descriptors are significant in this context, but I will probably learn that as I work on this.
+
+I also got a bit side-tracked today when I realized that the system I have been using to transfer files to the server is basically the same as what PHPStorm does to access a remote host. I spent some time trying to move my project over to PHPStorm, but it turns out PHPStorm doesn't quite have the same level of Python syntax highlighting. Also, since I have to run my programs through the command line, I eventually decided just to keep using SuperPuTTY as I have been. Maybe in the future once the server is meant to run more continuously, I can move everything over to make things easier.
+
 ##### August 3rd, 2020:
 
 I spent the day reading the multiprocessing documentation and fiddling with test programs, trying to get a grasp of how this stuff works. I still don't quite understand how I am supposed to control which cores the processes are run on, but it's possible that python just takes care of that automatically. I did learn, though, learned that it is indeed the multiprocessing module that I should use, rather than the subprocess module - I was unsure about that until this afternoon. The subprocess module is for accessing any other type of program from inside python. I also learned that the best practice for this application will be to try and create processes which will run for the longest period of time, rather than starting and stopping processes. Unlike threading, that would be rather costly. The multiprocessing was built with similar usage cases to the threading module which made it easy to run, but I still don't quite grasp the behind-the-scenes conceptual stuff so I don't think I can fully make use of the efficiency it provides.
