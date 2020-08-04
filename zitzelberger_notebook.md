@@ -33,6 +33,16 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### August 3rd, 2020:
+
+I spent the day reading the multiprocessing documentation and fiddling with test programs, trying to get a grasp of how this stuff works. I still don't quite understand how I am supposed to control which cores the processes are run on, but it's possible that python just takes care of that automatically. I did learn, though, learned that it is indeed the multiprocessing module that I should use, rather than the subprocess module - I was unsure about that until this afternoon. The subprocess module is for accessing any other type of program from inside python. I also learned that the best practice for this application will be to try and create processes which will run for the longest period of time, rather than starting and stopping processes. Unlike threading, that would be rather costly. The multiprocessing was built with similar usage cases to the threading module which made it easy to run, but I still don't quite grasp the behind-the-scenes conceptual stuff so I don't think I can fully make use of the efficiency it provides.
+
+Questions that I need to figure out:
+
+1) Can I control which CPU core each process runs on? If so, how?
+2) If I run more processes than there are CPU cores, do the extra processes run like thread? Would it be better to use the threading module for extra processes instead?
+3) Since sockets aren't serializable using pickle, what is the best way to transmit sockets to another process? Is it to duplicate the socket in the new process, or share the data being transferred instead?
+
 ##### July 31st, 2020:
 
 Today I spent my time rewriting some of my program in preparation for parallelism. Moving forward, I think it is prudent at this time to implement multiprocessing rather than threading. I think this will take some time for me to figure out, but now that EnSURE is coming to an end I believe I will have the time.
