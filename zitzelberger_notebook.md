@@ -33,6 +33,18 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### August 6th, 2020:
+
+I have decided on a way to deal with that inconsistency between the ServerConnection and the ClientConnection I mentioned yesterday. I am going to have the ClientConnection hold a reference to a source SocketHandler, just like the ServerConnection. From a development standpoint it seems kinda useless, but I think it makes a whole lot more sense from a user standpoint.
+
+Anyway, I also realized that there is another issue with this setup. When a request is sent to the server and handled by one of it's Connections, the method that is called doesn't know which socket the request came from. To solve this I had to pass a reference of the requesting SocketHandler into the request object constructor. This is a *bit* hacky as the Request object is also used by users, and I would rather not confuse the issue by having a constructor argument that isn't used. I am thinking of redesigning the Request object structure into a couple different classes - one that is used by users, and one that is used in the code. I'll work on that tomorrow.
+
+A more general problem I ran into is that the ServerConnections don't have a great way of passing along a request back to the ServerHandler if it can't handle the request. In theory, this should never happen as any request that specifies a connection ID should be intended for the ServerConnection, however I want to have a safety net incase (for some unknown reason) a request is received that has an unnecessary connection ID attached to it. Rather than throw an error, I would much rather the ServerConnection just pass the request along to the server, and only then throw an error if it can't be handled.
+
+I would also like to make it possible to reuse as many ServerHandler objects as possible, swapping out the sockets for new ones as they time out (timeouts is another thing I need to implement). This way I would bog down my program with big objects being created and destroyed all the time.
+
+Lastly, I changed the SocketHandler so that new commands are no longer called on a separate thread. I am realizing now that this might have been the cause of some problems I experienced awhile back. The idea was to make all commands concurrent, but I am realizing now that the contents of the commands are not necessarily thread-safe, which would be up to the user to implement. For now, if something would take long enough to warrant concurrency, I will leave it up to the user to do that. Keep in mind that at this point the "user" is not an "end-user" in the general use of the word, but rather whoever inherits this code before it's turned into a working application. The main reason I have this concept of a user is because I don't yet know what kinds of data might need to be transferred and visually displayed, and I want my program to be flexible enough to incorporate anything I can think of.
+
 ##### August 5th, 2020:
 
 In light of the information I got yesterday, I have been re-organizing my code to accommodate. The new structure is as follows:
