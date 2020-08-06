@@ -33,6 +33,24 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### August 5th, 2020:
+
+In light of the information I got yesterday, I have been re-organizing my code to accommodate. The new structure is as follows:
+
+The SocketHandler is essentially a wrapper for a socket, which reads and writes to it as all my Handlers have done previously. This class used to be the one derived and amended by users (to add request methods and such), but now the handler instead calls the request methods of it's parent object, defined by the connection parameter. The connection object can be anything which has methods that should be called in response to requests, but is most notable a ServerConnection object.
+
+The ServerConnection class holds multiple SocketHandlers: The source socket handler is for the socket connected by the Raspberry Pi. There is only one source. All other sockets are stored in ServerConnection.clients, which is a list of SocketHandlers, holding sockets that are connected to anything else (presumably a browser or anything else that wants the data from the source socket). This is the class that should be inherited by users looking to create request methods on the server.
+
+The main Server class, which is created in ingestion.py, holds an index of all the ServerConnection objects. The keys are unique IDs for each ServerConnection, which right now is just the IP:PORT of the source socket. 
+
+The Server also has it's own ServerHandler object, which is a derivative of the SocketHandler. It is special in that it's handle_request() method is overwritten. Instead of simply calling the method specified by the request, this handler first checks to see if an ID was specified in the request query string (like so: 123:456:788/some-page?id=IDHERE). If no ID is specified, then the request is handled as usual (most likely a GET request for a server page). If an ID is specified, it looks for a matching ID in the index of connections. If no such ID exists, the handler then attempts to handle the request while ignoring the ID. If the ID is valid, then the socket sending the request is added to the corresponding ServerConnection's client list, and all further requests from that socket are handled by that connection, instead of the server. This is for cases where a streaming page may need to continually send requests to update the stream, as in the case of the plot streams. These requests on that socket will now go directly to the ServerConnection object, rather than through the ServerHandler first. 
+
+Another special case for the ServerHandler is if the incoming request is an INIT request (reserved method name). In this case, a new ServerConnection object is created with that socket as the source socket, as only a user created client would send an INIT request. The ServerHandler looks for the required headers (class, device, and name), then calls the user defined INIT methods if it exists. Once done, subsequent requests on that source socket will be handled by the new ServerConnection. This, again, is so that the high amount of traffic over that socket does not go through the ServerHandler, but rather directly to the ServerConnection instead.
+
+Essentially, the ServerConnections represent a connection to a single Raspberry Pi, and allows browsers to retrieve the data from it. The ServerHandler is what figures out which ServerConnection any given request should be sent to, and also handles general server unrelated to the data streams.
+
+Finally, the ClientConnection object is the equivalent of the ServerConnection, but on the client side. I am still debating how to structure this, though, because it would make sense for a ClientConnection to hold many sockets, but that doesn't make any sense because any given client connection will only have one socket - to the server. It would then be logical to have the ClientConnection inherit directly from the SocketHandler, but I am afraid that the inconsistency between server and client structure may confuse users. One solution to this would be to rewrite the SocketHandler class to be able to handle multiple sockets (like with the Select module), then there would be no need for a ServerConnection class. The ServerHandler could just pass any number of sockets to another SocketHandler. However I would like to get this version fully working before I do something like that, as SocketHandler is the most difficult to debug.
+
 ##### August 4th, 2020:
 
 Did more research to answer my questions from yesterday:
