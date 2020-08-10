@@ -33,6 +33,10 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### August 8th, 2020:
+
+Sigh... today was rather unproductive. I encountered an issue with the ServerConnection structure so I rewrote it again, but then later realized that I didn't actually need to do that so I just rolled it back.  I'm still trying to get this program to shut down. I've solved some of it, but the problem is that the SocketHandlers need to communicate to their Connection objects whenever they run into a problem so that the Connection can remove them from it's index of sockets. Right now I'm trying to do that by writing a callback function in the Connections that all sockets are required to call if it exists. This allows the Connection to do whatever it needs to in addition to removing it from it's index. This includes shutting down completely if the socket being shut down is the source socket, which means that the Pi disconnected, which means that any request aimed at that connection should not go through. However I still want the rest of the Connections to remain functional even if a single device disconnects. I'll be working on that tomorrow.
+
 ##### August 7th, 2020:
 
 I have not yet mastered the multiprocessing module, it seems.  A major issue is that I can't seem to get the program to shut down properly. I cannot find any processed or threads that are still running. I think I will try to get rid of all threads first and get it working, then add them back if I can find the problem.
