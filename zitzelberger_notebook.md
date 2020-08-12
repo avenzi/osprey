@@ -33,7 +33,15 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
-##### August 8th, 2020:
+##### August 11th, 2020:
+
+(I wrote down the wrong date on yesterday's log entry. It should have been the 10th instead of the 8th. Fixed now.)
+
+I had a conversation with Dr. Ghassemi last night about our plans for the coming semester, and I explained my concerns about whether I should switch over to an API given that my code is a rather naïve implementation of stuff that already exists. We discussed the fact that this code needs to be easy to modify for others to add features, so organization is extremely important. I am finding it incredibly difficult to make this as "general purpose" as possible with the limited knowledge that I have, and an API might be the best way to do that.  Ghassemi also mentioned that it is not at all uncommon to write and re-write code many times over, which was reassuring to hear as I have been doing that frequently. 
+
+I took some time today to go back and re-write some stuff that I think I've been holding onto for too long (another thing Ghassemi and I discussed). I took out some of the multiprocessing and got a working version that I am happy with - I am going to start over with the multiprocessing tomorrow.
+
+##### August 10th, 2020:
 
 Sigh... today was rather unproductive. I encountered an issue with the ServerConnection structure so I rewrote it again, but then later realized that I didn't actually need to do that so I just rolled it back.  I'm still trying to get this program to shut down. I've solved some of it, but the problem is that the SocketHandlers need to communicate to their Connection objects whenever they run into a problem so that the Connection can remove them from it's index of sockets. Right now I'm trying to do that by writing a callback function in the Connections that all sockets are required to call if it exists. This allows the Connection to do whatever it needs to in addition to removing it from it's index. This includes shutting down completely if the socket being shut down is the source socket, which means that the Pi disconnected, which means that any request aimed at that connection should not go through. However I still want the rest of the Connections to remain functional even if a single device disconnects. I'll be working on that tomorrow.
 
