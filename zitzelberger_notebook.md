@@ -33,6 +33,14 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### August 12th, 2020:
+
+Alright I've re-written my Server and Client classes. Here's the new structure that I'm working with:
+
+The Connection classes hold an index of SocketHandlers, and each run on a separate Thread. Theses threads run on an isolated Process, which uses a multiprocessing Queue to communicate with the main Connection object, which is the main server. 
+
+The problem I am trying to solve right now is to figure out the best method of shutting everything down. Should the SocketHandlers be trusted to shut themselves down, or should they send a signal to the Connection that forces them to? Same situation for the Server and the Connection, except this time it's between processes not threads. Processes can be easily terminated, but threads cannot. My thought right now is that when the server shuts down, it will give each connection a time window in which to close all it's associated socket handlers. Once that window expires, the main Server will terminate the process, ending all socket handling threads. Which reminds me, I've got to figure out a better way to keep a reference to all the processes and signal queues than just a dictionary of tuples.
+
 ##### August 11th, 2020:
 
 (I wrote down the wrong date on yesterday's log entry. It should have been the 10th instead of the 8th. Fixed now.)
