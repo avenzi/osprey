@@ -33,6 +33,14 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### August 13th, 2020:
+
+Still going string today. I've now completely redone the way that request methods are called by the Connection. I'm having trouble figuring out a way to call both the default INIT method and a user-defined INIT method. Previously I just had a default _INIT method that also triggered when an INIT request was sent, but with this new structure it just feels wrong to hard code that in. I might have to leave it for now and figure out a nicer way later.
+
+I am also really happy with the way that the process-piping system I've built worked out. Each HostConnection and WorkerConnection has Pipe objects that connect to their respective host/workers. This pipe object has a reference to the process running the other end, that Connection's name, and the shared queue object. 
+
+Another issue at the moment is transferring sockets from one process to another. I've created a PickedRequest class that extracts the raw information from a Request so that it can be send through a process queue. It also takes the raw socket object out of the Request.origin and sends that through alone, because my SocketHandler class cannot be pickled due to the threading Locks it contains. At the other end of the queue, the PickledRequest is re-constructed into a Request object, and the socket is given a new SocketHandler. I hope this process won't be too time-costly.
+
 ##### August 12th, 2020:
 
 Alright I've re-written my Server and Client classes. Here's the new structure that I'm working with:
