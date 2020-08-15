@@ -33,9 +33,15 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### August 14th, 2020:
+
+I decided that the INIT method problem from yesterday is best solved by just having a completely isolated SIGN_ON method that is called, and any other information can be sent afterward in the INIT method. 
+
+I re-wrote the PickledRequest class (now called SocketPackage because I am never satisfied with a name for more than a day) to try and speed things up, but I suspect that this may be a bottleneck in my program. In order to speed things up, I will need to be able to reduce the amount of socket transfers that occur. This would mean dictating what requests (from a browser) are sent on what sockets. New requests pertaining to a specific client should only send requests to that client, and any other requests (such as for html pages) should be started on new sockets. As far as I know, there is not way to control this, but I will ask Dr. Ghassemi if he has any ideas. If I cannot speed up the process of socket transfer, I am unsure how I will be able to parallelize this program. the only parallelization I would have left would be the separation of the data-stream and the neural network training. So basically I really really hope that this will be fast enough. Hopefully I will have all the bugs worked out and I can start testing it.
+
 ##### August 13th, 2020:
 
-Still going string today. I've now completely redone the way that request methods are called by the Connection. I'm having trouble figuring out a way to call both the default INIT method and a user-defined INIT method. Previously I just had a default _INIT method that also triggered when an INIT request was sent, but with this new structure it just feels wrong to hard code that in. I might have to leave it for now and figure out a nicer way later.
+Still going strong today. I've now completely redone the way that request methods are called by the Connection. I'm having trouble figuring out a way to call both the default INIT method and a user-defined INIT method. Previously I just had a default _INIT method that also triggered when an INIT request was sent, but with this new structure it just feels wrong to hard code that in. I might have to leave it for now and figure out a nicer way later.
 
 I am also really happy with the way that the process-piping system I've built worked out. Each HostConnection and WorkerConnection has Pipe objects that connect to their respective host/workers. This pipe object has a reference to the process running the other end, that Connection's name, and the shared queue object. 
 
