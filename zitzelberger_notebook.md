@@ -33,6 +33,12 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### August 17th, 2020:
+
+Today was mainly just debugging. I ran across an issue where the initial "sign-on" request from the client streamer was being sent before the streamer itself was run on a new process. I know that's not a huge performance issue, but it feels like evidence of a bigger issue. I re-wrote some of that to give the startup procedure more flexibility. 
+
+I also changed how the "source socket" is dealt with - it should not be necessary to run a handler. I want there to be room for a server handler that doesn't have a data stream (which would mean having a source socket). This kind of handler would be useful for something like a diagnostic stream from the server to the browser - something like a live feed of the memory or CPU usage. Ideally, it shouldn't be difficult to implement given this setup.
+
 ##### August 14th, 2020:
 
 I decided that the INIT method problem from yesterday is best solved by just having a completely isolated SIGN_ON method that is called, and any other information can be sent afterward in the INIT method. 
