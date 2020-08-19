@@ -33,6 +33,10 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### August 18th, 2020:
+
+I found the source of a lot of the weird behavior that I've been seeing. Evidently when I transfer a socket to another process, it continues to run on the first process anyway, resulting in unwanted handling of requests on the first process. The solution would ideally be to stop the SocketHandler but not close the socket itself, remove that SockerHandler from the Host's index, pass the socket through the process Pipe, create a new SocketHandler with the socket, then run the new SocketHandler on the worker process. This would effectively "pause" the socket while it's being transferred. At the moment I have no way to stop the SocketHandler without shutting down the socket completely, so I'll have to re-write some of the SocketHandler. Either that or duplicate the socket, and shutdown the original.
+
 ##### August 17th, 2020:
 
 Today was mainly just debugging. I ran across an issue where the initial "sign-on" request from the client streamer was being sent before the streamer itself was run on a new process. I know that's not a huge performance issue, but it feels like evidence of a bigger issue. I re-wrote some of that to give the startup procedure more flexibility. 
