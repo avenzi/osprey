@@ -1,24 +1,22 @@
 from io import BytesIO
 import socket
-import time
 import traceback
 import threading
-from threading import Thread, Lock, Condition
+from threading import Thread, Lock, Condition, Condition, current_thread
+from multiprocessing import Process, current_process, Pipe
 from requests import get
+from uuid import uuid4
 import inspect
 import time
+from datetime import datetime
 import json
-
-import matplotlib
-matplotlib.use('agg')
-import matplotlib.pyplot as plt
+import os
 
 from bokeh.models import AjaxDataSource, CDSView
 from bokeh.embed import json_item
 
-import numpy as np
 
-
+# Base Classes
 class Base:
     """
     Base class from which all others inherit.
@@ -28,19 +26,62 @@ class Base:
     last_msg = ''    # to keep track of the last output message
     print_lock = Lock()  # lock on output
 
-    def __init__(self, debug=None):
-        self.exit = False  # Flag to signal that processes should end
-        self.exit_condition = Condition()   # Used to notify throw handling threads when an throw occurs
-        if debug is not None:  # given
-            Base.debug_level = debug  # set debug level
+    def __init__(self):
+        self.exit = False  # status flag  determine when the class should stop running
+        self.close = False  # status flag to determine when the class should completely shutdown
+        self.exit_condition = Condition()  # condition lock to stop running
+        self.shutdown_condition = Condition()  # condition lock block until everything is completely shutdown
+        self.encoding = 'iso-8859-1'  # encoding for all data streams (latin-1)
+
+    def run_exit_trigger(self, block=False):
+        """
+        Runs exit trigger.
+        If non-blocking, the exit trigger runs on a new thread (KeyboardInterrupts will be ignored)
+        If blocking, the exit trigger runs on the current thread. If run on the MainThread,
+            KeyboardInterrupts will be caught. Otherwise, they will be ignored.
+        """
+        if not block:  # run exit trigger on separate thread
+            Thread(target=self._exit_trigger, name='CLEANUP', daemon=True).start()
+        else:  # run exit trigger on current thread
+            self._exit_trigger()
+
+    def _exit_trigger(self):
+        """
+        Waits until exit status is set.
+        When triggered, calls cleanup if close status is set
+        Should be run on it's own thread.
+        """
+        try:
+            with self.exit_condition:
+                self.exit_condition.wait()  # wait until notified
+        except KeyboardInterrupt:
+            if current_process().name == 'MainProcess':
+                self.log("Manual Termination")  # only display log on main process
+            self.shutdown()  # set both exit and close flags
+        except Exception as e:
+            self.debug("Unexpected exception in exit trigger of '{}': {}".format(self.__class__.__name__, e))
+        finally:
+            if self.close:  # if close flag is set
+                self.cleanup()
+            with self.shutdown_condition:
+                self.shutdown_condition.notify_all()  # notify that cleanup has finished
+
+    def set_debug(self, level):
+        Base.debug_level = level
+        if self.debug_level > 0:
             print()  # display message
             print("------------------------------")
-            print(":: RUNNING IN DEBUG MODE {} ::".format(Base.debug_level))
+            print("RUNNING IN DEBUG MODE {}".format(Base.debug_level))
+            print('[TIME][PROCESS][THREAD]: Message')
             print("------------------------------")
 
-    def date(self):
-        """ Return the current time in HTTP Date-header format """
+    def get_date(self):
+        """ Return the current date and time in HTTP Date-header format """
         return time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime())
+
+    def get_time(self):
+        """ Return the current time for debugging purposes """
+        return datetime.now().strftime("%-H:%-M:%-S:%f")
 
     def display(self, msg):
         """ display a log message """
@@ -50,221 +91,80 @@ class Base:
             Base.last_msg = msg
             print(msg)
 
-    def log(self, message, important=False):
+    def log(self, message):
         """ Outputs a log message """
-        if important:  # important message just meant to stand out from the rest
-            self.display("[{}]".format(message))
-        else:  # normal log emssage
-            self.display("> {}".format(message))
+        self.display("> {}".format(message))
 
     def debug(self, msg, level=1):
         """ Sends a debug level message """
         if Base.debug_level >= level:
-            self.display("(debug)[{}]: {}".format(threading.currentThread().getName(), msg))
+            self.display("[{}][{}][{}]: {}".format(self.get_time(), current_process().name, current_thread().name, msg))
+
+    def throw(self, msg, cause=None, trace=True):
+        """ display error message and halt """
+        self.shutdown()  # set both exit and shustdown flags
+        err = "\nERROR: {}\n".format(msg)
+        if cause is not None:
+            err += "CAUSE: {}\n".format(cause)
+        self.display(err)
+        if trace:
+            traceback.print_exc()
+
+    def generate_uuid(self):
+        """ Return a UUID as a URN string """
+        return uuid4().urn[9:]
 
     def halt(self):
-        """ Signal to end all processes """
-        self.exit = True
-        self.streaming = False
+        """ Set only the exit flag and exit """
+        self.exit = True  # signal to stop running
         with self.exit_condition:
-            self.exit_condition.notify_all()  # wake waiting error threads
+            self.exit_condition.notify_all()  # notify waiting thread
 
-    def throw(self, message, cause=None):
-        """ Display an error message and signal to end all processes """
+    def shutdown(self, block=False):
+        """
+        set both the exit flag and shutdown flag.
+        If block is True, waits for shutdown to complete.
+        """
+        if self.close and self.exit:  # shutdown already called
+            return
         self.halt()
-        self.display("(ERROR)[{}]: {}".format(threading.currentThread().getName(), message))
-        if cause is not None:
-            self.display("(CAUSE): {}".format(cause))  # show cause if given
+        self.close = True
+        if block:
+            with self.shutdown_condition:
+                self.shutdown_condition.wait()  # wait until cleanup is finished
 
-    def traceback(self):
-        """ output traceback """
-        traceback.print_exc()
-
-    def get_thread_name(self, name):
-        """ Given a name, add a unique number to it """
-        num = threading.active_count()
-        return "Thread[{}]-{}".format(num + 1, name)
-
-
-class Server(Base):
-    """
-    Handles incoming connections to the server.
-    HandlerClass is used to handle individual requests.
-    call run() to start.
-    """
-
-    def __init__(self, port, name='Server', debug=False):
-        super().__init__(debug)
-
-        self.HandlerClass = InitServerHandler   # initial class to handle incoming INIT requests
-        self.ip = ''      # ip to bind to
-        self.host = ''    # public ip
-        self.port = port  # port to bind to
-        self.name = name  # server name
-        self.listener = None  # socket that accepts new connections
-
-        self.connections = {}  # index of all connections to the server. (full:address, Handler Object)
-
-    def create(self):
-        """ Create a listening socket object """
-        self.listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
-        try:  # Bind socket to ip and port
-            self.listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # allow socket to reuse address?
-            self.listener.bind((self.ip, self.port))  # bind to host address
-            self.debug("Socket Bound to *:{}".format(self.port))
-        except Exception as e:
-            self.throw("Failed to bind socket to *:{}".format(self.port), e)
-            return
-
-        try:  # Set as listening connection
-            self.debug("Set to listening socket")
-            self.listener.listen()
-        except Exception as e:
-            self.throw("Failed to set as listening socket", e)
-
-    def accept(self):
-        """ Accepts new connections and creates a new handler for each """
-        try:
-            conn, (ip, port) = self.listener.accept()  # wait for a new connection
-            conn.setblocking(True)
-            self.debug("New Connection From: {}:{}".format(ip, port), 3)
-        except Exception as e:
-            self.throw("Failed while accepting new connection", e)
-            return
-
-        try:
-            handler = self.HandlerClass(conn, self)  # create handler with new socket
-            Thread(target=handler.run, name=self.get_thread_name("INIT-RUN"), daemon=True).start()  # run connection on new thread
-        except Exception as e:
-            self.throw("Failed to handle new connection", e)
-            return
-
-    def run(self):
-        """ Main entry point """
-        self.host = '{}:{}'.format(get('http://ipinfo.io/ip').text.strip(), self.port)
-        self.log("Server Host: {}".format(self.host))  # show this machine's public ip
-        self.create()  # create listener socket
-        if not self.exit:
-            self.log("Listening for connections...")
-        while not self.exit:
-            try:
-                self.accept()  # accept new connections and handle on new daemon thread
-            except KeyboardInterrupt:
-                self.throw("Manual Termination")
-                self.close()
-                return
-
-    def close(self):
-        """ Makes sure each connection closes before terminating main thread """
-        for handler in list(self.connections.values()):  # force as list instead of iterator because connections remove themselves as they are closed
-            handler.halt()  # signal handler to exit
-            handler.thread.join()  # wait for it to exit
-        self.log("All connections terminated")
-
-    def main_page(self):
-        """ Returns the HTML for the main selection page """
-        page = """
-        <html>
-        <head><title>Data Hub</title></head>
-        <body><h1>Stream Selection</h1>
+    def cleanup(self):
         """
-        # TODO: Organize connections by host device
-        for id, conn in self.connections.items():
-            if not conn.name:  # if name is not specified, this is a browser connection, not a data streaming connection
-                continue
-            page += "<p><a href='/stream?id={}'>{} ({})</a></p>".format(id, conn.name, conn.peer)
-        page += "</body></html>"
-        return page
-
-
-class Client(Base):
-    """
-    Makes a connection to the server.
-    HandlerClass is used to handle individual requests.
-    call run() to start.
-    """
-
-    def __init__(self, ip, port, name='Unnamed Client', debug=False):
-        super().__init__(debug)
-
-        self.ip = ip  # server ip address to connect to
-        self.port = port  # server port to connect through
-        self.name = name  # name of client
-        self.socket = None  # socket object
-
-        self.connections = []  # list of handlers on this client
-
-    def create(self, handler_class):
-        """ Create socket object and try to connect it to the server, then run the handler class on a new thread. """
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
-        try:  # connect socket to given address
-            self.debug("Attempting to connect to server", 2)
-            self.socket.connect((self.ip, self.port))
-            self.socket.setblocking(True)
-            self.debug("Socket Connected", 2)
-        except Exception as e:
-            self.log("Failed to connect to server: {}".format(e))
-            return False
-
-        try:
-            handler = handler_class(self.socket, self)  # create new connection for the client
-            Thread(target=handler.run, name=self.get_thread_name("RUN"), daemon=True).start()  # start handler on new thread
-            self.connections.append(handler)
-            self.debug("Created Handler '{}'".format(handler.name), 2)
-        except Exception as e:
-            self.log("Failed to create new handler: {}".format(e))
-            return False
-        return True
-
-    def run(self, handlers):
+        Should not be called directly.
+        Should be overwritten to do anything that should happen before terminating.
+        This method is called in _exit_trigger.
         """
-        Takes in a list of Handler CLasses to use.
-        Creates one instance of each handler type.
-        For each handler class, listens for new connections then starts them on their own thread.
-        """
-        self.log("Name: {}".format(self.name))
-        self.log("Device IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
-        self.log("Server IP: {}".format(self.ip))
-        for handler_class in handlers:
-            if not self.create(handler_class):  # connect to server and handle on new thread
-                self.log("Terminating")
-                return
-        try:
-            with self.exit_condition:
-                self.exit_condition.wait()  # wait until exit condition notified
-        except KeyboardInterrupt:
-            self.throw("Manual Termination")
-        except Exception as e:
-            self.throw("Client terminated due exception", e)
-        finally:
-            self.close()  # terminate
-
-    def close(self):
-        """ Makes sure each connection closes before terminating main thread """
-        for handler in self.connections:
-            handler.halt()  # signal handler to exit
-            handler.thread.join()  # wait for it to exit
-        self.log("All connections terminated")
+        pass
 
 
-class HandlerBase(Base):
+class SocketHandler(Base):
     """
-    Inherited by ServerHandler and ClientHandler.
-    Object that represents a single connection between server and client.
-    Handles incoming requests on a single socket.
-    Holds the socket and associated buffers.
+    Handles incoming requests on a single socket
+    <sock> is the streaming socket connected to either the data server or streaming client
+    <node> is the object which defines the request methods.
+    <name> Optional Name of the socket. If none is give, 'SOCKET' will be used.
+    <uuid> Optional ID. If none is give, one will be generated.
     """
-
-    def __init__(self, sock):
+    def __init__(self, sock, node, name=None, uuid=None):
         super().__init__()
 
-        self.socket = sock                               # socket object to read/write to
-        self.thread = None                               # thread calling this handler's run() method
+        self.socket = sock
+        self.node = node
+        if not name:
+            name = 'SOCKET'
+        self.name = name
+        if not uuid:
+            self.id = self.generate_uuid()  # unique id
+        else:
+            self.id = uuid
 
         self.ip = "{}:{}".format(*sock.getsockname())    # local address of this socket
-        self.peer = "{}:{}".format(*sock.getpeername())  # address of machine on other end of connection
-        self.name = None                                 # name of connection
-        self.id = self.peer                              # unique identifier of this connection. Used by browsers to request information from specific connections
+        self.peer = "{}:{}".format(*sock.getpeername())  # address of machine on other end of connection                          # unique identifier. Right now it's just the ip of the connecting socket - no need for anything more complicated yet.
 
         self.pull_buffer = sock.makefile('rb')  # incoming stream buffer to read from
         self.pull_lock = Condition()            # lock for pull_buffer
@@ -272,80 +172,57 @@ class HandlerBase(Base):
         self.push_buffer = sock.makefile('wb')  # outgoing stream buffer to write to
         self.push_lock = Condition()            # lock for push_buffer
 
-        self.request = Request()      # current request being parsed
-        self.encoding = 'iso-8859-1'  # encoding for data stream (latin-1)
-
-        self.name = None  # Name to identify connection. Sent by 'name' header in INIT
-        self.streaming = False  # flag that indicates whether the connection is currently sending/receiving a multipart stream
+        self.request = Request(origin=self)     # current request being parsed
 
     def run(self):
         """
         Main entry point.
-        Called by parent as a non-daemon thread.
-        Starts handling on a new thread.
-        Waits for an error to be thrown, then closes socket.
+        Starts running on a new thread.
         """
-        self.thread = threading.current_thread()  # set running thread
-        Thread(target=self.handle, name=self.get_thread_name("HANDLE"), daemon=True).start()  # start handler thread
+        if not self.node:  # no parent connection set
+            self.throw("No parent Node has been assigned for SocketHandler '{}'".format(self.name))
+            return
+        if not hasattr(self.node, 'HANDLE'):  # no HANDLE method
+            self.throw("Parent Node '{}' of SocketHandler '{}' has no HANDLE method".format(self.node.name, self.name))
+            return
+        Thread(target=self._run, name=self.name+'-RUN', daemon=True).start()  # start handler thread
+        self.run_exit_trigger()  # start thread waiting for exit status
+
+    def _run(self):
+        """
+        Continually parse and handle requests until exit status set.
+        Blocks until something is read from the socket.
+        Should be called on it's own thread.
+        """
         try:
-            with self.exit_condition:
-                self.exit_condition.wait()  # wait for self.halt()
+            while not self.exit:  # loop until exit condition
+                with self.pull_lock:
+                    request = self.parse_request()  # get the next full request
+                    if request:
+                        self.node.HANDLE(request, threaded=True)   # allow the request to be handled by the parent Connection
         except Exception as e:
-            self.debug("Termination in handler: {}".format(e))
+            self.throw("Unexpected Exception in running socket: {}".format(self.name), e, trace=True)
         finally:
-            self.close()
+            self.shutdown()
 
-    def handle(self):
+    def parse_request(self):
         """
-        Continually handle requests until exit status set
-        Only one thread at a time can read from the stream.
-        """
-        while not self.exit:
-            with self.pull_lock:
-                self.handle_once()
-
-    def handle_once(self):
-        """
-        Handle a single request.
-        Parse requests form the stream, and delegate new threads to handle them.
+        Reads a single request from the stream.
+        Returns a request object when fully parsed.
+        Returns None if not yet finished.
         """
         if not self.parse_request_line():
-            return
+            return  # error
         if not self.parse_header():
-            return
+            return  # error
         if not self.validate():  # validate request headers before parsing content
-            return
-        self.parse_content()  # may or may not have content
+            return  # error
+        if not self.parse_content():
+            return  # error
 
-        if self.request.method:  # received request method
-            self.execute_command(self.request)
-        elif self.request.code:  # received a response code
-            pass
-            # TODO: handle response codes from clients?
-        else:
-            self.throw("Unknown request/response type?", "Nether a request method nor a response code were found in the data sent.")
-
-        self.request = Request()  # ready for new request
-        # TODO: Add a check to see when the thread needs to be stopped?
-        #  If the user hasn't written in a natural stopping point, it may be necessary to forcibly kill the thread.
-
-    def execute_command(self, request):
-        """ Executes the specified method function """
-        if not hasattr(self, request.method):  # if a method for the request doesn't exist
-            self.throw('Unsupported Request Method {} for {}'.format(request.method, self.__class__.__name__))
-            return
-        content_type = request.header.get('content-type')
-        method_func = getattr(self, request.method)  # get handler method that matches name of request method
-
-        if content_type is None:  # no content type - treat method as command
-            Thread(target=method_func, args=(request,), name=self.get_thread_name(method_func.__name__), daemon=True).start()  # execute command
-
-        elif content_type.split(';')[0] == 'multipart/x-mixed-replace':  # multipart stream
-            self.streaming = True
-            self.throw("Receiving Multipart stream - not implemented yet.")
-            #Thread(target=self.parse_multipart, name=self.get_thread_name("MULTI"), daemon=True).start()
-        else:
-            self.throw("Unrecognized content type header", 'content type: {}'.format(content_type))
+        parsed_request = self.request
+        self.request = Request(origin=self)  # ready for new request
+        return parsed_request   # return parsed request
 
     def validate(self):
         """
@@ -401,14 +278,15 @@ class HandlerBase(Base):
                     length -= data_len
                     data += self.pull_buffer.read(length)  # pull remaining length
                     data_len = len(data)
+
             if not data:  # no data read - disconnected
                 raise BrokenPipeError
             if decode:
                 data = data.decode(self.encoding).strip()  # decode and strip whitespace including CLRF
             return data
         except (ConnectionResetError, BrokenPipeError) as e:  # disconnected
-            self.halt()
-            return
+            self.debug("Couldn't read from stream - Socket closed. Disconnecting.", 3)
+            self.shutdown()
 
     def parse_request_line(self):
         """
@@ -421,8 +299,8 @@ class HandlerBase(Base):
         while line == '':  # if blank lines are read, keep reading.
             line = self.read(max_len, line=True)  # read first line from stream
             if line is None:  # error reading
-                return False
-            self.debug("Received Request-Line: '{}'".format(line.strip()), 3)
+                return
+        self.debug("Received Request-Line: '{}'".format(line.strip()), 3)
         words = line.split()
         if len(words) != 3:
             err = "Request-Line must conform to HTTP Standard ( METHOD /path HTTP/X.X   or   HTTP/X.X STATUS MESSAGE )"
@@ -455,7 +333,7 @@ class HandlerBase(Base):
         max_len = 1024  # max length each header (arbitrary choice)
         for _ in range(max_num):
             line = self.read(max_len, line=True)  # read next line in stream
-            self.debug("Read Header '{}'".format(line), 3)
+            self.debug("Read Header '{}'".format(line), 4)
             if line is None:  # error reading
                 return False
             if line == '':  # empty line signaling end of headers
@@ -481,15 +359,15 @@ class HandlerBase(Base):
         """
         length = self.request.header.get("content-length")
         if length:  # if content length was sent
-            content = self.read(int(length), decode=False)  # read raw bytes from stream
+            content = self.read(int(length), decode=False)  # read raw bytes of exact length from stream
             if content is None:   # error reading
                 return False
             self.debug("Received Content of length: {}".format(len(content)), 3)
             self.request.content = content
             return True
         else:  # no content length specified - assuming no content sent
-            return False
-            # TODO: Is there a better way to determine for sure whether a request has only a header?
+            return True
+            # TODO: Check request type to better determine whether a request could have content.
 
     def send(self, response):
         """ Compiles the response object then adds it to the out_buffer """
@@ -507,7 +385,8 @@ class HandlerBase(Base):
                 self.push_buffer.flush()
                 self.debug("Pushed data to stream", 3)
         except (ConnectionResetError, BrokenPipeError) as e:
-            self.throw("{} Disconnected".format(self.name))
+            self.debug("Couldn't write to stream - socket closed. Disconnecting.", 3)
+            self.shutdown()
 
     def send_multipart(self, buffer, request=None):
         """
@@ -537,8 +416,7 @@ class HandlerBase(Base):
 
         try:
             self.debug("Started multipart stream", 2)
-            self.streaming = True
-            while not self.exit and self.streaming:
+            while not self.exit:
                 data = buffer.read()
                 length_header = "Content-Length:{}\r\n".format(len(data)).encode(self.encoding)  # content length + blank line
                 packet = chunk_header + length_header + b'\r\n' + data + b'\r\n'
@@ -546,60 +424,16 @@ class HandlerBase(Base):
             self.debug("Ended multipart stream", 2)
         except Exception as e:
             self.throw('Multipart Stream Disconnected ({})'.format(self.peer), e)
-        finally:
-            self.streaming = False
 
-    def close(self):
-        """ Closes the connection """
-        self.exit = True  # set exit status if not set already
-        self.socket.close()
-
-
-class ServerHandler(HandlerBase):
-    """
-    Base class for all derived Server Handler classes in ingestion_lib.
-    """
-
-    def __init__(self, sock, server):
-        super().__init__(sock)
-        self.server = server  # Server class that created this handler
-        self.client_name = None  # device name at the other end of this connection
-
-        self.data_buffer = DataBuffer()   # raw data from stream
-        self.image_buffer = DataBuffer()  # data ready to be visually displayed in a browser
-
-        self.server.connections[self.peer] = self  # add this connection to the server's index
-
-    def INIT(self, request):
-        """
-        Overwritten in derived classes
-        Handles initial sign-on request from clients.
-        """
-        pass
-
-    def INGEST(self, request):
-        """
-        Overwritten in derived classes
-        Parses the content of the request and stores it in data_buffer.
-        Additionally can create a visual representation of the data to be stored in image_buffer.
-        """
-        pass
-
-    def HTML(self):
-        """
-        Overwritten in derived classes
-        Returns the HTML string for a browser page displaying the content being streamed
-        """
-        pass
-
-    def parse_multipart(self):
-        """ parses a multipart stream created by send_multipart. Additionaly calls the given method for each data chunk """
+    def parse_multipart(self, buffer):
+        """ parses a multipart stream created by send_multipart. """
+        # TODO: rewrite this. Maybe with an optional callback function for each chunk?
         self.debug("Receiving multipart stream", 2)
         try:
             boundary = False
             headers = False
             length = None
-            while not self.exit and self.streaming:
+            while not self.exit:
                 if not boundary:
                     boundary_header = self.read(32, line=True)
                     if boundary_header == '':
@@ -625,96 +459,558 @@ class ServerHandler(HandlerBase):
                         self.throw("Did not receive content-length header")
                         return
                     data = self.read(length, decode=False)
-                    self.image_buffer.write(data)
+                    buffer.write(data)
                     self.debug("Wrote to image buffer", 3)
                     boundary = False
                     headers = False
                     length = None
-            self.streaming = False
         except Exception as e:
             self.throw("BAD", e)
 
+    def cleanup(self):
+        """ Called when the handler stops running """
+        try:
+            self.socket.shutdown(socket.SHUT_RDWR)  # disallow further read and writes
+            self.socket.close()  # close socket
+        except (OSError, Exception) as e:
+            self.debug("Error closing socket '{}': {}".format(self.name, e))
+        finally:
+            self.debug("Socket '{}' Closed on '{}' (IP: {})".format(self.name, self.node.name, self.peer), 2)
+            self.node.remove_socket(self.id)  # call the parent connection's method to remove this socket
+
+
+class PipeHandler(Base):
+    """
+    An object representing a tunnel to a Node object running in another process
+    <name> Name of the Connection
+    <conn> Connection object returned by multiprocessing.Pipe()
+    <process> Process that is running on the other end of the pipe
+    """
+    def __init__(self, name, conn, process=None):
+        super().__init__()
+        self.name = name
+        self.pipe = conn
+        self.process = process
+
+    def send(self, payload):
+        """ Send a message through the process pipe """
+        self.pipe.send(payload)
+
+    def receive(self):
+        """ Wait for then return a message from the pipe queue """
+        try:
+            return self.pipe.recv()
+        except KeyboardInterrupt:
+            self.debug("Pipe interrupted: '{}'".format(self.name))
+        except EOFError:  # connection closed
+            self.debug("EOF: Pipe '{}' closed".format(self.name))
+        except Exception as e:
+            self.debug("Failed to read from pipe '{}': {}".format(self.name, e), 2)
+
+    def terminate(self):
+        """ Terminate the process after a shutdown window """
+        if not self.process:  # is a worker pipe
+            return
+        if not self.process.is_alive():  # if already terminated
+            return
+        self.process.join(0.1)  # allow process time to shutdown
+        time.sleep(0.1)  # give the process time to register as terminated
+        if self.process.is_alive():  # if the process is still alive
+            self.process.terminate()  # forcibly terminate it
+            self.debug("Manually Terminated Process '{}'".format(self.name), 2)
+
     def close(self):
-        super().close()  # close connection normally
-        del self.server.connections[self.peer]  # remove this connection from the server's index
-        self.log("Connection Closed: {} ({})".format(self.name, self.peer))
+        """ Closes the connection """
+        self.pipe.close()
 
 
-class InitServerHandler(HandlerBase):
+class SocketPackage:
     """
-    Class to handle INIT requests from new connections.
-    Uses information from INIT request to hand the connection
-        over to the specified ServerHandler derived class.
-    Also handles GET requests from browsers.
+    Holds a raw socket object and it's original ID.
+    Optionally holds all attributes of a Request.
+    Can be pickled and sent between processes.
+    Use unpack() to reconstruct a SocketHandler object and Request object.
+
+    <sock> A SocketHandler object, or a raw socket object.
+    <request> The optional Request object
     """
-    def __init__(self, sock, server):
-        super().__init__(sock)
-        self.server = server  # Server class that created this handler
-        self.name = "Init Handler"
+    def __init__(self, sock, request=None):
+        if type(sock) == SocketHandler:  # if a handler is given
+            self.socket = sock.socket    # get raw socket
+            self.id = sock.id            # get ID of handler
+        else:
+            self.socket = sock
+            self.id = None
 
-    def execute_command(self, request):
-        """ Overwrites default method """
-        method = request.method
-        ID = request.queries.get('id')  # handler ID
+        if request:  # get the information to reconstruct a Request object
+            self.request = True
+            self.method = request.method
+            self.path = request.path
+            self.code = request.code
+            self.message = request.message
+            self.version = request.version
+            self.queries = request.queries
+            self.header = request.header
+            self.content = request.content
 
-        if ID:  # a particular handler was specified to handle this request
-            handler = self.server.connections.get(ID)  # handler with this ID
-            if not handler:  # conenction does not exist
-                response = Request()
-                response.add_response(404)
-                return response
-            if hasattr(handler, method):
-                method_func = getattr(handler, method)
-                response = method_func(request)  # call method of requested handler
-                if type(response) == DataBuffer:  # TODO: for the love of all that is good please find a better way to do this
-                    self.log("returned buffer for stream")
-                    self.send_multipart(response)
-                    return
-                elif response:
-                    self.send(response)  # send given response
-                    self.debug("Response from {} sent.".format(handler.__class__.__name__), 3)
-                    return
-                elif response is False:
-                    # if returned False, fall through to general response from this class's methods
-                    pass
-                elif not response:
-                    return  # if nothing returned, do nothing
-                else:
-                    self.throw("Handler {} returned unhandled value: '{}'".format(handler.__class__.__name__, response))
-                    return
-            self.debug("No response returned from {}. Sending fallback server response.".format(handler.__class__.__name__), 3)
+    def unpack(self, node):
+        """
+        Returns a new SocketHandler and a Request object from this package
+        Node is the new parent node for the SocketHandler.
+        Request might be None if no request was sent in this package.
+        """
+        # create a SocketHandler from the raw socket, and provide the ID if it was given
+        handler = SocketHandler(self.socket, node, uuid=self.id)
 
-        if not hasattr(self, method):  # doesn't have this method
-            self.throw("Unsupported request method for InitServerHandler.", "'{}'".format(method))
+        req = None
+        if self.request:  # if a request was given create a new Request object
+            req = Request()
+            req.origin = handler
+            req.method = self.method
+            req.path = self.path
+            req.code = self.code
+            req.message = self.message
+            req.version = self.version
+            req.queries = self.queries
+            req.header = self.header
+            req.content = self.content
+
+        return handler, req
+
+
+class Node(Base):
+    """
+    Base class for Connection Nodes.
+    Holds an index of sockets assigned to it, and provides request methods to handle requests.
+    Holds an index of IPC pipes to other Nodes.
+    """
+    def __init__(self, name=None, device='Unnamed_Device'):
+        super().__init__()
+        if not name:
+            name = self.__class__.__name__
+        self.name = name
+        self.device = device
+        self.id = self.generate_uuid()  # unique id
+
+        self.sockets = {}  # index of SocketHandlers associated with this connection. Keys are the ID of the socket
+
+    def add_socket(self, socket_handler):
+        """ Add a new SocketHandler the index and return the ID"""
+        self.sockets[socket_handler.id] = socket_handler
+        self.debug("Added socket '{}' to '{}'".format(socket_handler.name, self.name), 1)
+        return socket_handler.id
+
+    def remove_socket(self, socket_id):
+        """
+        Remove a SocketHandler from the socket index.
+        The SocketHandler must be deactivated to remove it.
+        This means that either SocketHandler.halt() or SocketHandler.shutdown() is called beforehand.
+        If SocketHandler.halt() is called, it is assumed that the live raw_socket is to be re-used with another handler.
+        """
+        handler = self.sockets.get(socket_id)
+        if not handler:  # not found
+            self.debug("Failed to remove socket (ID: {}) from {}: Not found in socket dictionary".format(socket_id, self.name), 1)
+            return
+        if not handler.exit:  # exit status on socket not set
+            self.throw("Attempted to remove a live SocketHandler '{}' from node '{}'".format(handler.name, self.name), trace=False)
+            return
+        self.debug("Removing socket '{}' from node '{}'".format(handler.name, self.name), 1)
+        del self.sockets[socket_id]  # remove it from the socket index
+
+    def transfer_socket(self, pipe, raw_socket, request=None):
+        """
+        Send a live raw socket through a process pipe.
+        Packages the socket and optional request in order to send it through the pipe.
+        This method assumes that the SocketHandler previously associated with this socket
+            (if any) has already been halted and removed.
+        """
+        package = SocketPackage(raw_socket, request)
+        pipe.send(package)
+        self.debug("Node '{}' sent a socket to pipe '{}'".format(self.name, pipe.name), 2)
+
+    def receive_socket(self, package):
+        """
+        Unpacks a SocketPackage to create a SocketHandler and a possible Request
+        Runs the Request on that socket, then runs the SocketHandler to receive subsequent requests.
+        """
+        self.debug("Node '{}' received a transferred socket.".format(self.name), 2)
+
+        # get the new SocketHandler (with self as the new parent node) and optional Request
+        handler, request = package.unpack(self)
+        if request:  # if a request was sent with the socket
+            if request.method == 'SIGN_ON':
+                handler.name = 'DATA-SOURCE'
+            else:
+                handler.name = 'REQUESTER'
+            self.HANDLE(request, False)  # handle the request first (not threaded)
+
+        self.add_socket(handler)  # add this handler to the socket index
+        handler.run()  # then start handling other requests from the socket (on a new thread)
+
+    def send(self, request, socket_handler):
+        """ Sends a Request object through a socket. """
+        socket_handler.send(request)
+
+    def HANDLE(self, request, threaded=True):
+        """
+        Method called for every request that is sent to any of the Connection's sockets.
+        Calls other request methods according to the request type (e.g. GET, POST, INIT, etc...)
+        """
+        if request.method:  # received request method
+            if threaded:  # run command on a new thread
+                Thread(target=self._execute, args=(request,), name=self.name+'-'+request.method, daemon=True).start()
+            else:
+                self._execute(request)
+        elif request.code:  # received a response code
+            pass
+            # TODO: handle response codes from clients?
+        else:
+            self.throw("Unknown request/response type?", "Nether a request method nor a response code were found in the data sent.")
+
+        # content_type = request.header.get('content-type')
+        # if content_type and content_type.split(';')[0] == 'multipart/x-mixed-replace':  # multipart stream
+
+    def _execute(self, request):
+        """ Execute the specified command """
+        if not hasattr(self, request.method):  # if a method for the request doesn't exist
+            self.throw('Unsupported Request Method {} for {}'.format(request.method, self.name))
             return
         else:
-            method_func = getattr(self, method)
-            response = method_func(request)
-            if response:
-                self.send(response)
-        self.halt()
+            method_func = getattr(self, request.method)  # get handler method that matches name of request method
 
-    def INIT(self, request):
+        try:
+            method_func(request)  # execute command and pass along the request that called it
+        except Exception as e:
+            self.throw("Error in command: {}".format(request.method), e, trace=True)
+
+    def cleanup(self):
+        """ Shutdown all sockets """
+        for sock in list(self.sockets.values()):  # force as iterator because items are removed from the dictionary
+            sock.shutdown(block=True)  # block until socket shuts down
+        self.debug("All Sockets shut down on Node '{}'".format(self.name))
+
+
+class HostNode(Node):
+    """
+    The main hosting connection (a Server or Client).
+    Run on the main process.
+    Optionally delegates incoming sockets to other worker Connections.
+    Worker connections are started on new processed and communicated with using pipes.
+    <auto> Boolean: whether to automatically shutdown when all worker nodes have shutdown.
+    """
+    def __init__(self, name, auto=True):
+        super().__init__(name, name)  # name and device name are the same
+        self.automatic_shutdown = auto
+        self.pipes = {}   # index of Pipe objects, each connecting to a WorkerConnection
+
+    def run_worker(self, worker):
         """
-        Handle initial request sent by all streaming clients.
-        Creates a new Handler class specified by the request.
-        Passes the request to the new handler class to finish initialization.
+        Start the given worker node on a new process.
+        Adds the new Pipe to the pipe index, and starts reading from it on a new thread.
+        Return the new Pipe.
         """
-        handler_name = request.header.get('class')  # connection requests a specific Handler class to be used
+        host_conn, worker_conn = Pipe()  # multiprocessing duplex connections (doesn't matter which)
+        worker_process = Process(target=worker.run, name=worker.name, daemon=True)  # process for new worker
 
-        # get the class with name handler_name
-        import ingestion_lib
-        HandlerClass = [member[1] for member in inspect.getmembers(ingestion_lib, inspect.isclass) if (member[1].__module__ == 'ingestion_lib' and member[0] == handler_name)][0]
-        handler = HandlerClass(self.socket, self.server)  # create new handler
+        # host knows worker name and process. Pipe is indexed by the worker ID
+        self.pipes[worker.id] = PipeHandler(worker.name, worker_conn, worker_process)
 
-        self.log("New connection from {}: {}".format(handler.__class__.__name__, handler.peer))
-        handler.INIT(request)  # pass on this request to the new handler's INIT method
-        Thread(target=handler.run, name=self.get_thread_name('RUN'), daemon=True).start()  # run new handler to accept subsequent requests on this socket
-        self.debug("Initial handler passed request to '{}'".format(handler.__class__.__name__), 2)
+        # worker knows host name but not the host process
+        worker.pipe = PipeHandler(self.name, host_conn)
 
-        req = Request()  # Send START request back to client
-        req.add_request('START')
-        return req
+        # new thread to act as main thread for process
+        Thread(target=worker_process.start, name='WorkerMainThread', daemon=True).start()
+
+        # read from this pipe on a new thread
+        Thread(target=self._run_pipe, args=(worker.id,), name=self.name+'-PIPE', daemon=True).start()
+
+    def remove_worker(self, pipe_id):
+        """
+        Removes a worker pipe from the index
+        Note that this does not terminate the worker process
+        """
+        pipe = self.pipes.get(pipe_id)
+        if not pipe:  # ID not found in index
+            self.debug("Host Failed to remove worker Node '{}'. Not found in worker dictionary. \
+                This could be caused by a worker sending two SHUTDOWN signals.".format(pipe.name))
+            return
+        del self.pipes[pipe_id]  # remove from index
+        if self.automatic_shutdown:
+            if not self.pipes:  # all worker have disconnected
+                self.debug("No workers left - shutting down '{}'".format(self.name))
+                self.shutdown()
+
+    def _run_pipe(self, pipe_id):
+        """
+        Continually waits for messages coming from the pipe.
+        Handles the message by calling other methods.
+        Should be run on it's own thread.
+        """
+        pipe = self.pipes[pipe_id]
+        while not self.exit:
+            message = pipe.receive()  # blocks until a message is received
+
+            # Handle the message
+            if type(message) == SocketPackage:  # A PickledRequest object containing a request and a new socket
+                self.receive_socket(message)
+            elif message == 'SHUTDOWN':  # the connection on the other end shut down
+                self.debug("Host '{}' received SHUTDOWN from worker '{}'".format(self.name, pipe.name), 2)
+                self.remove_worker(pipe_id)  # remove it
+                return
+            elif message is None:
+                self.debug("Pipe to '{}' shut down unexpectedly on node '{}'".format(pipe.name, self.name), 2)
+                return
+            else:
+                self.debug("Host Node Received unknown signal '{}' from Worker Node '{}'".format(message, pipe.name))
+
+    def cleanup(self):
+        """ End all worker process and sockets """
+        super().cleanup()  # shutdown all sockets
+        for pipe in list(self.pipes.values()):  # force as iterator because items are removed from the dictionary
+            pipe.send('SHUTDOWN')  # signal all workers to shutdown
+            pipe.terminate()  # terminate the process if not already
+        self.debug("All worker nodes terminated on Host '{}'".format(self.name), 1)
+
+
+class WorkerNode(Node):
+    """
+    This class holds a socket connection to a data-streaming client,
+        plus all sockets requesting data from that client.
+
+    <source> is the socket that connects to the Raspberry Pi that initiated the connection.
+    <server> is the server object controlling this handler, which will pass on all subsequent socket connections
+    """
+    def __init__(self, naeee):
+        super().__init__()
+        self.source_id = None  # ID of the main data-streaming socket
+        self.pipe = None  # Pipe object to the HostNode
+
+    def run(self):
+        """
+        Main entry point.
+        Run this Worker on a new process.
+        Self.pipe must be a PipeHandler leading to the host node.
+        Should be run on it's own Process's Main Thread
+        """
+        self.debug("Started new worker '{}'".format(self.name), 1)
+        Thread(target=self._run, name='RUN', daemon=True).start()
+        Thread(target=self._run_pipe, name='PIPE', daemon=True).start()
+        self.run_exit_trigger(block=True)  # Wait for exit status on new thread
+
+    def _run(self):
+        """ Starts running all sockets, if any. """
+        # run each socket (on a new thread)
+        for handler in list(self.sockets.values()):
+            self.debug("Running socket '{}' on '{}'".format(handler.name, self.name), 1)
+            handler.run()
+
+    def _run_pipe(self):
+        """
+        Continually waits for messages coming from the pipe.
+        Handles the message by calling other methods.
+        Should be run on it's own thread.
+        """
+        # Listen for messages on the hose pipe
+        while not self.exit:
+            message = self.pipe.receive()  # blocks until a message is received
+            # Handle the message
+            if type(message) == SocketPackage:  # A PickledRequest object containing a request and a new socket
+                self.receive_socket(message)
+            elif message == 'SHUTDOWN':  # Host Node signalled to shut down
+                self.debug("Worker '{}' received SHUTDOWN from Host '{}'".format(self.name, self.pipe.name))
+                self.shutdown()
+                return
+            elif message is None:
+                self.debug("Pipe to '{}' shut down unexpectedly on node '{}'".format(self.pipe.name, self.name), 2)
+                return
+            else:
+                self.debug("Worker Node received unknown signal '{}' from Host Node '{}'".format(message, self.pipe.name))
+
+    def set_source(self, raw_socket):
+        """
+        Set the source socket.
+        Assumes that the SocketHandler previously associated with this socket (if any)
+            has been halted and removed from the old node.
+        """
+        handler = SocketHandler(raw_socket, self, name='DATA-SOCKET')
+        self.source_id = self.add_socket(handler)
+
+    def remove_socket(self, socket_id):
+        """ Overwrites default method """
+        if socket_id == self.source_id:  # removing source socket
+            self.debug("Removing source socket '{}' from {}) ".format(self.sockets[socket_id].name, self.name), 2)
+            self.shutdown()  # start shutdown
+            return
+        super().remove_socket(socket_id)  # run default socket shutdown method
+
+    def cleanup(self):
+        """ Shutdown all handlers associated with this connection and signal that it shut down """
+        super().cleanup()  # shutdown all sockets
+        self.log("{} Closed.".format(self.name))
+        self.pipe.send('SHUTDOWN')  # Signal to the server that this connection is shutting down
+
+
+# Server Side
+class Server(HostNode):
+    """
+    Handles all incoming connections to the server.
+    INIT requests from new connections create a new WorkerConnection object to handle all subsequent requests.
+    GET requests from browsers are handled to server server page contents.
+    Any other request with a query matching one of the current Connections is handed over to that Connection.
+    Call run() to start.
+    """
+    def __init__(self, port, name, debug=0):
+        super().__init__(name, auto=False)
+        self.set_debug(2)
+
+        self.ip = ''          # ip to bind to
+        self.host_ip = ''     # public ip
+        self.port = port      # port to bind to
+        self.listener = None  # socket that accepts new connections
+
+    def run(self):
+        """
+        Main entry point.
+        Must be called on the main thread of a process.
+        Calls _run on a new thread and waits for exit status.
+        Blocks until exit status set.
+        """
+        Thread(target=self._run, name=self.name+'-RUN', daemon=True).start()
+        self.run_exit_trigger(block=True)  # block main thread until triggered
+
+    def _run(self):
+        """
+        Creates server socket and listens for new connections.
+        New sign-on requests from clients create new worker node.
+        Handles server-specific requests, on the main process, and passes
+            client-specific requests onto the respective worker processes
+        """
+        self.host_ip = '{}:{}'.format(get('http://ipinfo.io/ip').text.strip(), self.port)
+        self.log("Server Host: {}".format(self.host_ip))  # show this machine's public ip
+        self.create_listener()  # create listener socket
+        while not self.exit:
+            self.accept()  # run accept-loop
+
+    def create_listener(self):
+        """ Create a listening socket """
+        self.listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
+        try:  # Bind socket to ip and port
+            self.listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # allow socket to reuse address
+            self.listener.bind((self.ip, self.port))  # bind to host address
+            self.debug("Server Socket Bound to *:{}".format(self.port), 1)
+        except Exception as e:
+            self.throw("Failed to bind server socket to *:{}".format(self.port), e)
+            return
+
+        try:  # Set as listening connection
+            self.listener.listen()
+            self.debug("Set to listening socket", 1)
+        except Exception as e:
+            self.throw("Failed to set as listening socket", e)
+            return
+
+        self.log("Listening for connections...")
+
+    def accept(self):
+        """ Accepts new connections and runs a new handler for each """
+        try:
+            new_socket, (ip, port) = self.listener.accept()  # wait for a new connection
+            new_socket.setblocking(True)
+            self.debug("New Connection From: {}:{}".format(ip, port), 1)
+        except Exception as e:
+            self.throw("Failed while accepting new connection", e, trace=True)
+            return
+
+        try:
+            new_handler = SocketHandler(new_socket, self)
+            sock_id = self.add_socket(new_handler)  # add new socket to index and run it
+            self.sockets[sock_id].run()  # run the new socket
+        except Exception as e:
+            self.throw("Failed to handle create new SocketHandler", e, trace=True)
+            return
+
+    def main_page(self):
+        """ Returns the HTML for the main selection page """
+        # TODO: make this be retrieved from a file instead so it can be easily found and modified
+        page = """
+        <html>
+        <head><title>Data Hub</title></head>
+        <body><h1>Stream Selection</h1>
+        """
+        # TODO: Organize connections by host device
+        for id, pipe in self.pipes.items():
+            page += "<p><a href='/stream?id={}'>{}</a></p>".format(id, pipe.name)
+        page += "</body></html>"
+        return page
+
+    def HANDLE(self, request, threaded=True):
+        """
+        Overwrites default method to handle incoming requests
+        When a request would normally be handled, first decide if it should be handled by an existing connection.
+        This is determined by whether a connection ID was specified in the query string of the request.
+        """
+        ID = request.queries.get('id')  # handler ID
+
+        if ID is not None:  # a particular connection was specified to handle this request
+            self.debug("Client requested an ID", 2)
+            pipe = self.pipes.get(ID)  # Connection with this ID
+            if pipe:  # Connection exists
+                self.transfer_socket(pipe, request.origin, request)  # transfer origin socket and request to the existing WorkerConnection
+                return
+            else:  # Worker doesn't exist
+                self.log("A client requested an invalid ID ({}). The Server will attempt to handle the request. Request: \n{}".format(ID, request))
+                self.debug("Valid ID's: {}".format(list(self.pipes.keys())))
+
+        # no ID was specified or ID not found - continue to run on this Server Connection
+        if request.method == "SIGN_ON":  # reserved method for initializing new data stream client connections
+            super().HANDLE(request, threaded=False)  # call SIGN_ON method, and don't read any more from the socket
+        else:
+            super().HANDLE(request, threaded=threaded)  # call the method per usual
+
+    def SIGN_ON(self, request):
+        """
+        Reserved method for clients to sign onto the server. Should not be overwritten.
+        Handle initial sign-on request sent by all streaming clients.
+        Creates a new Connection class specified by the request.
+        Transfers the request to the new Connection class to finish initialization.
+        """
+        class_name = request.header.get('class')
+        device_name = request.header.get('device')
+        display_name = request.header.get('name')
+        if not class_name:
+            self.throw("New data-client SIGN_ON request failed to specify the name of the class with which to handle the request. \
+                The class name must be sent as the 'class' header.", "Request: {}".format(request))
+            return
+        if not device_name:
+            self.debug("New data-client INIT request did not specify the name of the device hosting the connection. Must be sent as the 'device' header.")
+        if not display_name:
+            self.debug("New data-client INIT request did not specify the display name of the connection. Must be sent as the 'name' header. This will default to the Connection class name")
+
+        # Get the right class from ingestion lib
+        import ingestion_lib  # imported here so as to avoid import recursion
+        members = inspect.getmembers(ingestion_lib, inspect.isclass)  # all classes [(name, class), ]
+        StreamerClass = None
+        for member in members:
+            if member[1].__module__ == 'ingestion_lib' and member[0] == class_name:  # class name matches
+                StreamerClass = member[1]
+                break
+        if not StreamerClass:
+            self.throw("Streamer Class '{}' not found in ingestion_lib".format(class_name))
+            return
+
+        start_req = Request()
+        start_req.add_request('START')
+        self.send(start_req, request.origin)  # send start request back to client
+        self.log("New Data-Stream connection from {} on {} ({})".format(display_name, device_name, request.origin.peer))
+
+        worker = StreamerClass()  # create new worker node
+        worker.name = display_name
+        worker.device = device_name
+
+        request.origin.halt()     # stop running this socket
+        worker.set_source(request.origin.socket)  # extract the raw socket and set it as the new source
+        self.remove_socket(request.origin.id)  # remove the handler from this node
+        self.run_worker(worker)   # run the Worker on a new process
 
     def GET(self, request):
         """ Handle request from web browser """
@@ -725,143 +1021,202 @@ class InitServerHandler(HandlerBase):
             response.add_header('Location', '/index.html')  # redirect to index.html
 
         elif request.path == '/favicon.ico':
-            with open('favicon.ico', 'rb') as fout:  # send favicon image
-                img = fout.read()
-                response.add_content(img)
             response.add_response(200)  # success
             response.add_header('Content-Type', 'image/x-icon')  # favicon
+            with open('pages/favicon.ico', 'rb') as file:  # send favicon image
+                img = file.read()
+                response.add_content(img)
 
         elif request.path == '/index.html':
-            content = self.server.main_page().encode(self.encoding)
+            content = self.main_page().encode(self.encoding)
             response.add_response(200)  # success
             response.add_header('Content-Type', 'text/html')
             response.add_content(content)  # write html content to page
 
-        else:
-            response.add_response(404)  # couldn't find it
-            self.log("GET requested unknown path: {}".format(request.path))
+        elif request.path == '/404.html':
+            response.add_response(200)
+            response.add_header('Content-Type', 'text/html')
+            with open('pages/404.html', 'rb') as file:
+                response.add_content(file.read())
 
-        self.debug("done handling GET", 3)
-        return response
+        elif request.path == '/invalid_id.html':
+            response.add_response(200)
+            response.add_header('Content-Type', 'text/html')
+            with open('pages/invalid_id.html', 'rb') as file:
+                response.add_content(file.read())
+
+        else:  # unknown path
+            response.add_response(301)  # redirect
+            if request.queries.get('id'):  # id was provided, but was invalid.
+                response.add_header('location', '/invalid_id.html')
+            else:  # no id was provided
+                response.add_header('location', '/404.html')
+                self.log("A client requested unknown path: {}".format(request.path))
+
+        self.send(response, request.origin)  # send response back to requesting socket
+        self.debug("Server handled a GET request for {}".format(request.path), 1)
 
     def OPTIONS(self, request):
         """ Responds to an OPTIONS request """
+        self.log("A client requested OPTIONS")
         response = Request()
-        response.add_response(204)
-        response.add_header('Allow', 'OPTIONS, GET')
-        return response
-
-    def close(self):
-        super().close()
-        self.debug("Initial request handler closed", 3)
+        response.add_response(405)
+        self.send(response, request.origin)
 
 
-class ClientHandler(HandlerBase):
-    """ Handles incoming requests to a client object """
-
-    def __init__(self, sock, client):
-        super().__init__(sock)
-        self.client = client  # Client class that created this handler
-        self.server_name = None  # name of server at the other end of this connection
-
-        self.data_buffer = DataBuffer()  # raw data from device
-
-    def init(self):
+class Handler(WorkerNode):
+    """
+    To be used on the server to handle requests send by a Streamer
+    """
+    def INGEST(self, request):
         """
-        Overwritten by derived classes.
-        Must call on initialization.
-        Send sign-on request to server.
-        Gives the server necessary information about this connection.
-        Server will respond with the START request.
+        Overwritten in derived classes.
+        Parses the content of the request.
+        Usually stores raw content and processed content in DataBuffers.
         """
         pass
 
-    def START(self, request):
-        """
-        Overwritten by derived class.
-        Handles the START request from the server.
-        Starts the stream
-        """
-        pass
 
-    def STOP(self, request):
+# Client side
+class Client(HostNode):
+    """
+    Makes a connection to the server.
+    HandlerClass is used to handle individual requests.
+    call run() to start.
+    """
+    def __init__(self, ip, port, name, debug=0):
+        super().__init__(name, auto=True)
+        self.set_debug(2)
+
+        self.ip = ip  # server ip address to connect to
+        self.port = port  # server port to connect through
+
+    def run(self):
         """
-        Overwritten by derived class.
-        Handles the STOP request from the server.
-        Stops the stream
+        Main entry point.
+        Must be called on the main thread of a process.
+        Calls _run on a new thread and waits for exit status.
+        Blocks until exit status set.
         """
-        pass
+        Thread(target=self._run, name=self.name+'-RUN', daemon=True).start()
+        self.run_exit_trigger(block=True)  # block main thread until exit
 
-    def close(self):
-        super().close()
-        self.streaming = False  # stop streaming
-        self.log("Closed {}".format(self.name))
-        with self.client.exit_condition:
-            self.client.exit_condition.notify_all()  # wake waiting thread in client to terminate it
+    def _run(self):
+        """
+        Should be called on a new thread.
+        Creates one instance of each handler type from collection_lib
+        For each handler class, listens for new connections then starts them on their own thread.
+        """
+        self.log("Name: {}".format(self.name))
+        self.log("Device IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
+        self.log("Server IP: {}".format(self.ip))
+
+        with open('config.json') as file:
+            config = json.load(file)
+
+        # get selected handler classes
+        import collection_lib
+        members = inspect.getmembers(collection_lib, inspect.isclass)  # all classes [(name, class), ]
+        for member in members:
+            if member[1].__module__ == 'collection_lib' and config['HANDLERS'][member[0]].upper() == 'Y':  # class selected in config file
+                self.connect(member[1])  # connect this HandlerClass to the server
+
+    def connect(self, NodeClass):
+        """ Create socket object and try to connect it to the server, then run the Node class on a new process """
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
+        try:  # connect socket to given address
+            self.debug("Attempting to connect to server", 1)
+            sock.connect((self.ip, self.port))
+            sock.setblocking(True)
+            self.debug("Socket Connected", 1)
+        except Exception as e:
+            self.throw("Failed to connect socket to server:", e)
+            return False
+
+        worker = NodeClass()  # create an instance of this node class
+        worker.set_source(sock)  # set this socket as a datasource socket for the client
+        self.run_worker(worker)  # run the new worker node on a parallel process
 
 
+class Streamer(WorkerNode):
+    """
+    To be used on a client to send requests to the Handler
+    """
+    def __init__(self):
+        super().__init__()
+        self.handler = None  # class name of the handler to use on the server
+
+    def _run(self):
+        """ Pre-extends the default method to automatically send the sign-on request """
+        if not self.handler:
+            self.throw("Streamer Node must have the attribute 'handler' to indicate which Handler class is to be used on the server")
+            return
+
+        req = Request()  # new request
+        req.add_request('SIGN_ON')
+        req.add_header('name', self.name)  # name of the class to be displayed
+        req.add_header('device', self.device)  # name of host Node
+        req.add_header('class', self.handler)  # class name of the handler to use at the other end
+        self.send(req, self.sockets[self.source_id])
+
+        super()._run()  # continue _run method. Runs the sockets on this worker.
+
+
+# Tools
 class Request(Base):
     """
     Holds all data from one request.
     Used by Handler class to store incoming/outgoing requests.
     To use, call the appropriate add_ methods to add parts of the HTTP request,
-        then pass the object to self.send (self referring to the Handler class the request is used in)
+        then pass the object to Handler.send.
+
+    <origin> is the Handler class containing the socket that received the request.
+        This is so that a response can be sent back through the same socket.
     """
 
-    def __init__(self):
+    def __init__(self, method=None, origin=None):
         super().__init__()
-        self.encoding = 'iso-8859-1'  # byte encoding
-        # TODO: make encoding not hard-coded? It's defined again in the Handler class. Maybe there's a nice way to pass it down? putting it in the constructor would not be ideal because the user has to call it in custom request methods.
+        self.origin = origin  # SocketHandler object which received this request
 
         self.method = None   # request method (GET, POST, etc..)
-
-        self.path = None     # request path string without queries
-        self.queries = {}    # dict of queries, if any
-
-        self.version = None  # request version (HTTP/X.X)
-
-        self.header = {}     # dictionary of headers
-
-        self.content = None  # request content in bytes
-
-        self.request_received = False  # whether the whole request line has been received
-        self.header_received = False  # whether all headers have been received
-        self.content_received = False  # whether all content has been received
+        if method:
+            self.add_request(method)
 
         self.code = None  # HTTP response code
         self.message = None  # Response message
+
+        self.version = 'HTTP/1.1'  # request version (HTTP/X.X)
+        self.path = None     # request path string without queries
+        self.queries = {}    # dict of queries, if any
+
+        self.header = {}     # dictionary of headers
+        self.content = None  # request content in bytes
+
+    def __repr__(self):
+        """ String representation shows only request line and headers """
+        return self.format_request_line() + self.format_headers()
 
     def add_request(self, method, path='/', version='HTTP/1.1'):
         """ Add request method, path, and version """
         self.method = method
         self.path = path
         self.version = version
+        self.debug("Added requestline: {}".format(self.format_request_line().replace('\r\n', '\\r\\n')), 3)
 
     def add_response(self, code):
         """ Add a response code, message, version, and default headers. Used to respond to web browsers. """
         self.code = code
-        self.version = "HTTP/1.1"
-        if code == 200:
-            self.message = 'OK'
-        elif code == 204:
-            self.message = "No Content"
-        elif code == 301:
-            self.message = 'Moved Permanently'
-        elif code == 304:
-            self.message = 'Not Modified'
-        elif code == 308:
-            self.message = 'Permanent Redirect'
-        elif code == 404:
-            self.message = 'Not Found'
-        else:
-            self.message = 'MESSAGE'
-
+        self.version = self.version
+        messages = {200: 'OK', 204: 'No Content', 301: 'Moved Permanently', 304: 'Not Modified', 308: 'Permanent Redirect', 404: 'Not Found', 405: 'Method Not Allowed'}
+        self.message = messages[code]
         self.add_header('Server', 'StreamingServer Python/3.7.3')  # TODO: make this not hard coded (Not really necessary yet)
-        self.add_header('Date', self.date())
+        self.add_header('Date', self.get_date())
+        self.debug("Added responseline: {}".format(self.format_request_line().replace('\r\n', '\\r\\n')), 3)
 
     def add_header(self, keyword, value):
         """ Add a single header line """
         self.header[keyword.lower()] = value
+        self.debug("Added header: {}: {}".format(keyword.lower(), value), 4)
 
     def add_content(self, content):
         """ Add main content payload """
@@ -875,6 +1230,7 @@ class Request(Base):
         if content:
             self.add_header('content-length', len(data))  # add content length header
         self.content = data
+        self.debug("Added content of length: {}".format(len(data)), 3)
 
     def verify(self):
         """ Verify that this object meets all requirements and can be safely sent to the stream """
@@ -886,40 +1242,51 @@ class Request(Base):
             return False
         return True
 
+    def format_request_line(self):
+        """ Formats request/response according to HTTP standard"""
+        if self.method:
+            line = "{} {} {}\r\n".format(self.method, self.path, self.version)
+        elif self.code:
+            line = "{} {} {}\r\n".format(self.version, self.code, self.message)
+        else:
+            self.throw("Could not format request-line. No method or response code defined.")
+            return ''
+        return line
+
+    def format_headers(self):
+        """ Format headers according to HTTP standard """
+        text = ''
+        for key, value in self.header.items():
+            text += "{}: {}\r\n".format(key, value)
+        if self.header:  # at least one header exists
+            text += '\r\n'  # add a blank line to denote end of headers
+        return text
+
     def get_data(self):
         """ Formats all data into an encoded HTTP request and returns it """
         if not self.verify():
             return
         data = b''  # data to be returned
 
-        # first line
-        if self.method:
-            request_line = "{} {} {}\r\n".format(self.method, self.path, self.version)
-            data += request_line.encode(self.encoding)
-            self.debug("Added request line '{}'".format(request_line.strip()), 3)
+        data += self.format_request_line().encode(self.encoding)
+        data += self.format_headers().encode(self.encoding)
 
-        if self.code:
-            response_line = "{} {} {}\r\n".format(self.version, self.code, self.message)
-            data += response_line.encode(self.encoding)
-            self.debug("Added response line '{}'".format(response_line.strip()), 3)
-
-        # headers
-        for key, value in self.header.items():
-            header = "{}: {}\r\n".format(key, value)
-            data += header.encode(self.encoding)
-            self.debug("Added header '{}:{}'".format(key, value), 3)
-        if self.header:
-            data += b'\r\n'  # add a blank line to denote end of headers
-            self.debug("Added all headers", 3)
-
-        # content
         if self.content is not None:
             data += self.content  # content should already be in bytes
-            self.debug("Added content of length: {}".format(len(self.content)), 3)
         else:
             data += b'\r\n'  # if no content, signal end of transmission
 
         return data
+
+
+class Response(Request):
+    """
+    Inherits request. Same thing, but can be initialized with a response code instead.
+    """
+    def __init__(self, code=None):
+        super().__init__()
+        if code:
+            self.add_response(code)
 
 
 class DataBuffer(object):
@@ -974,7 +1341,7 @@ class GraphStream:
         self.source = AjaxDataSource(
             data_url=update_url,
             polling_interval=interval,
-            mode='append',
+            mode=mode,
             max_size=domain,
             method='GET',
             if_modified=True)  # if_modified ignores responses sent with code 304 and not cached
@@ -986,7 +1353,7 @@ class GraphStream:
 
         # Holds JSON data ready to be sent to the AjaxDataSource.
         # Allow one read per write. All other reads return None.
-        # When reading None, should respond with 304.
+        # When reading None, should respond with code 304 (Not Modified).
         self.buffer = NonBlockingBuffer()
 
         '''
@@ -1013,7 +1380,7 @@ class GraphStream:
         response.add_response(200)
         response.add_header('content-type', 'text/html')
 
-        with open('plot_page_template.html', 'r') as file:
+        with open('pages/plot_page.html', 'r') as file:
             html = file.read()
         response.add_content(html)  # send initial page html
         return response

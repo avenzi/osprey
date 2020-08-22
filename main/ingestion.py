@@ -23,6 +23,6 @@ if not(port and name):
     port = config.get('PORT')             # port to connect through
     name = config.get('NAME')             # display name of this Client
 
-server = Server(port, name=name, debug=2)
+server = Server(port, name=name)
 server.run()
 

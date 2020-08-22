@@ -41,11 +41,8 @@ if not(ip and port and name and handlers):
     port = config.get('PORT')             # port to connect through
     name = config.get('NAME')             # display name of this Client
 
-# get selected handler classes
-handlers = [member[1] for member in inspect.getmembers(collection_lib, inspect.isclass) if member[1].__module__ == 'collection_lib' and config['HANDLERS'][member[0]].upper() == 'Y']
-
-video_client = Client(ip, port, name=name, debug=2)
-video_client.run(handlers)
+client = Client(ip, port, name=name)
+client.run()
 
 
 
