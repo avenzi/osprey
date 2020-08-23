@@ -33,6 +33,10 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### August 22nd / 23rd, 2020:
+
+This weekend I have been trying to teach myself the bash scripting language. Eventually I will need to write an install script that can get everything set up on the Pi or Server. 
+
 ##### August 21st, 2020:
 
 The multiprocessing Pipe() worked like a charm. The Pipe() differs from the Queue() in that is has two distinct "ends". Each has a send() and recv() method that connects to the other end. Queues, on the other hand, have a single entry/exit point which was causing the problem from yesterday. I now have it set up such that a KeyboardInterrupt will trigger in all processes, but the main process can still shut down all worker processes if an error occurs. I have also added an option called automatic_shutdown that will automatically shut down a host node when all workers have terminated. At the moment, this option is only activated on the Client. The Server will still remain active, waiting for new connections. 
