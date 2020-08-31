@@ -33,6 +33,10 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### August 31st, 2020:
+
+I was finally able to solve the issue where the EEG stream was losing its column data - took awhile to track down but it turns out it was a simple scope error. I also cleaned up the time axis display on the EEG stream. I ran into an issue where sockets seemed to be shutting themselves down redundantly too many times in a row; even though this wasn't a problem because I have a number of catches for that, it was producing a lot of error messages. Turns out that the problem was actually that some sockets were continuing to run on the main Server host even after they had been passed to the Worker process, and shutting down the connection resulted in both sockets terminating. Once I identified that, it was a easy fix. There are still some situations where a socket might be redundantly shutdown (if the program itself is terminated at the same time as a socket broke off the connection), so I still have catches for redundancy.
+
 ##### August 22nd / 23rd, 2020:
 
 This weekend I have been trying to teach myself the bash scripting language. Eventually I will need to write an install script that can get everything set up on the Pi or Server. 
