@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" serverName="data-hub">
+  <component name="PublishConfigData" autoUpload="Always" serverName="data-hub">
     <serverData>
       <paths name="data-hub">
         <serverdata>
           <mappings>
-            <mapping deploy="/home/ubuntu/data-hub/main/" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/home/ubuntu/data-hub/main" local="$PROJECT_DIR$/main" web="/" />
           </mappings>
         </serverdata>
       </paths>
     </serverData>
+    <option name="myAutoUpload" value="ALWAYS" />
   </component>
 </project>

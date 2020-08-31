@@ -2,7 +2,7 @@ from io import BytesIO
 import socket
 import traceback
 import threading
-from threading import Thread, Lock, Condition, Condition, current_thread
+from threading import Thread, Lock, Condition, current_thread
 from multiprocessing import Process, current_process, Pipe
 from requests import get
 from uuid import uuid4
@@ -87,9 +87,10 @@ class Base:
         """ display a log message """
         if Base.last_msg == msg:  # same message
             return  # Ignore duplicate messages
-        with Base.print_lock:
-            Base.last_msg = msg
-            print(msg)
+        Base.print_lock.acquire()
+        Base.last_msg = msg
+        print(msg)
+        Base.print_lock.release()
 
     def log(self, message):
         """ Outputs a log message """
@@ -202,7 +203,6 @@ class SocketHandler(Base):
                         self.node.HANDLE(request, threaded=True)   # allow the request to be handled by the parent Connection
         except Exception as e:
             self.throw("Unexpected Exception in running socket: {}".format(self.name), e, trace=True)
-        finally:
             self.shutdown()
 
     def parse_request(self):
@@ -475,7 +475,7 @@ class SocketHandler(Base):
         except (OSError, Exception) as e:
             self.debug("Error closing socket '{}': {}".format(self.name, e))
         finally:
-            self.debug("Socket '{}' Closed on '{}' (IP: {})".format(self.name, self.node.name, self.peer), 2)
+            self.debug("Socket '{}' Closed on '{}' (ID: {})".format(self.name, self.node.name, self.id), 2)
             self.node.remove_socket(self.id)  # call the parent connection's method to remove this socket
 
 
@@ -494,7 +494,10 @@ class PipeHandler(Base):
 
     def send(self, payload):
         """ Send a message through the process pipe """
-        self.pipe.send(payload)
+        try:
+            self.pipe.send(payload)
+        except:
+            self.debug("Unable to send message through pipe {}".format(self.name), 2)
 
     def receive(self):
         """ Wait for then return a message from the pipe queue """
@@ -597,7 +600,7 @@ class Node(Base):
     def add_socket(self, socket_handler):
         """ Add a new SocketHandler the index and return the ID"""
         self.sockets[socket_handler.id] = socket_handler
-        self.debug("Added socket '{}' to '{}'".format(socket_handler.name, self.name), 1)
+        self.debug("Added socket '{}' to '{}'".format(socket_handler.name, self.name), 2)
         return socket_handler.id
 
     def remove_socket(self, socket_id):
@@ -608,13 +611,13 @@ class Node(Base):
         If SocketHandler.halt() is called, it is assumed that the live raw_socket is to be re-used with another handler.
         """
         handler = self.sockets.get(socket_id)
-        if not handler:  # not found
-            self.debug("Failed to remove socket (ID: {}) from {}: Not found in socket dictionary".format(socket_id, self.name), 1)
+        if not handler:  # not found - socket has already been removed or never existed
+            self.debug("Redundantly removed Socket (ID: {}) from {}".format(socket_id, self.name), 2)
             return
         if not handler.exit:  # exit status on socket not set
-            self.throw("Attempted to remove a live SocketHandler '{}' from node '{}'".format(handler.name, self.name), trace=False)
+            self.throw("Attempted to remove a live SocketHandler '{}' (ID: {}) from node '{}'".format(handler.name, socket_id, self.name), trace=False)
             return
-        self.debug("Removing socket '{}' from node '{}'".format(handler.name, self.name), 1)
+        self.debug("Removing socket '{} (ID: {})' from node '{}'".format(handler.name, socket_id, self.name), 2)
         del self.sockets[socket_id]  # remove it from the socket index
 
     def transfer_socket(self, pipe, raw_socket, request=None):
@@ -626,7 +629,7 @@ class Node(Base):
         """
         package = SocketPackage(raw_socket, request)
         pipe.send(package)
-        self.debug("Node '{}' sent a socket to pipe '{}'".format(self.name, pipe.name), 2)
+        self.debug("'{}' sent a socket to '{}'".format(self.name, pipe.name), 2)
 
     def receive_socket(self, package):
         """
@@ -699,7 +702,7 @@ class HostNode(Node):
     <auto> Boolean: whether to automatically shutdown when all worker nodes have shutdown.
     """
     def __init__(self, name, auto=True):
-        super().__init__(name, name)  # name and device name are the same
+        super().__init__(name=name, device=name)  # name and device name are the same
         self.automatic_shutdown = auto
         self.pipes = {}   # index of Pipe objects, each connecting to a WorkerConnection
 
@@ -710,13 +713,15 @@ class HostNode(Node):
         Return the new Pipe.
         """
         host_conn, worker_conn = Pipe()  # multiprocessing duplex connections (doesn't matter which)
-        worker_process = Process(target=worker.run, name=worker.name, daemon=True)  # process for new worker
+
+        # worker knows host name but not the host process
+        worker_pipe = PipeHandler(self.name, host_conn)
+
+        # process for new worker
+        worker_process = Process(target=worker.run, args=(worker_pipe,), name=worker.name, daemon=True)
 
         # host knows worker name and process. Pipe is indexed by the worker ID
         self.pipes[worker.id] = PipeHandler(worker.name, worker_conn, worker_process)
-
-        # worker knows host name but not the host process
-        worker.pipe = PipeHandler(self.name, host_conn)
 
         # new thread to act as main thread for process
         Thread(target=worker_process.start, name='WorkerMainThread', daemon=True).start()
@@ -780,19 +785,21 @@ class WorkerNode(Node):
     <source> is the socket that connects to the Raspberry Pi that initiated the connection.
     <server> is the server object controlling this handler, which will pass on all subsequent socket connections
     """
-    def __init__(self, naeee):
+    def __init__(self):
         super().__init__()
         self.source_id = None  # ID of the main data-streaming socket
         self.pipe = None  # Pipe object to the HostNode
 
-    def run(self):
+    def run(self, pipe):
         """
         Main entry point.
         Run this Worker on a new process.
-        Self.pipe must be a PipeHandler leading to the host node.
+        pipe must be a PipeHandler leading to the host node.
         Should be run on it's own Process's Main Thread
         """
-        self.debug("Started new worker '{}'".format(self.name), 1)
+        self.pipe = pipe
+        self.device = self.pipe.name
+        self.debug("Started new worker '{}' on '{}'".format(self.name, self.device), 1)
         Thread(target=self._run, name='RUN', daemon=True).start()
         Thread(target=self._run_pipe, name='PIPE', daemon=True).start()
         self.run_exit_trigger(block=True)  # Wait for exit status on new thread
@@ -801,7 +808,7 @@ class WorkerNode(Node):
         """ Starts running all sockets, if any. """
         # run each socket (on a new thread)
         for handler in list(self.sockets.values()):
-            self.debug("Running socket '{}' on '{}'".format(handler.name, self.name), 1)
+            self.debug("Running socket '{}' on '{}'".format(handler.name, self.name), 2)
             handler.run()
 
     def _run_pipe(self):
@@ -817,14 +824,14 @@ class WorkerNode(Node):
             if type(message) == SocketPackage:  # A PickledRequest object containing a request and a new socket
                 self.receive_socket(message)
             elif message == 'SHUTDOWN':  # Host Node signalled to shut down
-                self.debug("Worker '{}' received SHUTDOWN from Host '{}'".format(self.name, self.pipe.name))
+                self.debug("Worker '{}' received SHUTDOWN from Host '{}'".format(self.name, self.pipe.name), 2)
                 self.shutdown()
                 return
             elif message is None:
                 self.debug("Pipe to '{}' shut down unexpectedly on node '{}'".format(self.pipe.name, self.name), 2)
                 return
             else:
-                self.debug("Worker Node received unknown signal '{}' from Host Node '{}'".format(message, self.pipe.name))
+                self.throw("Worker Node received unknown signal '{}' from Host Node '{}'. This really shouldn't have happened.".format(message, self.pipe.name))
 
     def set_source(self, raw_socket):
         """
@@ -861,7 +868,7 @@ class Server(HostNode):
     """
     def __init__(self, port, name, debug=0):
         super().__init__(name, auto=False)
-        self.set_debug(2)
+        self.set_debug(1)
 
         self.ip = ''          # ip to bind to
         self.host_ip = ''     # public ip
@@ -897,14 +904,14 @@ class Server(HostNode):
         try:  # Bind socket to ip and port
             self.listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # allow socket to reuse address
             self.listener.bind((self.ip, self.port))  # bind to host address
-            self.debug("Server Socket Bound to *:{}".format(self.port), 1)
+            self.debug("Server Socket Bound to *:{}".format(self.port), 2)
         except Exception as e:
             self.throw("Failed to bind server socket to *:{}".format(self.port), e)
             return
 
         try:  # Set as listening connection
             self.listener.listen()
-            self.debug("Set to listening socket", 1)
+            self.debug("Set to listening socket", 2)
         except Exception as e:
             self.throw("Failed to set as listening socket", e)
             return
@@ -916,7 +923,7 @@ class Server(HostNode):
         try:
             new_socket, (ip, port) = self.listener.accept()  # wait for a new connection
             new_socket.setblocking(True)
-            self.debug("New Connection From: {}:{}".format(ip, port), 1)
+            self.debug("New Connection From: {}:{}".format(ip, port), 2)
         except Exception as e:
             self.throw("Failed while accepting new connection", e, trace=True)
             return
@@ -956,6 +963,8 @@ class Server(HostNode):
             pipe = self.pipes.get(ID)  # Connection with this ID
             if pipe:  # Connection exists
                 self.transfer_socket(pipe, request.origin, request)  # transfer origin socket and request to the existing WorkerConnection
+                request.origin.halt()  # stop handler
+                self.remove_socket(request.origin.id)  # remove handler from host index
                 return
             else:  # Worker doesn't exist
                 self.log("A client requested an invalid ID ({}). The Server will attempt to handle the request. Request: \n{}".format(ID, request))
@@ -1086,7 +1095,7 @@ class Client(HostNode):
     """
     def __init__(self, ip, port, name, debug=0):
         super().__init__(name, auto=True)
-        self.set_debug(2)
+        self.set_debug(1)
 
         self.ip = ip  # server ip address to connect to
         self.port = port  # server port to connect through
@@ -1125,16 +1134,16 @@ class Client(HostNode):
         """ Create socket object and try to connect it to the server, then run the Node class on a new process """
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
         try:  # connect socket to given address
-            self.debug("Attempting to connect to server", 1)
+            self.debug("Attempting to connect to server", 2)
             sock.connect((self.ip, self.port))
             sock.setblocking(True)
-            self.debug("Socket Connected", 1)
+            self.debug("Socket Connected", 2)
         except Exception as e:
             self.throw("Failed to connect socket to server:", e)
             return False
 
         worker = NodeClass()  # create an instance of this node class
-        worker.set_source(sock)  # set this socket as a datasource socket for the client
+        worker.set_source(sock)  # set this socket as a data-source socket for the client
         self.run_worker(worker)  # run the new worker node on a parallel process
 
 
@@ -1344,12 +1353,13 @@ class GraphStream:
             mode=mode,
             max_size=domain,
             method='GET',
-            if_modified=True)  # if_modified ignores responses sent with code 304 and not cached
+            if_modified=True)  # if_modified ignores responses sent with code 304 and not cached.
         # TODO: make domain a measure of time on the x axis rather than a number of points?
 
         # set the source of all plots in the layout
         self.set_source(layout)
         self.layout = layout
+
 
         # Holds JSON data ready to be sent to the AjaxDataSource.
         # Allow one read per write. All other reads return None.

@@ -10,8 +10,8 @@ class VideoStreamer(Streamer):
         self.handler = 'VideoHandler'
 
         self.camera = None             # picam object
-        self.resolution = '640x480'  # resolution of stream
-        self.framerate = 24            # camera framerate
+        self.resolution = '200x200'  # resolution of stream
+        self.framerate = 10            # camera framerate
 
         self.frames_sent = 0    # number of frames sent
         self.time = 0           # time of START
@@ -167,12 +167,13 @@ class EEGStreamer(Streamer):
         resp.add_request("INGEST")
         while self.streaming and not request.origin.exit:
             data = {}
-            data['time'] = []  # time data
             for channel in self.eeg_channel_names:  # lists of channel data
                 data[channel] = []
 
             raw_data = self.board.get_board_data()
-            data['time'] = list(raw_data[self.time_channel])
+
+            # convert from epoch time to relative time since session start
+            data['time'] = list(raw_data[self.time_channel]-self.time)
 
             for i, j in enumerate(self.eeg_channel_indexes):
                 data[self.eeg_channel_names[i]] = list(raw_data[j]/1000000)  # convert from uV to V
@@ -182,7 +183,7 @@ class EEGStreamer(Streamer):
             resp.add_header('frames-sent', self.frames_sent)
             resp.add_content(data)
             self.send(resp, request.origin)
-            time.sleep(0.2)  # wait a bit for the board to collect another chunk of data
+            time.sleep(0.3)  # wait a bit for the board to collect another chunk of data
 
     def STOP(self, request):
         """ Request method STOP """

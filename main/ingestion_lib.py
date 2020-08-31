@@ -94,8 +94,8 @@ class SenseHandler(Handler):
         lay = layout([[humid, temp], [press, orient]])
         update_url = '/update?id={}'.format(self.id)
 
-        # pass layout into GraphStream object
-        self.graph = GraphStream(lay, update_url, interval=50, domain=100)
+        # pass layout into GraphStream object, polling interval in ms, domain of x values to display
+        self.graph = GraphStream(lay, update_url, interval=100, domain=100)
 
     def INGEST(self, request):
         """ Handle table data received from Pi """
@@ -130,6 +130,13 @@ class EEGHandler(Handler):
         self.frames_received = 0
         self.channels = []  # list of channel name strings
 
+        # A list of channel names is required, so self.graph is initialized in the INIT method
+        self.graph = None
+
+    def INIT(self, request):
+        """ Handles INIT request from client """
+        self.channels = request.header['channels'].split(',')
+
         # Create Bokeh Layout
         tools = ['save']
         colors = viridis(len(self.channels))  # viridis color palette
@@ -141,20 +148,16 @@ class EEGHandler(Handler):
             eeg_list.append(eeg)
 
         lay = layout(eeg_list)
-        update_url = 'http://{}/stream/update?id={}'.format(self.server.host, self.id)
+        update_url = '/update?id={}'.format(self.id)
 
         # pass layout into GraphStream object
-        self.graph = GraphStream(lay, update_url, interval=50, domain=1000)
-
-    def INIT(self, request):
-        """ Handles INIT request from client """
-        self.channels = request.header['channels'].split(',')
+        self.graph = GraphStream(lay, update_url, interval=100, domain=1000)
 
     def INGEST(self, request):
         """ Handle table data received from Pi """
         data = request.content.decode(request.encoding)  # raw JSON data
-        self.frames_received += 1
         self.graph.buffer.write(data)
+        self.frames_received += 1
         self.debug("Ingested EEG data (frame {})".format(self.frames_received), 3)
 
     def GET(self, request):
