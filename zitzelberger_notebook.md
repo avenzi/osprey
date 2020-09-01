@@ -33,6 +33,16 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### September 1st, 2020:
+
+Today I fixed an issue that I've been having for some time regarding requests being sent unpredictably. I have been looking for a way to control whether a request is sent from the browser on a new socket or an old one, but I still have not identified a way to do that. Today I decided to get around this problem by allowing sockets to travel back from a Worker Node to a Host Node, if need be. That way, a socket can be transferred back and forth between worker and host when needed. I still think this is inefficient, but this transferring doesn't happen as often as, say the EEG stream polling the server 10 times per second. 
+
+I also then tried to tack the issue where two tabs sometimes cannot view the same video stream at once. I thought this this indicated a problem with the DataBuffer holding the images, so I rewrote it so that any number of threads can read from the DataBuffer once each, rather than only one read per write. However this did not solve the problem, and I am getting the same behavior as before: 
+
+Using the "duplicate tab" feature does not work, and the server doesn't even receive a new request. I first suspected that this had to do with cache because reloading the page in the dev console fixes it, but none of the cache-control settings seemed to help. I think there might also be a problem with the way in which a worker node received a socket. Tomorrow I will try running the receive_socket() method on a new thread so hopefully the _run_pipe() method doesn't block, preventing it from getting new sockets (which might be the problem).
+
+When working on this, I also realized that I need to change how the NonBlockingDataBuffer functions. I need to allow multiple reads from different threads for that too, and right now the data is overwritten after each successful read. That should be easier, through.
+
 ##### August 31st, 2020:
 
 I was finally able to solve the issue where the EEG stream was losing its column data - took awhile to track down but it turns out it was a simple scope error. I also cleaned up the time axis display on the EEG stream. I ran into an issue where sockets seemed to be shutting themselves down redundantly too many times in a row; even though this wasn't a problem because I have a number of catches for that, it was producing a lot of error messages. Turns out that the problem was actually that some sockets were continuing to run on the main Server host even after they had been passed to the Worker process, and shutting down the connection resulted in both sockets terminating. Once I identified that, it was a easy fix. There are still some situations where a socket might be redundantly shutdown (if the program itself is terminated at the same time as a socket broke off the connection), so I still have catches for redundancy.
