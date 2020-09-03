@@ -45,8 +45,9 @@ class VideoStreamer(Streamer):
         resp = Request()  # new response
         resp.add_request("INGEST")
 
+        lock = self.data_buffer.get_read_lock()
         while self.streaming and not request.origin.exit:
-            data = self.data_buffer.read()
+            data = self.data_buffer.read(lock)
             self.frames_sent += 1
             resp.add_header('frames-sent', self.frames_sent)
             resp.add_header('time', time.time()-self.time)  # time since start

@@ -33,6 +33,12 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### September 3rd, 2020:
+
+I've done everything I thought of yesterday, and the problem still isn't solved. I also tried to repeat the bug on a different browser, and there was no sign of it. I now think this may be specific to firefox, or at least not all browser. Regardless, this means It may not be a problem with my code. The main reason I was concerned is because I thought it might prevent both a browser stream and a neural network from receiving the data at the same time, but now that the evidence indicated it's just a browser issue, I'm not as worried. This problem is still on my list of bugs to fix, but now is much lower in priority.
+
+Next, I need to be able to test on multiple Pis, so I started trying to figure that out. On my local gateway page, I have the option of forwarding ports on my network, but when I tried to forward port 22, I was given an error saying that I could not forward the same port on multiple devices. I spent the next few hours trying to set a static IP on the Pis with no luck. After giving up on that, I finally went back to the gateway page and settled on forwarding port 2222 and 2223 to port 22 on two different Pis. This is not an idea solution, and I still cannot guarantee static IPs for the Pis, but it will have to do for now.
+
 ##### September 1st, 2020:
 
 Today I fixed an issue that I've been having for some time regarding requests being sent unpredictably. I have been looking for a way to control whether a request is sent from the browser on a new socket or an old one, but I still have not identified a way to do that. Today I decided to get around this problem by allowing sockets to travel back from a Worker Node to a Host Node, if need be. That way, a socket can be transferred back and forth between worker and host when needed. I still think this is inefficient, but this transferring doesn't happen as often as, say the EEG stream polling the server 10 times per second. 

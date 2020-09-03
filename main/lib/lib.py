@@ -405,7 +405,7 @@ class SocketHandler(Base):
             request = Request()
             request.add_response(200)
             request.add_header('Age', 0)
-            request.add_header('Cache-Control', 'no-cache, private')
+            #request.add_header('Cache-Control', 'no-cache')
             # res.add_header('Connection', 'keep-alive')
 
             chunk_header += b'content-type:image/jpeg\r\n'  # when sending to browser, always use jpeg image type in the chunk headers
@@ -415,9 +415,10 @@ class SocketHandler(Base):
         self.send(request)
 
         try:
-            self.debug("Started multipart stream", 2)
+            self.debug("Started multipart stream", 1)
+            lock = buffer.get_read_lock()
             while not self.exit:
-                data = buffer.read()
+                data = buffer.read(lock)
                 length_header = "Content-Length:{}\r\n".format(len(data)).encode(self.encoding)  # content length + blank line
                 packet = chunk_header + length_header + b'\r\n' + data + b'\r\n'
                 self.send_raw(packet)
@@ -620,15 +621,15 @@ class Node(Base):
         self.debug("Removing socket '{} (ID: {})' from node '{}'".format(handler.name, socket_id, self.name), 2)
         del self.sockets[socket_id]  # remove it from the socket index
 
-    def transfer_socket(self, pipe, raw_socket, request=None):
+    def transfer_socket(self, pipe, socket_handler, request=None):
         """
         Send a live raw socket through a process pipe.
         Packages the socket and optional request in order to send it through the pipe.
-        This method assumes that the SocketHandler previously associated with this socket
-            (if any) has already been halted and removed.
         """
-        package = SocketPackage(raw_socket, request)
-        pipe.send(package)
+        request.origin.halt()  # stop handler first
+        package = SocketPackage(socket_handler, request)  # package the raw socket and request
+        pipe.send(package)  # send package through pipe
+        self.remove_socket(request.origin.id)  # remove handler from host index
         self.debug("'{}' sent a socket to '{}'".format(self.name, pipe.name), 2)
 
     def receive_socket(self, package):
@@ -645,7 +646,7 @@ class Node(Base):
                 handler.name = 'DATA-SOURCE'
             else:
                 handler.name = 'REQUESTER'
-            self.HANDLE(request, False)  # handle the request first (not threaded)
+            self.HANDLE(request)  # handle the request on a new thread
 
         self.add_socket(handler)  # add this handler to the socket index
         handler.run()  # then start handling other requests from the socket (on a new thread)
@@ -868,7 +869,7 @@ class Server(HostNode):
     """
     def __init__(self, port, name, debug=0):
         super().__init__(name, auto=False)
-        self.set_debug(1)
+        self.set_debug(2)
 
         self.ip = ''          # ip to bind to
         self.host_ip = ''     # public ip
@@ -963,8 +964,6 @@ class Server(HostNode):
             pipe = self.pipes.get(ID)  # Connection with this ID
             if pipe:  # Connection exists
                 self.transfer_socket(pipe, request.origin, request)  # transfer origin socket and request to the existing WorkerConnection
-                request.origin.halt()  # stop handler
-                self.remove_socket(request.origin.id)  # remove handler from host index
                 return
             else:  # Worker doesn't exist
                 self.log("A client requested an invalid ID ({}). The Server will attempt to handle the request. Request: \n{}".format(ID, request))
@@ -1063,7 +1062,7 @@ class Server(HostNode):
                 self.log("A client requested unknown path: {}".format(request.path))
 
         self.send(response, request.origin)  # send response back to requesting socket
-        self.debug("Server handled a GET request for {}".format(request.path), 1)
+        self.debug("Server handled a GET request for {}".format(request.path), 2)
 
     def OPTIONS(self, request):
         """ Responds to an OPTIONS request """
@@ -1075,8 +1074,27 @@ class Server(HostNode):
 
 class Handler(WorkerNode):
     """
-    To be used on the server to handle requests send by a Streamer
+    Worker node for the Server
+    Handles requests sent by Streamers and Browser connections
     """
+
+    def HANDLE(self, request, threaded=True):
+        """
+        Overwrites default method to handle incoming requests
+        If the ID of a request does not match this worker ID or is not found
+            (and it wasn't sent from a data-collection client, indicated by the user-agent header),
+            send the socket back to the host process to be handled
+        """
+        ID = request.queries.get('id')
+
+        # ID matches this worker or the request comes from a data-collection client
+        if ID == self.id or request.header.get('user-agent') == 'STREAMER':
+            super().HANDLE(request, threaded=threaded)  # handle the request
+
+        else:  # ID doesn't match or is not found, and not from a data-collection client
+            self.debug("{} Received different ID. Sending back to host".format(self.name))
+            self.transfer_socket(self.pipe, request.origin, request)
+
     def INGEST(self, request):
         """
         Overwritten in derived classes.
@@ -1154,6 +1172,14 @@ class Streamer(WorkerNode):
     def __init__(self):
         super().__init__()
         self.handler = None  # class name of the handler to use on the server
+
+    def send(self, request, socket_handler):
+        """
+        Overwriting default send method
+        Adds a user-agent header that identifies this request as being from a client streamer.
+        """
+        request.add_header('user-agent', 'STREAMER')
+        super().send(request, socket_handler)
 
     def _run(self):
         """ Pre-extends the default method to automatically send the sign-on request """
@@ -1305,17 +1331,38 @@ class DataBuffer(object):
     """
     def __init__(self):
         self.data = b''
-        self.condition = Condition()
+        self.read_conditions = []  # list of all conditions handed out
+        self.write_condition = Condition()
 
-    def read(self):
-        with self.condition:
-            self.condition.wait()
+    def get_read_lock(self):
+        """ Returns a condition object that must be passed into the read() method. """
+        cond = Condition()
+        self.read_conditions.append(cond)
+        return cond
+
+    def read(self, condition):
+        """
+        Waits with the given condition object until notified,
+            then returns the latest piece of data.
+        Any number of conditions can read from the data at a time,
+            but each only once until notified again.
+        """
+        with condition:
+            condition.wait()
             return self.data
 
     def write(self, new_data):
-        with self.condition:
+        """
+        Waits on a single write condition.
+        Only one write is allowed at a time
+        """
+        with self.write_condition:
             self.data = new_data
-            self.condition.notify_all()  # wake any waiting threads
+
+            # wake all waiting read-conditions
+            for condition in self.read_conditions:
+                with condition:  # get the lock
+                    condition.notify_all()  # wake
 
 
 class NonBlockingBuffer(object):
