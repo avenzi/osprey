@@ -1,7 +1,7 @@
 import json
 import inspect
-from lib import Client
-import collection_lib
+from lib.pi_lib import Client
+import streamers
 
 # get configured settings
 try:
@@ -29,7 +29,7 @@ if not(ip and port and name and handlers):
     if not handlers:
         config['HANDLERS'] = {}
         # get all classes in collection_lib
-        class_names = [member[0] for member in inspect.getmembers(collection_lib, inspect.isclass) if member[1].__module__ == 'collection_lib']
+        class_names = [member[0] for member in inspect.getmembers(streamers, inspect.isclass) if member[1].__module__ == 'collection_lib']
         print("\n> Answer Y/N to each of the following\n  to select which Handler classes\n  are to be used for this client.")
         for name in class_names:
             config['HANDLERS'][name] = input("Use {}? ".format(name)).upper()

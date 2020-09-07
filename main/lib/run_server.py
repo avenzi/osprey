@@ -1,5 +1,5 @@
 import json
-from lib import Server
+from lib.server_lib import Server
 
 # get configured settings
 with open('config.json') as file:

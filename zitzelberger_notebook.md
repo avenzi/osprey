@@ -33,6 +33,10 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### September 7th, 2020:
+
+Today I've been trying to figure out how to get a Fourier analysis to display along with the EEG data. In principle, I just need to perform an FFT on the server and sent that extra data along with the EEG data to the browser. The problem is that I now need to create a new DataBuffer that holds a specified amount of data (which can ideally be modified in real-time) from which to calculate the FFT. Additionally, I need to rewrite the Bokeh graph streamer class to accommodate more than one AjaxDataSource. I've started working on this today, and should have it done by the end of the week.
+
 ##### September 3rd, 2020:
 
 I've done everything I thought of yesterday, and the problem still isn't solved. I also tried to repeat the bug on a different browser, and there was no sign of it. I now think this may be specific to firefox, or at least not all browser. Regardless, this means It may not be a problem with my code. The main reason I was concerned is because I thought it might prevent both a browser stream and a neural network from receiving the data at the same time, but now that the evidence indicated it's just a browser issue, I'm not as worried. This problem is still on my list of bugs to fix, but now is much lower in priority.
