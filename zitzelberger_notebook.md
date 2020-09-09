@@ -33,6 +33,10 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### September 8th, 2020:
+
+I've written a GraphRingBuffer class that will act as a circular buffer for EEG data, keeping a specified amount of data in the buffer to be used for the FFT. I wrote this buffer to be able to dynamically change size, so that I can hopefully add some interactivity to the browser FFT display. I believe that will have to be done using Bokeh widgets, and that's a lower priority then getting the FFT working itself.
+
 ##### September 7th, 2020:
 
 Today I've been trying to figure out how to get a Fourier analysis to display along with the EEG data. In principle, I just need to perform an FFT on the server and sent that extra data along with the EEG data to the browser. The problem is that I now need to create a new DataBuffer that holds a specified amount of data (which can ideally be modified in real-time) from which to calculate the FFT. Additionally, I need to rewrite the Bokeh graph streamer class to accommodate more than one AjaxDataSource. I've started working on this today, and should have it done by the end of the week.
