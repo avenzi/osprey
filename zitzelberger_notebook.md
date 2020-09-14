@@ -33,6 +33,10 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### September 13th, 2020:
+
+I have implemented the basic structure of a FFT display alongside the EEG stream, and so far it seems to be going well. I had a little trouble getting the Bokeh slider widget to work, but it turns out that you need to import the Bokeh widget JS script separately from the base release in the HTML for the plot. 
+
 ##### September 8th, 2020:
 
 I've written a GraphRingBuffer class that will act as a circular buffer for EEG data, keeping a specified amount of data in the buffer to be used for the FFT. I wrote this buffer to be able to dynamically change size, so that I can hopefully add some interactivity to the browser FFT display. I believe that will have to be done using Bokeh widgets, and that's a lower priority then getting the FFT working itself.
