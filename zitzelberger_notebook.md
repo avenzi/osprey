@@ -33,6 +33,10 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### September 14th, 2020:
+
+Dr. Ghassemi wants me to implement a spectrographic analysis as well. That shouldn't be too hard - I just have to use my RingBuffer class for the FFT data as well, and display it in a heat map. I fine-tuned the FFT today and committed the latest working version. Before I get started on the spectrograph, though, I want to implement some better filtering and de-noising using Brainflow.
+
 ##### September 13th, 2020:
 
 I have implemented the basic structure of a FFT display alongside the EEG stream, and so far it seems to be going well. I had a little trouble getting the Bokeh slider widget to work, but it turns out that you need to import the Bokeh widget JS script separately from the base release in the HTML for the plot. 
