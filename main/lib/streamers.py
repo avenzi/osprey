@@ -1,7 +1,8 @@
 import time
-import msgpack as mp
 import json
-from lib import Streamer, Request, DataBuffer
+
+from pi_lib import Streamer, Request
+from lib import DataBuffer
 
 
 class VideoStreamer(Streamer):
@@ -152,6 +153,7 @@ class EEGStreamer(Streamer):
         # First send some initial information
         req = Request()
         req.add_request('INIT')
+        req.add_header('sample_rate', self.freq)
         req.add_header('channels', ','.join(self.eeg_channel_names))
         self.send(req, request.origin)
 
@@ -184,7 +186,7 @@ class EEGStreamer(Streamer):
             resp.add_header('frames-sent', self.frames_sent)
             resp.add_content(data)
             self.send(resp, request.origin)
-            time.sleep(0.3)  # wait a bit for the board to collect another chunk of data
+            time.sleep(0.2)  # wait a bit for the board to collect another chunk of data
 
     def STOP(self, request):
         """ Request method STOP """

@@ -4,7 +4,8 @@
 <head>
     <meta charset="utf-8">
     <title>Pi Stream</title>
-    <script type="text/javascript" src="https://cdn.pydata.org/bokeh/release/bokeh-2.1.1.min.js"></script>
+    <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-2.1.1.min.js"></script>
+    <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.1.1.min.js"></script>
     <script type="text/javascript">Bokeh.set_log_level("info");</script>
 </head>
 
@@ -17,15 +18,15 @@
 
 <script type="text/javascript">
     function get_plot() {
-        var anHttpRequest = new XMLHttpRequest();
-        anHttpRequest.onreadystatechange = function() {
-            if (anHttpRequest.readyState == 4 && anHttpRequest.status == 200)
-                embed_plot(anHttpRequest.responseText);  // once data is received, embed the plot
+        var req = new XMLHttpRequest();
+        req.onreadystatechange = function() {
+            if (req.readyState == 4 && req.status == 200)
+                embed_plot(req.responseText);  // once data is received, embed the plot
         }
         url = window.location.pathname
         queries = window.location.search
-        anHttpRequest.open("GET", url+'/plot'+queries, true);
-        anHttpRequest.send(null);   // send GET request for plot JSON
+        req.open("GET", url+'/plot'+queries, true);
+        req.send(null);   // send GET request for plot JSON
         console.log('sent request: '+url+'/plot'+queries)
     }
 

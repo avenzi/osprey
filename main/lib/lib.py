@@ -1,22 +1,16 @@
-from io import BytesIO
-import socket
-import traceback
-import threading
-from threading import Thread, Lock, Condition, current_thread
+from threading import Thread, Lock, Condition, Event, current_thread
 from multiprocessing import Process, current_process, Pipe
-from requests import get
 from uuid import uuid4
-import inspect
-import time
+import traceback
+import socket
 from datetime import datetime
+import time
 import json
-import os
-
-from bokeh.models import AjaxDataSource, CDSView
-from bokeh.embed import json_item
 
 
-# Base Classes
+PAGES_DIR = '../pages'
+
+
 class Base:
     """
     Base class from which all others inherit.
@@ -109,7 +103,9 @@ class Base:
             err += "CAUSE: {}\n".format(cause)
         self.display(err)
         if trace:
+            Base.print_lock.acquire()
             traceback.print_exc()
+            Base.print_lock.release()
 
     def generate_uuid(self):
         """ Return a UUID as a URN string """
@@ -244,6 +240,7 @@ class SocketHandler(Base):
                     valid = False
         if not valid:
             self.throw("Blocked Connection from banned source:\n   Address: {}\n   Host: {}\n   User-Agent: {}".format(self.peer, host_string, agent_string))
+            self.debug("FULL HEADER: {}".format(self.request.header))
         return valid
 
     def read(self, length, line=False, decode=True):
@@ -858,346 +855,6 @@ class WorkerNode(Node):
         self.pipe.send('SHUTDOWN')  # Signal to the server that this connection is shutting down
 
 
-# Server Side
-class Server(HostNode):
-    """
-    Handles all incoming connections to the server.
-    INIT requests from new connections create a new WorkerConnection object to handle all subsequent requests.
-    GET requests from browsers are handled to server server page contents.
-    Any other request with a query matching one of the current Connections is handed over to that Connection.
-    Call run() to start.
-    """
-    def __init__(self, port, name, debug=0):
-        super().__init__(name, auto=False)
-        self.set_debug(2)
-
-        self.ip = ''          # ip to bind to
-        self.host_ip = ''     # public ip
-        self.port = port      # port to bind to
-        self.listener = None  # socket that accepts new connections
-
-    def run(self):
-        """
-        Main entry point.
-        Must be called on the main thread of a process.
-        Calls _run on a new thread and waits for exit status.
-        Blocks until exit status set.
-        """
-        Thread(target=self._run, name=self.name+'-RUN', daemon=True).start()
-        self.run_exit_trigger(block=True)  # block main thread until triggered
-
-    def _run(self):
-        """
-        Creates server socket and listens for new connections.
-        New sign-on requests from clients create new worker node.
-        Handles server-specific requests, on the main process, and passes
-            client-specific requests onto the respective worker processes
-        """
-        self.host_ip = '{}:{}'.format(get('http://ipinfo.io/ip').text.strip(), self.port)
-        self.log("Server Host: {}".format(self.host_ip))  # show this machine's public ip
-        self.create_listener()  # create listener socket
-        while not self.exit:
-            self.accept()  # run accept-loop
-
-    def create_listener(self):
-        """ Create a listening socket """
-        self.listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
-        try:  # Bind socket to ip and port
-            self.listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # allow socket to reuse address
-            self.listener.bind((self.ip, self.port))  # bind to host address
-            self.debug("Server Socket Bound to *:{}".format(self.port), 2)
-        except Exception as e:
-            self.throw("Failed to bind server socket to *:{}".format(self.port), e)
-            return
-
-        try:  # Set as listening connection
-            self.listener.listen()
-            self.debug("Set to listening socket", 2)
-        except Exception as e:
-            self.throw("Failed to set as listening socket", e)
-            return
-
-        self.log("Listening for connections...")
-
-    def accept(self):
-        """ Accepts new connections and runs a new handler for each """
-        try:
-            new_socket, (ip, port) = self.listener.accept()  # wait for a new connection
-            new_socket.setblocking(True)
-            self.debug("New Connection From: {}:{}".format(ip, port), 2)
-        except Exception as e:
-            self.throw("Failed while accepting new connection", e, trace=True)
-            return
-
-        try:
-            new_handler = SocketHandler(new_socket, self)
-            sock_id = self.add_socket(new_handler)  # add new socket to index and run it
-            self.sockets[sock_id].run()  # run the new socket
-        except Exception as e:
-            self.throw("Failed to handle create new SocketHandler", e, trace=True)
-            return
-
-    def main_page(self):
-        """ Returns the HTML for the main selection page """
-        # TODO: make this be retrieved from a file instead so it can be easily found and modified
-        page = """
-        <html>
-        <head><title>Data Hub</title></head>
-        <body><h1>Stream Selection</h1>
-        """
-        # TODO: Organize connections by host device
-        for id, pipe in self.pipes.items():
-            page += "<p><a href='/stream?id={}'>{}</a></p>".format(id, pipe.name)
-        page += "</body></html>"
-        return page
-
-    def HANDLE(self, request, threaded=True):
-        """
-        Overwrites default method to handle incoming requests
-        When a request would normally be handled, first decide if it should be handled by an existing connection.
-        This is determined by whether a connection ID was specified in the query string of the request.
-        """
-        ID = request.queries.get('id')  # handler ID
-
-        if ID is not None:  # a particular connection was specified to handle this request
-            self.debug("Client requested an ID", 2)
-            pipe = self.pipes.get(ID)  # Connection with this ID
-            if pipe:  # Connection exists
-                self.transfer_socket(pipe, request.origin, request)  # transfer origin socket and request to the existing WorkerConnection
-                return
-            else:  # Worker doesn't exist
-                self.log("A client requested an invalid ID ({}). The Server will attempt to handle the request. Request: \n{}".format(ID, request))
-                self.debug("Valid ID's: {}".format(list(self.pipes.keys())))
-
-        # no ID was specified or ID not found - continue to run on this Server Connection
-        if request.method == "SIGN_ON":  # reserved method for initializing new data stream client connections
-            super().HANDLE(request, threaded=False)  # call SIGN_ON method, and don't read any more from the socket
-        else:
-            super().HANDLE(request, threaded=threaded)  # call the method per usual
-
-    def SIGN_ON(self, request):
-        """
-        Reserved method for clients to sign onto the server. Should not be overwritten.
-        Handle initial sign-on request sent by all streaming clients.
-        Creates a new Connection class specified by the request.
-        Transfers the request to the new Connection class to finish initialization.
-        """
-        class_name = request.header.get('class')
-        device_name = request.header.get('device')
-        display_name = request.header.get('name')
-        if not class_name:
-            self.throw("New data-client SIGN_ON request failed to specify the name of the class with which to handle the request. \
-                The class name must be sent as the 'class' header.", "Request: {}".format(request))
-            return
-        if not device_name:
-            self.debug("New data-client INIT request did not specify the name of the device hosting the connection. Must be sent as the 'device' header.")
-        if not display_name:
-            self.debug("New data-client INIT request did not specify the display name of the connection. Must be sent as the 'name' header. This will default to the Connection class name")
-
-        # Get the right class from ingestion lib
-        import ingestion_lib  # imported here so as to avoid import recursion
-        members = inspect.getmembers(ingestion_lib, inspect.isclass)  # all classes [(name, class), ]
-        StreamerClass = None
-        for member in members:
-            if member[1].__module__ == 'ingestion_lib' and member[0] == class_name:  # class name matches
-                StreamerClass = member[1]
-                break
-        if not StreamerClass:
-            self.throw("Streamer Class '{}' not found in ingestion_lib".format(class_name))
-            return
-
-        start_req = Request()
-        start_req.add_request('START')
-        self.send(start_req, request.origin)  # send start request back to client
-        self.log("New Data-Stream connection from {} on {} ({})".format(display_name, device_name, request.origin.peer))
-
-        worker = StreamerClass()  # create new worker node
-        worker.name = display_name
-        worker.device = device_name
-
-        request.origin.halt()     # stop running this socket
-        worker.set_source(request.origin.socket)  # extract the raw socket and set it as the new source
-        self.remove_socket(request.origin.id)  # remove the handler from this node
-        self.run_worker(worker)   # run the Worker on a new process
-
-    def GET(self, request):
-        """ Handle request from web browser """
-        response = Request()
-
-        if request.path == '/':
-            response.add_response(301)  # redirect
-            response.add_header('Location', '/index.html')  # redirect to index.html
-
-        elif request.path == '/favicon.ico':
-            response.add_response(200)  # success
-            response.add_header('Content-Type', 'image/x-icon')  # favicon
-            with open('pages/favicon.ico', 'rb') as file:  # send favicon image
-                img = file.read()
-                response.add_content(img)
-
-        elif request.path == '/index.html':
-            content = self.main_page().encode(self.encoding)
-            response.add_response(200)  # success
-            response.add_header('Content-Type', 'text/html')
-            response.add_content(content)  # write html content to page
-
-        elif request.path == '/404.html':
-            response.add_response(200)
-            response.add_header('Content-Type', 'text/html')
-            with open('pages/404.html', 'rb') as file:
-                response.add_content(file.read())
-
-        elif request.path == '/invalid_id.html':
-            response.add_response(200)
-            response.add_header('Content-Type', 'text/html')
-            with open('pages/invalid_id.html', 'rb') as file:
-                response.add_content(file.read())
-
-        else:  # unknown path
-            response.add_response(301)  # redirect
-            if request.queries.get('id'):  # id was provided, but was invalid.
-                response.add_header('location', '/invalid_id.html')
-            else:  # no id was provided
-                response.add_header('location', '/404.html')
-                self.log("A client requested unknown path: {}".format(request.path))
-
-        self.send(response, request.origin)  # send response back to requesting socket
-        self.debug("Server handled a GET request for {}".format(request.path), 2)
-
-    def OPTIONS(self, request):
-        """ Responds to an OPTIONS request """
-        self.log("A client requested OPTIONS")
-        response = Request()
-        response.add_response(405)
-        self.send(response, request.origin)
-
-
-class Handler(WorkerNode):
-    """
-    Worker node for the Server
-    Handles requests sent by Streamers and Browser connections
-    """
-
-    def HANDLE(self, request, threaded=True):
-        """
-        Overwrites default method to handle incoming requests
-        If the ID of a request does not match this worker ID or is not found
-            (and it wasn't sent from a data-collection client, indicated by the user-agent header),
-            send the socket back to the host process to be handled
-        """
-        ID = request.queries.get('id')
-
-        # ID matches this worker or the request comes from a data-collection client
-        if ID == self.id or request.header.get('user-agent') == 'STREAMER':
-            super().HANDLE(request, threaded=threaded)  # handle the request
-
-        else:  # ID doesn't match or is not found, and not from a data-collection client
-            self.debug("{} Received different ID. Sending back to host".format(self.name))
-            self.transfer_socket(self.pipe, request.origin, request)
-
-    def INGEST(self, request):
-        """
-        Overwritten in derived classes.
-        Parses the content of the request.
-        Usually stores raw content and processed content in DataBuffers.
-        """
-        pass
-
-
-# Client side
-class Client(HostNode):
-    """
-    Makes a connection to the server.
-    HandlerClass is used to handle individual requests.
-    call run() to start.
-    """
-    def __init__(self, ip, port, name, debug=0):
-        super().__init__(name, auto=True)
-        self.set_debug(1)
-
-        self.ip = ip  # server ip address to connect to
-        self.port = port  # server port to connect through
-
-    def run(self):
-        """
-        Main entry point.
-        Must be called on the main thread of a process.
-        Calls _run on a new thread and waits for exit status.
-        Blocks until exit status set.
-        """
-        Thread(target=self._run, name=self.name+'-RUN', daemon=True).start()
-        self.run_exit_trigger(block=True)  # block main thread until exit
-
-    def _run(self):
-        """
-        Should be called on a new thread.
-        Creates one instance of each handler type from collection_lib
-        For each handler class, listens for new connections then starts them on their own thread.
-        """
-        self.log("Name: {}".format(self.name))
-        self.log("Device IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
-        self.log("Server IP: {}".format(self.ip))
-
-        with open('config.json') as file:
-            config = json.load(file)
-
-        # get selected handler classes
-        import collection_lib
-        members = inspect.getmembers(collection_lib, inspect.isclass)  # all classes [(name, class), ]
-        for member in members:
-            if member[1].__module__ == 'collection_lib' and config['HANDLERS'][member[0]].upper() == 'Y':  # class selected in config file
-                self.connect(member[1])  # connect this HandlerClass to the server
-
-    def connect(self, NodeClass):
-        """ Create socket object and try to connect it to the server, then run the Node class on a new process """
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
-        try:  # connect socket to given address
-            self.debug("Attempting to connect to server", 2)
-            sock.connect((self.ip, self.port))
-            sock.setblocking(True)
-            self.debug("Socket Connected", 2)
-        except Exception as e:
-            self.throw("Failed to connect socket to server:", e)
-            return False
-
-        worker = NodeClass()  # create an instance of this node class
-        worker.set_source(sock)  # set this socket as a data-source socket for the client
-        self.run_worker(worker)  # run the new worker node on a parallel process
-
-
-class Streamer(WorkerNode):
-    """
-    To be used on a client to send requests to the Handler
-    """
-    def __init__(self):
-        super().__init__()
-        self.handler = None  # class name of the handler to use on the server
-
-    def send(self, request, socket_handler):
-        """
-        Overwriting default send method
-        Adds a user-agent header that identifies this request as being from a client streamer.
-        """
-        request.add_header('user-agent', 'STREAMER')
-        super().send(request, socket_handler)
-
-    def _run(self):
-        """ Pre-extends the default method to automatically send the sign-on request """
-        if not self.handler:
-            self.throw("Streamer Node must have the attribute 'handler' to indicate which Handler class is to be used on the server")
-            return
-
-        req = Request()  # new request
-        req.add_request('SIGN_ON')
-        req.add_header('name', self.name)  # name of the class to be displayed
-        req.add_header('device', self.device)  # name of host Node
-        req.add_header('class', self.handler)  # class name of the handler to use at the other end
-        self.send(req, self.sockets[self.source_id])
-
-        super()._run()  # continue _run method. Runs the sockets on this worker.
-
-
-# Tools
 class Request(Base):
     """
     Holds all data from one request.
@@ -1331,25 +988,33 @@ class DataBuffer(object):
     """
     def __init__(self):
         self.data = b''
-        self.read_conditions = []  # list of all conditions handed out
+        self.read_events = []  # list of all event conditions handed out
         self.write_condition = Condition()
 
     def get_read_lock(self):
         """ Returns a condition object that must be passed into the read() method. """
-        cond = Condition()
-        self.read_conditions.append(cond)
-        return cond
+        event = Event()
+        self.read_events.append(event)
+        event.set()
+        return event
 
-    def read(self, condition):
+    def read(self, event, block=True):
         """
-        Waits with the given condition object until notified,
+        Waits for the given Event object to be set (or returns None if block is False),
             then returns the latest piece of data.
         Any number of conditions can read from the data at a time,
-            but each only once until notified again.
+            but each only once until new data is written
         """
-        with condition:
-            condition.wait()
+        if block:
+            event.wait()  # triggers when data is available
+            event.clear()  # reset event
             return self.data
+        else:  # non-blocking
+            if event.is_set():  # ready to be read
+                event.clear()  # reset event
+                return self.data
+            else:  # data not ready
+                return None
 
     def write(self, new_data):
         """
@@ -1359,10 +1024,9 @@ class DataBuffer(object):
         with self.write_condition:
             self.data = new_data
 
-            # wake all waiting read-conditions
-            for condition in self.read_conditions:
-                with condition:  # get the lock
-                    condition.notify_all()  # wake
+            # wake all waiting read-events
+            for event in self.read_events:
+                event.set()  # set all events
 
 
 class NonBlockingBuffer(object):
@@ -1382,89 +1046,4 @@ class NonBlockingBuffer(object):
         with self.condition:
             self.data = new_data
 
-
-class GraphStream:
-    """
-    Object holding the Bokeh plot to dynamically update in a browser
-    <layout> is a layout object with figures created using Bokeh
-    <data_dict> is a dictionary representing the plot structure. Keys are plot titles, values are lists of y-labels.
-    <url> is the url to poll to get new data
-    <interval> is the polling interval in milliseconds
-    <mode> 'append' to data or 'replace' existing data
-    <domain> is the amount of data to keep at each update
-    """
-    def __init__(self, layout, update_url, mode='append', interval=1000, domain=100):
-        self.source = AjaxDataSource(
-            data_url=update_url,
-            polling_interval=interval,
-            mode=mode,
-            max_size=domain,
-            method='GET',
-            if_modified=True)  # if_modified ignores responses sent with code 304 and not cached.
-        # TODO: make domain a measure of time on the x axis rather than a number of points?
-
-        # set the source of all plots in the layout
-        self.set_source(layout)
-        self.layout = layout
-
-
-        # Holds JSON data ready to be sent to the AjaxDataSource.
-        # Allow one read per write. All other reads return None.
-        # When reading None, should respond with code 304 (Not Modified).
-        self.buffer = NonBlockingBuffer()
-
-        '''
-        hover = HoverTool(tooltips=[
-            ("data", "@data"),
-            ("IEX Real-Time Price", "@price")
-            ])
-        '''
-
-    def set_source(self, obj):
-        """ Recursively set data source of plots in the layout object """
-        if hasattr(obj, 'children'):
-            for child in obj.children:
-                self.set_source(child)
-        else:
-            for renderer in obj.renderers:
-                if hasattr(renderer, 'glyph'):
-                    renderer.data_source = self.source
-                    renderer.view = CDSView(source=self.source)
-
-    def stream_page(self):
-        """ Returns the response for the plot page """
-        response = Request()
-        response.add_response(200)
-        response.add_header('content-type', 'text/html')
-
-        with open('pages/plot_page.html', 'r') as file:
-            html = file.read()
-        response.add_content(html)  # send initial page html
-        return response
-
-    def plot_json(self):
-        """
-        Returns response with full JSON of serialized plot object to be displayed in HTML.
-        This is before any data is updated - it's just the basic plot layout.
-        """
-        response = Request()
-        response.add_response(200)
-        response.add_header('content-type', 'application/json')
-        response.add_content(json.dumps(json_item(self.layout)))  # send plot JSON
-        return response
-
-    def update_json(self):
-        """
-        Returns response with JSON containing data to update the plot with.
-        """
-        response = Request()
-        response.add_header('content-type', 'application/json')
-        response.add_header('Cache-Control', 'no-store')  # don't store old data or it will try to write it again when 304 code is received.
-        data = self.buffer.read()
-        if data is not None:  # new data
-            response.add_response(200)
-            response.add_content(data)
-        else:
-            response.add_response(304)  # not modified
-        return response
 
