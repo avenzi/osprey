@@ -33,6 +33,11 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### September 15th, 2020:
+
+I've read through a bunch of the Bokeh documentation on Widgets, and added some to the EEG streaming page. I wrote the widget definitions in a standalone file: lib/pages/eeg_widgets
+In this file, each widget is given JS code to send a request to the server with the updated widget values. These will be things like the status of a button, position of a slider, selected drop-down item, etc. Right now I just want to use these to add interactive signal filtering selection. The filtering itself hasn't yet been implemented, but Brainflow provides some basic filtering/denoising mechanisms that can easily be applied.
+
 ##### September 14th, 2020:
 
 Dr. Ghassemi wants me to implement a spectrographic analysis as well. That shouldn't be too hard - I just have to use my RingBuffer class for the FFT data as well, and display it in a heat map. I fine-tuned the FFT today and committed the latest working version. Before I get started on the spectrograph, though, I want to implement some better filtering and de-noising using Brainflow.
