@@ -8,7 +8,7 @@ import time
 import json
 
 
-PAGES_DIR = '../pages'
+PAGES_DIR = './pages'
 
 
 class Base:
@@ -998,12 +998,12 @@ class DataBuffer(object):
         event.set()
         return event
 
-    def read(self, event, block=True):
+    def read(self, event, json=False, block=True):
         """
-        Waits for the given Event object to be set (or returns None if block is False),
-            then returns the latest piece of data.
-        Any number of conditions can read from the data at a time,
-            but each only once until new data is written
+        Returns the last data entry
+        <event> is an event object received from get_read_lock(). Acts as a 'ticket' to read the data
+        <json> Unused. Arguments just need to match other buffer types.
+        <block> is whether the read blocks before a new write is available.
         """
         if block:
             event.wait()  # triggers when data is available
@@ -1029,21 +1029,137 @@ class DataBuffer(object):
                 event.set()  # set all events
 
 
-class NonBlockingBuffer(object):
-    def __init__(self):
-        self.data = None
-        self.condition = Condition()
+class GraphRingBuffer:
+    """
+    Thread-safe Data Buffer designed to hold some maximum number of rows of data.
+    Size determines how many rows of points to keep before overwriting them.
+    Size can be changed on the fly.
+    <column_names> is a list of names of the columns in the data set
+    <size> is the maximum number of points in each data column (rows)
+    """
 
-    def read(self):
-        """ After any read, subsequent reads return None until written to """
-        with self.condition:
-            if self.data is not None:  # available
-                data = self.data
-                self.data = None
-                return data
+    def __init__(self, column_names, size):
+        self.size = size  # max size
+        self.length = 0  # number of current elements
+        self.tail = 0  # oldest row index
+        self.head = 0  # index at which to place the next element
 
-    def write(self, new_data):
-        with self.condition:
-            self.data = new_data
+        self.names = column_names
+        self.columns = len(column_names)
+
+        self.data = {name: [0] * size for name in column_names}  # initialize each column with size
+        self.head_data = {}       # most recent data written
+        self.head_data_json = ''  # JSON string of the most recent data written
+
+        # threading locks
+        self.lock = Lock()  # write lock
+        self.read_events = []  # Event objects
+
+    def move_head(self, n):
+        """ Circularly increment head index by n """
+        self.head = (self.head + n) % self.size
+
+    def move_tail(self, n):
+        """ Circularly increment tail index by n"""
+        self.tail = (self.tail + n) % self.size
+
+    def sort(self):
+        """ Reorder the data chronologically such that the oldest data point is at index 0 """
+        for name, col in self.data.items():
+            self.data[name] = col[self.tail:] + col[:self.tail]
+
+    def update(self):
+        """ Update all attributes after sort() has been called """
+        self.tail = 0
+        if self.length < self.size:  # not full
+            self.head = self.length
+        else:  # full or overfull
+            self.head = 0
+            self.length = self.size  # this is here for when used in set_size
+
+    def set_size(self, size):
+        """ Set the maximum size of the ring """
+        if size == self.size:
+            return  # no change
+        with self.lock:
+            self.sort()  # reorder
+            if size < self.size:  # decreasing size
+                for name, col in self.data.items():
+                    extra = self.size - self.length  # extra space after last entry
+                    # truncate to get as much recent data as will fit in the new size
+                    self.data[name] = col[-size - extra:self.length]
+            else:  # increasing size
+                for name, col in self.data.items():
+                    self.data[name] = self.data[name] + [0] * (size - self.size)  # expand and pad with 0's
+            self.size = size
+            self.update()
+
+    def get_read_lock(self):
+        """ Returns a condition object to be passed into read() and read_all() """
+        event = Event()
+        event.set()
+        self.read_events.append(event)
+        return event
+
+    def write(self, data):
+        """
+        Add data to the ring as a dictionary
+        Keys are column names, values are lists of new data for each column.
+        New data lists must all be of the same length.
+        """
+        with self.lock:
+            self.head_data = data  # save
+            self.head_data_json = json.dumps(data)  # save as json string
+
+            length = len(list(data.values())[0])  # data lists should all be same length
+            for i in range(length):  # iterate through indexes of new data list
+                for col in self.names:  # for each column
+                    self.data[col][self.head] = data[col][i]  # add data point to ring
+
+                self.move_head(1)  # shift head index
+                if self.size == self.length:  # if full
+                    self.move_tail(1)  # shift tail
+                else:  # not full
+                    self.length += 1  # tail doesn't move
+
+        for event in self.read_events:
+            event.set()  # ready to be read
+
+    def read(self, event, json=False, block=True):
+        """
+        Return the most recent data element as a JSON string
+        <event> is an event object received from get_read_lock(). Acts as a 'ticket' to read the data
+        <json> is whether to return the data as a JSON string
+        <block> is whether the read blocks before a new write is available.
+        """
+        if block:
+            event.wait()  # continues when new data is available
+            event.clear()  # reset event
+        else:  # non-blocking
+            if event.is_set():  # ready to be read
+                event.clear()   # reset event
+            else:  # data not ready
+                return None
+        if json:
+            return self.head_data_json
+        else:
+            return self.head_data
+
+    def read_all(self, event, block=True):
+        """ Get all data in the ring as a dictionary """
+        if block:
+            event.wait()  # triggers when data is available
+            event.clear()  # reset event
+            self.sort()
+            self.update()
+            return self.data
+        else:  # non-blocking
+            if event.is_set():  # ready to be read
+                event.clear()   # reset event
+                self.sort()
+                self.update()
+                return self.data
+            else:  # data not ready
+                return None
 
 

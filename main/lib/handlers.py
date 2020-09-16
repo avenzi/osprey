@@ -1,13 +1,16 @@
 from bokeh.layouts import layout
 from bokeh.plotting import figure
 from bokeh.palettes import viridis
-from bokeh.models import AjaxDataSource, CustomJS, RangeSlider, Button
+from bokeh.models import AjaxDataSource
+
+# EEG Bokeh widgets
+from pages.eeg_widgets import widgets, widgets_row, fourier_window
 
 import numpy as np
 import json
 
-from server_lib import Handler, GraphStream, GraphRingBuffer
-from lib import Request, Response, DataBuffer
+from server_lib import Handler, GraphStream
+from lib import Request, Response, DataBuffer, GraphRingBuffer
 
 
 class VideoHandler(Handler):
@@ -142,29 +145,30 @@ class EEGHandler(Handler):
         self.frames_received = 0
         self.channels = []  # list of channel name strings
         self.sample_rate = 0  # sampling rate of EEG data
-        self.min_freq = 0  # minimum frequency
-        self.max_freq = 0  # maximum frequency
 
-        # A list of channel names is required, so self.graph is initialized in the INIT method
+        # need a list of channel names, so most of these are initialized in the INIT method
         self.graph = None
 
         self.eeg_buffer = None
-        self.eeg_lock = None
+        self.eeg_lock = None  # ticket to read from EEG buffer
 
         self.fourier_buffer = None
-        self.fourier_lock = None
-        self.fourier_all_lock = None
+        self.fourier_lock = None  # ticket to read latest data from Fourier buffer
+        self.fourier_all_lock = None  # ticket to read all data from fourier buffer at once
+
+        # dictionary of values for all widgets, imported from /pages/eeg_widgets
+        self.widgets = widgets
 
     def INIT(self, request):
         """ Handles INIT request from client """
-        self.channels = request.header['channels'].split(',')
-        self.sample_rate = float(request.header['sample_rate'])
-        self.min_freq, self.max_freq = 0, self.sample_rate//2
+        self.channels = request.header['channels'].split(',')  # list of EEG channel names
+        self.sample_rate = float(request.header['sample_rate'])  # data points per second
 
+        # Bokeh configuration
         tools = ['save']
         colors = viridis(len(self.channels))  # viridis color palette
 
-        # create data sources
+        # create AJAX data sources for the plots
         eeg_source = AjaxDataSource(
             data_url='/update_eeg?id={}'.format(self.id),
             method='GET',
@@ -187,27 +191,20 @@ class EEGHandler(Handler):
             eeg_list.append(eeg)
 
         # Create fourier figure with a line for each EEG channel
-        fourier = figure(title="EEG Fourier", x_axis_label='Frequency (Hz)', y_axis_label='Magnitude (log)', y_axis_type="log", tools=tools, plot_width=700, plot_height=500)
+        fourier = figure(
+            title="EEG Fourier", x_axis_label='Frequency (Hz)', y_axis_label='Magnitude (log)', y_axis_type="log", tools=tools, plot_width=700, plot_height=500)
         for i in range(len(self.channels)):
             fourier.line(x='frequencies', y=self.channels[i]+'_fourier', color=colors[i], source=fourier_source)
 
-        # Fourier Filter Slider
-        filter_slider = RangeSlider(start=self.min_freq, end=self.max_freq, value=(self.min_freq, self.max_freq), step=1, title="Frequency Filter")
-        filter_slider.js_on_change("value", CustomJS(code="""
-            var req = new XMLHttpRequest();
-            url = window.location.pathname
-            queries = window.location.search
-            req.open("GET", url+'/filter_slider'+queries, true);
-            req.setRequestHeader('values', this.value)  // tuple
-            req.send(null);
-            console.log('range_slider: value=' + this.value, this.toString())
-        """))
-
         # Create layout and pass into GraphStream object
-        lay = layout([[eeg_list, [fourier, filter_slider]]])
+        # widgets_row and fourier_window imported from /pages/eeg_widgets
+        lay = layout([[eeg_list, [widgets_row, fourier_window, fourier]]])
         self.graph = GraphStream(lay)
 
-        self.eeg_buffer = GraphRingBuffer(self.channels, 1000)
+        # size of EEG buffer (# of data points to keep). FFT window is in seconds, sample rate is data points per second.
+        size = int(widgets['fourier_window'] * self.sample_rate)
+
+        self.eeg_buffer = GraphRingBuffer(self.channels, size)
         self.eeg_lock = self.eeg_buffer.get_read_lock()
 
         self.fourier_buffer = DataBuffer()
@@ -217,14 +214,15 @@ class EEGHandler(Handler):
     def INGEST(self, request):
         """ Handle table data received from Pi """
         data = request.content.decode(request.encoding)  # raw JSON data
-        self.eeg_buffer.write(data)
+        data = json.loads(data)  # load into a dictionary
+        self.filter(data)
+        self.denoise(data)
+        self.eeg_buffer.write(data)  # write data to EEG buffer
         self.frames_received += 1
         self.debug("Ingested EEG data (frame {})".format(self.frames_received), 3)
 
     def GET(self, request):
-        """
-        Handles a GET request send to the handler
-        """
+        """ Handles a GET request send to the handler """
         if request.path.endswith('/stream'):  # request for data stream page html
             response = self.graph.stream_page()
         elif request.path.endswith('/plot'):  # request for initial plot JSON
@@ -234,15 +232,35 @@ class EEGHandler(Handler):
         elif request.path.endswith('/update_fourier'):  # request for fourier update
             self.fourier()  # perform FFT
             response = self.graph.update_json(self.fourier_buffer, self.fourier_lock)  # get update from fourier buffer
-        elif request.path.endswith('/filter_slider'):  # filter slider was moved
-            vals = request.header['values'].split(',')
-            self.min_freq = float(vals[0])
-            self.max_freq = float(vals[1])
+        elif request.path.endswith('/widgets'):  # A widget was updated
+            header, value = list(request.header.items())[0]  # only one header should be sent
+            if header in ['bandpass_toggle', 'bandstop_toggle']:  # JS bools
+                if value == 'false':  # I am ashamed that I have to do this
+                    value = False
+                if value == 'true':
+                    value = True
+            elif header in ['bandpass_range']:  # range slider gives comma-separated values
+                value = tuple(float(i) for i in value.split(','))
+            elif header in ['bandpass_order', 'bandstop_order', 'fourier_window']:
+                value = int(value)  # ints
+            elif header in ['bandstop_center', 'bandstop_width']:
+                value = float(value)  # floats
+            # band pass/stop filter type is already a string
+
+            self.widgets[header] = value
             response = Response(204)  # no content successful response
         else:
             self.debug("Path not recognized: {}".format(request.path), 2)
             return
         self.send(response, request.origin)
+
+    def filter(self, data):
+        """ Performs frequency filters on the input dictionary of data in-place"""
+        return
+
+    def denoise(self, data):
+        """ Performs de-noising algorithms on the input dictionary of data in-place """
+        return
 
     def fourier(self):
         """ Calculates the FFT from all EEG data available """
@@ -251,11 +269,9 @@ class EEGHandler(Handler):
         N = len(list(data.values())[0])  # length of each channel in eeg data (should all be the same)
         freqs = np.fft.fftfreq(N, 1/self.sample_rate)[:N//2]  # frequency array
         fourier_dict['frequencies'] = freqs.tolist()  # numpy types are not JSON serializable
-        for name, eeg_data in data.items():
-            fft = (np.fft.fft(eeg_data)[:N//2])/N  # half frequency range and normalize
+        for name, channel_data in data.items():
+            fft = (np.fft.fft(channel_data)[:N//2])/N  # half frequency range and normalize
             fft = np.sqrt(np.real(fft)**2 + np.imag(fft)**2)
-            freq_filter = np.logical_or(freqs < self.min_freq, freqs > self.max_freq)
-            fft[freq_filter] = 1e-7  # log scale can't plot 0
             fourier_dict[name+'_fourier'] = fft.tolist()  # numpy types are not JSON serializable
         fourier_json = json.dumps(fourier_dict)
         self.fourier_buffer.write(fourier_json)

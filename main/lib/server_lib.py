@@ -143,8 +143,13 @@ class Server(HostNode):
         if not display_name:
             self.debug("New data-client INIT request did not specify the display name of the connection. Must be sent as the 'name' header. This will default to the Connection class name")
 
-        # Get the right class from ingestion lib
-        import handlers  # imported here so as to avoid import recursion
+        # Get the right handler class from handlers.py
+        try:
+            import handlers  # imported here so as to avoid import recursion
+        except:
+            self.throw("Import Error")
+            return
+
         members = inspect.getmembers(handlers, inspect.isclass)  # all classes [(name, class), ]
         StreamerClass = None
         for member in members:
@@ -152,7 +157,7 @@ class Server(HostNode):
                 StreamerClass = member[1]
                 break
         if not StreamerClass:
-            self.throw("Streamer Class '{}' not found in ingestion_lib".format(class_name))
+            self.throw("Streamer Class '{}' not found in handlers.py".format(class_name))
             return
 
         start_req = Request()
@@ -253,141 +258,10 @@ class Handler(WorkerNode):
         pass
 
 
-class GraphRingBuffer(Base):
+class GraphStream:
     """
-    Thread-safe Data Buffer designed to hold some maximum number of rows of data.
-    Size determines how many rows of points to keep before overwriting them.
-    Size can be changed on the fly.
-    <column_names> is a list of names of the columns in the data set
-    <size> is the maximum number of points in each data column (rows)
-    """
-
-    def __init__(self, column_names, size):
-        self.size = size  # max size
-        self.length = 0  # number of current elements
-        self.tail = 0  # oldest row index
-        self.head = 0  # index at which to place the next element
-
-        self.names = column_names
-        self.columns = len(column_names)
-        self.data = {name: [0] * size for name in column_names}  # initialize each column with size
-        self.head_json_data = ''  # JSON string of the most recent element
-
-        # threading locks
-        self.lock = Lock()  # write lock
-        self.read_events = []  # Event objects
-
-    def move_head(self, n):
-        """ Circularly increment head index by n """
-        self.head = (self.head + n) % self.size
-
-    def move_tail(self, n):
-        """ Circularly increment tail index by n"""
-        self.tail = (self.tail + n) % self.size
-
-    def sort(self):
-        """ Reorder the data chronologically such that the oldest data point is at index 0 """
-        for name, col in self.data.items():
-            self.data[name] = col[self.tail:] + col[:self.tail]
-
-    def update(self):
-        """ Update all attributes after sort() has been called """
-        self.tail = 0
-        if self.length < self.size:  # not full
-            self.head = self.length
-        else:  # full or overfull
-            self.head = 0
-            self.length = self.size  # this is here for when used in set_size
-
-    def set_size(self, size):
-        """ Set the maximum size of the ring """
-        if size == self.size:
-            return  # no change
-        with self.lock:
-            self.sort()  # reorder
-            if size < self.size:  # decreasing size
-                for name, col in self.data.items():
-                    extra = self.size - self.length  # extra space after last entry
-                    # truncate to get as much recent data as will fit in the new size
-                    self.data[name] = col[-size - extra:self.length]
-            else:  # increasing size
-                for name, col in self.data.items():
-                    self.data[name] = self.data[name] + [0] * (size - self.size)  # expand and pad with 0's
-            self.size = size
-            self.update()
-
-    def get_read_lock(self):
-        """ Returns a condition object to be passed into read() and read_all() """
-        event = Event()
-        event.set()
-        self.read_events.append(event)
-        return event
-
-    def write(self, json_data):
-        """
-        Add data to the ring as a JSON string.
-        Format is a Dictionary where keys are column names,
-            and values are lists of new data for each column.
-        New data lists must all be of the same length.
-        """
-        json_dict = json.loads(json_data)  # dictionary from JSON
-        with self.lock:
-            self.head_json_data = json_data  # save json string
-            length = len(list(json_dict.values())[0])  # should all be same length
-            for i in range(length):  # iterate through indexes of new data list
-                for col in self.names:  # for each column
-                    data = json_dict[col][i]  # get the new data point
-                    self.data[col][self.head] = data  # add to ring
-
-                self.move_head(1)  # shift head index
-                if self.size == self.length:  # if full
-                    self.move_tail(1)  # shift tail
-                else:  # not full
-                    self.length += 1  # tail doesn't move
-
-        for event in self.read_events:
-            event.set()  # ready to be read
-
-    def read(self, event, block=True):
-        """
-        Return the most recent data element as a JSON string
-        <condition> is a condition object received from get_read_lock()
-        <block> is whether the read blocks before a new write is available.
-        """
-        if block:
-            event.wait()  # triggers when data is available
-            event.clear()  # reset event
-            return self.head_json_data
-        else:  # non-blocking
-            if event.is_set():  # ready to be read
-                event.clear()   # reset event
-                return self.head_json_data
-            else:  # data not ready
-                return None
-
-    def read_all(self, event, block=True):
-        """ Get all data in the ring as a dictionary """
-        if block:
-            event.wait()  # triggers when data is available
-            event.clear()  # reset event
-            self.sort()
-            self.update()
-            return self.data
-        else:  # non-blocking
-            if event.is_set():  # ready to be read
-                event.clear()   # reset event
-                self.sort()
-                self.update()
-                return self.data
-            else:  # data not ready
-                return None
-
-
-class GraphStream(Base):
-    """
-    Object holding the Bokeh plot to dynamically update in a browser
+    Used to format data to be send to a browser with a Bokeh plot
     <layout> is a Bokeh layout object.
-    <buffers> are names of keys with which to identify DataBuffers
     """
     def __init__(self, layout):
         self.layout = layout
@@ -424,6 +298,8 @@ class GraphStream(Base):
     def update_json(self, buffer, event):
         """
         Returns a response constructed from the data in the given buffer.
+        Assumes the buffer read() method retrieves the appropriate data.
+            (i.e. whether the data is meant to be appended to a plot or replace it)
         <buffer> is the data buffer from which to read.
         <event> is the event object needed to read from the buffer.
             - Obtained from buffer.get_read_lock()
@@ -432,8 +308,8 @@ class GraphStream(Base):
         response.add_header('content-type', 'application/json')
         response.add_header('Cache-Control', 'no-store')  # don't store old data or it will try to write it again when 304 code is received.
 
-        # read data from the buffer
-        data = buffer.read(event, block=False)
+        # read most recent data from the buffer
+        data = buffer.read(event, json=True, block=False)
 
         if data is not None:  # new data
             response.add_response(200)
