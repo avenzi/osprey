@@ -1,4 +1,4 @@
-from threading import Thread, Lock, Event
+from threading import Thread
 from requests import get
 import socket
 import json

@@ -256,8 +256,19 @@ class EEGHandler(Handler):
 
     def filter(self, data):
         """ Performs frequency filters on the input dictionary of data in-place"""
-        return
-
+        # for demo apply different filters to different channels, in production choose one
+        '''
+        for name, data in data.items():
+            # filters work in-place
+            if count == 0:
+                DataFilter.perform_bandpass(data[channel], BoardShim.get_sampling_rate(board_id), 15.0, 6.0, 4, FilterTypes.BESSEL.value, 0)
+            elif count == 1:
+                DataFilter.perform_bandstop(data[channel], BoardShim.get_sampling_rate(board_id), 30.0, 1.0, 3, FilterTypes.BUTTERWORTH.value, 0)
+            elif count == 2:
+                DataFilter.perform_lowpass(data[channel], BoardShim.get_sampling_rate(board_id), 20.0, 5, FilterTypes.CHEBYSHEV_TYPE_1.value, 1)
+            elif count == 3:
+                DataFilter.perform_highpass(data[channel], BoardShim.get_sampling_rate(board_id), 3.0, 4, FilterTypes.BUTTERWORTH.value, 0)
+            '''
     def denoise(self, data):
         """ Performs de-noising algorithms on the input dictionary of data in-place """
         return
