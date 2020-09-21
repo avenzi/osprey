@@ -1,9 +1,15 @@
 import json
+import os
 from server_lib import Server
 
 # get configured settings
-with open('config.json') as file:
-    config = json.load(file)
+if os.path.exists('./config.json'):
+    with open('config.json', 'r') as file:
+        try:
+            config = json.load(file)
+        except Exception as e:  # corrupt or empty
+            print("JSON in config.json was corrupt or empty - reinitializing file: {}".format(e))
+            config = {}
 
 port = config.get('PORT')
 name = config.get('NAME')
