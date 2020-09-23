@@ -33,6 +33,12 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### September 23rd, 2020:
+
+I discovered that Bokeh can use an AjaxDataSource to accept image patches, but only whole images at a time. Because of this my approach is to have each FFT slice in the spectrogram be a separate image patch. It took me a while to figure out how to do that, but I have a working version now. There are still a couple bugs, like how the spacing between images is just a little off, and there are annoying blank lines that run through the spectrogram. Also occasionally I'll get a completely blank slice altogether and I have no idea why. It might be due to the spec_time counter incrementing when it's not supposed to?
+
+I also had a realization about those EEG plot blank areas that has been on my fix-list for months. I believe it's caused by the browser requesting updates at a slower rate than the stream is sending them, and my GraphRingBuffer only delivers the most recent packet of data. To fix this I need to rewrite my GraphRingBuffer to read data from any process' last read position, essentially using the buffer as a backlog in addition to storing a fixed amount of data. The problem is that each process reading from the buffer is going to have a different last-read position, so it will have to be kept track of separately. The buffer then has to keep track of the read positions of all processes and update them accordingly.
+
 ##### September 22th, 2020:
 
 Last week I tried to install Brainflow on the data hub server, but doing so ended up crashing the server and I had to get Dr. Ghassemi to reboot it manually. Instead, I've been looking into using Scipy signal filtering instead. I've written some test programs to figure out the best way to implement filtering, but I've ran into the issue of performing these filters on the live data. Either I filter each data packet as it's received, at the cost of small window sizes, or I use a large window size at the cost of time. I'm not sure what the best option is yet. 
