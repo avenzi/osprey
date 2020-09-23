@@ -33,6 +33,12 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### September 22th, 2020:
+
+Last week I tried to install Brainflow on the data hub server, but doing so ended up crashing the server and I had to get Dr. Ghassemi to reboot it manually. Instead, I've been looking into using Scipy signal filtering instead. I've written some test programs to figure out the best way to implement filtering, but I've ran into the issue of performing these filters on the live data. Either I filter each data packet as it's received, at the cost of small window sizes, or I use a large window size at the cost of time. I'm not sure what the best option is yet. 
+
+I then got started on implementing a spectrograph of the EEG data. My initial idea is to create a tabbed display that allows the user to switch between each EEG channel to view it's spectrogram. Plotting the spectrogram is proving more difficult than I thought, because the most efficient way (using the Bokeh image() plot) doesn't play nicely with the AjaxDataSource. If I cannot get this to work next time, I may just end up using a massive scatter plot, which is less efficient but more likely to work. Another possibility is a hex plot, but I think I'll run into the same issues as with the image plot.
+
 ##### September 15th, 2020:
 
 I've read through a bunch of the Bokeh documentation on Widgets, and added some to the EEG streaming page. I wrote the widget definitions in a standalone file: lib/pages/eeg_widgets
