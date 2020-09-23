@@ -1,10 +1,11 @@
 from bokeh.layouts import layout
 from bokeh.plotting import figure
-from bokeh.palettes import viridis
-from bokeh.models import AjaxDataSource
+from bokeh.palettes import viridis, magma
+from bokeh.models import AjaxDataSource, Panel, Tabs, ColorBar, LinearColorMapper, LogColorMapper, ColumnDataSource
+#from scipy import signal
 
 # EEG Bokeh widgets
-from pages.eeg_widgets import widgets, widgets_row, fourier_window
+from pages.eeg_widgets import widgets, widgets_row
 
 import numpy as np
 import json
@@ -156,6 +157,9 @@ class EEGHandler(Handler):
         self.fourier_lock = None  # ticket to read latest data from Fourier buffer
         self.fourier_all_lock = None  # ticket to read all data from fourier buffer at once
 
+        self.spec_time = 0  # counter for how many fft's have been sent for the spectrogram
+        self.spec_size = 20  # max number of FFT slices displayed in the Spectrogram
+
         # dictionary of values for all widgets, imported from /pages/eeg_widgets
         self.widgets = widgets
 
@@ -165,22 +169,31 @@ class EEGHandler(Handler):
         self.sample_rate = float(request.header['sample_rate'])  # data points per second
 
         # Bokeh configuration
-        tools = ['save']
+        tools = ['save','pan']
         colors = viridis(len(self.channels))  # viridis color palette
 
         # create AJAX data sources for the plots
         eeg_source = AjaxDataSource(
             data_url='/update_eeg?id={}'.format(self.id),
             method='GET',
-            polling_interval=200,
+            polling_interval=500,
             mode='append',
             max_size=1000,
             if_modified=True)
+
         fourier_source = AjaxDataSource(
             data_url='/update_fourier?id={}'.format(self.id),
             method='GET',
-            polling_interval=2000,
+            polling_interval=1000,
             mode='replace',
+            if_modified=True)
+
+        spectrogram_source = AjaxDataSource(
+            data_url='/update_spectrogram?id={}'.format(self.id),
+            method='GET',
+            polling_interval=500,
+            max_size=self.spec_size,
+            mode='append',
             if_modified=True)
 
         # create EEG figures, each with it's own line
@@ -190,15 +203,40 @@ class EEGHandler(Handler):
             eeg.line(x='time', y=self.channels[i], color=colors[i], source=eeg_source)
             eeg_list.append(eeg)
 
-        # Create fourier figure with a line for each EEG channel
+        # Create Tabbed section to view FFT and Spectrograms
+        tab_list = []  # list of Panel objects
+
+        # fourier figure with a line for each EEG channel
         fourier = figure(
-            title="EEG Fourier", x_axis_label='Frequency (Hz)', y_axis_label='Magnitude (log)', y_axis_type="log", tools=tools, plot_width=700, plot_height=500)
+            title="EEG Fourier",
+            x_axis_label='Frequency (Hz)', y_axis_label='Magnitude (log)',
+            y_axis_type="log", tools=tools,
+            plot_width=700, plot_height=500)
         for i in range(len(self.channels)):
-            fourier.line(x='frequencies', y=self.channels[i]+'_fourier', color=colors[i], source=fourier_source)
+            fourier.line(x='frequencies', y=self.channels[i], color=colors[i], source=fourier_source)
+        tab = Panel(child=fourier, title='FFT')
+        tab_list.append(tab)
+
+        # Color mapper for spectrogram
+        mapper = LogColorMapper(palette=magma(30), low=1e-9, high=0.01)
+
+        # plot a full spectrogram of nothing so new data is added proportionally
+        spectrogram_source.data = {name: [[[0]] for i in range(self.spec_size)] for name in self.channels}
+        spectrogram_source.data['spec_time'] = [i for i in range(self.spec_size)]
+
+        # create a spectrogram figure for each channel
+        for i in range(len(self.channels)):
+            fig = figure(title="EEG Spectrogram", x_axis_label='Frequency (Hz)', y_axis_label='Time', plot_width=700, plot_height=500, tools=tools)
+            fig.background_fill_color = "black"
+            fig.grid.visible = False
+            fig.image(image=self.channels[i], x=0, y='spec_time', dw=60, dh=1, source=spectrogram_source, color_mapper=mapper)
+            tab = Panel(child=fig, title=self.channels[i])
+            tab_list.append(tab)  # add figure panel to tabs list
 
         # Create layout and pass into GraphStream object
         # widgets_row and fourier_window imported from /pages/eeg_widgets
-        lay = layout([[eeg_list, [widgets_row, fourier_window, fourier]]])
+        tabs = Tabs(tabs=tab_list)  # tabs object
+        lay = layout([[eeg_list, [widgets_row, tabs]]])
         self.graph = GraphStream(lay)
 
         # size of EEG buffer (# of data points to keep). FFT window is in seconds, sample rate is data points per second.
@@ -210,6 +248,9 @@ class EEGHandler(Handler):
         self.fourier_buffer = DataBuffer()
         self.fourier_lock = self.fourier_buffer.get_read_lock()
         self.fourier_all_lock = self.fourier_buffer.get_read_lock()
+
+        self.spectrogram_buffer = DataBuffer()
+        self.spectrogram_lock = self.spectrogram_buffer.get_read_lock()
 
     def INGEST(self, request):
         """ Handle table data received from Pi """
@@ -226,24 +267,29 @@ class EEGHandler(Handler):
         if request.path.endswith('/stream'):  # request for data stream page html
             response = self.graph.stream_page()
         elif request.path.endswith('/plot'):  # request for initial plot JSON
+            self.spec_time = self.spec_size  # reset counter so spectrogram starts at correct spot
             response = self.graph.plot_json()
         elif request.path.endswith('/update_eeg'):  # request for eeg stream update
             response = self.graph.update_json(self.eeg_buffer, self.eeg_lock)  # get update from EEG buffer
         elif request.path.endswith('/update_fourier'):  # request for fourier update
             self.fourier()  # perform FFT
             response = self.graph.update_json(self.fourier_buffer, self.fourier_lock)  # get update from fourier buffer
+        elif request.path.endswith('/update_spectrogram'):
+            response = self.graph.update_json(self.spectrogram_buffer, self.spectrogram_lock)  # get update from fourier buffer
+            if response.code == 200:  # sending new data
+                self.spec_time += 1   # increment counter
         elif request.path.endswith('/widgets'):  # A widget was updated
             header, value = list(request.header.items())[0]  # only one header should be sent
-            if header in ['bandpass_toggle', 'bandstop_toggle']:  # JS bools
+            if header in ['bandpass_toggle', 'notch_toggle']:  # JS bools
                 if value == 'false':  # I am ashamed that I have to do this
                     value = False
                 if value == 'true':
                     value = True
             elif header in ['bandpass_range']:  # range slider gives comma-separated values
                 value = tuple(float(i) for i in value.split(','))
-            elif header in ['bandpass_order', 'bandstop_order', 'fourier_window']:
+            elif header in ['bandpass_order', 'notch_order', 'fourier_window']:
                 value = int(value)  # ints
-            elif header in ['bandstop_center', 'bandstop_width']:
+            elif header in ['notch_center']:
                 value = float(value)  # floats
             # band pass/stop filter type is already a string
 
@@ -255,20 +301,34 @@ class EEGHandler(Handler):
         self.send(response, request.origin)
 
     def filter(self, data):
-        """ Performs frequency filters on the input dictionary of data in-place"""
-        # for demo apply different filters to different channels, in production choose one
+        """ Performs frequency filters on the input dictionary of data in-place """
         '''
-        for name, data in data.items():
-            # filters work in-place
-            if count == 0:
-                DataFilter.perform_bandpass(data[channel], BoardShim.get_sampling_rate(board_id), 15.0, 6.0, 4, FilterTypes.BESSEL.value, 0)
-            elif count == 1:
-                DataFilter.perform_bandstop(data[channel], BoardShim.get_sampling_rate(board_id), 30.0, 1.0, 3, FilterTypes.BUTTERWORTH.value, 0)
-            elif count == 2:
-                DataFilter.perform_lowpass(data[channel], BoardShim.get_sampling_rate(board_id), 20.0, 5, FilterTypes.CHEBYSHEV_TYPE_1.value, 1)
-            elif count == 3:
-                DataFilter.perform_highpass(data[channel], BoardShim.get_sampling_rate(board_id), 3.0, 4, FilterTypes.BUTTERWORTH.value, 0)
-            '''
+        filter_type = self.widgets['bandpass_filter']
+        order = self.widgets['bandpass_order']  # polynomial order
+        crit = self.widgets['bandpass_range']  # bandpass range
+        filt = 'bandpass'
+        fs = self.sample_rate  # sampling rate
+        ripple = (1, 50)  # (max gain, max attenuation) for chebyshev and elliptic filters
+
+        # Generate Second-Order-Sections for given filter type
+        if filter_type == 'Bessel':
+            sos = signal.bessel(order, crit, filt, fs=fs, output='sos')
+        elif filter_type == 'Butterworth':
+            sos = signal.butter(order, crit, filt, fs=fs, output='sos')
+        elif filter_type == 'Chebyshev 1':
+            sos = signal.cheby1(order, ripple[0], crit, filt, fs=fs, output='sos')
+        elif filter_type == 'Chebyshev 2':
+            sos = signal.cheby2(order, ripple[1], crit, filt, fs=fs, output='sos')
+        elif filter_type == 'Elliptic':
+            sos = signal.ellip(order, ripple[0], ripple[1], crit, filt, fs=fs, output='sos')
+        else:
+            self.debug("Filter type not recognized: {}".format(filter_type))
+            return
+
+        for name, channel in data.items():  # for all arrays of data
+            data[name] = signal.sosfilt(sos, channel)  # apply filter
+    '''
+
     def denoise(self, data):
         """ Performs de-noising algorithms on the input dictionary of data in-place """
         return
@@ -276,16 +336,27 @@ class EEGHandler(Handler):
     def fourier(self):
         """ Calculates the FFT from all EEG data available """
         data = self.eeg_buffer.read_all(self.fourier_all_lock)  # dict of all current data
-        fourier_dict = {name+'_fourier': [] for name in self.channels}
+        fourier_dict = {name: [] for name in self.channels}
+        spectro_dict = {name: [] for name in self.channels}
+
         N = len(list(data.values())[0])  # length of each channel in eeg data (should all be the same)
         freqs = np.fft.fftfreq(N, 1/self.sample_rate)[:N//2]  # frequency array
         fourier_dict['frequencies'] = freqs.tolist()  # numpy types are not JSON serializable
+        #spectro_dict['frequencies'] = freqs.tolist()
+
         for name, channel_data in data.items():
             fft = (np.fft.fft(channel_data)[:N//2])/N  # half frequency range and normalize
             fft = np.sqrt(np.real(fft)**2 + np.imag(fft)**2)
-            fourier_dict[name+'_fourier'] = fft.tolist()  # numpy types are not JSON serializable
+            fft = fft.tolist()  # numpy types are not JSON serializable
+            fourier_dict[name] = fft
+            spectro_dict[name] = [[fft]]
+        spectro_dict['spec_time'] = [self.spec_time]
+
         fourier_json = json.dumps(fourier_dict)
         self.fourier_buffer.write(fourier_json)
+
+        spectro_json = json.dumps(spectro_dict)
+        self.spectrogram_buffer.write(spectro_json)
 
 
 
