@@ -33,6 +33,12 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### September 24th, 2020:
+
+I've discovered that this ring buffer is a bit more tricky to implement efficiently than I thought. Each last-read position has two edge cases that are indistinguishable. If the cursor is at the very back of the buffer (at the tail index), it is at the same spot as if it were at the very front (the head index). This is because, in either case, the "index that should be read next" is the same index. My only ideas on how to solve this break the conventions on how to implement a ring buffer, and I am afraid that doing so would make it more difficult for others to read.
+
+I also discovered that python has no native shared lock object - everything in the threading module is exclusive. This poses a problem, as I would like all reading processes to freely read without interfering with each other, while being blocked by writes. I believe I have solved this by implementing a custom locking class that allows simultaneous reads but only one write at a time. 
+
 ##### September 23rd, 2020:
 
 I discovered that Bokeh can use an AjaxDataSource to accept image patches, but only whole images at a time. Because of this my approach is to have each FFT slice in the spectrogram be a separate image patch. It took me a while to figure out how to do that, but I have a working version now. There are still a couple bugs, like how the spacing between images is just a little off, and there are annoying blank lines that run through the spectrogram. Also occasionally I'll get a completely blank slice altogether and I have no idea why. It might be due to the spec_time counter incrementing when it's not supposed to?
