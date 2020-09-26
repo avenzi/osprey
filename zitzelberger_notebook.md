@@ -33,6 +33,12 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### September 25th/26th, 2020:
+
+I think I've come up with a nice solution to my problem on the 24th. I will keep track of the reader index relative to the head index. For example, a reader of 5 means that the next position to read data is at the head index - 5. That way, a reader of 0 will mean it's all caught up, and a reader equal to the length of data means it's at the very end, even though the two represent the same position in the array. 
+
+I've written this new RingBuffer and am currently working out some bugs, but this coming week I should be able to fit it in nicely to the application.
+
 ##### September 24th, 2020:
 
 I've discovered that this ring buffer is a bit more tricky to implement efficiently than I thought. Each last-read position has two edge cases that are indistinguishable. If the cursor is at the very back of the buffer (at the tail index), it is at the same spot as if it were at the very front (the head index). This is because, in either case, the "index that should be read next" is the same index. My only ideas on how to solve this break the conventions on how to implement a ring buffer, and I am afraid that doing so would make it more difficult for others to read.
