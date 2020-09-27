@@ -7,7 +7,6 @@ from datetime import datetime
 import time
 import json
 
-
 PAGES_DIR = './pages'
 
 
@@ -98,7 +97,7 @@ class Base:
     def throw(self, msg, cause=None, trace=True):
         """ display error message and halt """
         self.shutdown()  # set both exit and shustdown flags
-        err = "\nERROR: {}\n".format(msg)
+        err = "Process: {}\nThread: {}\nERROR: {}\n".format(current_process().name, current_thread().name, msg)
         if cause is not None:
             err += "CAUSE: {}\n".format(cause)
         self.display(err)
@@ -413,7 +412,7 @@ class SocketHandler(Base):
 
         try:
             self.debug("Started multipart stream", 1)
-            lock = buffer.get_read_lock()
+            lock = buffer.get_ticket()
             while not self.exit:
                 data = buffer.read(lock)
                 length_header = "Content-Length:{}\r\n".format(len(data)).encode(self.encoding)  # content length + blank line
@@ -471,7 +470,10 @@ class SocketHandler(Base):
             self.socket.shutdown(socket.SHUT_RDWR)  # disallow further read and writes
             self.socket.close()  # close socket
         except (OSError, Exception) as e:
-            self.debug("Error closing socket '{}': {}".format(self.name, e))
+            # TODO: I don't know why sometimes the socket won't close,
+            #  but I think it means that it's already closed. Would be nice
+            #  to know for sure, though.
+            self.debug("Error closing socket '{}': {}".format(self.name, e), 2)
         finally:
             self.debug("Socket '{}' Closed on '{}' (ID: {})".format(self.name, self.node.name, self.id), 2)
             self.node.remove_socket(self.id)  # call the parent connection's method to remove this socket
@@ -981,185 +983,327 @@ class Response(Request):
             self.add_response(code)
 
 
-class DataBuffer(object):
+# Threading locks
+class ReadLock:
     """
-    A thread-safe buffer in which to store incoming data
-    The write() method can be used by a Picam
+    Context Manager class for ReadWriteLock.
+    Should not be used on it's own.
+    <lock> is a ReadWriteLock class
+    """
+    def __init__(self, lock):
+        self.lock = lock
+
+    def __enter__(self):
+        self.lock.acquire_read()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.lock.release_read()
+        return False
+
+
+class WriteLock:
+    """
+    Context Manager class for ReadWriteLock.
+    Should not be used on it's own.
+    <lock> is a ReadWriteLock class
+    """
+    def __init__(self, lock):
+        self.lock = lock
+
+    def __enter__(self):
+        self.lock.acquire_write()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.lock.release_write()
+        return False
+
+
+class ReadWriteLock:
+    """
+    Thread-safe lock object.
+    Allows shared locks for reading.
+    Requires exclusive lock for writing.
     """
     def __init__(self):
-        self.data = b''
-        self.read_events = []  # list of all event conditions handed out
-        self.write_condition = Condition()
+        self.lock = Condition()  # lock for notifying waiting locks and managing lock attributes
+        self.reading = 0         # number of shared locks
+        self.writing = False     # exclusive lock
 
-    def get_read_lock(self):
-        """ Returns a condition object that must be passed into the read() method. """
-        event = Event()
-        self.read_events.append(event)
-        event.set()
-        return event
+    def get_locks(self):
+        """ Returns ReadLock and WriteLock context managers """
+        return ReadLock(self), WriteLock(self)
 
-    def read(self, event, json=False, block=True):
+    def acquire_write(self):
+        """ Get exclusive lock and block until all readers have finished """
+        with self.lock:
+            self.writing = True
+            while self.reading > 0:  # while reading
+                self.lock.wait()  # wait
+
+    def release_write(self):
+        """ Release exclusive lock and notify all waiting readers """
+        with self.lock:
+            self.writing = False
+            self.lock.notify_all()  # notify all waiting threads
+
+    def acquire_read(self):
+        """ Block until no longer writing, then get shared lock """
+        with self.lock:
+            while self.writing:
+                self.lock.wait()
+            self.reading += 1
+
+    def release_read(self):
+        """ Notify that I am no longer reading """
+        with self.lock:
+            self.reading -= 1
+            if not self.reading:  # if this was the last reader
+                self.lock.notify_all()  # notify all waiting threads
+
+
+# Data buffers
+class DataBuffer(object):
+    """
+    A thread-safe buffer to store data
+    The write() method can be used by a Picam.
+    """
+    def __init__(self):
+        self.data = None
+
+        # list of all reader tickets (bools)
+        # Whether or not a given reader has read the most recent data
+        self.tickets = []
+
+        # threading locks
+        self.read_lock, self.write_lock = ReadWriteLock().get_locks()
+        self.ready = Condition()  # notifies when new data is available
+
+    def get_ticket(self):
+        """ Returns an ID that should be passed into read() """
+        ID = len(self.tickets)  # index of next ticket ID
+        self.tickets.append(False)
+        return ID  # return index of this reader
+
+    def read(self, ticket, block=True):
         """
-        Returns the last data entry
-        <event> is an event object received from get_read_lock(). Acts as a 'ticket' to read the data
-        <json> Unused. Arguments just need to match other buffer types.
+        Return most recent data entry.
+        <ticket> is the ID given by self.get_ticket()
         <block> is whether the read blocks before a new write is available.
         """
         if block:
-            event.wait()  # triggers when data is available
-            event.clear()  # reset event
-            return self.data
-        else:  # non-blocking
-            if event.is_set():  # ready to be read
-                event.clear()  # reset event
-                return self.data
-            else:  # data not ready
+            with self.ready:
+                self.ready.wait()  # Wait for new data.
+
+        with self.read_lock:  # get shared read-lock
+            reader = self.tickets[ticket]  # get reader value
+            if reader:  # No new data available (only if non-blocking)
                 return None
+            self.tickets[ticket] = True  # has now read most recent data
+        return self.data
 
-    def write(self, new_data):
-        """
-        Waits on a single write condition.
-        Only one write is allowed at a time
-        """
-        with self.write_condition:
-            self.data = new_data
-
-            # wake all waiting read-events
-            for event in self.read_events:
-                event.set()  # set all events
+    def write(self, data):
+        """ Replace current data with new data """
+        with self.write_lock:
+            if len(data) == 0:  # no data being added
+                return
+            self.data = data
+            self.tickets = [False] * len(self.tickets)  # reset all tickets
+        with self.ready:
+            self.ready.notify_all()  # notify that new data is ready
 
 
-class GraphRingBuffer:
+class RingBuffer:
     """
-    Thread-safe Data Buffer designed to hold some maximum number of rows of data.
-    Size determines how many rows of points to keep before overwriting them.
-    Size can be changed on the fly.
-    <column_names> is a list of names of the columns in the data set
-    <size> is the maximum number of points in each data column (rows)
+    Thread-safe Data Table Ring-Buffer.
+    Keeps track of a fixes set of named data columns.
+    Size determines how many rows of data to keep before overwriting them (can be modified).
+    Allows simultaneous reads and one exclusive write.
+    <column_names> is a list of names of the columns in the data set.
+    <size> is the maximum number of points in each data column
     """
 
     def __init__(self, column_names, size):
+        assert len(column_names) > 1, "Must have at least 1 column"
+        assert size > 0, "Maximum size must be greater than zero"
+
         self.size = size  # max size
         self.length = 0  # number of current elements
+
         self.tail = 0  # oldest row index
-        self.head = 0  # index at which to place the next element
+        self.head = 0  # Index at which to place the next element
 
-        self.names = column_names
-        self.columns = len(column_names)
+        self.names = column_names  # column names
 
-        self.data = {name: [0] * size for name in column_names}  # initialize each column with size
-        self.head_data = {}       # most recent data written
-        self.head_data_json = ''  # JSON string of the most recent data written
+        # initialize each column with the given names and size
+        self.data = {name: [0] * size for name in column_names}
 
         # threading locks
-        self.lock = Lock()  # write lock
-        self.read_events = []  # Event objects
+        self.read_lock, self.write_lock = ReadWriteLock().get_locks()
+        self.ready = Condition()  # Notifies when new data is ready
 
-    def move_head(self, n):
-        """ Circularly increment head index by n """
-        self.head = (self.head + n) % self.size
+        # list of reader positions relative to the head.
+        # ex. If reader = 5, then the next read should be from head-5 to head.
+        # When the reader is 0, it is at the front. When it is self.length, it's at the back.
+        # List index is reader ID. Any number of readers are allowed.
+        self.tickets = []
 
-    def move_tail(self, n):
-        """ Circularly increment tail index by n"""
-        self.tail = (self.tail + n) % self.size
-
-    def sort(self):
-        """ Reorder the data chronologically such that the oldest data point is at index 0 """
-        for name, col in self.data.items():
-            self.data[name] = col[self.tail:] + col[:self.tail]
-
-    def update(self):
-        """ Update all attributes after sort() has been called """
-        self.tail = 0
-        if self.length < self.size:  # not full
-            self.head = self.length
-        else:  # full or overfull
-            self.head = 0
-            self.length = self.size  # this is here for when used in set_size
+    def add(self, a, b):
+        """ Return circular addition of a and b """
+        return (a + b) % self.size
 
     def set_size(self, size):
         """ Set the maximum size of the ring """
         if size == self.size:
             return  # no change
-        with self.lock:
-            self.sort()  # reorder
+
+        with self.write_lock:  # don't allow read or writes during modification
+            # reorder data chronologically so that tail=0
+            for name, col in self.data.items():
+                self.data[name] = col[self.tail:] + col[:self.tail]
+
+            # Truncate or add data
             if size < self.size:  # decreasing size
+                # get as much recent data as will fit in the new size, truncate the rest
+                extra = self.size - self.length  # any extra space after last entry
                 for name, col in self.data.items():
-                    extra = self.size - self.length  # extra space after last entry
-                    # truncate to get as much recent data as will fit in the new size
                     self.data[name] = col[-size - extra:self.length]
             else:  # increasing size
+                # expand size and pad with 0's
                 for name, col in self.data.items():
-                    self.data[name] = self.data[name] + [0] * (size - self.size)  # expand and pad with 0's
-            self.size = size
-            self.update()
+                    self.data[name] = self.data[name] + [0] * (size - self.size)
 
-    def get_read_lock(self):
-        """ Returns a condition object to be passed into read() and read_all() """
-        event = Event()
-        event.set()
-        self.read_events.append(event)
-        return event
+            self.size = size
+            self.tail = 0
+
+            # size was truncated to at or below the length (full ring)
+            if self.size <= self.length:
+                self.length = self.size  # cut fown size to match
+                self.head = 0  # head it at tail because it's full
+            else:  # ring not full
+                self.head = self.length
+
+    def get_ticket(self):
+        """ Returns an ID that should be passed into read() """
+        ID = len(self.tickets)  # index of next ticket ID
+        reader = self.length  # first read position is at the back of the ring
+        self.tickets.append(reader)
+        return ID  # return index of this reader
 
     def write(self, data):
         """
         Add data to the ring as a dictionary
         Keys are column names, values are lists of new data for each column.
-        New data lists must all be of the same length.
+        New data lists must all be of the same length and names must match the data.
         """
-        with self.lock:
-            self.head_data = data  # save
-            self.head_data_json = json.dumps(data)  # save as json string
+        with self.write_lock:
+            data_length = len(data[self.names[0]])  # new data lists should all be same length
 
-            length = len(list(data.values())[0])  # data lists should all be same length
-            for i in range(length):  # iterate through indexes of new data list
-                for col in self.names:  # for each column
-                    self.data[col][self.head] = data[col][i]  # add data point to ring
+            # 5 cases for data to be appended:
 
-                self.move_head(1)  # shift head index
-                if self.size == self.length:  # if full
-                    self.move_tail(1)  # shift tail
+            # no data being added
+            if data_length == 0:
+                # This would also be the case for invalid data.
+                # TODO: Is it worth sacrificing speed to check the validity of input data?
+                #  This would mean making sure that the column names match up and all
+                #  new list sizes are equal.
+                return
+
+            # new data can be placed after head as-is (no wrapping needed)
+            elif data_length <= self.size - self.head:
+                for name in self.names:
+                    self.data[name][self.head:self.head + data_length] = data[name]
+                self.head = self.add(self.head, data_length)  # move head
+                if self.length + data_length >= self.size:  # now full
+                    self.length = self.size  # cap length
+                    self.tail = self.head  # tail = head
                 else:  # not full
-                    self.length += 1  # tail doesn't move
+                    self.length += data_length  # add length of new data
 
-        for event in self.read_events:
-            event.set()  # ready to be read
+            # new data needs to wrap around to the front (making it full if it wasn't already)
+            elif data_length < self.size:
+                after_head = self.size - self.head  # length of data to be placed after the head
+                wrapped = data_length - after_head  # length of data that wrapped to the front
+                for name in self.names:
+                    self.data[name][self.head:] = data[name][:after_head]  # set data after head
+                    self.data[name][:wrapped] = data[name][after_head:]  # set wrapped data
+                self.head = self.add(self.head, data_length)  # move head
+                self.tail = self.head  # must now be full if wrapping was necessary
+                self.length = self.size
 
-    def read(self, event, json=False, block=True):
+            # new data will complely replace old data, and some will be lost
+            elif data_length > self.size:
+                for name in self.names:
+                    self.data[name] = data[name][-self.size:]  # take only most recent data
+                self.tail = 0
+                self.head = 0
+                self.length = self.size
+                self.tickets = [self.size] * len(self.tickets)  # all readers move to back
+
+            # new data exactly replaces old data
+            else:  # data_length == self.size
+                self.data = data  # replace all data
+                self.tail = 0
+                self.head = 0
+                self.length = self.size
+                self.tickets = [self.size] * len(self.tickets)  # all readers move to back
+
+            # update reader positions
+            for i, reader in enumerate(self.tickets):
+                reader += data_length
+                if reader > self.size:
+                    reader = self.size  # max value is at the back of the ring
+                self.tickets[i] = reader
+
+        with self.ready:
+            self.ready.notify_all()  # notify that new data is ready
+
+    def read(self, ticket, block=True):
         """
-        Return the most recent data element as a JSON string
-        <event> is an event object received from get_read_lock(). Acts as a 'ticket' to read the data
+        Return the data since last read
+        <ticket> is the ID given by self.get_ticket()
         <json> is whether to return the data as a JSON string
         <block> is whether the read blocks before a new write is available.
         """
         if block:
-            event.wait()  # continues when new data is available
-            event.clear()  # reset event
-        else:  # non-blocking
-            if event.is_set():  # ready to be read
-                event.clear()   # reset event
-            else:  # data not ready
-                return None
-        if json:
-            return self.head_data_json
-        else:
-            return self.head_data
+            with self.ready:
+                self.ready.wait()  # Wait for new data.
 
-    def read_all(self, event, block=True):
-        """ Get all data in the ring as a dictionary """
-        if block:
-            event.wait()  # triggers when data is available
-            event.clear()  # reset event
-            self.sort()
-            self.update()
-            return self.data
-        else:  # non-blocking
-            if event.is_set():  # ready to be read
-                event.clear()   # reset event
-                self.sort()
-                self.update()
-                return self.data
-            else:  # data not ready
+        data = {}
+        with self.read_lock:  # get shared read-lock
+            reader = self.tickets[ticket]  # get reader value (which is realtive to head)
+            read_index = self.head - reader  # index from which to start reading
+
+            # 3 cases when reading:
+
+            # No new data available (triggers only if non-blocking)
+            if read_index == self.head:
                 return None
 
+                # data can be read as-is (no wrapping)
+            elif read_index >= 0:
+                for name in self.names:
+                    data[name] = self.data[name][read_index:self.head]
+
+            # data to be read wraps around
+            else:  # read_index < 0
+                for name, col in self.data.items():
+                    data[name] = col[read_index:] + col[:self.head]
+
+                    # set reader to 0 (all caught up)
+            self.tickets[ticket] = 0
+        return data
+
+    def read_all(self):
+        """ Get all data in the ring regardless of last read index """
+        data = {}
+        with self.read_lock:
+            if self.length == self.size:  # full
+                for name, col in self.data.items():
+                    data[name] = col[self.tail:] + col[:self.head]
+            else:  # not full
+                for name, col in self.data.items():
+                    data[name] = col[self.tail:self.head]
+        return data
 

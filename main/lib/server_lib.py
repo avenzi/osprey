@@ -258,7 +258,7 @@ class Handler(WorkerNode):
         pass
 
 
-class GraphStream:
+class GraphStream(Base):
     """
     Used to format data to be send to a browser with a Bokeh plot
     <layout> is a Bokeh layout object.
@@ -309,9 +309,12 @@ class GraphStream:
         response.add_header('Cache-Control', 'no-store')  # don't store old data or it will try to write it again when 304 code is received.
 
         # read most recent data from the buffer
-        data = buffer.read(event, json=True, block=False)
+        data = buffer.read(event, block=False)
 
         if data is not None:  # new data
+            # if data is str, it's already in JSON format
+            if type(data) != str:
+                data = json.dumps(data)  # convert to json
             response.add_response(200)
             response.add_content(data)
         else:  # no new data is available yet

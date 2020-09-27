@@ -46,9 +46,9 @@ class VideoStreamer(Streamer):
         resp = Request()  # new response
         resp.add_request("INGEST")
 
-        lock = self.data_buffer.get_read_lock()
+        lock = self.data_buffer.get_ticket()
         while self.streaming and not request.origin.exit:
-            data = self.data_buffer.read(lock)
+            data = self.data_buffer.read(lock, block=True)
             self.frames_sent += 1
             resp.add_header('frames-sent', self.frames_sent)
             resp.add_header('time', time.time()-self.time)  # time since start
@@ -59,7 +59,7 @@ class VideoStreamer(Streamer):
         """ Request method STOP """
         self.streaming = False
         self.camera.stop_recording()
-        self.log("Stopped Recording: {}".format(self.date()))
+        self.log("Stopped Recording: {}".format(self.get_date()))
         self.log("Stopped Stream.")
 
 
@@ -116,7 +116,7 @@ class SenseStreamer(Streamer):
     def STOP(self, request):
         """ Request method STOP """
         self.streaming = False
-        self.log("Stopped Recording SenseHat: {}".format(self.date()))
+        self.log("Stopped Recording SenseHat: {}".format(self.get_date()))
         self.log("Stopped Stream.")
 
 
@@ -126,7 +126,8 @@ class EEGStreamer(Streamer):
         self.handler = 'EEGHandler'
 
         from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds
-        self.board_id = BoardIds.CYTON_DAISY_BOARD.value   # board id according to BarinFlow Docs. It's 2.
+        #self.board_id = BoardIds.CYTON_DAISY_BOARD.value   # board id according to BarinFlow Docs. It's 2.
+        self.board_id = BoardIds.SYNTHETIC_BOARD.value  # synthetic board (-1)
         self.eeg_channel_indexes = BoardShim.get_eeg_channels(self.board_id)  # list of EEG channel indexes
         self.eeg_channel_names = BoardShim.get_eeg_names(self.board_id)       # list of EEG channel names
         self.time_channel = BoardShim.get_timestamp_channel(self.board_id)    # index of timestamp channel
@@ -135,7 +136,7 @@ class EEGStreamer(Streamer):
         BoardShim.disable_board_logger()  # disable logger
 
         params = BrainFlowInputParams()
-        params.serial_port = '/dev/ttyUSB0'  # serial port of dongle
+        #params.serial_port = '/dev/ttyUSB0'  # serial port of dongle - need for actual stream
         self.board = BoardShim(self.board_id, params)  # board object
 
         self.frames_sent = 0    # number of frames sent
@@ -169,6 +170,7 @@ class EEGStreamer(Streamer):
         resp = Request()  # new response
         resp.add_request("INGEST")
         while self.streaming and not request.origin.exit:
+            time.sleep(0.2)  # wait a bit for the board to collect another chunk of data
             data = {}
             for channel in self.eeg_channel_names:  # lists of channel data
                 data[channel] = []
@@ -177,6 +179,7 @@ class EEGStreamer(Streamer):
 
             # convert from epoch time to relative time since session start
             data['time'] = list(raw_data[self.time_channel]-self.time)
+            #self.debug(data['time'])
 
             for i, j in enumerate(self.eeg_channel_indexes):
                 data[self.eeg_channel_names[i]] = list(raw_data[j]/1000000)  # convert from uV to V
@@ -186,12 +189,11 @@ class EEGStreamer(Streamer):
             resp.add_header('frames-sent', self.frames_sent)
             resp.add_content(data)
             self.send(resp, request.origin)
-            time.sleep(0.2)  # wait a bit for the board to collect another chunk of data
 
     def STOP(self, request):
         """ Request method STOP """
         self.streaming = False
-        self.log("Stopped Recording SenseHat: {}".format(self.date()))
+        self.log("Stopped Recording SenseHat: {}".format(self.get_date()))
         self.log("Stopped Stream.")
 
         self.board.stop_stream()
