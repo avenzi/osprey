@@ -33,6 +33,12 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### September 27th, 2020:
+
+In doing research about signal filtering, I have found that the process is a lot more complicated than I thought. In order to filter live data (rather than all at once), one needs to perform a variety of computations. In the coming days I'll be trying to educate myself on the topic. 
+
+A paper I am finding useful: https://www.analog.com/media/en/technical-documentation/dsp-book/dsp_book_Ch18.pdf
+
 ##### September 25th/26th, 2020:
 
 I think I've come up with a nice solution to my problem on the 24th. I will keep track of the reader index relative to the head index. For example, a reader of 5 means that the next position to read data is at the head index - 5. That way, a reader of 0 will mean it's all caught up, and a reader equal to the length of data means it's at the very end, even though the two represent the same position in the array. 
