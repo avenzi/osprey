@@ -33,6 +33,10 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### September 30th, 2020:
+
+Apparently I was making it more difficult for myself than necessary - the SciPy library can actually solve a lot of the problems I was experiencing. Using scipy.signal.sosfilt, I can keep track of a set of Second Order Sections used to calculate a given filter. I can also keep track of a set of initial conditions that allows data to be chunked and filtered without signal degradation. I'm working on putting this into my program and adding some UI selection tools for it.
+
 ##### September 27th, 2020:
 
 In doing research about signal filtering, I have found that the process is a lot more complicated than I thought. In order to filter live data (rather than all at once), one needs to perform a variety of computations. In the coming days I'll be trying to educate myself on the topic. 
