@@ -1,7 +1,7 @@
 from bokeh.plotting import figure
 from bokeh.models import AjaxDataSource
 from bokeh.layouts import layout
-#from scipy import signal
+from scipy import signal
 import numpy as np
 import json
 
@@ -9,7 +9,7 @@ from server_lib import Handler, GraphStream
 from lib import Request, Response, DataBuffer, RingBuffer
 
 # EEG page Bokeh Layout
-from pages.eeg_layout import config, configure_layout
+from pages.eeg_layout import config, configure_layout, create_sos
 
 
 class VideoHandler(Handler):
@@ -156,8 +156,15 @@ class EEGHandler(Handler):
 
         self.spectrogram_buffer = None
         self.spectrogram_lock = None  # ticket to read from Fourier buffer
-
         self.spec_time = 0  # counter for how many  slices have been sent for the spectrogram
+
+        # EEG filtering
+        self.filter_sos = None     # current SOS. Created by create_sos() in eeg_layout.py
+        self.filter_sos_init = []  # list of SOS initial values
+        self.filter_update = True  # Flag to set when a new SOS is requested
+        self.notch_ba = None
+        self.notch_ba_init = []
+        self.notch_update = True
 
         # dictionary of values for all widgets, imported from /pages/eeg_widgets
         self.page_config = config
@@ -220,66 +227,66 @@ class EEGHandler(Handler):
             response = self.graph.update_json(self.spectrogram_buffer, self.spectrogram_lock)
             if response.code == 200:  # if sending new data (if no data is sent, code is 304)
                 self.spec_time += 1   # increment counter
-
-        elif request.path.endswith('/widgets'):  # A widget was updated
-            # only one header is sent per widget update
-            header, value = list(request.header.items())[0]
-
-            # Converting the header value from JS types to python types
-            if header in ['bandpass_toggle', 'notch_toggle']:  # JS bools
-                if value == 'false':  # I am ashamed that I have to do this
-                    value = False
-                if value == 'true':
-                    value = True
-
-            elif header in ['bandpass_range']:  # range slider gives comma-separated values
-                value = tuple(float(i) for i in value.split(','))
-
-            elif header in ['bandpass_order', 'notch_order', 'fourier_window']:  # ints
-                value = int(value)
-
-            elif header in ['notch_center']:  # floats
-                value = float(value)
-            # band pass/stop filter type is already a string
-
-            # store the new updated value in the page_config dictionary
-            self.page_config[header] = value
-            response = Response(204)  # no content, successful response
-
         else:
             self.debug("Path not recognized: {}".format(request.path), 2)
             return
 
         self.send(response, request.origin)
 
-    def filter(self, data):
-        """ Performs frequency filters on the input dictionary of data in-place """
-        '''
-        filter_type = self.widgets['bandpass_filter']
-        order = self.widgets['bandpass_order']  # polynomial order
-        crit = self.widgets['bandpass_range']  # bandpass range
-        filt = 'bandpass'
-        fs = self.sample_rate  # sampling rate
-        ripple = (1, 50)  # (max gain, max attenuation) for chebyshev and elliptic filters
+    def POST(self, request):
+        """ Handles POST request sent. Right now used to update widgets """
+        if request.path.endswith('/widgets'):  # A widget was updated
+            # Content is a JSON string with a single key-value pair
+            json_string = request.content.decode(self.encoding)  # decode from bytes
+            key, value = list(json.loads(json_string).items())[0]
 
-        # Generate Second-Order-Sections for given filter type
-        if filter_type == 'Bessel':
-            sos = signal.bessel(order, crit, filt, fs=fs, output='sos')
-        elif filter_type == 'Butterworth':
-            sos = signal.butter(order, crit, filt, fs=fs, output='sos')
-        elif filter_type == 'Chebyshev 1':
-            sos = signal.cheby1(order, ripple[0], crit, filt, fs=fs, output='sos')
-        elif filter_type == 'Chebyshev 2':
-            sos = signal.cheby2(order, ripple[1], crit, filt, fs=fs, output='sos')
-        elif filter_type == 'Elliptic':
-            sos = signal.ellip(order, ripple[0], ripple[1], crit, filt, fs=fs, output='sos')
+            # Converting the value from JS types in string form to python types
+            if key in ['bandpass_toggle', 'notch_toggle']:  # JS bools
+                if value == 'false':  # I am ashamed that I have to do this
+                    value = False
+                if value == 'true':
+                    value = True
+
+            elif key in ['bandpass_range']:  # range slider gives comma-separated values
+                value = [float(i) for i in value]
+
+            elif key in ['bandpass_order', 'notch_order', 'fourier_window']:  # ints
+                value = int(value)
+
+            elif key in ['notch_center']:  # floats
+                value = float(value)
+            # band pass/stop filter type is already a string
+
+            # filter needs to be updated
+            self.filter_update = True
+
+            # store the new updated value in the page_config dictionary
+            self.page_config[key] = value
+            response = Response(204)  # no content, successful response
+
         else:
-            self.debug("Filter type not recognized: {}".format(filter_type))
+            self.debug("Path not recognized for POST request: {}".format(request.path), 2)
             return
 
-        for name, channel in data.items():  # for all arrays of data
-            data[name] = signal.sosfilt(sos, channel)  # apply filter
-    '''
+        self.send(response, request.origin)
+
+    def filter(self, data):
+        """ Performs frequency filters on the input dictionary of data in-place """
+        # Bandpass filters
+        if self.page_config['filter_toggle']:
+            if self.filter_update:  # a new filter was requested
+                self.filter_sos = create_sos(self.sample_rate, self.page_config)
+                init = signal.sosfilt_zi(self.filter_sos)  # get initial conditions for this sos
+                self.filter_sos_init = [init] * len(self.channels)  # for each channel
+                self.filter_update = False  # filter has been updated
+                # TODO: When updating the filter and re-calculating the initial conditions,
+                #  all channels get a huge spike that messes up the FFT and Spectrogram.
+                #  I mean it goes away once time passes it's just annoying. At least you have a
+                #  record of when a new filter was implemented.
+
+            for i, name in enumerate(self.channels):  # for all EEG data channels
+                # apply filter with initial conditions, and set new initial conditions
+                data[name], self.filter_sos_init[i] = signal.sosfilt(self.filter_sos, data[name], zi=self.filter_sos_init[i])
 
     def denoise(self, data):
         """ Performs de-noising algorithms on the input dictionary of data in-place """

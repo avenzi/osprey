@@ -5,34 +5,46 @@ from bokeh.layouts import layout, Row, Column
 from bokeh.plotting import figure
 from bokeh.palettes import viridis, magma
 
+from scipy import signal
+
 
 # default values of all widgets and figure attributes
 config = {'fourier_window': 5,
-          'spectrogram_range': (-9.0, -2.0), 'spectrogram_size': 30,
-          'bandpass_toggle': True, 'notch_toggle': True,
-          'bandpass_range': (5, 62), 'notch_center': 60,
-          'bandpass_order': 3, 'notch_order': 3,
-          'bandpass_filter': 'Butterworth'}
+          'spectrogram_range': (-9.0, -2.0),
+          'spectrogram_size': 30,
+          'filter_toggle': True,
+          'filter_type': 'Bandpass',
+          'filter_style': 'Butterworth',
+          'filter_range': (5, 62),
+          'filter_order': 3,
+          'filter_ripple': (1, 50),
+          'notch_toggle': True,
+          'notch_center': 60,
+          'notch_order': 3
+        }
 
 
-def js_request(header, attribute='value'):
+def js_request(key, attribute='value'):
     """
     Generates callback JS code to send an HTTPRequest
     'this.value' refers to the new value of the Bokeh object.
         - In some cases (like buttons) Bokeh uses 'this.active'
-    <header> is the header string to send the information in
+    <key> is the key in the JSON string being sent to associate with this value
     """
     widget_path = 'widgets'  # request path
+
     code = """
         var req = new XMLHttpRequest();
         url = window.location.pathname
         queries = window.location.search  // get ID of current stream
-        req.open("GET", url+'/{path}'+queries, true);
-        req.setRequestHeader('{header}', this.{attribute})
-        req.send(null);
-        console.log('{header}: ' + this.{attribute})
+        req.open("POST", url+'/{path}'+queries, true);
+        req.setRequestHeader('Content-Type', 'application/json');
+        var json = JSON.stringify({{{key}: this.{attribute}}});
+        console.log(json.length);
+        req.send(json);
+        console.log('{key}: ' + this.{attribute});
     """
-    return code.format(path=widget_path, header=header, attribute=attribute)
+    return code.format(path=widget_path, key=key, attribute=attribute)
 
 
 # Fourier Window sliders
@@ -40,32 +52,32 @@ fourier_window = Slider(title="FFT Window (seconds)", start=0, end=20, step=1, v
 fourier_window.js_on_change("value_throttled", CustomJS(code=js_request('fourier_window')))
 
 # Toggle buttons
-bandpass_toggle = Toggle(label="Bandpass", button_type="success", active=config['bandpass_toggle'])
-bandpass_toggle.js_on_click(CustomJS(code=js_request('bandpass_toggle', 'active')))
+filter_toggle = Toggle(label="Filter", button_type="success", active=config['filter_toggle'])
+filter_toggle.js_on_click(CustomJS(code=js_request('filter_toggle', 'active')))
 
 notch_toggle = Toggle(label="Notch", button_type="success", active=config['notch_toggle'])
 notch_toggle.js_on_click(CustomJS(code=js_request('notch_toggle', 'active')))
 
 # Range slider and Center/Width sliders
-bandpass_range = RangeSlider(title="Range", start=0, end=70, step=1, value=config['bandpass_range'])
-bandpass_range.js_on_change("value_throttled", CustomJS(code=js_request('bandpass_range')))
+filter_range = RangeSlider(title="Range", start=0, end=70, step=1, value=config['filter_range'])
+filter_range.js_on_change("value_throttled", CustomJS(code=js_request('filter_range')))
 
 notch_center = Slider(title="Center", start=0, end=60, step=1, value=config['notch_center'])
 notch_center.js_on_change("value_throttled", CustomJS(code=js_request('notch_center')))
 
 # Filter selectors
-bandpass_filter = Select(title="Filters:", options=['Butterworth', 'Bessel', 'Chebyshev 1', 'Chebyshev 2', 'Elliptic'], value=config['bandpass_filter'])
-bandpass_filter.js_on_change("value", CustomJS(code=js_request('bandpass_filter')))
+filter_style = Select(title="Filters:", options=['Butterworth', 'Bessel', 'Chebyshev 1', 'Chebyshev 2', 'Elliptic'], value=config['filter_style'])
+filter_style.js_on_change("value", CustomJS(code=js_request('filter_style')))
 
 # Order spinners
-bandpass_order = Spinner(title="Order", low=1, high=10, step=1, width=80, value=config['bandpass_order'])
-bandpass_order.js_on_change("value", CustomJS(code=js_request('bandpass_order')))
+filter_order = Spinner(title="Order", low=1, high=10, step=1, width=80, value=config['filter_order'])
+filter_order.js_on_change("value", CustomJS(code=js_request('filter_order')))
 
 notch_order = Spinner(title="Order", low=1, high=10, step=1, width=80, value=config['notch_order'])
 notch_order.js_on_change("value", CustomJS(code=js_request('notch_order')))
 
 # Used to construct the Bokeh layout of widgets
-widgets_row = [[[bandpass_toggle, bandpass_filter, bandpass_order], bandpass_range,
+widgets_row = [[[filter_toggle, filter_style, filter_order], filter_range,
                [notch_toggle, notch_order], notch_center, fourier_window]]
 
 
@@ -212,3 +224,35 @@ def configure_layout(worker_id, channels):
     tabs = Tabs(tabs=[fourier_tab, spec_tab])  # tabs object
     full_layout = layout([[eeg_list, [widgets_row, tabs]]])
     return full_layout
+
+
+def create_sos(sample_rate, config):
+    """
+    Returns the Second Order Sections of the given filter design.
+    [sample rate] int: Number of samples per second
+    [config] dict: Configuration dictionary seen at the top of this file. Must contain:
+        [filter_type] string: bandpass, lowpass, highpass
+        [filter_style] string: Bessel, Butterworth, Chebyshev 1, Chebyshev 2, Elliptic
+        [crit] tuple: (low, high) critical values for the filter cutoffs
+        [order] int: Order of filter polynomial
+        [ripple] tuple: (max gain, max attenuation) for chebyshev and elliptic filters
+    """
+    type = config['filter_type']
+    style = config['filter_style']
+    range = config['filter_range']
+    order = config['filter_order']
+    ripple = config['filter_ripple']
+
+    if style == 'Bessel':
+        sos = signal.bessel(order, range, fs=sample_rate, btype=type, output='sos')
+    elif style == 'Butterworth':
+        sos = signal.butter(order, range, fs=sample_rate, btype=type, output='sos')
+    elif style == 'Chebyshev 1':
+        sos = signal.cheby1(order, ripple[0], range, fs=sample_rate, btype=type, output='sos')
+    elif style == 'Chebyshev 2':
+        sos = signal.cheby2(order, ripple[1], range, fs=sample_rate, btype=type, output='sos')
+    elif style == 'Elliptic':
+        sos = signal.ellip(order, ripple[0], ripple[1], range, fs=sample_rate, btype=type, output='sos')
+    else:
+        return None
+    return sos
