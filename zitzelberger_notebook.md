@@ -33,6 +33,14 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### October 12th, 2020:
+
+Over the last week, I've been struggling to fine-tune the filtering, as well as getting spectrogram head-plots function as Dr. Ghassemi requested.
+
+I have implemented two filters: a bandpass (defaulted to 1-60Hz) and a bandstop (defaulted to 59-61Hz). I originally used a notch filter (scipy.signal.iirnotch) instead of a bandstop, and it didn't quite eliminate the AC main peak at 60Hz. The bandstop can, with only an order 2 butterworth filter.
+
+I got the head plots to work, but there's no visual interpolation right now - just the band power at each electrode location. I downloaded a database of all projected electrode locations (pages/electrodes.json), so any configuration should work. As of right now I am calculating the band power as the mean of the FFT values. Dr. Ghassemi suggested that this might be too sensitive to peaking in the frequency domain, so I will do some research to see what would be best. He suggested using the median, so I'll try that first.
+
 ##### September 30th, 2020:
 
 Apparently I was making it more difficult for myself than necessary - the SciPy library can actually solve a lot of the problems I was experiencing. Using scipy.signal.sosfilt, I can keep track of a set of Second Order Sections used to calculate a given filter. I can also keep track of a set of initial conditions that allows data to be chunked and filtered without signal degradation. I'm working on putting this into my program and adding some UI selection tools for it.
