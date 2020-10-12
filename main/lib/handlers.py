@@ -377,12 +377,19 @@ class EEGHandler(Handler):
             low, high = self.page_config['bands'][band]  # get frequency range for this band
 
             # multiply by window size to get the frequency index because the FFT is stretched
-            low = int(low*self.page_config['fourier_window']/2)
-            high = int(high*self.page_config['fourier_window']/2)
+            low = int(low*self.page_config['fourier_window'])
+            high = int(high*self.page_config['fourier_window'])+1
+
+            # if the fourier data doesn't go as high as the high value wants.
+            # This would happen if the sampling rate is too low to measure this frequency.
+            if high > len(data[self.channels[0]]):
+                high = len(data[self.channels[0]])
+
+            #self.debug("{}: {}-{}".format(band, low, high))
 
             for name in self.channels:  # for each channel
                 # TODO experiment with avg/median. Compute in browser?
-                val = np.sqrt(np.mean(np.power(data[name][low:high+1], 2)))  # band power RMS
+                val = np.mean(data[name][low:high])  # band power RMS
                 headplot[band].append(val)  # append value to list of channels in this band
 
         headplot['x'] = self.head_x
