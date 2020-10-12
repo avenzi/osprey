@@ -2,26 +2,35 @@ from bokeh.models import CustomJS, AjaxDataSource
 from bokeh.models import Panel, Tabs, ColorBar, LogColorMapper, LogTicker
 from bokeh.models import Slider, RangeSlider, Select, Spinner, Toggle
 from bokeh.layouts import layout, Row, Column
+from bokeh.transform import linear_cmap
 from bokeh.plotting import figure
 from bokeh.palettes import viridis, magma
 
+import json
 from scipy import signal
 
 
 # default values of all widgets and figure attributes
 config = {'fourier_window': 5,
-          'spectrogram_range': (-9.0, -2.0),
+          'spectrogram_range': (-9.0, -2.0),  # color scale range (log)
           'spectrogram_size': 30,
-          'filter_toggle': True,
-          'filter_type': 'Bandpass',
-          'filter_style': 'Butterworth',
-          'filter_range': (5, 62),
-          'filter_order': 3,
-          'filter_ripple': (1, 50),
-          'notch_toggle': True,
-          'notch_center': 60,
-          'notch_order': 3
-        }
+
+          'pass_toggle': True,
+          'pass_type': 'bandpass',
+          'pass_style': 'Butterworth',
+          'pass_range': (1, 60),
+          'pass_order': 3,
+          'pass_ripple': (1, 50),
+
+          'stop_toggle': True,
+          'stop_type': 'bandstop',
+          'stop_style': 'Butterworth',
+          'stop_range': (59, 60.5),
+          'stop_order': 2,
+          'stop_ripple': (1, 50),
+
+          'bands': {'Delta': (1, 4), 'Theta': (4, 8), 'Alpha': (8, 12), 'Beta': (12, 30), 'Gamma': (30, 100)}
+          }
 
 
 def js_request(key, attribute='value'):
@@ -40,7 +49,6 @@ def js_request(key, attribute='value'):
         req.open("POST", url+'/{path}'+queries, true);
         req.setRequestHeader('Content-Type', 'application/json');
         var json = JSON.stringify({{{key}: this.{attribute}}});
-        console.log(json.length);
         req.send(json);
         console.log('{key}: ' + this.{attribute});
     """
@@ -48,37 +56,40 @@ def js_request(key, attribute='value'):
 
 
 # Fourier Window sliders
-fourier_window = Slider(title="FFT Window (seconds)", start=0, end=20, step=1, value=config['fourier_window'])
+fourier_window = Slider(title="FFT Window (seconds)", start=1, end=10, step=1, value=config['fourier_window'])
 fourier_window.js_on_change("value_throttled", CustomJS(code=js_request('fourier_window')))
 
 # Toggle buttons
-filter_toggle = Toggle(label="Filter", button_type="success", active=config['filter_toggle'])
-filter_toggle.js_on_click(CustomJS(code=js_request('filter_toggle', 'active')))
+pass_toggle = Toggle(label="Bandpass Filter", button_type="success", width=100, active=config['pass_toggle'])
+pass_toggle.js_on_click(CustomJS(code=js_request('pass_toggle', 'active')))
 
-notch_toggle = Toggle(label="Notch", button_type="success", active=config['notch_toggle'])
-notch_toggle.js_on_click(CustomJS(code=js_request('notch_toggle', 'active')))
+stop_toggle = Toggle(label="Bandstop Filter", button_type="success", width=100, active=config['stop_toggle'])
+stop_toggle.js_on_click(CustomJS(code=js_request('stop_toggle', 'active')))
 
-# Range slider and Center/Width sliders
-filter_range = RangeSlider(title="Range", start=0, end=70, step=1, value=config['filter_range'])
-filter_range.js_on_change("value_throttled", CustomJS(code=js_request('filter_range')))
+# Range sliders
+pass_range = RangeSlider(title="Range", start=0.1, end=100, step=0.1, value=config['pass_range'])
+pass_range.js_on_change("value_throttled", CustomJS(code=js_request('pass_range')))
 
-notch_center = Slider(title="Center", start=0, end=60, step=1, value=config['notch_center'])
-notch_center.js_on_change("value_throttled", CustomJS(code=js_request('notch_center')))
+stop_range = RangeSlider(title="Range", start=40, end=70, step=0.5, value=config['stop_range'])
+stop_range.js_on_change("value_throttled", CustomJS(code=js_request('stop_range')))
 
-# Filter selectors
-filter_style = Select(title="Filters:", options=['Butterworth', 'Bessel', 'Chebyshev 1', 'Chebyshev 2', 'Elliptic'], value=config['filter_style'])
-filter_style.js_on_change("value", CustomJS(code=js_request('filter_style')))
+# filter style selectors
+pass_style = Select(title="Filters:", options=['Butterworth', 'Bessel', 'Chebyshev 1', 'Chebyshev 2', 'Elliptic'], value=config['pass_style'])
+pass_style.js_on_change("value", CustomJS(code=js_request('pass_style')))
+
+stop_style = Select(title="Filters:", options=['Butterworth', 'Bessel', 'Chebyshev 1', 'Chebyshev 2', 'Elliptic'], value=config['stop_style'])
+stop_style.js_on_change("value", CustomJS(code=js_request('stop_style')))
 
 # Order spinners
-filter_order = Spinner(title="Order", low=1, high=10, step=1, width=80, value=config['filter_order'])
-filter_order.js_on_change("value", CustomJS(code=js_request('filter_order')))
+pass_order = Spinner(title="Order", low=1, high=10, step=1, width=80, value=config['pass_order'])
+pass_order.js_on_change("value", CustomJS(code=js_request('pass_order')))
 
-notch_order = Spinner(title="Order", low=1, high=10, step=1, width=80, value=config['notch_order'])
-notch_order.js_on_change("value", CustomJS(code=js_request('notch_order')))
+stop_order = Spinner(title="Order", low=1, high=10, step=1, width=80, value=config['stop_order'])
+stop_order.js_on_change("value", CustomJS(code=js_request('stop_order')))
 
 # Used to construct the Bokeh layout of widgets
-widgets_row = [[[filter_toggle, filter_style, filter_order], filter_range,
-               [notch_toggle, notch_order], notch_center, fourier_window]]
+widgets_row = [[[pass_toggle, pass_style, pass_order], pass_range,
+               [stop_toggle, stop_style, stop_order], stop_range, fourier_window]]
 
 
 # Bokeh Figures
@@ -88,6 +99,7 @@ def configure_layout(worker_id, channels):
     :param worker_id: Id of the WorkerNode (just self.id)
     :param channels: List of EEG channels being plotted.
     :return:
+    # TODO: Split this up into more easily digestible chunks
     """
     colors = viridis(len(channels))  # viridis color palette for channel colors
     #tools = ['save']  # specify list of tool names for the toolbars. Will need to enable toolbars.
@@ -116,6 +128,15 @@ def configure_layout(worker_id, channels):
         mode='append',  # new Spectrogram slices are appended each update
         if_modified=True)
 
+    headplot_source = AjaxDataSource(
+        data_url='/update_headplot?id={}'.format(worker_id),
+        method='GET',
+        polling_interval=1000,
+        mode='replace',
+        if_modified=True)
+
+
+    ##############
     # create EEG figures, each with it's own line
     eeg_list = []
     for i in range(len(channels)):
@@ -139,6 +160,8 @@ def configure_layout(worker_id, channels):
         fourier.line(x='frequencies', y=channels[i], color=colors[i], source=fourier_source)
     fourier_tab = Panel(child=fourier, title='FFT')  # create a tab for this plot
 
+
+    ################
     # Color mapper for spectrogram
     low = 10**(config['spectrogram_range'][0])  # low threshold
     high = 10**(config['spectrogram_range'][1])  # high threshold
@@ -184,12 +207,54 @@ def configure_layout(worker_id, channels):
     spec.background_fill_color = "black"
     spec.grid.visible = False
 
+    ################
+    # Head Plots
+    # Load database of electrode placements
+    # not used here yet, but I would like it to be
+    with open('pages/electrodes.json', 'r') as f:
+        all_names = json.loads(f.read())
+
+    x, y = [], []
+    for name in channels:  # get coordinates of electrodes by name
+        x.append(all_names[name][0])
+        y.append(all_names[name][1])
+
+    # Separate head figure for each band
+    head_figures = []  # list of headplot figures
+    circles = []  # list of circle glyphs used to update the color mapping
+    for band in config['bands']:
+        fig = figure(
+            title='{}-band Head Plot'.format(band),
+            plot_width=400, plot_height=400,
+            toolbar_location=None
+        )
+        # Even though x and y don't change, they have to be gotten from the data source.
+        # Each figure gets its own color mapper and takes
+        #   data from the column with it's band name, which
+        #   contains the color data.
+        mapper = linear_cmap(field_name=band, palette='RdBu11', low=0, high=0.001)
+        circle = fig.circle(x='x', y='y', source=headplot_source, color=mapper, size=20)
+        fig.add_layout(color_bar, 'right')
+        head_figures.append(fig)
+        circles.append(circle)
+
+    delta, theta, alpha, beta, gamma = head_figures  # delta, theta, alpha, beta, gamma
+    delta_c, theta_c, alpha_c, beta_c, gamma_c = circles
+
+
     # Spectrogram color scale adjusting slider.
     # This needs to be here to get references to all the arguments for the CustomJS
     # None of the other widgets are in this function because they don't require references
     spectrogram_slider = RangeSlider(
         title="Scale",
-        start=-10, end=1, step=1,
+        start=-10, end=1, step=1,  # log scale
+        orientation='vertical',
+        direction='rtl',  # Right to left, but vertical so top to bottom
+        value=config['spectrogram_range'])
+
+    headplot_slider = RangeSlider(
+        title="Scale",
+        start=-10, end=1, step=1,  # log scale
         orientation='vertical',
         direction='rtl',  # Right to left, but vertical so top to bottom
         value=config['spectrogram_range'])
@@ -200,8 +265,9 @@ def configure_layout(worker_id, channels):
             image=spec_image,
             source=spectrogram_source,
             color_bar=color_bar,
-            palette=palette),
-        code="""
+            palette=palette,
+        ),
+            code="""
             var low = Math.pow(10, this.value[0]);
             var high = Math.pow(10, this.value[1]);
             if (low != high) {
@@ -216,32 +282,74 @@ def configure_layout(worker_id, channels):
             """
         )
     )
+
+    headplot_slider.js_on_change(
+        "value",
+        CustomJS(args=dict(  # arguments to be passed into the JS function
+            color_bar=color_bar,
+            palette=palette,
+            source=headplot_source,
+            delta=delta_c,
+            theta=theta_c,
+            alpha=alpha_c,
+            beta=beta_c,
+            gamma=gamma_c
+        ),
+        code="""
+            var low = Math.pow(10, this.value[0]);
+            var high = Math.pow(10, this.value[1]);
+            if (low != high) {
+                color_bar.color_mapper.low = low;
+                color_bar.color_mapper.high = high;
+                color_bar.color_mapper.palette = palette;
+            
+                var color_mapper = new Bokeh.LogColorMapper({palette:palette, low:low, high:high});
+                delta.glyph.fill_color = {field: "Delta", transform: color_mapper};
+                delta.glyph.line_color = {field: "Delta", transform: color_mapper};
+                theta.glyph.fill_color = {field: "Theta", transform: color_mapper};
+                theta.glyph.line_color = {field: "Theta", transform: color_mapper};
+                alpha.glyph.fill_color = {field: "Alpha", transform: color_mapper};
+                alpha.glyph.line_color = {field: "Alpha", transform: color_mapper};
+                beta.glyph.fill_color = {field: "Beta", transform: color_mapper};
+                beta.glyph.line_color = {field: "Beta", transform: color_mapper};
+                gamma.glyph.fill_color = {field: "Gamma", transform: color_mapper};
+                gamma.glyph.line_color = {field: "Gamma", transform: color_mapper};
+                source.change.emit();
+            }
+            """
+        )
+    )
+
     # Tab for spectrogram has the range slider in it
     spec_tab = Panel(child=Row(spec, spectrogram_slider), title='Spectrogram')
 
-    # Construct final layout
+    # Tab for
+    head_tab = Panel(child=Column(Row(delta, theta, headplot_slider), Row(alpha, beta), Row(gamma)), title='Head Plots')  # create a tab for head plots
 
-    tabs = Tabs(tabs=[fourier_tab, spec_tab])  # tabs object
+    #################
+    # Construct final layout
+    tabs = Tabs(tabs=[fourier_tab, head_tab])  # tabs object
     full_layout = layout([[eeg_list, [widgets_row, tabs]]])
     return full_layout
 
 
-def create_sos(sample_rate, config):
+def create_filter_sos(name, sample_rate, config):
     """
     Returns the Second Order Sections of the given filter design.
+    [name] prefix used to get config attributes
     [sample rate] int: Number of samples per second
     [config] dict: Configuration dictionary seen at the top of this file. Must contain:
-        [filter_type] string: bandpass, lowpass, highpass
-        [filter_style] string: Bessel, Butterworth, Chebyshev 1, Chebyshev 2, Elliptic
-        [crit] tuple: (low, high) critical values for the filter cutoffs
-        [order] int: Order of filter polynomial
-        [ripple] tuple: (max gain, max attenuation) for chebyshev and elliptic filters
+        [name_type] string: bandpass, bandstop, lowpass, highpass
+        [name_style] string: Bessel, Butterworth, Chebyshev 1, Chebyshev 2, Elliptic
+        [name_crit] tuple: (low, high) critical values for the filter cutoffs
+        [name_order] int: Order of filter polynomial
+        [name_ripple] tuple: (max gain, max attenuation) for chebyshev and elliptic filters
     """
-    type = config['filter_type']
-    style = config['filter_style']
-    range = config['filter_range']
-    order = config['filter_order']
-    ripple = config['filter_ripple']
+    type = config[name+'_type']
+    style = config[name+'_style']
+    range = config[name+'_range']
+    order = config[name+'_order']
+    ripple = config[name+'_ripple']
 
     if style == 'Bessel':
         sos = signal.bessel(order, range, fs=sample_rate, btype=type, output='sos')
@@ -256,3 +364,4 @@ def create_sos(sample_rate, config):
     else:
         return None
     return sos
+

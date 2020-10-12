@@ -124,19 +124,27 @@ class EEGStreamer(Streamer):
     def __init__(self):
         super().__init__()
         self.handler = 'EEGHandler'
+        synth = False  # whether to use the BrainFlow Synthetic board (for testing and whatnot)
 
         from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds
-        #self.board_id = BoardIds.CYTON_DAISY_BOARD.value   # board id according to BarinFlow Docs. It's 2.
-        self.board_id = BoardIds.SYNTHETIC_BOARD.value  # synthetic board (-1)
+
+        if synth:
+            self.board_id = BoardIds.SYNTHETIC_BOARD.value  # synthetic board (-1)
+        else:
+            self.board_id = BoardIds.CYTON_DAISY_BOARD.value   # Cyton+Daisy borad ID (2)
+
         self.eeg_channel_indexes = BoardShim.get_eeg_channels(self.board_id)  # list of EEG channel indexes
         self.eeg_channel_names = BoardShim.get_eeg_names(self.board_id)       # list of EEG channel names
         self.time_channel = BoardShim.get_timestamp_channel(self.board_id)    # index of timestamp channel
-        self.freq = BoardShim.get_sampling_rate(self.board_id)                # sample frequency
+        self.freq = BoardShim.get_sampling_rate(self.board_id)  # sample frequency
+
         # BoardShim.enable_dev_board_logger()
         BoardShim.disable_board_logger()  # disable logger
 
         params = BrainFlowInputParams()
-        #params.serial_port = '/dev/ttyUSB0'  # serial port of dongle - need for actual stream
+
+        if not synth:
+            params.serial_port = '/dev/ttyUSB0'  # serial port of dongle
         self.board = BoardShim(self.board_id, params)  # board object
 
         self.frames_sent = 0    # number of frames sent
@@ -179,7 +187,6 @@ class EEGStreamer(Streamer):
 
             # convert from epoch time to relative time since session start
             data['time'] = list(raw_data[self.time_channel]-self.time)
-            #self.debug(data['time'])
 
             for i, j in enumerate(self.eeg_channel_indexes):
                 data[self.eeg_channel_names[i]] = list(raw_data[j]/1000000)  # convert from uV to V

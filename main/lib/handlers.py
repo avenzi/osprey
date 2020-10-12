@@ -9,7 +9,7 @@ from server_lib import Handler, GraphStream
 from lib import Request, Response, DataBuffer, RingBuffer
 
 # EEG page Bokeh Layout
-from pages.eeg_layout import config, configure_layout, create_sos
+from pages.eeg_layout import config, configure_layout, create_filter_sos
 
 
 class VideoHandler(Handler):
@@ -153,18 +153,19 @@ class EEGHandler(Handler):
 
         self.fourier_buffer = None
         self.fourier_lock = None  # ticket to read from Fourier buffer
+        self.head_plot_lock = None  # ticket for the head plots
 
         self.spectrogram_buffer = None
         self.spectrogram_lock = None  # ticket to read from Fourier buffer
         self.spec_time = 0  # counter for how many  slices have been sent for the spectrogram
 
         # EEG filtering
-        self.filter_sos = None     # current SOS. Created by create_sos() in eeg_layout.py
-        self.filter_sos_init = []  # list of SOS initial values
-        self.filter_update = True  # Flag to set when a new SOS is requested
-        self.notch_ba = None
-        self.notch_ba_init = []
-        self.notch_update = True
+        self.pass_sos = None     # current SOS. Created by create_sos() in eeg_layout.py
+        self.pass_sos_init = []  # list of SOS initial values
+        self.pass_update = True  # Flag to set when a new SOS is requested
+        self.stop_sos = None
+        self.stop_sos_init = []
+        self.stop_update = True
 
         # dictionary of values for all widgets, imported from /pages/eeg_widgets
         self.page_config = config
@@ -189,6 +190,14 @@ class EEGHandler(Handler):
 
         self.fourier_buffer = DataBuffer()
         self.fourier_lock = self.fourier_buffer.get_ticket()
+        self.head_plot_lock = self.fourier_buffer.get_ticket()
+
+        self.head_x, self.head_y = [], []
+        with open('pages/electrodes.json', 'r') as f:
+            all_names = json.loads(f.read())
+        for name in self.channels:  # get coordinates of electrodes by name
+            self.head_x.append(all_names[name][0])
+            self.head_y.append(all_names[name][1])
 
         self.spectrogram_buffer = DataBuffer()
         self.spectrogram_lock = self.spectrogram_buffer.get_ticket()
@@ -198,7 +207,6 @@ class EEGHandler(Handler):
         data = request.content.decode(request.encoding)  # raw JSON data
         data = json.loads(data)  # load into a dictionary
         self.filter(data)
-        self.denoise(data)
         self.eeg_buffer.write(data)  # write data to EEG buffer
         self.frames_received += 1
         self.debug("Ingested EEG data (frame {})".format(self.frames_received), 3)
@@ -227,6 +235,10 @@ class EEGHandler(Handler):
             response = self.graph.update_json(self.spectrogram_buffer, self.spectrogram_lock)
             if response.code == 200:  # if sending new data (if no data is sent, code is 304)
                 self.spec_time += 1   # increment counter
+
+        elif request.path.endswith('/update_headplot'):
+            response = self.update_headplot()
+
         else:
             self.debug("Path not recognized: {}".format(request.path), 2)
             return
@@ -241,24 +253,28 @@ class EEGHandler(Handler):
             key, value = list(json.loads(json_string).items())[0]
 
             # Converting the value from JS types in string form to python types
-            if key in ['bandpass_toggle', 'notch_toggle']:  # JS bools
+            if key in ['pass_toggle', 'stop_toggle']:  # JS bools
                 if value == 'false':  # I am ashamed that I have to do this
                     value = False
                 if value == 'true':
                     value = True
 
-            elif key in ['bandpass_range']:  # range slider gives comma-separated values
+            elif key in ['pass_range', 'stop_range']:  # range slider gives comma-separated values
                 value = [float(i) for i in value]
+                if value[1] >= self.sample_rate/2:
+                    value[1] = (self.sample_rate/2 - 0.5)
+                if value[0] <= 0:
+                    value[0] = 0.1
 
-            elif key in ['bandpass_order', 'notch_order', 'fourier_window']:  # ints
+            elif key in ['pass_order', 'stop_order', 'fourier_window']:  # ints
                 value = int(value)
+            # filter style is already a string
 
-            elif key in ['notch_center']:  # floats
-                value = float(value)
-            # band pass/stop filter type is already a string
-
-            # filter needs to be updated
-            self.filter_update = True
+            # filters needs to be updated
+            if 'pass' in key:
+                self.pass_update = True
+            if 'stop' in key:
+                self.stop_update = True
 
             # store the new updated value in the page_config dictionary
             self.page_config[key] = value
@@ -273,32 +289,45 @@ class EEGHandler(Handler):
     def filter(self, data):
         """ Performs frequency filters on the input dictionary of data in-place """
         # Bandpass filters
-        if self.page_config['filter_toggle']:
-            if self.filter_update:  # a new filter was requested
-                self.filter_sos = create_sos(self.sample_rate, self.page_config)
-                init = signal.sosfilt_zi(self.filter_sos)  # get initial conditions for this sos
-                self.filter_sos_init = [init] * len(self.channels)  # for each channel
-                self.filter_update = False  # filter has been updated
-                # TODO: When updating the filter and re-calculating the initial conditions,
-                #  all channels get a huge spike that messes up the FFT and Spectrogram.
-                #  I mean it goes away once time passes it's just annoying. At least you have a
-                #  record of when a new filter was implemented.
+        if self.page_config['pass_toggle']:
+            if self.pass_update:  # a new filter was requested
+                self.pass_sos = create_filter_sos('pass', self.sample_rate, self.page_config)
+                init = signal.sosfilt_zi(self.pass_sos)  # get initial conditions for this sos
+                self.pass_sos_init = [init] * len(self.channels)  # for each channel
+                self.pass_update = False  # filter has been updated
 
             for i, name in enumerate(self.channels):  # for all EEG data channels
                 # apply filter with initial conditions, and set new initial conditions
-                data[name], self.filter_sos_init[i] = signal.sosfilt(self.filter_sos, data[name], zi=self.filter_sos_init[i])
+                data[name], self.pass_sos_init[i] = signal.sosfilt(self.pass_sos, data[name], zi=self.pass_sos_init[i])
 
-    def denoise(self, data):
-        """ Performs de-noising algorithms on the input dictionary of data in-place """
-        return
+        # notch filter
+        # TODO: Use small bandpass filter instead?
+        if self.page_config['stop_toggle']:
+            if self.stop_update:  # a new filter was requested
+                self.stop_sos = create_filter_sos('stop', self.sample_rate, self.page_config)
+                init = signal.sosfilt_zi(self.stop_sos)  # get initial conditions for this (b, a)
+                self.stop_sos_init = [init] * len(self.channels)  # for each channel
+                self.stop_update = False  # filter has been updated
+
+            for i, name in enumerate(self.channels):  # for all EEG data channels
+                # apply filter with initial conditions, and set new initial conditions
+                data[name], self.stop_sos_init[i] = signal.sosfilt(self.stop_sos, data[name], zi=self.stop_sos_init[i])
+
+        # TODO: When updating the filter and re-calculating the initial conditions,
+        #  all channels get a huge ripple that messes up the FFT and Spectrogram.
+        #  It goes away once time passes, but it's annoying. At least you have a
+        #  record of when a new filter was implemented.
 
     def fourier(self):
         """ Calculates the FFT from all EEG data available """
         data = self.eeg_buffer.read_all()  # dict of all current data
 
         N = len(list(data.values())[0])  # length of each channel in eeg data (should all be the same)
-        freqs = np.fft.fftfreq(N, 1/self.sample_rate)[:N//2]  # frequency array
+        if N == 0:  # no data
+            self.debug("No data to compute FFT")
+            return
 
+        freqs = np.fft.fftfreq(N, 1/self.sample_rate)[:N//2]  # frequency array
         spectro_slice = np.zeros(len(freqs))  # array of zeros for the spectrogram slice
 
         fourier_dict = {'frequencies': freqs.tolist()}  # numpy types are not JSON serializable
@@ -312,7 +341,7 @@ class EEGHandler(Handler):
 
             # Add square of fft to spectrogram slice
             #spectro_slice += fft*fft
-            if name in ['Fz', 'Cz', 'Cd', 'C1', 'C0']:
+            if name in ['Fp1', 'Fp2']:
                 spectro_slice += fft
 
         fourier_json = json.dumps(fourier_dict)
@@ -325,6 +354,42 @@ class EEGHandler(Handler):
 
         spectro_json = json.dumps(spectro_dict)
         self.spectrogram_buffer.write(spectro_json)
+
+    def update_headplot(self):
+        """ Calculate head plot data values and return a response object to send """
+        response = Request()
+        response.add_header('content-type', 'application/json')
+        response.add_header('Cache-Control', 'no-store')
+
+        # data to send will be a dictionary of band names with amplitude data
+        # The order is the same as self.channels
+        headplot = {}
+
+        # read most recent data from the buffer
+        data = self.fourier_buffer.read(self.head_plot_lock, block=False)
+        if data is None:  # no new data is available yet
+            response.add_response(304)  # not modified
+            return response
+        data = json.loads(data)  # convert to dict
+
+        for band in self.page_config['bands'].keys():  # for each band type
+            headplot[band] = []
+            low, high = self.page_config['bands'][band]  # get frequency range for this band
+
+            # multiply by window size to get the frequency index because the FFT is stretched
+            low = int(low*self.page_config['fourier_window']/2)
+            high = int(high*self.page_config['fourier_window']/2)
+
+            for name in self.channels:  # for each channel
+                # TODO experiment with avg/median. Compute in browser?
+                val = np.sqrt(np.mean(np.power(data[name][low:high+1], 2)))  # band power RMS
+                headplot[band].append(val)  # append value to list of channels in this band
+
+        headplot['x'] = self.head_x
+        headplot['y'] = self.head_y
+        response.add_response(200)
+        response.add_content(json.dumps(headplot))
+        return response
 
 
 
