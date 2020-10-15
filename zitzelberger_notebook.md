@@ -33,6 +33,12 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### October 14th, 2020:
+
+I have finally *actually* fixed the 'chunked data' problem that I've mentioned before. The issue was that the EEG data appeared to be 'chunked', with blank spots between chunks. This was ultimately due to the FTDI driver settings. I fixed this by going to the file `/sys/bus/usb-serial/devices/ttyUSB0/latency_timer` and changing the contents from 16 to 1. I have also added some scripting to perform this automatically in the `install_pi` bash script. 
+
+I have also received another Cyton + Daisy board from Dr. Ghassemi, and I've hooked it up with an OpenBCI pulse sensor. However, the process for streaming the pulse data is a bit more involved, as it is not collected through the same channels as the EEG data. After a lot of digging, I've found that I'll need to reconfigure the Cyton board in order to be able to access the pulse sensor data through the Brainflow APi. That will be a job for tomorrow (or more realistically, this weekend).
+
 ##### October 12th, 2020:
 
 Over the last week, I've been struggling to fine-tune the filtering, as well as getting spectrogram head-plots function as Dr. Ghassemi requested.
