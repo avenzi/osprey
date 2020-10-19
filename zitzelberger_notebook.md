@@ -33,6 +33,16 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### October 18th, 2020:
+
+I have set up the pulse sensor streaming, however I suspect that I have a faulty pulse sensor, as the data seems to hit some sort of peak value that it cannot go beyond. Theoretically, this shouldn't affect the data as this only happens when a heart beat is detected, but it is messing with my heart beat detecting algorithm, which uses scipy.signal.find_peaks. I will ask Dr. Ghassemi if he has any ideas on a better algorithm.
+
+Setting up the pulse sensor wasn't that bad, although I did have to set a special configuration option on the Cyton board using board.config_board('/2') to send a '/2' byte. This configures the board for 'analog mode' where the AUX channels stream the data from the pulse sensor, whereas normally they would contain the accel data.
+
+I also found a bug that I should have discovered earlier: if two browsers requests data streamed from my RingBuffer at the same time, the data is split between them. This is because the GET function in my handler classes use the same buffer 'ticket' regardless of what browser it comes from. To fix this, I will need to implement the ability to detect whether a request comes from the same browser or not. To solve this, the server will simply have to recognize different browser sessions. The trouble is that I have no at all written the server with this in mind.
+
+In other news, I presented at the MSGC conference yesterday, and I think it went well.
+
 ##### October 14th, 2020:
 
 I have finally *actually* fixed the 'chunked data' problem that I've mentioned before. The issue was that the EEG data appeared to be 'chunked', with blank spots between chunks. This was ultimately due to the FTDI driver settings. I fixed this by going to the file `/sys/bus/usb-serial/devices/ttyUSB0/latency_timer` and changing the contents from 16 to 1. I have also added some scripting to perform this automatically in the `install_pi` bash script. 
