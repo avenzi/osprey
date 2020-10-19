@@ -18,14 +18,14 @@ class VideoStreamer(Streamer):
         self.time = 0           # time of START
 
         self.data_buffer = DataBuffer()  # buffer to hold data as it is collected from the picam
-        self.streaming = False  # flag to start and stop stream
 
     def START(self, request):
-        """ Start Streaming continually."""
-        if self.streaming:
-            self.log("Video Stream already Started")
-            return
-        self.streaming = True
+        """
+        Request method START
+        Start Streaming continually
+        Extended from base class in pi_lib.py
+        """
+        super().START(request)  # extend
 
         # First send some initial information
         init_req = Request()  # new request
@@ -40,7 +40,6 @@ class VideoStreamer(Streamer):
         self.camera.start_recording(self.data_buffer, format='mjpeg')
         time.sleep(2)  # let camera warm up for a sec. Does weird stuff otherwise.
         self.time = time.time()  # mark start time
-        self.log("Started Video Stream")
 
         # Send INGEST requests with image data
         resp = Request()  # new response
@@ -56,11 +55,12 @@ class VideoStreamer(Streamer):
             self.send(resp, request.origin)  # send INGEST request back
 
     def STOP(self, request):
-        """ Request method STOP """
-        self.streaming = False
+        """
+        Request method STOP
+        Extended from the base class in pi_lib.py
+        """
+        super().STOP(request)  # extend
         self.camera.stop_recording()
-        self.log("Stopped Recording: {}".format(self.get_date()))
-        self.log("Stopped Stream.")
 
 
 class SenseStreamer(Streamer):
@@ -75,18 +75,16 @@ class SenseStreamer(Streamer):
         self.frames_sent = 0    # number of frames sent
         self.time = 0  # time of START
 
-        self.streaming = False  # flag to start and stop stream
-
     def START(self, request):
-        """ Start Streaming continually."""
-        if self.streaming:
-            self.log("Sense Stream already Started")
-            return
-        self.streaming = True
+        """
+        Request method START
+        Start Streaming continually
+        Extended from base class in pi_lib.py
+        """
+        super().START(request)  # extend
 
         # get start time
         self.time = time.time()
-        self.log("Started Sense Stream...")
 
         resp = Request()  # new INGEST request
         resp.add_request("INGEST")
@@ -114,10 +112,11 @@ class SenseStreamer(Streamer):
             self.send(resp, request.origin)
 
     def STOP(self, request):
-        """ Request method STOP """
-        self.streaming = False
-        self.log("Stopped Recording SenseHat: {}".format(self.get_date()))
-        self.log("Stopped Stream.")
+        """
+        Request method STOP
+        Extended from base class in pi_lib.py
+        """
+        super().STOP(request)  # extend
 
 
 class ECGStreamer(Streamer):
@@ -159,14 +158,13 @@ class ECGStreamer(Streamer):
         self.frames_sent = 0    # number of frames sent
         self.time = 0  # time of START
 
-        self.streaming = False  # flag to start and stop stream
-
     def START(self, request):
-        """ Start Streaming continually."""
-        if self.streaming:
-            self.log("ECG Stream already Started")
-            return
-        self.streaming = True
+        """
+        Request method START
+        Start Streaming continually
+        Extended from base class in pi_lib.py
+        """
+        super().START(request)  # extend
 
         # start ECG session
         tries = 0
@@ -174,6 +172,7 @@ class ECGStreamer(Streamer):
             tries += 1
             try:
                 self.board.prepare_session()
+                break
             except:
                 time.sleep(0.1)
 
@@ -186,7 +185,6 @@ class ECGStreamer(Streamer):
 
         # get start time
         self.time = time.time()
-        self.log("Started ECG Stream...")
 
         # First send some initial information
         req = Request()
@@ -223,10 +221,11 @@ class ECGStreamer(Streamer):
             self.send(resp, request.origin)
 
     def STOP(self, request):
-        """ Request method STOP """
-        self.streaming = False
-        self.log("Stopped Recording ECG Data: {}".format(self.get_date()))
-        self.log("Stopped Stream.")
+        """
+        Request method STOP
+        Extended from base class in pi_lib.py
+        """
+        super().STOP(request)  # extend
 
         self.board.stop_stream()
         self.board.release_session()
@@ -239,7 +238,7 @@ class EEGStreamer(Streamer):
     def __init__(self):
         super().__init__()
         self.handler = 'EEGHandler'
-        synth = True  # whether to use the BrainFlow Synthetic board (for testing and whatnot)
+        synth = False  # whether to use the BrainFlow Synthetic board (for testing and whatnot)
 
         from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds
 
@@ -265,14 +264,13 @@ class EEGStreamer(Streamer):
         self.frames_sent = 0    # number of frames sent
         self.time = 0  # time of START
 
-        self.streaming = False  # flag to start and stop stream
-
     def START(self, request):
-        """ Start Streaming continually."""
-        if self.streaming:
-            self.log("EEG Stream already Started")
-            return
-        self.streaming = True
+        """
+        Request method START
+        Start Streaming continually
+        Extended from base class in pi_lib.py
+        """
+        super().START(request)  # extend
 
         # First send some initial information
         req = Request()
@@ -282,16 +280,23 @@ class EEGStreamer(Streamer):
         self.send(req, request.origin)
 
         # start EEG session
-        try:
-            self.board.prepare_session()
-        except:
+        tries = 0
+        while tries <= 5:
+            tries += 1
+            try:
+                self.board.prepare_session()
+                break
+            except:
+                time.sleep(0.1)
+
+        if self.board.is_prepared():
+            self.board.start_stream()  # start stream
+        else:
             self.throw("Failed to prepare streaming session in {}. Make sure the board is turned on.".format(self.name), trace=False)
             return
-        self.board.start_stream()
 
         # get start time
         self.time = time.time()
-        self.log("Started EEG Stream...")
 
         # continually collect sensor data
         resp = Request()  # new response
@@ -317,10 +322,11 @@ class EEGStreamer(Streamer):
             self.send(resp, request.origin)
 
     def STOP(self, request):
-        """ Request method STOP """
-        self.streaming = False
-        self.log("Stopped Recording EEG Data: {}".format(self.get_date()))
-        self.log("Stopped Stream.")
+        """
+        Request method STOP
+        Extended from base class in pi_lib.py
+        """
+        super().STOP(request)  # extend
 
         self.board.stop_stream()
         self.board.release_session()

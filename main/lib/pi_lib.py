@@ -3,6 +3,7 @@ from requests import get
 import socket
 import json
 import inspect
+import time
 
 from lib import HostNode, WorkerNode, Request
 
@@ -74,6 +75,8 @@ class Streamer(WorkerNode):
     def __init__(self):
         super().__init__()
         self.handler = None  # class name of the handler to use on the server
+        self.streaming = False  # flag set when actively streaming
+        self.time = 0  # start time
 
     def send(self, request, socket_handler):
         """
@@ -97,3 +100,23 @@ class Streamer(WorkerNode):
         self.send(req, self.sockets[self.source_id])
 
         super()._run()  # continue _run method. Runs the sockets on this worker.
+
+    def START(self, request):
+        """
+        Should be extended in streamers.py
+        Begins the streaming process, using self.send() to send each data packet.
+        """
+        if self.streaming:
+            self.log("{} received START request, but it is already running".format(self.name))
+            return
+        self.streaming = True
+        self.log("Started {}".format(self.name))
+        self.time = time.time()
+
+    def STOP(self, request):
+        """
+        Should be extended in streamers.py
+        Ends the streaming process
+        """
+        self.streaming = False
+        self.log("Stopped {} at {}".format(self.name, self.get_date()))

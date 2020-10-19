@@ -216,7 +216,6 @@ class ECGHandler(Handler):
         data = request.content.decode(request.encoding)  # raw JSON string
         data = json.loads(data)  # translate to dictionary
         data = self.calculate_heart_rate(data)  # adds heart rate to data
-        # This is ALL the data. How to add a column in buffer? read_all, calculate, write?
         self.ecg_buffer.write(data)  # save to buffer
         self.frames_received += 1
         self.debug("Ingested ECG data (frame {})".format(self.frames_received), 3)
@@ -274,10 +273,11 @@ class ECGHandler(Handler):
         # get pulse peaks above pulse_threshold, and a minimum distance of a 10th of the sample rate apart.
         peaks, _ = signal.find_peaks(pulses, height=self.pulse_threshold, distance=self.sample_rate/10)
         bpm = (len(peaks)/window)*self.sample_rate*60  # beats per minute
-        self.debug("Window: {}, peaks: {}".format(window, len(peaks)))
+        #self.debug("Window: {}, peaks: {}".format(window, len(peaks)))
 
         # add the calculated heart rate to the new data, and return it.
         # need to pad with 'nan' so the DataSource has columns of equal length.
+        # Bokeh doesn't plot 'nan' points.
         new_data['heart_rate'] = ['nan']*(len(new_pulse_data)-1) + [bpm]
         return new_data
 
