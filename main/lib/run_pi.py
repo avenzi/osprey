@@ -26,7 +26,7 @@ for class_name in class_names:
 
 # TODO: Add input validation to all these options?
 if not(ip and port and name and handlers and all_in_config):
-    print("> Configuration options are not yet set. \
+    print("\n> Configuration options are not yet set. \
           \n  Please provide the requested information. \
           \n  These can be changed in ./config.json\n")
     if not ip:
@@ -37,9 +37,11 @@ if not(ip and port and name and handlers and all_in_config):
         config['NAME'] = input("Client name: ")
     if not handlers:
         config['HANDLERS'] = {}
-        print("\n> Answer Y/N to each of the following\n  to select which Streamer classes\n  are to be used for this client.")
+        print("\n> Answer Y/N to each of the following (or press Enter for Y)\n  to select which Streamer classes\n  are to be used for this client.")
         for name in class_names:
-            config['HANDLERS'][name] = input("Use {}? ".format(name)).upper()
+            ans = input("Use {}? ".format(name)).upper()
+            ans = 'Y' if ans == '' else ans
+            config['HANDLERS'][name] = ans
 
     with open('config.json', 'w') as file:
         json.dump(config, file)

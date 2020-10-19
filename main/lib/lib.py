@@ -1296,7 +1296,7 @@ class RingBuffer:
         return data
 
     def read_all(self):
-        """ Get all data in the ring regardless of last read index """
+        """ Get all data in the ring regardless of last read index, and don't update read index """
         data = {}
         with self.read_lock:
             if self.length == self.size:  # full

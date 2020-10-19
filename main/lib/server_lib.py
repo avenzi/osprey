@@ -266,13 +266,6 @@ class GraphStream(Base):
     def __init__(self, layout):
         self.layout = layout
 
-        '''
-        hover = HoverTool(tooltips=[
-            ("data", "@data"),
-            ("IEX Real-Time Price", "@price")
-            ])
-        '''
-
     def stream_page(self):
         """ Returns the response for the plot page """
         response = Request()

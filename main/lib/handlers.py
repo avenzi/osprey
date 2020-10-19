@@ -1,5 +1,5 @@
 from bokeh.plotting import figure
-from bokeh.models import AjaxDataSource
+from bokeh.models import AjaxDataSource, Slider, CustomJS
 from bokeh.layouts import layout
 from scipy import signal
 import numpy as np
@@ -9,7 +9,7 @@ from server_lib import Handler, GraphStream
 from lib import Request, Response, DataBuffer, RingBuffer
 
 # EEG page Bokeh Layout
-from pages.eeg_layout import config, configure_layout, create_filter_sos
+from pages.eeg_layout import js_request, config, configure_layout, create_filter_sos
 
 
 class VideoHandler(Handler):
@@ -91,14 +91,13 @@ class SenseHandler(Handler):
             max_size=100,          # Keep last 1000 data points
             if_modified=True)      # if_modified ignores responses sent with code 304 and not cached.
 
-        tools = ['save']
-        humid = figure(title='Humidity', x_axis_label='time', y_axis_label='Percent', tools=tools, plot_width=600, plot_height=300)
+        humid = figure(title='Humidity', x_axis_label='time', y_axis_label='Percent', toolbar_location=None, plot_width=600, plot_height=300)
         humid.line(x='time', y='humidity', source=source)
-        press = figure(title='Pressure', x_axis_label='time', y_axis_label='Millibars', tools=tools, plot_width=600, plot_height=300)
+        press = figure(title='Pressure', x_axis_label='time', y_axis_label='Millibars', toolbar_location=None, plot_width=600, plot_height=300)
         press.line(x='time', y='pressure', source=source)
-        temp = figure(title='Temperature', x_axis_label='time', y_axis_label='Degrees Celsius', tools=tools, plot_width=600, plot_height=300)
+        temp = figure(title='Temperature', x_axis_label='time', y_axis_label='Degrees Celsius', toolbar_location=None, plot_width=600, plot_height=300)
         temp.line(x='time', y='temperature', source=source)
-        orient = figure(title='Orientation', x_axis_label='time', y_axis_label='Degrees', tools=tools, plot_width=600, plot_height=300)
+        orient = figure(title='Orientation', x_axis_label='time', y_axis_label='Degrees', toolbar_location=None, plot_width=600, plot_height=300)
         orient.line(x='time', y='pitch', legend_label='Pitch', color='blue', source=source)
         orient.line(x='time', y='roll', legend_label='Roll', color='green', source=source)
         orient.line(x='time', y='yaw', legend_label='Yaw', color='red', source=source)
@@ -135,8 +134,157 @@ class SenseHandler(Handler):
         self.send(response, request.origin)
 
 
+class ECGHandler(Handler):
+    """ Handles ECG stream """
+    def __init__(self):
+        super().__init__()
+
+        self.frames_sent = 0
+        self.frames_received = 0
+
+        self.sample_rate = 0  # sampling rate of board
+        self.ecg_channels = []  # list of ECG channel name strings
+
+        self.pulse_channels = []  # list of pulse channel name strings
+        self.pulse_threshold = 800  # threshold for detecting heart beats
+        self.pulse_window = 10  # maximum window for heart rate in seconds
+
+        # need a list of channel names, so most of these are initialized in the INIT method
+        self.graph = None
+
+        self.ecg_buffer = None
+        self.ecg_lock = None  # ticket to read from buffer
+
+    def INIT(self, request):
+        """ Handles INIT request from client """
+        self.sample_rate = float(request.header['sample_rate'])  # data points per second
+        self.ecg_channels = request.header['ecg_channels'].split(',')
+        self.pulse_channels = request.header['pulse_channels'].split(',')
+
+        # Create Bokeh figures
+        source = AjaxDataSource(
+            data_url='/update?id={}'.format(self.id),
+            method='GET',
+            polling_interval=100,  # in milliseconds
+            mode='append',  # append to existing data
+            max_size=1000,  # Keep last 1000 data points
+            if_modified=True)  # if_modified ignores responses sent with code 304 and not cached.
+
+        ecg_list = []
+        for i in range(len(self.ecg_channels)):
+            fig = figure(
+                title=self.ecg_channels[i],
+                x_axis_label='time', y_axis_label='???',
+                plot_width=600, plot_height=150,
+                toolbar_location=None
+            )
+            fig.line(x='time', y=self.ecg_channels[i], source=source)
+            ecg_list.append(fig)
+
+        # Pulse figure
+        pulse = figure(
+            title='Pulse Sensor',
+            x_axis_label='time', y_axis_label='???',
+            plot_width=600, plot_height=150,
+            toolbar_location=None
+        )
+        pulse.line(x='time', y=self.pulse_channels[0], source=source)
+
+        # Heart rate figure
+        heart_rate = figure(
+            title='Heart Rate',
+            x_axis_label='time', y_axis_label='BPM',
+            plot_width=600, plot_height=150,
+            toolbar_location=None
+        )
+        heart_rate.circle(x='time', y='heart_rate', source=source)
+
+        heartbeat_threshold = Slider(title="Heart Beat Threshold", start=0, end=1000, step=10, value=self.pulse_threshold)
+        heartbeat_threshold.js_on_change("value", CustomJS(code=js_request('heartbeat_threshold')))
+
+        # create layout
+        lay = layout([[ecg_list, [heartbeat_threshold, pulse, heart_rate]]])
+        # pass layout into GraphStream object, polling interval in ms, domain of x values to display
+        self.graph = GraphStream(lay)
+
+        size = int(self.pulse_window * self.sample_rate)
+        self.ecg_buffer = RingBuffer(self.ecg_channels+['heart_rate', 'time'], size)
+        self.ecg_lock = self.ecg_buffer.get_ticket()
+
+    def INGEST(self, request):
+        """ Handle table data received from Pi """
+        data = request.content.decode(request.encoding)  # raw JSON string
+        data = json.loads(data)  # translate to dictionary
+        data = self.calculate_heart_rate(data)  # adds heart rate to data
+        # This is ALL the data. How to add a column in buffer? read_all, calculate, write?
+        self.ecg_buffer.write(data)  # save to buffer
+        self.frames_received += 1
+        self.debug("Ingested ECG data (frame {})".format(self.frames_received), 3)
+
+    def GET(self, request):
+        """
+        Returns response object for a GET request
+        Return False to fall back to general server response
+        """
+        if request.path.endswith('/stream'):  # request for data stream page html
+            response = self.graph.stream_page()
+        elif request.path.endswith('/plot'):  # request for initial plot JSON
+            response = self.graph.plot_json()
+        elif request.path.endswith('/update'):  # request for data stream update
+            response = self.graph.update_json(self.ecg_buffer, self.ecg_lock)
+        else:
+            self.debug("Path not recognized: {}".format(request.path), 2)
+            return
+        self.send(response, request.origin)
+
+    def POST(self, request):
+        """ Handles POST request sent. Right now used to update widgets """
+        if request.path.endswith('/widgets'):  # A widget was updated
+            # Content is a JSON string with a single key-value pair
+            json_string = request.content.decode(self.encoding)  # decode from bytes
+            key, value = list(json.loads(json_string).items())[0]
+
+            # Converting the value from JS types in string form to python types
+            if key in ['heartbeat_threshold']:  # ints
+                value = int(value)
+
+            # store the new updated value
+            self.pulse_threshold = value
+            response = Response(204)  # no content, successful response
+
+        else:
+            self.debug("Path not recognized for POST request: {}".format(request.path), 2)
+            return
+
+        self.send(response, request.origin)
+
+    def calculate_heart_rate(self, new_data):
+        """
+        Calculates heart rate within the last pulse window
+        Adds heart rate to the data dictionary and returns it
+        <new_data> new data to add heart rate to.
+        """
+        all_pulse_data = self.ecg_buffer.read_all()[self.pulse_channels[0]]  # get old data
+        new_pulse_data = new_data[self.pulse_channels[0]]  # new pulse data to be added
+        pulse_data = all_pulse_data + new_pulse_data  # all available pulse data
+
+        window = min(int(self.pulse_window*self.sample_rate), len(pulse_data)-1)  # size of time window
+        pulses = pulse_data[-window:]  # pulse data in time window
+
+        # get pulse peaks above pulse_threshold, and a minimum distance of a 10th of the sample rate apart.
+        peaks, _ = signal.find_peaks(pulses, height=self.pulse_threshold, distance=self.sample_rate/10)
+        bpm = (len(peaks)/window)*self.sample_rate*60  # beats per minute
+        self.debug("Window: {}, peaks: {}".format(window, len(peaks)))
+
+        # add the calculated heart rate to the new data, and return it.
+        # need to pad with 'nan' so the DataSource has columns of equal length.
+        new_data['heart_rate'] = ['nan']*(len(new_pulse_data)-1) + [bpm]
+        return new_data
+
+
+
 class EEGHandler(Handler):
-    """ Handles SenseHat stream """
+    """ Handles EEG stream """
     def __init__(self):
         super().__init__()
 

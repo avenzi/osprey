@@ -15,14 +15,14 @@ config = {'fourier_window': 5,
           'spectrogram_range': (-9.0, -2.0),  # color scale range (log)
           'spectrogram_size': 30,
 
-          'pass_toggle': True,
+          'pass_toggle': False,
           'pass_type': 'bandpass',
           'pass_style': 'Butterworth',
           'pass_range': (1, 60),
           'pass_order': 3,
           'pass_ripple': (1, 50),
 
-          'stop_toggle': True,
+          'stop_toggle': False,
           'stop_type': 'bandstop',
           'stop_style': 'Butterworth',
           'stop_range': (59, 60.5),
