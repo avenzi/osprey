@@ -152,6 +152,7 @@ class ECGHandler(Handler):
         # need a list of channel names, so most of these are initialized in the INIT method
         self.graph = None
 
+        self.ecg_store_interval = 60  # interval at which to save data to a file in seconds
         self.ecg_buffer = None
         self.ecg_lock = None  # ticket to read from buffer
 
@@ -167,7 +168,7 @@ class ECGHandler(Handler):
             method='GET',
             polling_interval=100,  # in milliseconds
             mode='append',  # append to existing data
-            max_size=1000,  # Keep last 1000 data points
+            max_size=int(self.sample_rate*5),  # display last 5 seconds
             if_modified=True)  # if_modified ignores responses sent with code 304 and not cached.
 
         ecg_list = []
@@ -204,11 +205,10 @@ class ECGHandler(Handler):
 
         # create layout
         lay = layout([[ecg_list, [heartbeat_threshold, pulse, heart_rate]]])
-        # pass layout into GraphStream object, polling interval in ms, domain of x values to display
-        self.graph = GraphStream(lay)
+        self.graph = GraphStream(lay)  # pass layout into GraphStream object
 
-        size = int(self.pulse_window * self.sample_rate)
-        self.ecg_buffer = RingBuffer(self.ecg_channels+['heart_rate', 'time'], size)
+        size = int(self.ecg_store_interval * self.sample_rate)  # store interval in number of samples
+        self.ecg_buffer = RingBuffer(self.ecg_channels+['heart_rate', 'time'], size, './data/ECG_data')
         self.ecg_lock = self.ecg_buffer.get_ticket()
 
     def INGEST(self, request):
@@ -263,7 +263,8 @@ class ECGHandler(Handler):
         Adds heart rate to the data dictionary and returns it
         <new_data> new data to add heart rate to.
         """
-        all_pulse_data = self.ecg_buffer.read_all()[self.pulse_channels[0]]  # get old data
+        samples = int(self.pulse_window * self.sample_rate)
+        all_pulse_data = self.ecg_buffer.read_length(samples)[self.pulse_channels[0]]
         new_pulse_data = new_data[self.pulse_channels[0]]  # new pulse data to be added
         pulse_data = all_pulse_data + new_pulse_data  # all available pulse data
 
@@ -282,7 +283,6 @@ class ECGHandler(Handler):
         return new_data
 
 
-
 class EEGHandler(Handler):
     """ Handles EEG stream """
     def __init__(self):
@@ -299,6 +299,7 @@ class EEGHandler(Handler):
         self.eeg_buffer = None
         self.eeg_lock = None  # ticket to read from EEG buffer
 
+        self.fourier_store_interval = 0  # interval at which to save data in seconds
         self.fourier_buffer = None
         self.fourier_lock = None  # ticket to read from Fourier buffer
         self.head_plot_lock = None  # ticket for the head plots
@@ -306,6 +307,8 @@ class EEGHandler(Handler):
         self.spectrogram_buffer = None
         self.spectrogram_lock = None  # ticket to read from Fourier buffer
         self.spec_time = 0  # counter for how many  slices have been sent for the spectrogram
+
+        self.head_x, self.head_y = [], []  # x/y positions for electrodes in head plots
 
         # EEG filtering
         self.pass_sos = None     # current SOS. Created by create_sos() in eeg_layout.py
@@ -332,7 +335,6 @@ class EEGHandler(Handler):
         # size of EEG buffer (# of data points to keep).
         # FFT window is in seconds, sample rate is data points per second.
         size = int(self.page_config['fourier_window'] * self.sample_rate)
-
         self.eeg_buffer = RingBuffer(self.channels+['time'], size)
         self.eeg_lock = self.eeg_buffer.get_ticket()
 
@@ -340,7 +342,6 @@ class EEGHandler(Handler):
         self.fourier_lock = self.fourier_buffer.get_ticket()
         self.head_plot_lock = self.fourier_buffer.get_ticket()
 
-        self.head_x, self.head_y = [], []
         with open('pages/electrodes.json', 'r') as f:
             all_names = json.loads(f.read())
         for name in self.channels:  # get coordinates of electrodes by name
@@ -468,7 +469,8 @@ class EEGHandler(Handler):
 
     def fourier(self):
         """ Calculates the FFT from all EEG data available """
-        data = self.eeg_buffer.read_all()  # dict of all current data
+        samples = int(self.page_config['fourier_window'] * self.sample_rate)
+        data = self.eeg_buffer.read_length(samples)  # dict of data in the fourier window
 
         N = len(list(data.values())[0])  # length of each channel in eeg data (should all be the same)
         if N == 0:  # no data

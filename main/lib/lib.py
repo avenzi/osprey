@@ -6,6 +6,7 @@ import socket
 from datetime import datetime
 import time
 import json
+import os
 
 PAGES_DIR = './pages'
 
@@ -1118,15 +1119,17 @@ class RingBuffer:
     """
     Thread-safe Data Table Ring-Buffer.
     Keeps track of a fixes set of named data columns.
-    Size determines how many rows of data to keep before overwriting them (can be modified).
+    Size determines how many rows of data to keep before overwriting them.
     Allows simultaneous reads and one exclusive write.
     <column_names> is a list of names of the columns in the data set.
     <size> is the maximum number of points in each data column
+    <file_location> directory where old data is stored before being overwritten.
+        - if not provided, old data will not be stored
     """
 
-    def __init__(self, column_names, size):
+    def __init__(self, column_names, size, file_location=None):
         assert len(column_names) > 1, "Must have at least 1 column"
-        assert size > 0, "Maximum size must be greater than zero"
+        assert 0 < size, "Maximum accessible size must be greater than zero"
 
         self.size = size  # max size
         self.length = 0  # number of current elements
@@ -1144,45 +1147,27 @@ class RingBuffer:
         self.ready = Condition()  # Notifies when new data is ready
 
         # list of reader positions relative to the head.
-        # ex. If reader = 5, then the next read should be from head-5 to head.
+        # ex. If reader = 5, then the next read should be from head-5_ to head.
         # When the reader is 0, it is at the front. When it is self.length, it's at the back.
         # List index is reader ID. Any number of readers are allowed.
         self.tickets = []
 
+        # Initialize data dump file
+        if file_location is None:
+            self.file = None
+        else:
+            if not os.path.exists(file_location):  # check for directory
+                os.makedirs(file_location)
+
+            self.dump_counter = 0  # keeps track of how much data has been added since the last dump
+            self.file = file_location + '/' + time.strftime("%m-%d-%y_%H-%M-%S.csv", time.localtime())
+            self.file_lock = Lock()  # lock to write to the file
+            with open(self.file, 'a') as file:
+                file.write(','.join(self.names) + '\n')  # csv header
+
     def add(self, a, b):
         """ Return circular addition of a and b """
         return (a + b) % self.size
-
-    def set_size(self, size):
-        """ Set the maximum size of the ring """
-        if size == self.size:
-            return  # no change
-
-        with self.write_lock:  # don't allow read or writes during modification
-            # reorder data chronologically so that tail=0
-            for name, col in self.data.items():
-                self.data[name] = col[self.tail:] + col[:self.tail]
-
-            # Truncate or add data
-            if size < self.size:  # decreasing size
-                # get as much recent data as will fit in the new size, truncate the rest
-                extra = self.size - self.length  # any extra space after last entry
-                for name, col in self.data.items():
-                    self.data[name] = col[-size - extra:self.length]
-            else:  # increasing size
-                # expand size and pad with 0's
-                for name, col in self.data.items():
-                    self.data[name] = self.data[name] + [0] * (size - self.size)
-
-            self.size = size
-            self.tail = 0
-
-            # size was truncated to at or below the length (full ring)
-            if self.size <= self.length:
-                self.length = self.size  # cut fown size to match
-                self.head = 0  # head it at tail because it's full
-            else:  # ring not full
-                self.head = self.length
 
     def get_ticket(self):
         """ Returns an ID that should be passed into read() """
@@ -1197,21 +1182,40 @@ class RingBuffer:
         Keys are column names, values are lists of new data for each column.
         New data lists must all be of the same length and names must match the data.
         """
+        data_length = len(data[self.names[0]])  # new data lists should all be same length
+
+        if data_length == 0:  # no data being added
+            return
+
+        # TODO: Is it worth sacrificing speed to check the validity of input data as well?
+        #  This would mean making sure that the column names match up and all
+        #  new list sizes are equal.
+
+        # Dump old data to file
+        if self.file:  # if a file was given
+            with self.file_lock:
+                # if new data goes over the dump limit (size)
+                if self.dump_counter + data_length >= self.size:
+                    with open(self.file, 'a') as file:
+                        # dump data since last dump
+                        cur_data = self.read_length(self.dump_counter)
+                        for i in range(self.dump_counter):
+                            row = ','.join([str(cur_data[name][i]) for name in self.names]) + '\n'
+                            file.write(row)
+                        # dump new data too
+                        for i in range(data_length):
+                            row = ','.join([str(data[name][i]) for name in self.names]) + '\n'
+                            file.write(row)
+                    self.dump_counter = 0  # reset dump counter
+
+                else:  # no dump needed yet
+                    self.dump_counter += data_length  # add new data length to dump counter
+
+        # 4 cases for data to be appended:
         with self.write_lock:
-            data_length = len(data[self.names[0]])  # new data lists should all be same length
-
-            # 5 cases for data to be appended:
-
-            # no data being added
-            if data_length == 0:
-                # This would also be the case for invalid data.
-                # TODO: Is it worth sacrificing speed to check the validity of input data?
-                #  This would mean making sure that the column names match up and all
-                #  new list sizes are equal.
-                return
 
             # new data can be placed after head as-is (no wrapping needed)
-            elif data_length <= self.size - self.head:
+            if data_length <= self.size - self.head:
                 for name in self.names:
                     self.data[name][self.head:self.head + data_length] = data[name]
                 self.head = self.add(self.head, data_length)  # move head
@@ -1295,15 +1299,30 @@ class RingBuffer:
             self.tickets[ticket] = 0
         return data
 
-    def read_all(self):
-        """ Get all data in the ring regardless of last read index, and don't update read index """
+    def read_length(self, length):
+        """ Get a specific length of data the ring regardless of last read index, and don't update any read indexes """
         data = {}
         with self.read_lock:
             if self.length == self.size:  # full
-                for name, col in self.data.items():
-                    data[name] = col[self.tail:] + col[:self.head]
-            else:  # not full
-                for name, col in self.data.items():
-                    data[name] = col[self.tail:self.head]
-        return data
 
+                if length <= self.head:  # reading before the head, no wrapping
+                    for name, col in self.data.items():
+                        data[name] = col[self.head - length:self.head]
+
+                elif length >= self.size:  # reading all data
+                    for name, col in self.data.items():
+                        data[name] = col[self.tail:] + col[:self.head]
+
+                else:  # self.head < length < self.size  # wrapping, but not all the way
+                    for name, col in self.data.items():
+                        data[name] = col[-(length - self.head):] + col[:self.head]
+
+            else:  # not full
+                if length >= self.length:  # reading all data
+                    for name, col in self.data.items():
+                        data[name] = col[self.tail:self.head]
+
+                else:  # not all data. Becuase not full, should be no wrapping
+                    for name, col in self.data.items():
+                        data[name] = col[self.head - length:self.head]
+        return data
