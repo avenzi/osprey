@@ -164,8 +164,6 @@ class ECGStreamer(Streamer):
         Start Streaming continually
         Extended from base class in pi_lib.py
         """
-        super().START(request)  # extend
-
         # start ECG session
         tries = 0
         while tries <= 5:
@@ -183,8 +181,7 @@ class ECGStreamer(Streamer):
             self.throw("Failed to prepare streaming session in {}. Make sure the board is turned on.".format(self.name), trace=False)
             return
 
-        # get start time
-        self.time = time.time()
+        super().START(request)  # display log message and get current time
 
         # First send some initial information
         req = Request()
@@ -270,7 +267,6 @@ class EEGStreamer(Streamer):
         Start Streaming continually
         Extended from base class in pi_lib.py
         """
-        super().START(request)  # extend
 
         # First send some initial information
         req = Request()
@@ -295,8 +291,7 @@ class EEGStreamer(Streamer):
             self.throw("Failed to prepare streaming session in {}. Make sure the board is turned on.".format(self.name), trace=False)
             return
 
-        # get start time
-        self.time = time.time()
+        super().START(request)  # display log message and get current time
 
         # continually collect sensor data
         resp = Request()  # new response

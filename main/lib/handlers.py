@@ -6,7 +6,7 @@ import numpy as np
 import json
 
 from server_lib import Handler, GraphStream
-from lib import Request, Response, DataBuffer, RingBuffer
+from lib import Request, Response, DataBuffer, RingBuffer, MovingAverage
 
 # EEG page Bokeh Layout
 from pages.eeg_layout import js_request, config, configure_layout, create_filter_sos
@@ -146,8 +146,8 @@ class ECGHandler(Handler):
         self.ecg_channels = []  # list of ECG channel name strings
 
         self.pulse_channels = []  # list of pulse channel name strings
-        self.pulse_threshold = 800  # threshold for detecting heart beats
         self.pulse_window = 10  # maximum window for heart rate in seconds
+        self.heart_rate = MovingAverage(10)  # heart rate moving average
 
         # need a list of channel names, so most of these are initialized in the INIT method
         self.graph = None
@@ -200,11 +200,8 @@ class ECGHandler(Handler):
         )
         heart_rate.circle(x='time', y='heart_rate', source=source)
 
-        heartbeat_threshold = Slider(title="Heart Beat Threshold", start=0, end=1000, step=10, value=self.pulse_threshold)
-        heartbeat_threshold.js_on_change("value", CustomJS(code=js_request('heartbeat_threshold')))
-
         # create layout
-        lay = layout([[ecg_list, [heartbeat_threshold, pulse, heart_rate]]])
+        lay = layout([[ecg_list, [pulse, heart_rate]]])
         self.graph = GraphStream(lay)  # pass layout into GraphStream object
 
         size = int(self.ecg_store_interval * self.sample_rate)  # store interval in number of samples
@@ -272,14 +269,17 @@ class ECGHandler(Handler):
         pulses = pulse_data[-window:]  # pulse data in time window
 
         # get pulse peaks above pulse_threshold, and a minimum distance of a 10th of the sample rate apart.
-        peaks, _ = signal.find_peaks(pulses, height=self.pulse_threshold, distance=self.sample_rate/10)
-        bpm = (len(peaks)/window)*self.sample_rate*60  # beats per minute
+        # distance is used to regulate the space between peaks - right now this is to account for the plateaus
+        peaks, _ = signal.find_peaks(pulses, distance=self.sample_rate/4, prominence=400)
+        bpm = (len(peaks)/window)*self.sample_rate*60  # beats per minute in this window
+        heart_rate = self.heart_rate.add(bpm)  # add value to moving average and get result
+
         #self.debug("Window: {}, peaks: {}".format(window, len(peaks)))
 
         # add the calculated heart rate to the new data, and return it.
         # need to pad with 'nan' so the DataSource has columns of equal length.
         # Bokeh doesn't plot 'nan' points.
-        new_data['heart_rate'] = ['nan']*(len(new_pulse_data)-1) + [bpm]
+        new_data['heart_rate'] = ['nan']*(len(new_pulse_data)-1) + [heart_rate]
         return new_data
 
 
