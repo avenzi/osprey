@@ -33,6 +33,10 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### October 25th, 2020:
+
+I wrote a class called MovingAverage that I now use to keep track of the heart rate from the pulse sensor. I figured it could be useful in the future. I also am now compensating for the plateaus in the pulse sensor differently, using the distance and prominence arguments of scipy.signal.find_peaks() instead of the height threshold. It seems to be working much better, as it is no longer double-counting each side of the pleateaus.
+
 ##### October 24th, 2020:
 
 I've successfully implemented a massive 1-minute buffer in which to save data and dump it in a csv file. My main problem was incorporating it into my RingBuffer class, but I essentially re-wrote it so that the total ring buffer size is 1 minute of samples, and the read_all() method is now read_length() with an argument determining what length to read. I also had an issue where data appeared to be mixed around in the csv file, but I believe I fixed that by adding a threading lock on the file itself.
