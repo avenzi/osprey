@@ -33,6 +33,12 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### October 24th, 2020:
+
+I've successfully implemented a massive 1-minute buffer in which to save data and dump it in a csv file. My main problem was incorporating it into my RingBuffer class, but I essentially re-wrote it so that the total ring buffer size is 1 minute of samples, and the read_all() method is now read_length() with an argument determining what length to read. I also had an issue where data appeared to be mixed around in the csv file, but I believe I fixed that by adding a threading lock on the file itself.
+
+I also confirmed my suspicions about the heart rate algorithm - it is indeed finding multiple peaks on the plateau that the pulse sensor detects. I still don't know why that plateau exists. I may ask Dr. Ghassemi to buy a new pulse sensor, or maybe I'll try to rewrite my algorithm.
+
 ##### October 18th, 2020:
 
 I have set up the pulse sensor streaming, however I suspect that I have a faulty pulse sensor, as the data seems to hit some sort of peak value that it cannot go beyond. Theoretically, this shouldn't affect the data as this only happens when a heart beat is detected, but it is messing with my heart beat detecting algorithm, which uses scipy.signal.find_peaks. I will ask Dr. Ghassemi if he has any ideas on a better algorithm.
