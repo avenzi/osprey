@@ -33,6 +33,12 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### October 26th, 2020:
+
+Dr. Ghassemi and I talked today, and we discussed getting the application startup and configuration to a minimal amount of user interaction. One exciting possibility is having a single script on the data hub server that SSHs into all the Pis and runs the program automatically. Another thing I want to work on is running automatic git pull updates whenever the program is started.
+
+In preparation for this, I completely overhauled the directory structure of the application. This is because I want to make absolutely clear what config files go with what scripts, and that the server and pi code are completely separate.
+
 ##### October 25th, 2020:
 
 I wrote a class called MovingAverage that I now use to keep track of the heart rate from the pulse sensor. I figured it could be useful in the future. I also am now compensating for the plateaus in the pulse sensor differently, using the distance and prominence arguments of scipy.signal.find_peaks() instead of the height threshold. It seems to be working much better, as it is no longer double-counting each side of the pleateaus.
