@@ -9,8 +9,6 @@ import time
 import json
 import os
 
-PAGES_DIR = './pages'
-
 
 class Base:
     """

@@ -31,5 +31,4 @@ do
   done
 done
 
-cd ./lib
 python3 run_pi.py

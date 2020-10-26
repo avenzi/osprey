@@ -9,7 +9,7 @@ sudo apt-get -y install python3-pip
 pip3 install -r ./pi_requirements.txt
 
 # download brainflow
-cd ~/
+cd ~/  # go to home directory
 git clone https://github.com/OpenBCI/brainflow.git
 sudo apt-get install cmake -y
 
