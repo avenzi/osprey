@@ -33,6 +33,20 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### October 28th, 2020:
+
+Today I spent my time trying to figure out how to write a bash script on the server that automatically SSH's into a raspberry Pi, executes some commands, then exits. The script itself is simple - just a call to ssh with following commands for it to run. However, there are a number of issues that this doesn't account for.
+
+First, this script assumes that all the port forwarding for the pi has been set up. I have no idea how to do this automatically, as the only experience I have in port forwarding is through the user interface of my home network. This is also tied to the fact that there is no guarantee that the Pi will have a static IP address. I have tried to solve this but the solutions I have found online were both complicated and ineffective. 
+
+Second, this also assumes that the raspberry pi already has the public authentication key on it. I tried to write a script that automatically sends the public key to the pi, but this script needs to prompt the user for the Pi's user password, which is not ideal. I have a few options for this:
+
+- Prompt the user for the password anyway. The problem is that this will happen for each connected Pi, and it might be difficult to recognize which Pi it is by the IP alone. Essentially the user would needs to know which password goes with which ip address (again assuming the ip address is static, which I haven't figured out how to fix as mentioned above).
+- Assume the raspberry pi has the default user password. This would work automatically for newly-bought and un-configured Pis, but in order to re-purpose a raspberry pi, one would need to reset the password to default, then change it back again afterward.
+- Use a default public/private key pair stored on the git repo. This way each pi receives the appropriate public key when the repo is cloned, and the problem is eliminated. The issue is that this creates an obvious security vulnerability.
+
+Lastly, there is the issue of logging on the Pi. RIght now, log messages go straight to the terminal. I want everything to go to a log file instead, but that log file will be on it's respective Raspberry Pi. In order to notify the user that something went wrong, a message will need to be sent to the server and logged there instead, but the ssh session to start the pi has already been terminated, so it must then be through the socket connection itself. But if that is the case, then if the socket connection breaks, and error won't be able to be sent. I'm not sure how to fix this, other than to warn the user that log files on the pi have to be manually located.
+
 ##### October 26th, 2020:
 
 Dr. Ghassemi and I talked today, and we discussed getting the application startup and configuration to a minimal amount of user interaction. One exciting possibility is having a single script on the data hub server that SSHs into all the Pis and runs the program automatically. Another thing I want to work on is running automatic git pull updates whenever the program is started.
