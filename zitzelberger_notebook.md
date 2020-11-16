@@ -33,6 +33,24 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### November 15th, 2020:
+
+After the last entry, I needed to figure out a way for the raspberry pi to keep a static IP address, because this would need to be solved in order for our solution to work. I struggled to do this because the solutions I found online did not seem to work. I was able to achieve a static IP address, but only temporarily as there was always a chance that the IP was already taken. After I figured out why this was happening, I realized that there was no way to guarantee a perfectly static private IP without configuring the router settings, which the Pi does not have access to. There is a chance that some networks have an API for their gateway settings, but again there is no guarantee. 
+
+This lack of consistency and general complicatedness led me to try to think of a better way to solve the problem. The main issue we are trying to solve is to avoid the need for the user to ssh into the raspberry pi in order to run the program. About part way through last week I had a realization - why not just have the program run on boot? That way *nothing* needs to SSH into the Pi, not even the server. The pi could just be turned on, the automatically start searching for the remote server socket. Once it's found the PI can connect to the server without any interaction from the user. Once the program ends, I just need a way to automatically shut off the Pi. This solves all the problems we have been having - both for user interaction and network complexity.
+
+So for the last week I've been experimenting with different ways to start a script on boot, and so far the best and "cleanest" one, in my opinion, is to edit the Pi's root user crontab file to include a @reboot line that calls the startup script. I've cobbled together a bash line that does just this from many various  resources online:
+
+(sudo crontab -l ; echo "@reboot sh ${startup_path}") 2>/dev/null | sort | uniq | sudo crontab -
+
+The reason this is so roundabout is because apparently it's bad practice to directly edit cron files, so it's best to feed the line you want to  append into the crontab command instead. However, doing this normally  would just overwrite the cron file, so in order to preserver something  that may already be there, we need to copy everything in the crontab  with "sudo crontab -l", then echo out the new line to append on a new  line. The 2>/dev/null is to get rid of some messages that output if  the crontab file doesn't exist. The sort and unique commands prevent  duplicates incase the user runs the setup file multiple times. 
+
+Now, the next step is to add a method to trigger a shutdown of all Pi's connected to the server from user input. I am currently thinking that a simple button on the website UI will work just fine. The server will then send a special HTTP request to the Pi's, which will trigger a shutdown. This way, the user will never have to ssh into any of the Pi's beyond initial setup.
+
+##### November 2nd, 2020:
+
+I talked with Dr. Ghassemi at length today about resolving the issues discussed last time. We decided that the best way to solve the issue of depositing the public key onto the pi would be the following: When adding a Pi to the network, instruct the user to change the user password to some string known by the server. The server can then ssh into the pi with that password and deposit the public key. Then the user is free to change the password back to what it was if they so choose. This solves the issue of making the user keep track of ip addresses while also circumventing the security problems - this known password could be generated randomly.
+
 ##### October 28th, 2020:
 
 Today I spent my time trying to figure out how to write a bash script on the server that automatically SSH's into a raspberry Pi, executes some commands, then exits. The script itself is simple - just a call to ssh with following commands for it to run. However, there are a number of issues that this doesn't account for.
