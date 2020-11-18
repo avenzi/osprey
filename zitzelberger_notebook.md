@@ -33,6 +33,10 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### November 17th, 2020:
+
+I need to rewrite my setup scripts to also include configuration for the pi. I started working on a bash script that does this, given the assumption that python might not be installed yet. I'm really struggling with string formatting in bash, and I'm wondering if it might just be easier to install python, then do all of this configuration in python. The only issue with that is I was hoping to make the user configuration the first thing that pops up, rather than "Installing Python." I tried for awhile to have a nice user interface with animated loading icons for the installations, but I gave up after hours of trying and failing to understand why any sane human being would create such a horrible language.
+
 ##### November 15th, 2020:
 
 After the last entry, I needed to figure out a way for the raspberry pi to keep a static IP address, because this would need to be solved in order for our solution to work. I struggled to do this because the solutions I found online did not seem to work. I was able to achieve a static IP address, but only temporarily as there was always a chance that the IP was already taken. After I figured out why this was happening, I realized that there was no way to guarantee a perfectly static private IP without configuring the router settings, which the Pi does not have access to. There is a chance that some networks have an API for their gateway settings, but again there is no guarantee. 
