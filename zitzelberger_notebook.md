@@ -33,6 +33,10 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### November 18th, 2020:
+
+Working on writing a python script to prompt the user for all necessary config info.
+
 ##### November 17th, 2020:
 
 I need to rewrite my setup scripts to also include configuration for the pi. I started working on a bash script that does this, given the assumption that python might not be installed yet. I'm really struggling with string formatting in bash, and I'm wondering if it might just be easier to install python, then do all of this configuration in python. The only issue with that is I was hoping to make the user configuration the first thing that pops up, rather than "Installing Python." I tried for awhile to have a nice user interface with animated loading icons for the installations, but I gave up after hours of trying and failing to understand why any sane human being would create such a horrible language.
