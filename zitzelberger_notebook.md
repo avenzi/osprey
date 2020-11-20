@@ -33,6 +33,12 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### November 19th, 2020:
+
+Finally got those setup scripts working smoothly. All initial setup configuration is obtained from the user when they run pi_setup.sh, and every reboot afterward runs the appropriate python file to run the client.
+
+Next step is to rewrite the Pi client to continually try to connect to the server when run. I'm thinking every 5 seconds is reasonable. Maybe that could be an extra config option?
+
 ##### November 18th, 2020:
 
 Working on writing a python script to prompt the user for all necessary config info.
