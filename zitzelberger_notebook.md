@@ -33,6 +33,12 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### November 22th, 2020:
+
+The raspberry Pi now checks for the server to be available every 5 seconds (by default) by creating a throw-away socket and trying to connect. If the connection fails, then it waits and tries again. By throw-away socket I mean that it's not used for anything other than checking the server. I would like a better way to do this, but it was a simple solution and I don't see any immediate issues with it.
+
+I have also modified the Pi client code such that it reverts to that 'searching' state when the server disconnects. This means that the server can restart completely and all the Pis will re-connect automatically. My plan is that the server will also have the option of sending a specific signal to the Pis to shut them down completely. However in order to start the pis after that, they will need to be turned back on manually.
+
 ##### November 19th, 2020:
 
 Finally got those setup scripts working smoothly. All initial setup configuration is obtained from the user when they run pi_setup.sh, and every reboot afterward runs the appropriate python file to run the client.
