@@ -13,44 +13,48 @@ CONFIG_PATH = 'lib/raspi/config.json'
 class Client(HostNode):
     """
     Makes a connection to the server.
-    HandlerClass is used to handle individual requests.
+    Handler classes are used to handle individual requests.
     call run() to start.
+    <retry> number of seconds to wait before attempting to connect to the server each time
+    <debug> debug level of the client
     """
-    def __init__(self, ip, port, name, debug=0):
-        super().__init__(name, auto=True)
-        self.set_debug(1)
+    def __init__(self, retry=5, debug=0):
+        with open(CONFIG_PATH) as file:  # get config options
+            self.config = json.load(file)
+        self.ip = self.config.get('SERVER_IP_ADDRESS')  # ip address of server
+        self.port = self.config.get('PORT')  # port to connect through
 
-        self.ip = ip  # server ip address to connect to
-        self.port = port  # server port to connect through
+        name = self.config.get('NAME')  # display name of this Client
+        super().__init__(name, auto=False)
+        self.set_debug(debug)
+        self.retry = retry
 
     def run(self):
         """
-        Main entry point.
+        Overwritten from HostNode.run()
         Must be called on the main thread of a process.
-        Calls _run on a new thread and waits for exit status.
-        Blocks until exit status set.
+        Calls idle() and _run() on a new thread and waits for exit status.
+        Blocks until exit status set (because this is the main thread)
         """
-        Thread(target=self._run, name=self.name+'-RUN', daemon=True).start()
+        # search for a server to connect to, call _run() when found.
+        Thread(target=self.idle, name=self.name+'-IDLE', daemon=True).start()
         self.run_exit_trigger(block=True)  # block main thread until exit
 
     def _run(self):
         """
-        Should be called on a new thread.
+        Called by self.run() on a new thread.
         Creates one instance of each handler type from collection_lib
-        For each handler class, listens for new connections then starts them on their own thread.
+            For each handler class, listens for new connections then starts them on their own thread.
         """
         self.log("Name: {}".format(self.name))
         self.log("Device IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
         self.log("Server IP: {}".format(self.ip))
 
-        with open(CONFIG_PATH) as file:
-            config = json.load(file)
-
         # get selected handler classes
         from . import streamers
         members = inspect.getmembers(streamers, inspect.isclass)  # all classes [(name, class), ]
         for member in members:
-            if member[1].__module__.split('.')[-1] == 'streamers' and config['HANDLERS'][member[0]].upper() == 'Y':  # class selected in config file
+            if member[1].__module__.split('.')[-1] == 'streamers' and self.config['HANDLERS'][member[0]].upper() == 'Y':  # class selected in config file
                 self.connect(member[1])  # connect this HandlerClass to the server
 
     def connect(self, NodeClass):
@@ -68,6 +72,30 @@ class Client(HostNode):
         worker = NodeClass()  # create an instance of this node class
         worker.set_source(sock)  # set this socket as a data-source socket for the client
         self.run_worker(worker)  # run the new worker node on a parallel process
+
+    def idle(self):
+        """
+        Attempts to connect a dummy socket to the server.
+            If no server found, waits some amount of time then tries again.
+            Once found, closes the dummy socket and calls self._run()
+        """
+        self.debug("Waiting to find a server...")
+        while True:  # try to connect every interval
+            time.sleep(self.retry)  # wait to try again
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
+            try:  # connect socket to given address
+                # TODO: Better way to ping the server than using a dummy socket
+                sock.connect((self.ip, self.port))
+                self.debug("Server was found.")
+                # close socket
+                sock.shutdown(socket.SHUT_RDWR)
+                sock.close()
+                break
+            except Exception as e:  # failed to connect
+                pass
+
+        # Server was found, run on a new thread
+        Thread(target=self._run, name=self.name+'-RUN', daemon=True).start()
 
 
 class Streamer(WorkerNode):

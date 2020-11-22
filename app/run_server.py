@@ -1,7 +1,7 @@
-# This is here just because the top level
-# python file needs to be in this directory
-# for all the imports to work.
-# This is because python doesn't like
-# package imports from above the current path
+import os
 
+# ensure that python's CWD is this script's directory
+os.chdir(os.path.dirname(os.path.realpath(__file__)))
+
+# run run_pi.py to start the server
 import lib.server.run_server

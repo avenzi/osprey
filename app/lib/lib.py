@@ -42,7 +42,6 @@ class Base:
         """
         Waits until exit status is set.
         When triggered, calls cleanup if close status is set
-        Should be run on it's own thread.
         """
         try:
             with self.exit_condition:
@@ -706,15 +705,38 @@ class HostNode(Node):
         self.automatic_shutdown = auto
         self.pipes = {}   # index of Pipe objects, each connecting to a WorkerConnection
 
+    def run(self):
+        """
+        Default main entry point. Can be overwritten
+        Must be called on the main thread of a process.
+        Blocks until exit status set.
+        """
+        Thread(target=self._run, name=self.name+'-RUN', daemon=True).start()
+        self.run_exit_trigger(block=True)  # block main thread until exit
+
+    def _run(self):
+        """
+        Called by run() on a new thread.
+        Performs main execution cycle of the derived host object.
+        """
+        pass
+
+    def idle(self):
+        """
+        Optional default action when all workers are terminated and automatic_shutdown is not set.
+        Called on a new thread.
+        """
+        pass
+
     def run_worker(self, worker):
         """
         Start the given worker node on a new process.
         Adds the new Pipe to the pipe index, and starts reading from it on a new thread.
-        Return the new Pipe.
         """
-        host_conn, worker_conn = Pipe()  # multiprocessing duplex connections (doesn't matter which)
+        # multiprocessing duplex connections (doesn't matter which is which)
+        host_conn, worker_conn = Pipe()
 
-        # worker knows host name but not the host process
+        # worker knows the host name but not the host process
         worker_pipe = PipeHandler(self.name, host_conn)
 
         # process for new worker
@@ -723,7 +745,7 @@ class HostNode(Node):
         # host knows worker name and process. Pipe is indexed by the worker ID
         self.pipes[worker.id] = PipeHandler(worker.name, worker_conn, worker_process)
 
-        # new thread to act as main thread for process
+        # new thread to act as main thread for the worker process
         Thread(target=worker_process.start, name='WorkerMainThread', daemon=True).start()
 
         # read from this pipe on a new thread
@@ -740,10 +762,12 @@ class HostNode(Node):
                 This could be caused by a worker sending two SHUTDOWN signals.".format(pipe.name))
             return
         del self.pipes[pipe_id]  # remove from index
-        if self.automatic_shutdown:
-            if not self.pipes:  # all worker have disconnected
+        if not self.pipes:  # all workers have disconnected
+            if self.automatic_shutdown:  # shutdown because no workers left
                 self.debug("No workers left - shutting down '{}'".format(self.name))
                 self.shutdown()
+            else:  # put in idle mode because no workers left
+                Thread(target=self.idle, name=self.name+'-IDLE', daemon=True).start()
 
     def _run_pipe(self, pipe_id):
         """

@@ -19,27 +19,22 @@ class Server(HostNode):
     Any other request with a query matching one of the current Connections is handed over to that Connection.
     Call run() to start.
     """
-    def __init__(self, port, name, debug=0):
+    def __init__(self, debug=0):
+        with open(CONFIG_PATH, 'r') as file:  # get config settings
+            config = json.load(file)
+
+        name = config['NAME']
         super().__init__(name, auto=False)
-        self.set_debug(1)
 
-        self.ip = ''          # ip to bind to
-        self.host_ip = ''     # public ip
-        self.port = port      # port to bind to
+        self.ip = ''                # ip to bind to
+        self.host_ip = ''           # public ip
+        self.port = config['PORT']  # port to bind to
         self.listener = None  # socket that accepts new connections
-
-    def run(self):
-        """
-        Main entry point.
-        Must be called on the main thread of a process.
-        Calls _run on a new thread and waits for exit status.
-        Blocks until exit status set.
-        """
-        Thread(target=self._run, name=self.name+'-RUN', daemon=True).start()
-        self.run_exit_trigger(block=True)  # block main thread until triggered
+        self.set_debug(debug)
 
     def _run(self):
         """
+        Called by self.run() on a new thread
         Creates server socket and listens for new connections.
         New sign-on requests from clients create new worker node.
         Handles server-specific requests, on the main process, and passes
@@ -48,8 +43,10 @@ class Server(HostNode):
         self.host_ip = '{}:{}'.format(get('http://ipinfo.io/ip').text.strip(), self.port)
         self.log("Server Host: {}".format(self.host_ip))  # show this machine's public ip
         self.create_listener()  # create listener socket
+
+        # run accept-loop
         while not self.exit:
-            self.accept()  # run accept-loop
+            self.accept()
 
     def create_listener(self):
         """ Create a listening socket """
@@ -268,6 +265,7 @@ class GraphStream(Base):
     """
     def __init__(self, layout):
         self.layout = layout
+        # TODO: Get rid of this class in favor of making everything methods of the Handler class.
 
     def stream_page(self):
         """ Returns the response for the plot page """

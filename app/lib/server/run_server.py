@@ -27,9 +27,7 @@ if not(port and name):
     with open(CONFIG_PATH, 'w') as file:
         json.dump(config, file)
     print("\n> Configuration complete. \n  All options saved in {}".format(CONFIG_PATH))
-    port = config.get('PORT')             # port to connect through
-    name = config.get('NAME')             # display name of this Client
 
-server = Server(port, name=name)
+server = Server(debug=2)
 server.run()
 

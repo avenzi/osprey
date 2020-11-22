@@ -1,1 +1,7 @@
-python3 run_server.py
+#!/usr/bin/env bash
+
+# ensure the CWD is the directory of this script
+cd "$(dirname "$0")"
+
+# run python file that starts the server
+python3 ../app/run_server.py
