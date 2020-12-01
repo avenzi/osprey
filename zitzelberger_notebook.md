@@ -33,6 +33,10 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### November 30th, 2020:
+
+I want to set up a python virtual environment so as to keep this application away from whatever else might be going on in the system, however I've ran into some off import issues that I have been unable to resolve.
+
 ##### November 22th, 2020:
 
 The raspberry Pi now checks for the server to be available every 5 seconds (by default) by creating a throw-away socket and trying to connect. If the connection fails, then it waits and tries again. By throw-away socket I mean that it's not used for anything other than checking the server. I would like a better way to do this, but it was a simple solution and I don't see any immediate issues with it.
