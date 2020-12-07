@@ -1,15 +1,45 @@
 from bokeh.plotting import figure
-from bokeh.models import AjaxDataSource, Slider, CustomJS
+from bokeh.models import AjaxDataSource
 from bokeh.layouts import layout
 from scipy import signal
 import numpy as np
 import json
 
-from .server_lib import Handler, GraphStream, PAGES_PATH
+from .server_lib import Handler, GraphStream, PAGES_PATH, CONFIG_PATH
 from ..lib import Request, Response, DataBuffer, RingBuffer, MovingAverage
 
 # EEG page Bokeh Layout
 from .pages.eeg_layout import config, configure_layout, create_filter_sos
+
+
+class LogHandler(Handler):
+    """ Handles SenseHat stream """
+    def __init__(self):
+        super().__init__()
+
+        self.client_name = None
+
+        with open(CONFIG_PATH) as config_file:
+            config = json.load(config_file)
+        self.log_path = config.get('LOG_PATH')
+
+    def INIT(self, request):
+        """ Handles INIT request from client """
+        self.client_name = request.header['client']
+        self.log_path = self.log_path + '/{}.log'.format(self.client_name)
+
+        # erase previous log contents
+        with open(self.log_path, 'w') as file:
+            file.truncate(0)
+        self.log("INIITTTTTTTTTTTTTTTTTTTTTTTTTT")
+
+    def INGEST(self, request):
+        """ Handle data received from Pi """
+        data = request.content.decode(request.encoding)  # data string received
+        self.log("RECEIVING LOG FILLELEEEEEEEEEE")
+        with open(self.log_path, 'a') as file:
+            file.write(data)
+        self.debug("Ingested log data", 1)
 
 
 class VideoHandler(Handler):
@@ -205,7 +235,7 @@ class ECGHandler(Handler):
         self.graph = GraphStream(lay)  # pass layout into GraphStream object
 
         size = int(self.ecg_store_interval * self.sample_rate)  # store interval in number of samples
-        self.ecg_buffer = RingBuffer(self.ecg_channels+['heart_rate', 'time'], size, './data/ECG_data')
+        self.ecg_buffer = RingBuffer(self.ecg_channels+['heart_rate', 'time'], size, self.data_path+'/ECG_data')
         self.ecg_lock = self.ecg_buffer.get_ticket()
 
     def INGEST(self, request):

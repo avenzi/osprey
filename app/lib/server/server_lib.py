@@ -28,7 +28,10 @@ class Server(HostNode):
 
         self.ip = ''                # ip to bind to
         self.host_ip = ''           # public ip
-        self.port = config['PORT']  # port to bind to
+        self.port = config.get('PORT')  # port to bind to
+        self.data_path = config.get('DATA_PATH')  # path to data directory
+        self.set_log_path(config.get('LOG_PATH'))  # path to logging directory
+
         self.listener = None  # socket that accepts new connections
         self.set_debug(debug)
 

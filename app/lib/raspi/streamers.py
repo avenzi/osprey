@@ -1,8 +1,57 @@
 import time
 import json
+import os
 
-from .pi_lib import Streamer, Request
-from ..lib import DataBuffer
+from .pi_lib import Streamer, Request, configure_port, CONFIG_PATH
+from ..lib import DataBuffer, Base
+
+
+class LogStreamer(Streamer):
+    def __init__(self):
+        super().__init__()
+        self.handler = 'LogHandler'
+
+        with open(CONFIG_PATH) as config_file:
+            config = json.load(config_file)
+        self.log_path = config.get('LOG_PATH') + '/log.log'
+        self.client_name = config.get('NAME')
+
+    def START(self, request):
+        """
+        Request method START
+        Start Streaming continually
+        Extended from base class in pi_lib.py
+        """
+        super().START(request)  # extend
+
+        # First send initial information
+        init_req = Request()  # new request
+        init_req.add_request('INIT')  # call INIT method on server handler
+        init_req.add_header('client', self.client_name)
+        self.send(init_req, request.origin)  # send init request back
+
+        resp = Request()  # new INGEST request
+        resp.add_request("INGEST")
+
+        # stream log file every 60 seconds
+        while self.streaming and not request.origin.exit:
+            time.sleep(5)
+            with Base.log_lock:  # get lock on log file
+                with open(self.log_path, 'w+') as file:
+                    log = file.read()  # get logs
+                    file.truncate(0)  # erase
+            self.log("SENDING LOG FILE")
+
+            log = log.encode(self.encoding)
+            resp.add_content(log)
+            self.send(resp, request.origin)
+
+    def STOP(self, request):
+        """
+        Request method STOP
+        Extended from base class in pi_lib.py
+        """
+        super().STOP(request)  # extend
 
 
 class VideoStreamer(Streamer):
@@ -119,6 +168,110 @@ class SenseStreamer(Streamer):
         super().STOP(request)  # extend
 
 
+class EEGStreamer(Streamer):
+    """
+    EEG Streamer class for an OpenBCI board (Cyton, Cyton+Daisy, Ganglion)
+    """
+    def __init__(self):
+        super().__init__()
+        self.handler = 'EEGHandler'
+        synth = True  # whether to use the BrainFlow Synthetic board (for testing and whatnot)
+
+        from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds
+
+        if synth:
+            self.board_id = BoardIds.SYNTHETIC_BOARD.value  # synthetic board (-1)
+        else:
+            self.board_id = BoardIds.CYTON_DAISY_BOARD.value   # Cyton+Daisy borad ID (2)
+            with open(CONFIG_PATH) as config_file:  # get device path
+                config = json.load(config_file)
+            self.serial_port = config['VCP'][self.__class__.__name__]
+
+        self.eeg_channel_indexes = BoardShim.get_eeg_channels(self.board_id)  # list of EEG channel indexes
+        self.eeg_channel_names = BoardShim.get_eeg_names(self.board_id)       # list of EEG channel names
+        self.time_channel = BoardShim.get_timestamp_channel(self.board_id)    # index of timestamp channel
+        self.freq = BoardShim.get_sampling_rate(self.board_id)  # sample frequency
+
+        # BoardShim.enable_dev_board_logger()
+        BoardShim.disable_board_logger()  # disable logger
+
+        params = BrainFlowInputParams()
+
+        if not synth:
+            params.serial_port = self.serial_port  # serial port of dongle
+        self.board = BoardShim(self.board_id, params)  # board object
+
+        self.frames_sent = 0    # number of frames sent
+        self.time = 0  # time of START
+
+    def START(self, request):
+        """
+        Request method START
+        Start Streaming continually
+        Extended from base class in pi_lib.py
+        """
+        # configure data collection ports to avoid data chunking
+        configure_port(self.serial_port)
+
+        # start EEG session
+        tries = 0
+        while tries <= 5:
+            tries += 1
+            try:
+                self.board.prepare_session()
+                break
+            except:
+                time.sleep(0.1)
+
+        if self.board.is_prepared():
+            self.board.start_stream()  # start stream
+        else:
+            self.throw("Failed to prepare streaming session in {}. Make sure the board is turned on.".format(self.name), trace=False)
+            return
+
+        super().START(request)  # display log message and get current time
+
+        # First send some initial information
+        req = Request()
+        req.add_request('INIT')
+        req.add_header('sample_rate', self.freq)
+        req.add_header('channels', ','.join(self.eeg_channel_names))
+        self.send(req, request.origin)
+
+        # continually collect sensor data
+        resp = Request()  # new response
+        resp.add_request("INGEST")
+        while self.streaming and not request.origin.exit:
+            time.sleep(0.2)  # wait a bit for the board to collect another chunk of data
+            data = {}
+            for channel in self.eeg_channel_names:  # lists of channel data
+                data[channel] = []
+
+            raw_data = self.board.get_board_data()
+
+            # convert from epoch time to relative time since session start
+            data['time'] = list(raw_data[self.time_channel]-self.time)
+
+            for i, j in enumerate(self.eeg_channel_indexes):
+                data[self.eeg_channel_names[i]] = list(raw_data[j]/1000000)  # convert from uV to V
+
+            data = json.dumps(data).encode(self.encoding)
+            self.frames_sent += 1
+            resp.add_header('frames-sent', self.frames_sent)
+            resp.add_content(data)
+            self.send(resp, request.origin)
+
+    def STOP(self, request):
+        """
+        Request method STOP
+        Extended from base class in pi_lib.py
+        """
+        super().STOP(request)  # extend
+
+        self.board.stop_stream()
+        self.board.release_session()
+
+
 class ECGStreamer(Streamer):
     """
     ECG Streamer class for an OpenBCI board (Cyton, Cyton+Daisy, Ganglion)
@@ -126,7 +279,7 @@ class ECGStreamer(Streamer):
     def __init__(self):
         super().__init__()
         self.handler = 'ECGHandler'
-        synth = False  # whether to use the BrainFlow Synthetic board (for testing and whatnot)
+        synth = True  # whether to use the BrainFlow Synthetic board (for testing and whatnot)
 
         from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds
 
@@ -134,6 +287,10 @@ class ECGStreamer(Streamer):
             self.board_id = BoardIds.SYNTHETIC_BOARD.value  # synthetic board (-1)
         else:
             self.board_id = BoardIds.CYTON_BOARD.value   # Cyton board ID (0)
+
+            with open(CONFIG_PATH) as config_file:  # get device path
+                config = json.load(config_file)
+            self.serial_port = config['VCP'][self.__class__.__name__]
 
         # Note that the channels returned would be for EEG channels
         self.ecg_channel_indexes = BoardShim.get_ecg_channels(self.board_id)
@@ -152,7 +309,7 @@ class ECGStreamer(Streamer):
         params = BrainFlowInputParams()
 
         if not synth:
-            params.serial_port = '/dev/ttyUSB1'  # serial port of dongle
+            params.serial_port = self.serial_port  # serial port of dongle
         self.board = BoardShim(self.board_id, params)  # board object
 
         self.frames_sent = 0    # number of frames sent
@@ -164,6 +321,9 @@ class ECGStreamer(Streamer):
         Start Streaming continually
         Extended from base class in pi_lib.py
         """
+        # configure data collection ports to avoid data chunking
+        configure_port(self.serial_port)
+
         # start ECG session
         tries = 0
         while tries <= 5:
@@ -210,105 +370,6 @@ class ECGStreamer(Streamer):
             # add Pulse data
             for i, j in enumerate(self.pulse_channel_indexes):
                 data[self.pulse_channel_names[i]] = list(raw_data[j])
-
-            data = json.dumps(data).encode(self.encoding)
-            self.frames_sent += 1
-            resp.add_header('frames-sent', self.frames_sent)
-            resp.add_content(data)
-            self.send(resp, request.origin)
-
-    def STOP(self, request):
-        """
-        Request method STOP
-        Extended from base class in pi_lib.py
-        """
-        super().STOP(request)  # extend
-
-        self.board.stop_stream()
-        self.board.release_session()
-
-
-class EEGStreamer(Streamer):
-    """
-    EEG Streamer class for an OpenBCI board (Cyton, Cyton+Daisy, Ganglion)
-    """
-    def __init__(self):
-        super().__init__()
-        self.handler = 'EEGHandler'
-        synth = False  # whether to use the BrainFlow Synthetic board (for testing and whatnot)
-
-        from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds
-
-        if synth:
-            self.board_id = BoardIds.SYNTHETIC_BOARD.value  # synthetic board (-1)
-        else:
-            self.board_id = BoardIds.CYTON_DAISY_BOARD.value   # Cyton+Daisy borad ID (2)
-
-        self.eeg_channel_indexes = BoardShim.get_eeg_channels(self.board_id)  # list of EEG channel indexes
-        self.eeg_channel_names = BoardShim.get_eeg_names(self.board_id)       # list of EEG channel names
-        self.time_channel = BoardShim.get_timestamp_channel(self.board_id)    # index of timestamp channel
-        self.freq = BoardShim.get_sampling_rate(self.board_id)  # sample frequency
-
-        # BoardShim.enable_dev_board_logger()
-        BoardShim.disable_board_logger()  # disable logger
-
-        params = BrainFlowInputParams()
-
-        if not synth:
-            params.serial_port = '/dev/ttyUSB0'  # serial port of dongle
-        self.board = BoardShim(self.board_id, params)  # board object
-
-        self.frames_sent = 0    # number of frames sent
-        self.time = 0  # time of START
-
-    def START(self, request):
-        """
-        Request method START
-        Start Streaming continually
-        Extended from base class in pi_lib.py
-        """
-
-        # First send some initial information
-        req = Request()
-        req.add_request('INIT')
-        req.add_header('sample_rate', self.freq)
-        req.add_header('channels', ','.join(self.eeg_channel_names))
-        self.send(req, request.origin)
-
-        # start EEG session
-        tries = 0
-        while tries <= 5:
-            tries += 1
-            try:
-                self.board.prepare_session()
-                break
-            except:
-                time.sleep(0.1)
-
-        if self.board.is_prepared():
-            self.board.start_stream()  # start stream
-        else:
-            self.throw("Failed to prepare streaming session in {}. Make sure the board is turned on.".format(self.name), trace=False)
-            return
-
-        super().START(request)  # display log message and get current time
-
-        # continually collect sensor data
-        resp = Request()  # new response
-        resp.add_request("INGEST")
-        while self.streaming and not request.origin.exit:
-            time.sleep(0.2)  # wait a bit for the board to collect another chunk of data
-            data = {}
-            for channel in self.eeg_channel_names:  # lists of channel data
-                data[channel] = []
-
-            raw_data = self.board.get_board_data()
-
-            # convert from epoch time to relative time since session start
-            data['time'] = list(raw_data[self.time_channel]-self.time)
-
-            for i, j in enumerate(self.eeg_channel_indexes):
-                data[self.eeg_channel_names[i]] = list(raw_data[j]/1000000)  # convert from uV to V
 
             data = json.dumps(data).encode(self.encoding)
             self.frames_sent += 1

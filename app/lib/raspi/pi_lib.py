@@ -1,13 +1,32 @@
 from threading import Thread
 from requests import get
+import subprocess
 import socket
 import json
 import inspect
 import time
+import os
 
 from ..lib import HostNode, WorkerNode, Request
 
 CONFIG_PATH = 'lib/raspi/config.json'
+
+
+def configure_port(dev_path):
+    """
+    Used for data collection devices which rely on the Pi's internal timer to time-stamp data.
+    Sets the internal buffer for the given VCP port to 1ms-latency in order to avoid data chunking.
+    This setting gets reset when the device is disconnected or the Pi is power cycled,
+        so it needs to be run each time the client begins streaming
+    """
+    device = dev_path[dev_path.index('tty'):]
+    filepath = "/sys/bus/usb-serial/devices/{}/latency_timer".format(device)
+    if os.path.exists(filepath):
+        subprocess.Popen("echo 1 | sudo tee {}".format(filepath), shell=True, stdout=subprocess.PIPE)
+        return True
+    else:
+        print("Could not configure serial device - path doesn't exist")
+        return False
 
 
 class Client(HostNode):
@@ -27,6 +46,7 @@ class Client(HostNode):
         name = self.config.get('NAME')  # display name of this Client
         super().__init__(name, auto=False)
         self.set_debug(debug)
+        self.set_log_path(self.config.get('LOG_PATH'))
         self.retry = retry
 
     def run(self):
@@ -54,7 +74,7 @@ class Client(HostNode):
         from . import streamers
         members = inspect.getmembers(streamers, inspect.isclass)  # all classes [(name, class), ]
         for member in members:
-            if member[1].__module__.split('.')[-1] == 'streamers' and self.config['HANDLERS'][member[0]].upper() == 'Y':  # class selected in config file
+            if member[1].__module__.split('.')[-1] == 'streamers' and self.config['STREAMERS'][member[0]].upper() == 'Y':  # class selected in config file
                 self.connect(member[1])  # connect this HandlerClass to the server
 
     def connect(self, NodeClass):
@@ -150,3 +170,4 @@ class Streamer(WorkerNode):
         """
         self.streaming = False
         self.log("Stopped {} at {}".format(self.name, self.get_date()))
+

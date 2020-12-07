@@ -9,15 +9,14 @@ source ./misc.sh  # import loading function
 # ensure python is installed
 sudo apt-get -y install python3
 sudo apt-get -y install python3-pip
-pip3 install -r ./pi_requirements.txt  # install requirements
+pip3 install -r ./requirements_pi.txt  # install requirements
 ) > /dev/null &
 loading $! "Installing Python3 and dependent requirements.... \n\
 Please wait until this is finished to provide configuration information\n"
 
-python3 ../app/pi_setup.py # Get configuration from user
-printf "\n%s\n" "$(pwd)"
+python3 ../app/setup_pi.py # Get configuration from user
 printf "No further interaction is required.\nInstallation will continue, and afterward the Pi will reboot.\n"
-sleep 5
+sleep 3
 
 (
 # Add crontab line to start the app on boot, targetting data-hub/main/run_pi.sh
@@ -36,14 +35,31 @@ fi
 loading $! "Enabled Picam..."
 
 (
+# Enable Sense Hat if not already
+if ! grep "dtoverlay=rpi-sense" /boot/config.txt
+then
+  echo "dtoverlay=rpi-sense" | sudo tee -a /boot/config.txt
+fi
+) > /dev/null &
+loading $! "Enabling SenseHat..."
+
+(
 # download brainflow
 cd ~/ # go to home directory
-git clone https://github.com/OpenBCI/brainflow.git
-sudo apt-get install cmake -y
+if [ -d "./brainflow" ]  # if brainflow directory already exists
+then
+  cd ./brainflow
+  git pull https://github.com/OpenBCI/brainflow.git
+  cd ..
+else
+  git clone https://github.com/OpenBCI/brainflow.git
+fi
+
+sudo apt-get install cmake -y  # make sure cmake is installed
 
 # build brainflow
 cd ./brainflow
-bash ./tools/build_linux.sh
+bash ./tools/build_linux.sh > /dev/null
 pip3 install ./python-package
 
 # for numpy to work properly with brainflow on Raspbian

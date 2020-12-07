@@ -11,6 +11,14 @@ from .pi_lib import CONFIG_PATH
 from . import streamers
 
 
+def dmesg():
+    """ Returns the last line of output from dmesg """
+    # TODO: make this more robust to possible changes in future dmesg output formats
+    sub = subprocess.Popen("dmesg | tail -1", shell=True, stdout=subprocess.PIPE)
+    output = sub.stdout.read().decode('utf-8')
+    return output
+
+
 def detect_vcp(event):
     """
     Used to detect when a tty device is plugged in.
@@ -18,20 +26,19 @@ def detect_vcp(event):
     <event> is a threading event to communicate with the main thread
     config is a dictionary from outer scope, and should be changed in-place.
     """
-    ports = []  # all device paths found
-    print("Device Paths Detected: ")
+    output = dmesg()
     while event.is_set():  # loop until event is un-set
-        time.sleep(0.5)
-        sub = subprocess.Popen("dmesg | tail -1", shell=True, stdout=subprocess.PIPE)
-        output = sub.stdout.read().decode('utf-8')
-        index = output.find('ttyUSB')
-        if index >= 0:  # found
-            path = '/dev/' + output[index:-1]
-            if path not in ports:
-                print('> ', path)
-                ports.append(path)
-    config['VCP'] = ports
-    event.set()  # set event, notifying that the config dict has been updated
+        time.sleep(0.2)
+        new_output = dmesg()
+        if new_output != output:  # new entry to dmesg detected
+            output = new_output
+            index = new_output.find('tty')
+            if index >= 0:  # found
+                path = '/dev/' + new_output[index:-1]
+                print(path, end='', flush=True)
+                config['VCP'][event.current_key] = path
+    # when event is unset from main thread, set event again to notify that it's done
+    event.set()
 
 
 updating = False  # flag if updating existing config settings
@@ -54,54 +61,75 @@ else:
 ip = config.get('SERVER_IP_ADDRESS')  # ip address of server
 port = config.get('PORT')             # port to connect through
 name = config.get('NAME')             # display name of this Client
-handlers = config.get('HANDLERS')     # Dictionary of handler class to choose from
-vcp = config.get('VCP')               # List if Virtual COM Ports that will receive data from the dongles
+selected = config.get('STREAMERS')    # Dictionary of streamer class to choose from
+vcp = config.get('VCP')               # Dictionary mapping streamers to Virtual COM Ports that will receive data from the dongles
 
 # get all classes defined in 'streamers.py'
-class_names = [member[0] for member in inspect.getmembers(streamers, inspect.isclass) if member[1].__module__.split('.')[-1] == 'streamers']
+streamer_classes = []
+for member in inspect.getmembers(streamers, inspect.isclass):
+    if member[1].__module__.split('.')[-1] == 'streamers':
+        streamer_classes.append(member)
 
-# Check to see if all classes have a config option
+# Check to see if all classes are included in the config options
 all_in_config = True
-if handlers:
-    for class_name in class_names:
-        if class_name not in handlers.keys():
+if selected:
+    for member in streamer_classes:
+        if member[0] not in selected.keys():
+            all_in_config = False
+        if member[0] not in vcp.keys():
             all_in_config = False
 
 
 # all settings present, not overwriting
-if ip and port and name and handlers and vcp and all_in_config and updating:
+if ip and port and name and selected and vcp and all_in_config and updating:
     print("\nAll config options are set. \nIf you wish to change anything you can edit '{}', \nor restart this script and choose to overwrite.".format(CONFIG_PATH))
     quit()
 
 # file doesn't exist, or overwriting existing file
 # TODO: Add regex input validation to all these options?
-print("\n> Please provide the following information. These can be changed in {}\n".format(CONFIG_PATH))
+print("> Please provide the following information. These can be changed in {}\n".format(CONFIG_PATH))
 if not ip:
     config['SERVER_IP_ADDRESS'] = input("IP address of server: ")
 if not port:
     config['PORT'] = int(input("Port: "))
 if not name:
     config['NAME'] = input("Client name: ")
-if not handlers:
-    config['HANDLERS'] = {}
+if not selected:
+    config['STREAMERS'] = {}
     print("\n> Answer y/n to each of the following to select which Streamer classes are to be used.")
-    for name in class_names:
+    for member in streamer_classes:
+        name = member[0]
         ans = input("Use {}? ".format(name)).upper()
         # ans = 'y' if ans == '' else ans
-        config['HANDLERS'][name] = ans
+        config['STREAMERS'][name] = ans
 if not vcp:
-    print("\nPlease insert (or remove and re-insert) each OpenBCI dongle that will be used by this device.\n"
-          "You should see the associated device path appear below for each dongle after inserted. When done, press Enter.\n"
-          "(If you do not see their device path(s) appear below, you may have to enter them manually afterward in {}):".format(CONFIG_PATH))
+    config['VCP'] = {}
+    print("\n> Now we need to associate each streamer class with its corresponding serial port, if any.\n"
+          "For each streamer classes listed below, please provide the full device path of its corresponding serial port.\n"
+          "If you do not already know the device path, you may insert (or remove and re-insert) the device and we will attempt to detect it for you.\n"
+          "If this succeeds, you should see the associated device path appear automatically a few seconds after inserted.\n"
+          "If you do not see it appear, you may need to enter it manually in {} under the 'VCP' keyword.\n"
+          "If the given streamer does not require a device path, type nothing.\n"
+          "Press Enter to confirm each entry.\n".format(CONFIG_PATH))
+
     event = Event()  # threading event to regulate the parallel thread
     event.set()  # set to True
-    Thread(target=detect_vcp, args=(event,)).start()  # start looking for tty devices on different thread
-    input('')  # wait for user to press enter
+    event.current_key = ''  # string - current streamer key for the config dictionary
+    Thread(target=detect_vcp, args=(event,), daemon=True).start()  # start looking for tty devices on different thread
+    for member in streamer_classes:
+        event.current_key = member[0]
+        devpath = input("{}: ".format(member[0])).strip()  # wait for user to press enter
+        if devpath:  # if user gave input
+            config['VCP'][member[0]] = devpath
     event.clear()  # stop loop in other thread
     event.wait()  # wait until thread sets the event again to indicate that config has been updated
+
+# set log file path.
+# TODO: Option to configure this
+config['LOG_PATH'] = '../logs'
 
 # After all config options set
 with open(CONFIG_PATH, 'w+') as file:
     json.dump(config, file)  # dump config dictionary to the JSON config file
-print("> Configuration complete. All options saved in {}".format(CONFIG_PATH))
+print("\n> Configuration complete. All options saved in {}".format(CONFIG_PATH))
 

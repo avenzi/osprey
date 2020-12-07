@@ -1,4 +1,4 @@
-from threading import Thread, Lock, Condition, Event, current_thread
+from threading import Thread, Condition, Event, current_thread, Lock
 from multiprocessing import Process, current_process, Pipe
 import numpy as np
 from uuid import uuid4
@@ -16,8 +16,10 @@ class Base:
     Implements global logging functionality.
     """
     debug_level = 0  # debugging level
+    log_file = None  # logging file path
+
     last_msg = ''    # to keep track of the last output message
-    print_lock = Lock()  # lock on output
+    log_lock = Lock()  # lock on output
 
     def __init__(self):
         self.exit = False  # status flag  determine when the class should stop running
@@ -67,6 +69,24 @@ class Base:
             print('[TIME][PROCESS][THREAD]: Message')
             print("------------------------------")
 
+    def set_log_path(self, path):
+        """
+        Sets the path to the logging file and the logging mode
+        <path> is the path to the logging directory which will contain the log file
+        """
+        if not os.path.isdir(path):
+            os.mkdir(path)
+        Base.log_file = os.path.join(path, "log.log")
+
+        # erase contents of old log file
+        # TODO: maybe keep the ~5 most recent log files?
+        #  will need to change similar truncating code in LogHandler INIT
+        try:
+            with open(Base.log_file) as file:
+                file.truncate(0)
+        except:
+            pass
+
     def get_date(self):
         """ Return the current date and time in HTTP Date-header format """
         return time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime())
@@ -75,14 +95,24 @@ class Base:
         """ Return the current time for debugging purposes """
         return datetime.now().strftime("%-H:%-M:%-S:%f")
 
-    def display(self, msg):
-        """ display a log message """
+    def display(self, msg, console=True, file=True):
+        """
+        display a log message
+        <console> whether to send to stdout
+        <file> whether to log in the log file
+        """
         if Base.last_msg == msg:  # same message
             return  # Ignore duplicate messages
-        Base.print_lock.acquire()
-        Base.last_msg = msg
-        print(msg)
-        Base.print_lock.release()
+        try:
+            with Base.log_lock:  # get exclusive lock on outputs
+                Base.last_msg = msg
+                if console:
+                    print(msg)  # display on console
+                if file and Base.log_file:
+                    with open(Base.log_file, 'a') as file:  # write to log file
+                        file.write(msg+'\n')
+        except:
+            return
 
     def log(self, message):
         """ Outputs a log message """
@@ -91,7 +121,7 @@ class Base:
     def debug(self, msg, level=1):
         """ Sends a debug level message """
         if Base.debug_level >= level:
-            self.display("[{}][{}][{}]: {}".format(self.get_time(), current_process().name, current_thread().name, msg))
+            self.display("[{}][{}][{}]: {}".format(self.get_time(), current_process().name, current_thread().name, msg), False, True)
 
     def throw(self, msg, cause=None, trace=True):
         """ display error message and halt """
@@ -101,9 +131,8 @@ class Base:
             err += "CAUSE: {}\n".format(cause)
         self.display(err)
         if trace:
-            Base.print_lock.acquire()
-            traceback.print_exc()
-            Base.print_lock.release()
+            with Base.log_lock:
+                traceback.print_exc()
 
     def generate_uuid(self):
         """ Return a UUID as a URN string """
