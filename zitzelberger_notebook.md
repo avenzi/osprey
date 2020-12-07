@@ -33,6 +33,10 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### December 6th, 2020:
+
+I have pushed forward with the "streamed logging" that I proposed to Dr. Ghassemi last week. The idea is that the raspberry pi periodically sends it's logs to the server, rather than store them on the pi itself. This reduces further the chance that ssh'ing into the pi would be necessary for the user. I have written a sort of 'proof of concept', but it is far from perfect. A number of issue cropped up, mostly having to do with serializing access to the log files in the multiprocessing module. It seems that python's logger module does not support this, so I had to work with my own logging mechanism. 
+
 ##### November 30th, 2020:
 
 I want to set up a python virtual environment so as to keep this application away from whatever else might be going on in the system, however I've ran into some off import issues that I have been unable to resolve.
