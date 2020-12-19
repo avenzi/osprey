@@ -1,5 +1,5 @@
-from threading import Thread, Condition, Event, current_thread, Lock
-from multiprocessing import Process, current_process, Pipe
+from threading import Thread, current_thread
+from multiprocessing import Process, current_process, Pipe, Lock, Condition
 import numpy as np
 from uuid import uuid4
 import traceback
@@ -17,8 +17,6 @@ class Base:
     """
     debug_level = 0  # debugging level
     log_file = None  # logging file path
-
-    last_msg = ''    # to keep track of the last output message
     log_lock = Lock()  # lock on output
 
     def __init__(self):
@@ -62,12 +60,6 @@ class Base:
 
     def set_debug(self, level):
         Base.debug_level = level
-        if self.debug_level > 0:
-            print()  # display message
-            print("------------------------------")
-            print("RUNNING IN DEBUG MODE {}".format(Base.debug_level))
-            print('[TIME][PROCESS][THREAD]: Message')
-            print("------------------------------")
 
     def set_log_path(self, path):
         """
@@ -101,11 +93,8 @@ class Base:
         <console> whether to send to stdout
         <file> whether to log in the log file
         """
-        if Base.last_msg == msg:  # same message
-            return  # Ignore duplicate messages
         try:
             with Base.log_lock:  # get exclusive lock on outputs
-                Base.last_msg = msg
                 if console:
                     print(msg)  # display on console
                 if file and Base.log_file:
@@ -514,9 +503,11 @@ class PipeHandler(Base):
     <conn> Connection object returned by multiprocessing.Pipe()
     <process> Process that is running on the other end of the pipe
     """
-    def __init__(self, name, conn, process=None):
+    def __init__(self, node, conn, process=None):
         super().__init__()
-        self.name = name
+        self.name = node.name
+        self.device = node.device
+
         self.pipe = conn
         self.process = process
 
@@ -730,7 +721,7 @@ class HostNode(Node):
     <auto> Boolean: whether to automatically shutdown when all worker nodes have shutdown.
     """
     def __init__(self, name, auto=True):
-        super().__init__(name=name, device=name)  # name and device name are the same
+        super().__init__(name=name, device=name)  # node name is the device name for the host
         self.automatic_shutdown = auto
         self.pipes = {}   # index of Pipe objects, each connecting to a WorkerConnection
 
@@ -762,17 +753,17 @@ class HostNode(Node):
         Start the given worker node on a new process.
         Adds the new Pipe to the pipe index, and starts reading from it on a new thread.
         """
-        # multiprocessing duplex connections (doesn't matter which is which)
+        # multiprocessing duplex connections (doesn't matter which end of the pipe is which)
         host_conn, worker_conn = Pipe()
 
         # worker knows the host name but not the host process
-        worker_pipe = PipeHandler(self.name, host_conn)
+        worker_pipe = PipeHandler(self, host_conn)
 
         # process for new worker
         worker_process = Process(target=worker.run, args=(worker_pipe,), name=worker.name, daemon=True)
 
         # host knows worker name and process. Pipe is indexed by the worker ID
-        self.pipes[worker.id] = PipeHandler(worker.name, worker_conn, worker_process)
+        self.pipes[worker.id] = PipeHandler(worker, worker_conn, worker_process)
 
         # new thread to act as main thread for the worker process
         Thread(target=worker_process.start, name='WorkerMainThread', daemon=True).start()
@@ -851,8 +842,8 @@ class WorkerNode(Node):
         Should be run on it's own Process's Main Thread
         """
         self.pipe = pipe
-        self.device = self.pipe.name
-        self.debug("Started new worker '{}' on '{}'".format(self.name, self.device), 1)
+        self.device = self.pipe.device
+        self.debug("Worker '{}' started running on '{}'".format(self.name, self.device), 1)
         Thread(target=self._run, name='RUN', daemon=True).start()
         Thread(target=self._run_pipe, name='PIPE', daemon=True).start()
         self.run_exit_trigger(block=True)  # Wait for exit status on new thread
@@ -1089,11 +1080,12 @@ def validate_input(message, expecting, case=False):
 
     return ans
 
+
 # Threading locks
 class ReadLock:
     """
     Context Manager class for ReadWriteLock.
-    Should not be used on it's own.
+    Should not be initialized on it's own. Use ReadWriteLock.get_locks() instead.
     <lock> is a ReadWriteLock class
     """
     def __init__(self, lock):
@@ -1111,7 +1103,7 @@ class ReadLock:
 class WriteLock:
     """
     Context Manager class for ReadWriteLock.
-    Should not be used on it's own.
+    Should not be initialized on it's own. Use ReadWriteLock.get_locks() instead.
     <lock> is a ReadWriteLock class
     """
     def __init__(self, lock):

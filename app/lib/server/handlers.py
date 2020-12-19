@@ -35,6 +35,8 @@ class LogHandler(Handler):
 
     def INGEST(self, request):
         """ Handle data received from Pi """
+        if not request.content:  # no log file received:
+            return
         data = request.content.decode(request.encoding)  # data string received
         self.log("RECEIVING LOG FILLELEEEEEEEEEE")
         with open(self.log_path, 'a') as file:

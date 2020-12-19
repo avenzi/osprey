@@ -74,14 +74,18 @@ class Client(HostNode):
         from . import streamers
         members = inspect.getmembers(streamers, inspect.isclass)  # all classes [(name, class), ]
         for member in members:
-            if member[1].__module__.split('.')[-1] == 'streamers' and self.config['STREAMERS'][member[0]].upper() == 'Y':  # class selected in config file
-                self.connect(member[1])  # connect this HandlerClass to the server
+            if member[1].__module__.split('.')[-1] == 'streamers':  # imported from the streamers.py file
+                config = self.config['STREAMERS'].get(member[0])  # configuration of whether this class is to be used or not
+                if config and config.upper() == 'Y':  # this class is in the config file and set to be used
+                    self.connect(member[1])  # connect this StreamerClass to the server
+                else:  # not in the config file or not set to be used
+                    self.log("Streamer class {} is not being used. Set it's keyword to 'Y' in {} to use".format(member[0], CONFIG_PATH))
 
     def connect(self, NodeClass):
         """ Create socket object and try to connect it to the server, then run the Node class on a new process """
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
         try:  # connect socket to given address
-            self.debug("Attempting to connect to server", 2)
+            self.debug("Attempting to connect {} to server".format(NodeClass.__name__), 2)
             sock.connect((self.ip, self.port))
             sock.setblocking(True)
             self.debug("Socket Connected", 2)
@@ -99,14 +103,14 @@ class Client(HostNode):
             If no server found, waits some amount of time then tries again.
             Once found, closes the dummy socket and calls self._run()
         """
-        self.debug("Waiting to find a server...")
+        self.log("Waiting to find a server...")
         while True:  # try to connect every interval
             time.sleep(self.retry)  # wait to try again
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
             try:  # connect socket to given address
-                # TODO: Better way to ping the server than using a dummy socket
+                # TODO: Better way to ping the server than using a dummy socket?
                 sock.connect((self.ip, self.port))
-                self.debug("Server was found.")
+                self.log("Server was found.")
                 # close socket
                 sock.shutdown(socket.SHUT_RDWR)
                 sock.close()

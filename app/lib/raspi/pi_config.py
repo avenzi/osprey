@@ -125,7 +125,7 @@ if not vcp:
     event.wait()  # wait until thread sets the event again to indicate that config has been updated
 
 # set log file path.
-# TODO: Option to configure this
+# TODO: Option to configure this?
 config['LOG_PATH'] = '../logs'
 
 # After all config options set

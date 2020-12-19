@@ -1,4 +1,3 @@
-from threading import Thread
 from requests import get
 import socket
 import json
@@ -89,20 +88,6 @@ class Server(HostNode):
             self.throw("Failed to handle create new SocketHandler", e, trace=True)
             return
 
-    def main_page(self):
-        """ Returns the HTML for the main selection page """
-        # TODO: make this be retrieved from a file instead so it can be easily found and modified
-        page = """
-        <html>
-        <head><title>Data Hub</title></head>
-        <body><h1>Stream Selection</h1>
-        """
-        # TODO: Organize connections by host device
-        for id, pipe in self.pipes.items():
-            page += "<p><a href='/stream?id={}'>{}</a></p>".format(id, pipe.name)
-        page += "</body></html>"
-        return page
-
     def HANDLE(self, request, threaded=True):
         """
         Overwrites default method to handle incoming requests
@@ -150,17 +135,17 @@ class Server(HostNode):
         try:
             from . import handlers  # imported here so as to avoid import recursion
         except:
-            self.throw("Import Error", trace=True)
+            self.throw("Error importing Handlers", trace=True)
             return
 
         members = inspect.getmembers(handlers, inspect.isclass)  # all classes [(name, class), ]
-        StreamerClass = None
+        HandlerClass = None
         for member in members:
             if member[1].__module__.split('.')[-1] == 'handlers' and member[0] == class_name:  # class name matches
-                StreamerClass = member[1]
+                HandlerClass = member[1]
                 break
-        if not StreamerClass:
-            self.throw("Streamer Class '{}' not found in handlers.py".format(class_name))
+        if not HandlerClass:
+            self.throw("Handler Class '{}' not found in handlers.py".format(class_name))
             return
 
         start_req = Request()
@@ -168,7 +153,7 @@ class Server(HostNode):
         self.send(start_req, request.origin)  # send start request back to client
         self.log("New Data-Stream connection from {} on {} ({})".format(display_name, device_name, request.origin.peer))
 
-        worker = StreamerClass()  # create new worker node
+        worker = HandlerClass()  # create new worker node
         worker.name = display_name
         worker.device = device_name
 
@@ -227,6 +212,33 @@ class Server(HostNode):
         response = Request()
         response.add_response(405)
         self.send(response, request.origin)
+
+    def main_page(self):
+        """ Returns the HTML for the main selection page """
+        # Organize connections by host device
+        devices = {}  # device: [(id,name), (id,name), ...]
+        for id, pipe in self.pipes.items():
+            if devices.get(pipe.device) is None:
+                devices[pipe.device] = []
+            else:
+                devices[pipe.device].append((id, pipe.name))
+
+        page = """
+            <html>
+            <head><title>Data Hub</title></head>
+            <body><h1>Stream Selection</h1>
+        """
+
+        # List all stream links under their host device names
+        for device in devices.keys():
+            page += "<p>{}</p>".format(device)
+            page += "<ul>"
+            for id, name in devices[device]:
+                page += "<li><a href='/stream?id={}'>{}</a></li>".format(id, name)
+            page += "</ul><br>"
+
+        page += "</body></html>"
+        return page
 
 
 class Handler(WorkerNode):
