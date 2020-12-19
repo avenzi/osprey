@@ -33,6 +33,12 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### December 18th, 2020:
+
+I have finally discovered why the python logging module doesn't support multiprocessing. Evidently using fork() to create new processes has a chance to deadlock the program if it inherits an already-aquired lock from a thread. I discovered this after I created this exact scenario in my own implementation. I have since been able to work around it (I hope) and have fixed the deadlocking issues with the LogStreamer class.
+
+A small detail is that the LogStreamer sends the raspi log file ever 60 seconds, but if the pi crashes in-between, the remaining log file isn't sent until the pi is run again. In order to fix this I will need to force the LogStreamer to send the log before the process shuts down, which may be difficult as the cleanup() funtion is at a lower level than the Streamer class operates. 
+
 ##### December 6th, 2020:
 
 I have pushed forward with the "streamed logging" that I proposed to Dr. Ghassemi last week. The idea is that the raspberry pi periodically sends it's logs to the server, rather than store them on the pi itself. This reduces further the chance that ssh'ing into the pi would be necessary for the user. I have written a sort of 'proof of concept', but it is far from perfect. A number of issue cropped up, mostly having to do with serializing access to the log files in the multiprocessing module. It seems that python's logger module does not support this, so I had to work with my own logging mechanism. 
