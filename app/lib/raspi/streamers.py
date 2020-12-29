@@ -52,7 +52,6 @@ class LogStreamer(Streamer):
             with open(self.log_path, 'r+') as file:
                 log = file.read()  # get logs
                 file.truncate(0)  # erase
-        self.log("SENDING LOG FILE")
         log = log.encode(self.encoding)
         resp.add_content(log)
         self.send(resp, request.origin)

@@ -31,17 +31,15 @@ class LogHandler(Handler):
         # erase previous log contents
         with open(self.log_path, 'w') as file:
             file.truncate(0)
-        self.log("INIITTTTTTTTTTTTTTTTTTTTTTTTTT")
 
     def INGEST(self, request):
         """ Handle data received from Pi """
         if not request.content:  # no log file received:
             return
         data = request.content.decode(request.encoding)  # data string received
-        self.log("RECEIVING LOG FILLELEEEEEEEEEE")
         with open(self.log_path, 'a') as file:
             file.write(data)
-        self.debug("Ingested log data", 1)
+        self.debug("Received Log File", 1)
 
 
 class VideoHandler(Handler):
