@@ -1,40 +1,32 @@
 ##### Setup
-Navigate to main/installations/
-On the data-hub server, run   $bash server_install
-On any raspberry pi, run         $bash pi_install
+
+On the data server, run           $bash scripts/setup_server.sh
+On any raspberry pi, run         $bash scripts/setup_pi.sh
+Follow the instructions given.
+
+All configuration options can be modified in app/lib/raspi/config.json and app/lib/server/config.json
 
 ##### Running the application
 
-Make sure that the port you wish to use for the server is open on the network the server is connected to.
+On the pi, no further interaction is necessary. The application will automatically start on boot.
 
-First, start the server by running  $bash run_server
-If the configuration is not set up yet, you will be prompted for config information. This will only happen the first time, and any config data can be changed in lib/config.json. 
+For the server, make sure that the port you wish to use is open on the network the server is connected to.
 
-Once you see "Listening for connections....", start a raspberry pi with   $bash run_pi
-Again, you will be prompted for config info, and it can be changed in the same location on the Pi.
+Start the server by running  $bash scripts/run_server.sh
 
-If everything is working properly, use a browser to navigate to the IP of the server with the port number you assigned (e.g.    123.456.7.8:12345). 
+Use a browser to navigate to the IP of the server with the port number you assigned (e.g. 123.456.78.9:12345). 
 
 
-##### Sending Requests
 
-Data is sent according to Standard HTTP 1.1 format using a Request object:
+### Creating and modifying streamer classes
 
-> request = Request()       # new request
-> request.add_request("METHOD_NAME")  # optional path and version arguments
-> request.add_header("keyword1", value1)
-> request.add_header("keyword2", value2)
-> ...
-> request.add_content(content)  # If it's a string, it will be converted to bytes
-> Node.send(request, origin_socket_handler)
-
-This will send a byte-encoded and properly formatted request to the origin_socket specified.
+Examples can be found in app/lib/raspi/streamers.py and app/lib/server/handlers.py
 
 ##### Handling Requests
 
-Within the derived Streamer or Handler class, create a function with the name of the method you want to handle, with a single argument. A Request object will be passed in through which you can access the following:
+Within a Streamer or Handler class, create a function with the name of the method you want to handle, with a single argument. A Request object will be passed in through which you can access the following:
 
-> Request.origin      # socket that send this request (passed in as the second argument to Node.send())
+> Request.origin      # socket that sent this request (passed in as the second argument to self.send())
 > Request.path        # request path
 > Request.header    # dictionary of request headers
 > Request.version   # HTTP version string
@@ -46,5 +38,19 @@ Within the derived Streamer or Handler class, create a function with the name of
 
 This function will be called when the Node received a request using that method name. For example, defining the method self.GET() will be called whenever a GET request is received. 
 
-If this function is to be run continually (i.e. streaming something using a continuous loop), add a conditional to check "not self.exit" as a cue to stop the loop cleanly. Otherwise the thread will be killed when the process terminates.
+If this function is to be run continually (i.e. streaming something using a continuous loop), add a conditional to check "not self.exit" as a cue to stop the loop cleanly. Otherwise the thread will be killed abruptly when the process terminates.
+
+##### Sending Requests
+
+Within a Handler or Streamer class, requests can be sent back and forth between one another. Data is sent according to Standard HTTP 1.1 format using a Request object:
+
+> request = Request()       # new request
+> request.add_request("METHOD_NAME")   # optional path and version arguments
+> request.add_header("keyword1", value1)
+> request.add_header("keyword2", value2)
+> ...
+> request.add_content(content)   # If it's a string, it will be converted to bytes
+> self.send(request, origin_socket)   # where self is a Handler or Streamer class
+
+This will send a byte-encoded and properly formatted request to the origin_socket specified.
 
