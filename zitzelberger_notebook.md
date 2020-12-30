@@ -33,6 +33,22 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### December 19th, 2020:
+
+This week I'm working on tackling some small things that should make the development process a little smoother:
+
+- Automatically do a git pull on each application start
+- Add the ability to remotely start/stop the streams from the browser window
+- move the application to its own environment
+- set a group process id of the application that can be targeted to kill all processes associated with the app
+- send an email if something crashes
+
+The automatic git pull wasn't difficult, although it assumes that the necessary credentials have already been stored, which may not always be the case.
+
+Remotely starting/stopping the streams is easy to implement in theory, however I am having a lot of trouble getting Bokeh to work when the stream gets interrupted for some reason. I also had to rewrite how the OpenBCI board and Picam are initialized.
+
+Moving the application to its own environment is also proving to be difficult because I am getting permission errors where there should not be any - I have not yet found the source of this issue.
+
 ##### December 18th, 2020:
 
 I have finally discovered why the python logging module doesn't support multiprocessing. Evidently using fork() to create new processes has a chance to deadlock the program if it inherits an already-aquired lock from a thread. I discovered this after I created this exact scenario in my own implementation. I have since been able to work around it (I hope) and have fixed the deadlocking issues with the LogStreamer class.
