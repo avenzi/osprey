@@ -33,7 +33,15 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
-##### December 19th, 2020:
+##### December 30th, 2020:
+
+The remote start/stop is still giving me trouble. I've fixed the issues with Bokeh, however some others have cropped up. 
+
+Specifically, the VideoStreamer crashes after a starting up a second time. I cannot pinpoint the problem, but the error appears to be occurring in the data buffer class that I'm using the store the images before they are sent to the browser. Either the buffer itself is encountering an edge case that I did not think of, or there is a deeper threading issue going on.
+
+There also appears to be a problem with the EEGStreamer, which also happens after starting up the second time. It looks like the data it receives from the server is out of order and missing chunks. This could very well be the same problem the video streamer is having, but I cannot be certain. 
+
+##### December 29th, 2020:
 
 This week I'm working on tackling some small things that should make the development process a little smoother:
 
