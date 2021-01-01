@@ -48,7 +48,7 @@ class Base:
                 self.exit_condition.wait()  # wait until notified
         except KeyboardInterrupt:
             if current_process().name == 'MainProcess':
-                self.log("Manual Termination")  # only display log on main process
+                self.log("Manual Termination")  # only display once
             self.shutdown()  # set both exit and close flags
         except Exception as e:
             self.debug("Unexpected exception in exit trigger of '{}': {}".format(self.__class__.__name__, e))
@@ -298,7 +298,6 @@ class SocketHandler(Base):
                 data = data.decode(self.encoding).strip()  # decode and strip whitespace including CLRF
             return data
         except (ConnectionResetError, BrokenPipeError) as e:  # disconnected
-            self.debug("Couldn't read from stream - Socket closed. Disconnecting.", 3)
             self.shutdown()
 
     def parse_request_line(self):
@@ -313,7 +312,6 @@ class SocketHandler(Base):
             line = self.read(max_len, line=True)  # read first line from stream
             if line is None:  # error reading
                 return
-        self.debug("Received Request-Line: '{}'".format(line.strip()), 3)
         words = line.split()
         if len(words) != 3:
             err = "Request-Line must conform to HTTP Standard ( METHOD /path HTTP/X.X   or   HTTP/X.X STATUS MESSAGE )"
@@ -346,11 +344,9 @@ class SocketHandler(Base):
         max_len = 1024  # max length each header (arbitrary choice)
         for _ in range(max_num):
             line = self.read(max_len, line=True)  # read next line in stream
-            self.debug("Read Header '{}'".format(line), 4)
             if line is None:  # error reading
                 return False
             if line == '':  # empty line signaling end of headers
-                self.debug("All headers received", 3)
                 self.request.header_received = True  # mark header as received
                 break
             try:
@@ -375,7 +371,6 @@ class SocketHandler(Base):
             content = self.read(int(length), decode=False)  # read raw bytes of exact length from stream
             if content is None:   # error reading
                 return False
-            self.debug("Received Content of length: {}".format(len(content)), 3)
             self.request.content = content
             return True
         else:  # no content length specified - assuming no content sent
@@ -396,9 +391,7 @@ class SocketHandler(Base):
             with self.push_lock:
                 self.push_buffer.write(data)
                 self.push_buffer.flush()
-                self.debug("Pushed data to stream", 3)
-        except (ConnectionResetError, BrokenPipeError) as e:
-            self.debug("Couldn't write to stream - socket closed. Disconnecting.", 3)
+        except (ConnectionResetError, BrokenPipeError) as e:  # disconnected
             self.shutdown()
 
     def send_multipart(self, buffer, request=None):
@@ -428,14 +421,12 @@ class SocketHandler(Base):
         self.send(request)
 
         try:
-            self.debug("Started multipart stream", 1)
             lock = buffer.get_ticket()
             while not self.exit:
                 data = buffer.read(lock)
                 length_header = "Content-Length:{}\r\n".format(len(data)).encode(self.encoding)  # content length + blank line
                 packet = chunk_header + length_header + b'\r\n' + data + b'\r\n'
                 self.send_raw(packet)
-            self.debug("Ended multipart stream", 2)
         except Exception as e:
             self.throw('Multipart Stream Disconnected ({})'.format(self.peer), e)
 
@@ -490,9 +481,8 @@ class SocketHandler(Base):
             # TODO: I don't know why sometimes the socket won't close,
             #  but I think it means that it's already closed. Would be nice
             #  to know for sure, though.
-            self.debug("Error closing socket '{}': {}".format(self.name, e), 2)
+            pass
         finally:
-            self.debug("Socket '{}' Closed on '{}' (ID: {})".format(self.name, self.node.name, self.id), 2)
             self.node.remove_socket(self.id)  # call the parent connection's method to remove this socket
 
 
@@ -619,7 +609,7 @@ class Node(Base):
     def add_socket(self, socket_handler):
         """ Add a new SocketHandler the index and return the ID"""
         self.sockets[socket_handler.id] = socket_handler
-        self.debug("Added socket '{}' to '{}'".format(socket_handler.name, self.name), 2)
+        #self.debug("Added socket '{}' to '{}'".format(socket_handler.name, self.name), 2)
         return socket_handler.id
 
     def remove_socket(self, socket_id):
@@ -636,7 +626,7 @@ class Node(Base):
         if not handler.exit:  # exit status on socket not set
             self.throw("Attempted to remove a live SocketHandler '{}' (ID: {}) from node '{}'".format(handler.name, socket_id, self.name), trace=False)
             return
-        self.debug("Removing socket '{} (ID: {})' from node '{}'".format(handler.name, socket_id, self.name), 2)
+        #self.debug("Removing socket '{} (ID: {})' from node '{}'".format(handler.name, socket_id, self.name), 2)
         del self.sockets[socket_id]  # remove it from the socket index
 
     def transfer_socket(self, pipe, socket_handler, request=None):
@@ -648,14 +638,14 @@ class Node(Base):
         package = SocketPackage(socket_handler, request)  # package the raw socket and request
         pipe.send(package)  # send package through pipe
         self.remove_socket(request.origin.id)  # remove handler from host index
-        self.debug("'{}' sent a socket to '{}'".format(self.name, pipe.name), 2)
+        #self.debug("'{}' sent a socket to '{}'".format(self.name, pipe.name), 2)
 
     def receive_socket(self, package):
         """
         Unpacks a SocketPackage to create a SocketHandler and a possible Request
         Runs the Request on that socket, then runs the SocketHandler to receive subsequent requests.
         """
-        self.debug("Node '{}' received a transferred socket.".format(self.name), 2)
+        #self.debug("Node '{}' received a transferred socket.".format(self.name), 2)
 
         # get the new SocketHandler (with self as the new parent node) and optional Request
         handler, request = package.unpack(self)
@@ -695,7 +685,7 @@ class Node(Base):
     def _execute(self, request):
         """ Execute the specified command """
         if not hasattr(self, request.method):  # if a method for the request doesn't exist
-            self.throw('Unsupported Request Method {} for {}'.format(request.method, self.name))
+            self.debug('Unsupported Request Method {} for {}'.format(request.method, self.name))
             return
         else:
             method_func = getattr(self, request.method)  # get handler method that matches name of request method
@@ -803,11 +793,11 @@ class HostNode(Node):
             if type(message) == SocketPackage:  # A PickledRequest object containing a request and a new socket
                 self.receive_socket(message)
             elif message == 'SHUTDOWN':  # the connection on the other end shut down
-                self.debug("Host '{}' received SHUTDOWN from worker '{}'".format(self.name, pipe.name), 2)
+                #self.debug("Host '{}' received SHUTDOWN from worker '{}'".format(self.name, pipe.name), 2)
                 self.remove_worker(pipe_id)  # remove it
                 return
             elif message is None:
-                self.debug("Pipe to '{}' shut down unexpectedly on node '{}'".format(pipe.name, self.name), 2)
+                #self.debug("Pipe to '{}' shut down unexpectedly on node '{}'".format(pipe.name, self.name), 2)
                 return
             else:
                 self.debug("Host Node Received unknown signal '{}' from Worker Node '{}'".format(message, pipe.name))
@@ -823,11 +813,7 @@ class HostNode(Node):
 
 class WorkerNode(Node):
     """
-    This class holds a socket connection to a data-streaming client,
-        plus all sockets requesting data from that client.
-
-    <source> is the socket that connects to the Raspberry Pi that initiated the connection.
-    <server> is the server object controlling this handler, which will pass on all subsequent socket connections
+    This class holds all socket connections to the data-streaming client
     """
     def __init__(self):
         super().__init__()
@@ -843,7 +829,7 @@ class WorkerNode(Node):
         """
         self.pipe = pipe
         self.device = self.pipe.device
-        self.debug("Worker '{}' started running on '{}'".format(self.name, self.device), 1)
+        #self.debug("Worker '{}' started running on '{}'".format(self.name, self.device), 1)
         Thread(target=self._run, name='RUN', daemon=True).start()
         Thread(target=self._run_pipe, name='PIPE', daemon=True).start()
         self.run_exit_trigger(block=True)  # Wait for exit status on new thread
@@ -852,7 +838,7 @@ class WorkerNode(Node):
         """ Starts running all sockets, if any. """
         # run each socket (on a new thread)
         for handler in list(self.sockets.values()):
-            self.debug("Running socket '{}' on '{}'".format(handler.name, self.name), 2)
+            #self.debug("Running socket '{}' on '{}'".format(handler.name, self.name), 2)
             handler.run()
 
     def _run_pipe(self):
@@ -868,28 +854,37 @@ class WorkerNode(Node):
             if type(message) == SocketPackage:  # A PickledRequest object containing a request and a new socket
                 self.receive_socket(message)
             elif message == 'SHUTDOWN':  # Host Node signalled to shut down
-                self.debug("Worker '{}' received SHUTDOWN from Host '{}'".format(self.name, self.pipe.name), 2)
+                #self.debug("Worker '{}' received SHUTDOWN from Host '{}'".format(self.name, self.pipe.name), 2)
                 self.shutdown()
                 return
             elif message is None:
-                self.debug("Pipe to '{}' shut down unexpectedly on node '{}'".format(self.pipe.name, self.name), 2)
+                #self.debug("Pipe to '{}' shut down unexpectedly on node '{}'".format(self.pipe.name, self.name), 2)
                 return
             else:
                 self.throw("Worker Node received unknown signal '{}' from Host Node '{}'. This really shouldn't have happened.".format(message, self.pipe.name))
 
-    def set_source(self, raw_socket):
+    def set_source(self, socket):
         """
         Set the source socket.
         Assumes that the SocketHandler previously associated with this socket (if any)
             has been halted and removed from the old node.
+        <socket> can be a raw socket object or SocketHandler
         """
-        handler = SocketHandler(raw_socket, self, name='DATA-SOCKET')
+        if type(socket) == SocketHandler:
+            raw_socket = socket.socket  # get raw socket from handler
+        handler = SocketHandler(socket, self, name='SOURCE')  # create new handler
         self.source_id = self.add_socket(handler)
+
+    def send(self, request, socket_handler=None):
+        """ Extends Node send() method to automatically send to the source socket """
+        if not socket_handler:
+            socket_handler = self.sockets[self.source_id]
+        super().send(request, socket_handler)
 
     def remove_socket(self, socket_id):
         """ Overwrites default method """
         if socket_id == self.source_id:  # removing source socket
-            self.debug("Removing source socket '{}' from {}) ".format(self.sockets[socket_id].name, self.name), 2)
+            #self.debug("Removing source socket '{}' from {}) ".format(self.sockets[socket_id].name, self.name), 2)
             self.shutdown()  # start shutdown
             return
         super().remove_socket(socket_id)  # run default socket shutdown method
@@ -939,7 +934,6 @@ class Request(Base):
         self.method = method
         self.path = path
         self.version = version
-        self.debug("Added requestline: {}".format(self.format_request_line().replace('\r\n', '\\r\\n')), 3)
 
     def add_response(self, code):
         """ Add a response code, message, version, and default headers. Used to respond to web browsers. """
@@ -947,9 +941,8 @@ class Request(Base):
         self.version = self.version
         messages = {200: 'OK', 204: 'No Content', 301: 'Moved Permanently', 304: 'Not Modified', 308: 'Permanent Redirect', 404: 'Not Found', 405: 'Method Not Allowed'}
         self.message = messages[code]
-        self.add_header('Server', 'StreamingServer Python/3.7.3')  # TODO: make this not hard coded (Not really necessary yet)
+        self.add_header('Server', 'StreamingServer Python/3.7.3')  # TODO: make the version not hard coded (Not really necessary yet)
         self.add_header('Date', self.get_date())
-        self.debug("Added responseline: {}".format(self.format_request_line().replace('\r\n', '\\r\\n')), 3)
 
     def add_header(self, keyword, value):
         """ Add a single header line """
@@ -968,7 +961,6 @@ class Request(Base):
         if content:
             self.add_header('content-length', len(data))  # add content length header
         self.content = data
-        self.debug("Added content of length: {}".format(len(data)), 3)
 
     def verify(self):
         """ Verify that this object meets all requirements and can be safely sent to the stream """
@@ -1092,12 +1084,10 @@ class ReadLock:
         self.lock = lock
 
     def __enter__(self):
-        self.lock.acquire_read()
-        return self
+        return self.lock.acquire_read()
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.lock.release_read()
-        return False
 
 
 class WriteLock:
@@ -1110,12 +1100,10 @@ class WriteLock:
         self.lock = lock
 
     def __enter__(self):
-        self.lock.acquire_write()
-        return self
+        return self.lock.acquire_write()
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.lock.release_write()
-        return False
 
 
 class ReadWriteLock:
@@ -1162,7 +1150,7 @@ class ReadWriteLock:
 
 
 # Data buffers
-class DataBuffer(object):
+class DataBuffer(Base):
     """
     A thread-safe buffer to store data
     The write() method can be used by a Picam.
@@ -1196,20 +1184,23 @@ class DataBuffer(object):
 
         with self.read_lock:  # get shared read-lock
             reader = self.tickets[ticket]  # get reader value
-            if reader:  # No new data available (only if non-blocking)
+            if reader:  # No new data available (should only happen if non-blocking)
+                if block:  # this will only happen if something is going wrong
+                    self.log("UNEXPECTED NO DATA IN BLOCKING READ")
+                    return self.data  # temp fix
                 return None
             self.tickets[ticket] = True  # has now read most recent data
         return self.data
 
     def write(self, data):
         """ Replace current data with new data """
-        with self.write_lock:
+        with self.write_lock as success:
             if len(data) == 0:  # no data being added
                 return
             self.data = data
             self.tickets = [False] * len(self.tickets)  # reset all tickets
-        with self.ready:
-            self.ready.notify_all()  # notify that new data is ready
+            with self.ready:
+                self.ready.notify_all()  # notify that new data is ready
 
 
 class RingBuffer:

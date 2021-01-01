@@ -4,7 +4,7 @@ import json
 import inspect
 
 from bokeh.embed import json_item
-from ..lib import Base, HostNode, WorkerNode, SocketHandler, Request
+from ..lib import Base, HostNode, WorkerNode, SocketHandler, Request, Response
 
 PAGES_PATH = 'lib/server/pages'
 CONFIG_PATH = 'lib/server/config.json'
@@ -75,7 +75,7 @@ class Server(HostNode):
         try:
             new_socket, (ip, port) = self.listener.accept()  # wait for a new connection
             new_socket.setblocking(True)
-            self.debug("New Connection From: {}:{}".format(ip, port), 2)
+            #self.debug("New Connection From: {}:{}".format(ip, port), 2)
         except Exception as e:
             self.throw("Failed while accepting new connection", e, trace=True)
             return
@@ -94,19 +94,19 @@ class Server(HostNode):
         When a request would normally be handled, first decide if it should be handled by an existing connection.
         This is determined by whether a connection ID was specified in the query string of the request.
         """
-        ID = request.queries.get('id')  # handler ID
+        self.debug("Request: {} for {}".format(request.method, request.path), 2)
+        ID = request.queries.get('id')  # handler ID, if present in the request querystring
 
-        if ID is not None:  # a particular connection was specified to handle this request
-            self.debug("Client requested an ID", 2)
-            pipe = self.pipes.get(ID)  # Connection with this ID
-            if pipe:  # Connection exists
-                self.transfer_socket(pipe, request.origin, request)  # transfer origin socket and request to the existing WorkerConnection
+        if ID is not None:  # a particular worker was specified to handle this request
+            pipe = self.pipes.get(ID)  # Pipe to worker with this ID
+            if pipe:  # Pipe exists
+                self.transfer_socket(pipe, request.origin, request)  # transfer origin socket and request to the existing Worker Node
                 return
-            else:  # Worker doesn't exist
+            else:  # Pipe doesn't exist
                 self.debug("A client requested an invalid ID ({}). The Server will attempt to handle the request".format(ID))
-                self.debug("Valid ID's: {}".format(list(self.pipes.keys())))
+                #self.debug("Valid ID's: {}".format(list(self.pipes.keys())))
 
-        # no ID was specified or ID not found - continue to run on this Server Connection
+        # no ID was specified or ID not found - continue to run on this Server HostNode
         if request.method == "SIGN_ON":  # reserved method for initializing new data stream client connections
             super().HANDLE(request, threaded=False)  # call SIGN_ON method, and don't read any more from the socket
         else:
@@ -148,9 +148,10 @@ class Server(HostNode):
             self.throw("Handler Class '{}' not found in handlers.py".format(class_name))
             return
 
-        start_req = Request()
-        start_req.add_request('START')
-        self.send(start_req, request.origin)  # send start request back to client
+        # TODO: If we want the stream to start automatically as soon as it's connected, this is a good place to do it
+        # start_req = Request()
+        # start_req.add_request('START')
+        # self.send(start_req, request.origin)  # send start request back to client
         self.log("New Data-Stream connection from {} on {} ({})".format(display_name, device_name, request.origin.peer))
 
         worker = HandlerClass()  # create new worker node
@@ -163,7 +164,7 @@ class Server(HostNode):
         self.run_worker(worker)   # run the Worker on a new process
 
     def GET(self, request):
-        """ Handle request from web browser """
+        """ Handle GET request from web browser """
         response = Request()
 
         if request.path == '/':
@@ -182,6 +183,9 @@ class Server(HostNode):
             response.add_response(200)  # success
             response.add_header('Content-Type', 'text/html')
             response.add_content(content)  # write html content to page
+
+        elif request.path == '/command':
+            command = request.queries.get('command')
 
         elif request.path == '/404.html':
             response.add_response(200)
@@ -204,7 +208,6 @@ class Server(HostNode):
                 self.log("A client requested unknown path: {}".format(request.path))
 
         self.send(response, request.origin)  # send response back to requesting socket
-        self.debug("Server handled a GET request for {}".format(request.path), 2)
 
     def OPTIONS(self, request):
         """ Responds to an OPTIONS request """
@@ -216,17 +219,48 @@ class Server(HostNode):
     def main_page(self):
         """ Returns the HTML for the main selection page """
         # Organize connections by host device
-        devices = {}  # device: [(id,name), (id,name), ...]
+        devices = {}  # {device: [(id,name), (id,name), ...], ...}
+        ids = []  # list of all connected stream ID's
         for id, pipe in self.pipes.items():
             if devices.get(pipe.device) is None:
                 devices[pipe.device] = []
-            else:
-                devices[pipe.device].append((id, pipe.name))
+            devices[pipe.device].append((id, pipe.name))
+            ids.append(id)
 
         page = """
             <html>
-            <head><title>Data Hub</title></head>
+            <head>
+                <title>Data Hub</title>
+                <script>
+                    function command(name, id_array) {
+                        for (const id of id_array){
+                            var req = new XMLHttpRequest();
+                            req.open("COMMAND", '/'+name+'?id='+id, true);
+                            req.send();
+                            console.log('sent '+name+' to '+id);
+                        }
+                    }
+                </script>
+            </head>
+        """
+
+        page += """
             <body><h1>Stream Selection</h1>
+            <button type="button" onclick="command('start', {all_ids})" value="startval">Start All</button>
+            <button type="button" onclick="command('stop', {all_ids})" value="stopval">Stop All</button>
+        """.format(all_ids=ids)
+
+        # TODO: device-specific and infividual stream toggles not implemented yet.
+        # device-specific buttons
+        device_buttons = """
+            <button type="button" onclick="command('start', {device_ids})" value="Start">Start</button>
+            <button type="button" onclick="command('stop', {device_ids})" value="Stop">Stop</button>
+        """
+
+        # individual stream buttons
+        link_buttons = """
+            <button type="button" onclick="command('start', {link_id})" value="Start"></button>
+            <button type="button" onclick="command('stop', {link_id})" value="Stop"></button>
         """
 
         # List all stream links under their host device names
@@ -246,6 +280,9 @@ class Handler(WorkerNode):
     Worker node for the Server
     Handles requests sent by Streamers and Browser connections
     """
+    def __init__(self):
+        super().__init__()
+        self.streaming = False  # whether stream is activated
 
     def HANDLE(self, request, threaded=True):
         """
@@ -261,7 +298,7 @@ class Handler(WorkerNode):
             super().HANDLE(request, threaded=threaded)  # handle the request
 
         else:  # ID doesn't match or is not found, and not from a data-collection client
-            self.debug("{} Received different ID. Sending back to host".format(self.name))
+            #self.debug("{} Received different ID. Sending back to host".format(self.name))
             self.transfer_socket(self.pipe, request.origin, request)
 
     def INGEST(self, request):
@@ -271,6 +308,53 @@ class Handler(WorkerNode):
         Usually stores raw content and processed content in DataBuffers.
         """
         pass
+
+    def COMMAND(self, request):
+        """ Handles POST requests """
+        if request.path.endswith('/start'):
+            self.streaming = True
+            data_socket = self.sockets[self.source_id]  # get dat-source socket
+            req = Request()  # new request
+            req.add_request('START')  # call START method on client
+            self.send(req, data_socket)
+
+        elif request.path.endswith('/stop'):
+            self.streaming = False
+            data_socket = self.sockets[self.source_id]  # get dat-source socket
+            req = Request()  # new request
+            req.add_request('STOP')  # call STOP method on client
+            self.send(req, data_socket)
+
+        else:
+            self.debug("Command (path) not recognized: {}".format(request.path), 2)
+
+        # success response
+        response = Response(204)
+        self.send(response, request.origin)
+
+    def not_active(self, request):
+        """
+        Send response for a stream which has been temporarily stopped.
+        """
+
+        html = """
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <title>{name}</title>
+            </head>
+            <body>
+                <h1>{name} is not active.</h1>
+                <p><a href='/index.html'>Back</a></p>
+            </body>
+            </html>
+        """.format(name=self.name)
+
+        response = Request()
+        response.add_response(200)
+        response.add_header('content-type', 'text/html')
+        response.add_content(html)
+        self.send(response, request.origin)
 
 
 class GraphStream(Base):

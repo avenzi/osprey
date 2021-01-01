@@ -18,15 +18,16 @@ class LogHandler(Handler):
         super().__init__()
 
         self.client_name = None
+        self.log_path = None
 
         with open(CONFIG_PATH) as config_file:
             config = json.load(config_file)
-        self.log_path = config.get('LOG_PATH')
+        self.log_base_path = config.get('LOG_PATH')
 
     def INIT(self, request):
         """ Handles INIT request from client """
         self.client_name = request.header['client']
-        self.log_path = self.log_path + '/{}.log'.format(self.client_name)
+        self.log_path = self.log_base_path + '/{}.log'.format(self.client_name)
 
         # erase previous log contents
         with open(self.log_path, 'w') as file:
@@ -40,6 +41,45 @@ class LogHandler(Handler):
         with open(self.log_path, 'a') as file:
             file.write(data)
         self.debug("Received Log File", 1)
+
+    def GET(self, request):
+        """
+        Returns response object for a GET request
+        Return False to fall back to general server response
+        """
+        if request.path.endswith('/stream'):  # request for data stream page html
+            response = Request()
+            response.add_response(200)
+            response.add_header('content-type', 'text/html')
+            response.add_content(self.page_html())
+            self.send(response, request.origin)
+        else:
+            self.debug("Path not recognized: {}".format(request.path), 2)
+
+    def page_html(self):
+        """ Returns HTML for streaming display page in browser """
+        page = """
+            <html>
+            <head><title>{name}</title></head>
+            <body>
+                <p><a href='/index.html'>Back</a></p>
+                {notif}
+                <p style="white-space: pre-line">{log}</p>
+            </body>
+            </html>
+        """
+
+        notif = ''
+        if not self.streaming:
+            notif = """<p>{} is not active</p>""".format(self.name)
+
+        if self.log_path:  # log has been initialized
+            with open(self.log_path, 'r') as file:
+                log = file.read()
+        else:
+            log = "No log file received"
+
+        return page.format(name=self.name, log=log, notif=notif)
 
 
 class VideoHandler(Handler):
@@ -67,13 +107,13 @@ class VideoHandler(Handler):
         self.frames_received += 1
         self.frames_sent = int(request.header['frames-sent'])
         self.image_buffer.write(frame)  # raw data needs no modification - it's already an image
-        self.debug("ingested video", 3)
 
     def GET(self, request):
-        """
-        Returns response object for a GET request
-        Return False to fall back to general server response
-        """
+        """ Handles GET request from browser """
+        if not self.streaming:
+            self.not_active(request)
+            return
+
         if request.path.endswith('/stream'):  # request for data stream page html
             response = Request()
             response.add_response(200)
@@ -108,6 +148,10 @@ class SenseHandler(Handler):
     """ Handles SenseHat stream """
     def __init__(self):
         super().__init__()
+
+        with open(CONFIG_PATH, 'r') as file:  # get config settings
+            config = json.load(file)
+        self.data_path = config.get('DATA_PATH')  # path to data directory
 
         self.frames_sent = 0
         self.frames_received = 0
@@ -145,13 +189,16 @@ class SenseHandler(Handler):
         data = request.content.decode(request.encoding)  # raw JSON string
         self.buffer.write(data)  # save raw JSON string in buffer.
         self.frames_received += 1
-        self.debug("Ingested sense data (frame {})".format(self.frames_received), 3)
 
     def GET(self, request):
         """
         Returns response object for a GET request
         Return False to fall back to general server response
         """
+        if not self.streaming:
+            self.not_active(request)
+            return
+
         if request.path.endswith('/stream'):  # request for data stream page html
             response = self.graph.stream_page()
         elif request.path.endswith('/plot'):  # request for initial plot JSON
@@ -168,6 +215,10 @@ class ECGHandler(Handler):
     """ Handles ECG stream """
     def __init__(self):
         super().__init__()
+
+        with open(CONFIG_PATH, 'r') as file:  # get config settings
+            config = json.load(file)
+        self.data_path = config.get('DATA_PATH')  # path to data directory
 
         self.frames_sent = 0
         self.frames_received = 0
@@ -191,6 +242,10 @@ class ECGHandler(Handler):
         self.sample_rate = float(request.header['sample_rate'])  # data points per second
         self.ecg_channels = request.header['ecg_channels'].split(',')
         self.pulse_channels = request.header['pulse_channels'].split(',')
+
+        # graph configuration already done
+        if self.graph:
+            return
 
         # Create Bokeh figures
         source = AjaxDataSource(
@@ -245,13 +300,16 @@ class ECGHandler(Handler):
         data = self.calculate_heart_rate(data)  # adds heart rate to data
         self.ecg_buffer.write(data)  # save to buffer
         self.frames_received += 1
-        self.debug("Ingested ECG data (frame {})".format(self.frames_received), 3)
 
     def GET(self, request):
         """
         Returns response object for a GET request
         Return False to fall back to general server response
         """
+        if not self.streaming:
+            self.not_active(request)
+            return
+
         if request.path.endswith('/stream'):  # request for data stream page html
             response = self.graph.stream_page()
         elif request.path.endswith('/plot'):  # request for initial plot JSON
@@ -318,6 +376,9 @@ class EEGHandler(Handler):
     def __init__(self):
         super().__init__()
 
+        with open(CONFIG_PATH, 'r') as file:  # get config settings
+            self.data_path = json.load(file).get('DATA_PATH')  # path to data directory
+
         self.frames_sent = 0
         self.frames_received = 0
         self.channels = []  # list of channel name strings
@@ -356,16 +417,18 @@ class EEGHandler(Handler):
         self.channels = request.header['channels'].split(',')  # list of EEG channel names
         self.sample_rate = float(request.header['sample_rate'])  # data points per second
 
+        # graph configuration already done
+        if self.graph:
+            return
+
         # Massive Bokeh layout configuration imported from /pages/eeg_layout.py
         bokeh_layout = configure_layout(self.id, self.channels)
-
-        # pass Bokeh layout object into GraphStream
-        self.graph = GraphStream(bokeh_layout)
+        self.graph = GraphStream(bokeh_layout)  # pass into graphstream
 
         # size of EEG buffer (# of data points to keep).
         # FFT window is in seconds, sample rate is data points per second.
         size = int(self.page_config['fourier_window'] * self.sample_rate)
-        self.eeg_buffer = RingBuffer(self.channels+['time'], size)
+        self.eeg_buffer = RingBuffer(self.channels+['time'], size, self.data_path+'/EEG_data')
         self.eeg_lock = self.eeg_buffer.get_ticket()
 
         self.fourier_buffer = DataBuffer()
@@ -388,10 +451,13 @@ class EEGHandler(Handler):
         self.filter(data)
         self.eeg_buffer.write(data)  # write data to EEG buffer
         self.frames_received += 1
-        self.debug("Ingested EEG data (frame {})".format(self.frames_received), 3)
 
     def GET(self, request):
         """ Handles a GET request send to the handler """
+        if not self.streaming:
+            self.not_active(request)
+            return
+
         if request.path.endswith('/stream'):  # request for data stream page html
             response = self.graph.stream_page()
 

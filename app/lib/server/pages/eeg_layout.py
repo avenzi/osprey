@@ -45,8 +45,8 @@ def js_request(key, attribute='value'):
 
     code = """
         var req = new XMLHttpRequest();
-        url = window.location.pathname
-        queries = window.location.search  // get ID of current stream
+        url = window.location.pathname;
+        queries = window.location.search;  // get ID of current stream
         req.open("POST", url+'/{path}'+queries, true);
         req.setRequestHeader('Content-Type', 'application/json');
         var json = JSON.stringify({{{key}: this.{attribute}}});

@@ -5,6 +5,7 @@
 cd "$(dirname "$0")"
 
 # update from git
+echo "Updating From Git..."
 git pull
 
 # run python file to start the client

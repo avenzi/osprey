@@ -1,4 +1,5 @@
 from threading import Thread
+from multiprocessing import Event
 from requests import get
 import subprocess
 import socket
@@ -7,7 +8,7 @@ import inspect
 import time
 import os
 
-from ..lib import HostNode, WorkerNode, Request
+from ..lib import HostNode, WorkerNode, Request, SocketHandler
 
 CONFIG_PATH = 'lib/raspi/config.json'
 
@@ -56,6 +57,10 @@ class Client(HostNode):
         Calls idle() and _run() on a new thread and waits for exit status.
         Blocks until exit status set (because this is the main thread)
         """
+        self.log("Name: {}".format(self.name))
+        self.log("Device IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
+        self.log("Server IP: {}".format(self.ip))
+
         # search for a server to connect to, call _run() when found.
         Thread(target=self.idle, name=self.name+'-IDLE', daemon=True).start()
         self.run_exit_trigger(block=True)  # block main thread until exit
@@ -66,10 +71,6 @@ class Client(HostNode):
         Creates one instance of each handler type from collection_lib
             For each handler class, listens for new connections then starts them on their own thread.
         """
-        self.log("Name: {}".format(self.name))
-        self.log("Device IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
-        self.log("Server IP: {}".format(self.ip))
-
         # get selected handler classes
         from . import streamers
         members = inspect.getmembers(streamers, inspect.isclass)  # all classes [(name, class), ]
@@ -103,15 +104,18 @@ class Client(HostNode):
             If no server found, waits some amount of time then tries again.
             Once found, closes the dummy socket and calls self._run()
         """
-        self.log("Waiting to find a server...")
+        self.log("Waiting to find server...")
         while True:  # try to connect every interval
             time.sleep(self.retry)  # wait to try again
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
             try:  # connect socket to given address
-                # TODO: Better way to ping the server than using a dummy socket?
                 sock.connect((self.ip, self.port))
-                self.log("Server was found.")
-                # close socket
+                self.log("Server found.")
+                # This code would be used if we wanted to use the dummy socket for something.
+                #  Instead, we just immediately close it.
+                # new_handler = SocketHandler(sock, self, name="DummySocket")  # wrap raw socket in socket handler
+                # sock_id = self.add_socket(new_handler)  # add to socket index
+                # self.sockets[sock_id].run()  # run the new socket handler
                 sock.shutdown(socket.SHUT_RDWR)
                 sock.close()
                 break
@@ -129,19 +133,22 @@ class Streamer(WorkerNode):
     def __init__(self):
         super().__init__()
         self.handler = None  # class name of the handler to use on the server
-        self.streaming = False  # flag set when actively streaming
+        self.streaming = Event()  # threading event flag set when actively streaming
         self.time = 0  # start time
 
-    def send(self, request, socket_handler):
+    def send(self, request, socket_handler=None):
         """
-        Overwriting default send method
+        Overwriting WorkerNone send method
         Adds a user-agent header that identifies this request as being from a client streamer.
         """
         request.add_header('user-agent', 'STREAMER')
         super().send(request, socket_handler)
 
     def _run(self):
-        """ Pre-extends the default method to automatically send the sign-on request """
+        """
+        Pre-extends the default method to automatically send the sign-on request
+        Also runs the self._loop() method on a new thread
+        """
         if not self.handler:
             self.throw("Streamer Node must have the attribute 'handler' to indicate which Handler class is to be used on the server")
             return
@@ -153,17 +160,35 @@ class Streamer(WorkerNode):
         req.add_header('class', self.handler)  # class name of the handler to use at the other end
         self.send(req, self.sockets[self.source_id])
 
+        # start main execution loop
+        Thread(target=self._loop, name='{}-LOOP'.format(self.name), daemon=True).start()
         super()._run()  # continue _run method. Runs the sockets on this worker.
+
+    def _loop(self):
+        """
+        Main execution loop for the streamer.
+        Runs self.loop defined by user in derived class.
+        """
+        while not self.exit:  # run until application shutdown
+            self.streaming.wait()  # wait until streaming
+            self.loop()  # call user-defined main execution
+
+    def loop(self):
+        """
+        Should be overwritten by derived class.
+        Should not be called anywhere other than _loop()
+        """
+        pass
 
     def START(self, request):
         """
         Should be extended in streamers.py
         Begins the streaming process, using self.send() to send each data packet.
         """
-        if self.streaming:
+        if self.streaming.is_set():
             self.log("{} received START request, but it is already running".format(self.name))
             return
-        self.streaming = True
+        self.streaming.set()  # set streaming, which starts the main execution while loop
         self.log("Started {}".format(self.name))
         self.time = time.time()
 
@@ -172,6 +197,6 @@ class Streamer(WorkerNode):
         Should be extended in streamers.py
         Ends the streaming process
         """
-        self.streaming = False
-        self.log("Stopped {} at {}".format(self.name, self.get_date()))
+        self.streaming.clear()  # stop streaming, stopping the main execution while loop
+        self.log("Stopped {}".format(self.name))
 
