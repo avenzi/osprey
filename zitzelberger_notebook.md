@@ -33,6 +33,16 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### January 1st, 2021:
+
+I figured it out! The problem was in the raspi Streamer class, not the server Handler class. The while loop streaming the data would stop when reading from the stream (i.e. the picam and the OpenBCI dongle), but not exit the loop because the read is a blocking operation. Then when the stream started again, the same while loop would continue while a second while loop started in parallel. This created two identical streams, which bogged down the receiving data buffer on the server. To fix this, I rewrote the Handler classes to have separate START() and loop() methods. The START() and STOP() methods toggle the streaming condition (actually a multiprocessing Event() object), and the loop() method is automatically looped in the background, ensuring that only one instance of the stream exists at a time.
+
+While this does solve the issue that I've been hunting for the last two days, it does bring up concerns about my DataBuffer class. Theoretically, it should not have performed the way it did when the amount of information doubled. I am noting in my TODO list that I want to implement a more efficient buffer - possibly one that drops data if it is receiving too much so it doesn't lag behind. Ideally, I would want this to be the equivalent of reducing the framerate of the video stream so it can keep up with current data.
+
+##### December 31st, 2020:
+
+I looked directly at the data saved to disk from the EEG stream, and it looks fine. The issue I am observing appears to only affect the data when displayed by Bokeh - still unsure why. 
+
 ##### December 30th, 2020:
 
 The remote start/stop is still giving me trouble. I've fixed the issues with Bokeh, however some others have cropped up. 
