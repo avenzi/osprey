@@ -152,7 +152,7 @@ class Server(HostNode):
         # start_req = Request()
         # start_req.add_request('START')
         # self.send(start_req, request.origin)  # send start request back to client
-        self.log("New Data-Stream connection from {} on {} ({})".format(display_name, device_name, request.origin.peer))
+        self.log("New connection from {} on {} ({})".format(display_name, device_name, request.origin.peer))
 
         worker = HandlerClass()  # create new worker node
         worker.name = display_name

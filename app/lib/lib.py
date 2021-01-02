@@ -892,7 +892,7 @@ class WorkerNode(Node):
     def cleanup(self):
         """ Shutdown all handlers associated with this connection and signal that it shut down """
         super().cleanup()  # shutdown all sockets
-        self.log("{} Closed.".format(self.name))
+        self.debug("{} from {} Closed.".format(self.name, self.device))
         self.pipe.send('SHUTDOWN')  # Signal to the server that this connection is shutting down
 
 
