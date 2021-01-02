@@ -98,6 +98,7 @@ class VideoHandler(Handler):
 
     def INIT(self, request):
         """ Handles INIT request from client """
+        self.initialized = True
         self.framerate = request.header['framerate']
         self.resolution = tuple(int(res) for res in request.header['resolution'].split('x'))
 
