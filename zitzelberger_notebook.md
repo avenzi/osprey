@@ -33,6 +33,14 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### January 2nd, 2021:
+
+I've done some quality testing with a second raspberry pi at the same time, and most of the functionality appears stable, apart from increased lag on both VideoStreamers. This is further evidence that I need to re-write my DataBuffer class to be a little more robust to high volume traffic on slower connections.
+
+Additionally, with the new Streamer class structure, I need to do checks at the beginning of each request method to make sure it does not get called twice (most importantly for the START method). This would be much easier using function decorators, but I will leave that to another time - perhaps after we migrate to Flask.
+
+I have also looked into an issue that cropped up yesterday where the pi-side application would not start on boot as it should. The cause was the automated git pull. Evidently, on boot the pi is not able to access github for some unknown reason. I added a delay of about seconds to ensure that the pi is fully booted, but it did not seem to help. A simple workaround may be to just skip interacting with git when the pi first boots, and instead an an option to manually update later. 
+
 ##### January 1st, 2021:
 
 I figured it out! The problem was in the raspi Streamer class, not the server Handler class. The while loop streaming the data would stop when reading from the stream (i.e. the picam and the OpenBCI dongle), but not exit the loop because the read is a blocking operation. Then when the stream started again, the same while loop would continue while a second while loop started in parallel. This created two identical streams, which bogged down the receiving data buffer on the server. To fix this, I rewrote the Handler classes to have separate START() and loop() methods. The START() and STOP() methods toggle the streaming condition (actually a multiprocessing Event() object), and the loop() method is automatically looped in the background, ensuring that only one instance of the stream exists at a time.
