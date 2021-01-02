@@ -283,6 +283,7 @@ class Handler(WorkerNode):
     def __init__(self):
         super().__init__()
         self.streaming = False  # whether stream is activated
+        self.initialized = False   # whether the INIT method has been called yet
 
     def HANDLE(self, request, threaded=True):
         """
@@ -300,6 +301,14 @@ class Handler(WorkerNode):
         else:  # ID doesn't match or is not found, and not from a data-collection client
             #self.debug("{} Received different ID. Sending back to host".format(self.name))
             self.transfer_socket(self.pipe, request.origin, request)
+
+    def INIT(self, request):
+        """
+        Handles INIT request from client
+        Should be called once at session start
+        Extended in derived classes
+        """
+        pass
 
     def INGEST(self, request):
         """

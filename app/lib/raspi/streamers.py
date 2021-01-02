@@ -214,8 +214,6 @@ class EEGStreamer(Streamer):
         try:  # attempt to read from board
             raw_data = self.board.get_board_data()
         except Exception as e:
-            self.debug("Couldn't read from board: {}".format(e), 2)
-            self.shutdown()
             return
 
         # convert from epoch time to relative time since session start
@@ -325,8 +323,6 @@ class ECGStreamer(Streamer):
         try:  # attempt to read from board
             raw_data = self.board.get_board_data()
         except Exception as e:
-            self.debug("Couldn't read from board: {}".format(e), 2)
-            self.shutdown()
             return
 
         # convert from epoch time to relative time since session start
@@ -437,8 +433,6 @@ class SynthEEGStreamer(Streamer):
         try:  # attempt to read from board
             raw_data = self.board.get_board_data()
         except Exception as e:
-            self.debug("Couldn't read from board: {}".format(e), 2)
-            self.shutdown()
             return
 
         # convert from epoch time to relative time since session start

@@ -98,11 +98,14 @@ class VideoHandler(Handler):
 
     def INIT(self, request):
         """ Handles INIT request from client """
+        self.log("{} RECEIVED INIT".format(self.name))
         self.framerate = request.header['framerate']
         self.resolution = tuple(int(res) for res in request.header['resolution'].split('x'))
 
     def INGEST(self, request):
         """ Handle image data received from Pi """
+        if not self.initialized:
+            return
         frame = request.content  # bytes
         self.frames_received += 1
         self.frames_sent = int(request.header['frames-sent'])
@@ -243,9 +246,10 @@ class ECGHandler(Handler):
         self.ecg_channels = request.header['ecg_channels'].split(',')
         self.pulse_channels = request.header['pulse_channels'].split(',')
 
-        # graph configuration already done
-        if self.graph:
+        # configuration already done
+        if self.initialized:
             return
+        self.initialized = True
 
         # Create Bokeh figures
         source = AjaxDataSource(
@@ -295,6 +299,8 @@ class ECGHandler(Handler):
 
     def INGEST(self, request):
         """ Handle table data received from Pi """
+        if not self.initialized:
+            return
         data = request.content.decode(request.encoding)  # raw JSON string
         data = json.loads(data)  # translate to dictionary
         data = self.calculate_heart_rate(data)  # adds heart rate to data
@@ -417,9 +423,10 @@ class EEGHandler(Handler):
         self.channels = request.header['channels'].split(',')  # list of EEG channel names
         self.sample_rate = float(request.header['sample_rate'])  # data points per second
 
-        # graph configuration already done
-        if self.graph:
+        # configuration already done
+        if self.initialized:
             return
+        self.initialized = True
 
         # Massive Bokeh layout configuration imported from /pages/eeg_layout.py
         bokeh_layout = configure_layout(self.id, self.channels)
@@ -446,6 +453,8 @@ class EEGHandler(Handler):
 
     def INGEST(self, request):
         """ Handle EEG data received from Pi """
+        if not self.initialized:
+            return
         data = request.content.decode(request.encoding)  # raw JSON data
         data = json.loads(data)  # load into a dictionary
         self.filter(data)

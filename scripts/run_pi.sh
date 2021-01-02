@@ -8,5 +8,9 @@ cd "$(dirname "$0")"
 echo "Updating From Git..."
 git pull
 
+# kill any remaining python processes
+sudo pkill python3
+sudo pkill python
+
 # run python file to start the client
 python3 ../app/run_pi.py
