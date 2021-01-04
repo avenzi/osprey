@@ -1124,6 +1124,8 @@ class ReadWriteLock:
     def acquire_write(self):
         """ Get exclusive lock and block until all readers have finished """
         with self.lock:
+            while self.writing:  # while writing
+                self.lock.wait()  # wait
             self.writing = True
             while self.reading > 0:  # while reading
                 self.lock.wait()  # wait
@@ -1194,7 +1196,7 @@ class DataBuffer(Base):
 
     def write(self, data):
         """ Replace current data with new data """
-        with self.write_lock as success:
+        with self.write_lock:
             if len(data) == 0:  # no data being added
                 return
             self.data = data
