@@ -26,12 +26,33 @@ By working on this project you are agreeing to abide by the following expectatio
     * Any issues you faced, 
     * What you plan to accomplish in the coming week.
 3. You will keep all code, data and any other project-related items within this repository in neat and professional condition; this includes: 
-    * keeping the code commented, 
-    * naming scripts in a way that reflects their functionality, 
-    * making regular code commits with meaningful commit messages and,
-    * organizing the contents of the project into a logical directory structure.
+    1. keeping the code commented, 
+    2. naming scripts in a way that reflects their functionality, 
+    3. making regular code commits with meaningful commit messages and,
+    4. organizing the contents of the project into a logical directory structure.
 
 ### Daily Updates:
+
+##### January 6th, 2021:
+
+It turns out that the stream format I'm using (mjpeg) is already mostly compressed. I tried using jpeg compression to reduce the quality and it actually *increased* the image sizes. I found that the Picam is capable of streaming the images in h264. which is much more compressed. If I could stream this format, I predict that the network lag issues would be completely solved. The trouble is that h264 is not supported natively in browser windows like the mjpeg stream is, so I have two options: 
+
+- Decode the h264 stream into mjpeg images on the server, then stream to a multipart/x-mixed-replace stream as I have been doing.
+- Use some external pluggin in the browser to be able to decode h264.
+
+As of right now, I am not sure which is best. I am currently researching what sort of programs I would need to decode h264. I could use ffmpeg, however that program is significantly larger than the entirety of my application, so it seems rediculous to use it. I would prefer a direct, lightweight solution. I have found a couple github repos that claim to do the trick, so I will have to try some of them out first.
+
+##### January 4/5, 2021:
+
+I have been digging into the source of the video stream issues with multiple pi's at once.
+
+I was initially convinced that there was an issue with my DataBuffer class, which is used to store each image frame after it has been received and before it is sent to a browser window. I had designed the  class to be thread-safe, so it requires careful locking to make sure no race conditions occur. I thought this was slowing  everything down, so I made some optimizations with how the data is  handled on the server. This did not help.
+
+After more digging, I was able to pinpoint the exact line of code that  is causing the problems - it is the socket.send() operation on each  Raspnerry Pi. This method is from the python socket module, and it is  what sends the data through the created socket for the stream. I did a bunch of testing, and adding another Pi to the  stream consistently slows down this operation on the other Pis, though in sort of a strange way: Rather than slowing down all socket.send()  operations, the effect appears to be cumulative. For example, it might send 5 consecutive packages all at 0.3ms, then one  that takes 500ms. To me, this seems to indicate that only a certain  amount of data can be sent through my network from the Pis in a given  amount of time. I also made sure that this was the issue by running my program with one Pi on the 5GHz band of my network,  and one on the 2.4GHz band. In this setup, the two Pis no longer affected each other, confirming that the server is not the bottleneck.
+
+I think this is also consistent with the drop in performance I noticed  since moving back home from MSU. On campus, while individual devices are given limited upload bandwidth, the network as a whole must have a  massive total bandwidth to accommodate the campus population. As for my home network, the total upload bandwidth is going  to be significantly affected by each additional uploading device. 
+
+I am going to try to apply some image compression as Dr. Ghassemi recommended at our last meeting The hard part will be detecting when the compression is  necessary. My current plan is to have the server intermittently report  how many images it received in the last few seconds, and let the Pi decide how much to compress the next number of images.
 
 ##### January 2nd, 2021:
 
