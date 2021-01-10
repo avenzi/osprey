@@ -33,6 +33,12 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### January 7/8/9, 2021:
+
+Over the last few days I have managed to implement H.264 compression on the video streams. I found an open source JS script that decodes H.264 frames in-browser. Using this in-browser decoder requires the use of a WebSocket protocol, so I implemented rudimentary WebSocket handling on my server (this is what took most of my time). No extra WebSocket protocols or extensions are supported as of yet, but full encoding/decoding with fragmentation was necessary to support the H.264 stream. On the bright-side, I have now memorized the entire byte structure of a WebSocket frame.
+
+With this compression, video stream sizes have been decreased by roughly 80% (yay!!), and there is no observable decrease in performance when running two video streams simultaneously. 
+
 ##### January 6th, 2021:
 
 It turns out that the stream format I'm using (mjpeg) is already mostly compressed. I tried using jpeg compression to reduce the quality and it actually *increased* the image sizes. I found that the Picam is capable of streaming the images in h264. which is much more compressed. If I could stream this format, I predict that the network lag issues would be completely solved. The trouble is that h264 is not supported natively in browser windows like the mjpeg stream is, so I have two options: 
