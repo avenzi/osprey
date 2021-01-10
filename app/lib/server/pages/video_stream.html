@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>${name}</title>
+	<link rel="icon" href="data:;base64,iVBORw0KGgo=">
+	<script type="text/javascript">
+		// Create <script> tag in <head> with link to necesasry JS scripts
+		path = window.location.pathname;
+        queries = window.location.search;
+		element = document.createElement('script');
+		element.src = path+'${jmuxer_url}'+queries;  // copy url and queries
+		document.getElementsByTagName('head')[0].appendChild(element);
+	</script>
+</head>
+<body>
+	<h1>$name</h1>
+	<p><a href='/index.html'>Back</a></p>
+	<div id="streamtage">
+		<video width="${width}" height="${height}" controls autoplay muted id="stream"></video>
+	</div>
+
+    <script>
+	window.onload = function(){	
+		var jmuxer = new JMuxer({
+			node: 'stream',
+			mode: 'video',
+			flushingTime: 0,
+			fps: $fps,
+			debug: false
+		});
+
+		var vid = document.getElementById("stream");
+		vid.playbackRate = 1.5;  // catch up to current position
+
+		host = window.location.host
+		path = window.location.pathname
+		queries = window.location.search
+
+		var ws = new WebSocket('ws://'+host+path+'${stream_url}'+queries);
+		ws.binaryType = 'arraybuffer';
+		ws.addEventListener('message',function(event){
+			if (!document.hidden){
+				jmuxer.feed({video: new Uint8Array(event.data)});
+			}
+		});
+
+		/*
+		var req = new XMLHttpRequest();
+		req.open("GET", url+'${stream_url}'+queries, true);
+		req.responseType = "arraybuffer";
+		req.addEventListener("progress", newData);  // trigger when new data received
+
+		var loaded = 0
+		function newData(event) {
+			new_data = event.loaded - loaded
+			console.log(new_data)
+
+		}
+		req.send()
+		*/
+	}     
+    </script>
+</body>
+</html>
