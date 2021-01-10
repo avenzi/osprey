@@ -2,9 +2,10 @@ from requests import get
 import socket
 import json
 import inspect
+import time
 
 from bokeh.embed import json_item
-from ..lib import Base, HostNode, WorkerNode, SocketHandler, Request, Response
+from ..lib import Base, HostNode, WorkerNode, SocketHandler, HTTPRequest, HTTPResponse
 
 PAGES_PATH = 'lib/server/pages'
 CONFIG_PATH = 'lib/server/config.json'
@@ -94,7 +95,7 @@ class Server(HostNode):
         When a request would normally be handled, first decide if it should be handled by an existing connection.
         This is determined by whether a connection ID was specified in the query string of the request.
         """
-        self.debug("Request: {} for {}".format(request.method, request.path), 2)
+        self.debug("HTTPRequest: {} for {}".format(request.method, request.path), 2)
         ID = request.queries.get('id')  # handler ID, if present in the request querystring
 
         if ID is not None:  # a particular worker was specified to handle this request
@@ -124,7 +125,7 @@ class Server(HostNode):
         display_name = request.header.get('name')
         if not class_name:
             self.throw("New data-client SIGN_ON request failed to specify the name of the class with which to handle the request. \
-                The class name must be sent as the 'class' header.", "Request: {}".format(request))
+                The class name must be sent as the 'class' header.", "HTTPRequest: {}".format(request))
             return
         if not device_name:
             self.debug("New data-client INIT request did not specify the name of the device hosting the connection. Must be sent as the 'device' header.")
@@ -149,7 +150,7 @@ class Server(HostNode):
             return
 
         # TODO: If we want the stream to start automatically as soon as it's connected, this is a good place to do it
-        # start_req = Request()
+        # start_req = HTTPRequest()
         # start_req.add_request('START')
         # self.send(start_req, request.origin)  # send start request back to client
         self.log("New connection from {} on {} ({})".format(display_name, device_name, request.origin.peer))
@@ -165,7 +166,7 @@ class Server(HostNode):
 
     def GET(self, request):
         """ Handle GET request from web browser """
-        response = Request()
+        response = HTTPRequest()
 
         if request.path == '/':
             response.add_response(301)  # redirect
@@ -212,7 +213,7 @@ class Server(HostNode):
     def OPTIONS(self, request):
         """ Responds to an OPTIONS request """
         self.log("A client requested OPTIONS")
-        response = Request()
+        response = HTTPRequest()
         response.add_response(405)
         self.send(response, request.origin)
 
@@ -228,21 +229,21 @@ class Server(HostNode):
             ids.append(id)
 
         page = """
-            <html>
-            <head>
-                <title>Data Hub</title>
-                <script>
-                    function command(name, id_array) {
-                        for (const id of id_array){
-                            var req = new XMLHttpRequest();
-                            req.open("COMMAND", '/'+name+'?id='+id, true);
-                            req.send();
-                            console.log('sent '+name+' to '+id);
-                        }
-                    }
-                </script>
-            </head>
-        """
+<html>
+    <head>
+        <title>Data Hub</title>
+        <script>
+            function command(name, id_array) {
+                for (const id of id_array){
+                    var req = new XMLHttpRequest();
+                    req.open("COMMAND", '/'+name+'?id='+id, true);
+                    req.send();
+                    console.log('sent '+name+' to '+id);
+                }
+            }
+        </script>
+    </head>
+"""
 
         page += """
             <body><h1>Stream Selection</h1>
@@ -285,6 +286,8 @@ class Handler(WorkerNode):
         self.streaming = False  # whether stream is activated
         self.initialized = False   # whether the INIT method has been called yet
 
+        self.start_time = 0  # time stream started
+
     def HANDLE(self, request, threaded=True):
         """
         Overwrites default method to handle incoming requests
@@ -301,6 +304,13 @@ class Handler(WorkerNode):
         else:  # ID doesn't match or is not found, and not from a data-collection client
             #self.debug("{} Received different ID. Sending back to host".format(self.name))
             self.transfer_socket(self.pipe, request.origin, request)
+
+    def GET(self, request):
+        """
+        Handles GET request from clients
+        Should be extended/overwritten in derived classes
+        """
+        pass
 
     def INIT(self, request):
         """
@@ -323,14 +333,14 @@ class Handler(WorkerNode):
         if request.path.endswith('/start'):
             self.streaming = True
             data_socket = self.sockets[self.source_id]  # get dat-source socket
-            req = Request()  # new request
+            req = HTTPRequest()  # new request
             req.add_request('START')  # call START method on client
             self.send(req, data_socket)
 
         elif request.path.endswith('/stop'):
             self.streaming = False
             data_socket = self.sockets[self.source_id]  # get dat-source socket
-            req = Request()  # new request
+            req = HTTPRequest()  # new request
             req.add_request('STOP')  # call STOP method on client
             self.send(req, data_socket)
 
@@ -338,7 +348,7 @@ class Handler(WorkerNode):
             self.debug("Command (path) not recognized: {}".format(request.path), 2)
 
         # success response
-        response = Response(204)
+        response = HTTPResponse(204)
         self.send(response, request.origin)
 
     def not_active(self, request):
@@ -359,11 +369,15 @@ class Handler(WorkerNode):
             </html>
         """.format(name=self.name)
 
-        response = Request()
+        response = HTTPRequest()
         response.add_response(200)
         response.add_header('content-type', 'text/html')
         response.add_content(html)
         self.send(response, request.origin)
+
+    def time(self):
+        """ Get time passed since the stream started """
+        return time.time() - self.start_time
 
 
 class GraphStream(Base):
@@ -377,7 +391,7 @@ class GraphStream(Base):
 
     def stream_page(self):
         """ Returns the response for the plot page """
-        response = Request()
+        response = HTTPRequest()
         response.add_response(200)
         response.add_header('content-type', 'text/html')
 
@@ -391,7 +405,7 @@ class GraphStream(Base):
         Returns response with full JSON of serialized plot object to be displayed in HTML.
         This is before any data is updated - it's just the basic plot layout.
         """
-        response = Request()
+        response = HTTPRequest()
         response.add_response(200)
         response.add_header('content-type', 'application/json')
         response.add_content(json.dumps(json_item(self.layout)))  # send plot JSON
@@ -406,7 +420,7 @@ class GraphStream(Base):
         <event> is the event object needed to read from the buffer.
             - Obtained from buffer.get_read_lock()
         """
-        response = Request()
+        response = HTTPRequest()
         response.add_header('content-type', 'application/json')
         response.add_header('Cache-Control', 'no-store')  # don't store old data or it will try to write it again when 304 code is received.
 

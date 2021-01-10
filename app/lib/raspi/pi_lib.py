@@ -1,6 +1,7 @@
-from threading import Thread
+from threading import Thread, Condition
 from multiprocessing import Event
 from requests import get
+from io import BytesIO
 import subprocess
 import socket
 import json
@@ -8,7 +9,7 @@ import inspect
 import time
 import os
 
-from ..lib import HostNode, WorkerNode, Request, SocketHandler
+from ..lib import HostNode, WorkerNode, HTTPRequest, SocketHandler
 
 CONFIG_PATH = 'lib/raspi/config.json'
 
@@ -134,7 +135,8 @@ class Streamer(WorkerNode):
         super().__init__()
         self.handler = None  # class name of the handler to use on the server
         self.streaming = Event()  # threading event flag set when actively streaming
-        self.time = 0  # start time
+
+        self.start_time = 0  # start time
 
     def send(self, request, socket_handler=None):
         """
@@ -143,6 +145,10 @@ class Streamer(WorkerNode):
         """
         request.add_header('user-agent', 'STREAMER')
         super().send(request, socket_handler)
+
+    def time(self):
+        """ Get time passed since the stream started """
+        return time.time() - self.start_time
 
     def _run(self):
         """
@@ -153,7 +159,7 @@ class Streamer(WorkerNode):
             self.throw("Streamer Node must have the attribute 'handler' to indicate which Handler class is to be used on the server")
             return
 
-        req = Request()  # new request
+        req = HTTPRequest()  # new request
         req.add_request('SIGN_ON')
         req.add_header('name', self.name)  # name of the class to be displayed
         req.add_header('device', self.device)  # name of host Node
@@ -190,7 +196,7 @@ class Streamer(WorkerNode):
             return
         self.streaming.set()  # set streaming, which starts the main execution while loop
         self.log("Started {}".format(self.name))
-        self.time = time.time()
+        self.start_time = time.time()
 
     def STOP(self, request):
         """
@@ -199,4 +205,27 @@ class Streamer(WorkerNode):
         """
         self.streaming.clear()  # stop streaming, stopping the main execution while loop
         self.log("Stopped {}".format(self.name))
+
+
+class PicamOutput():
+    """ Data Buffer class to collect data from a Picam. """
+    def __init__(self):
+        self.buffer = BytesIO()
+        self.ready = Condition()  # lock for reading/writing frames
+
+    def write(self, data):
+        """ Write data to the buffer, adding the new frame when necessary """
+        with self.ready:
+            self.buffer.write(data)
+            self.ready.notify_all()
+
+    def read(self):
+        """ Blocking operation to read the newest frame """
+        with self.ready:
+            self.ready.wait()  # wait for access to buffer
+            data = self.buffer.getvalue()  # get all frames in buffer
+            self.buffer.seek(0)  # move to beginning
+            self.buffer.truncate()  # erase buffer
+            return data
+
 

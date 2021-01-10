@@ -1,9 +1,11 @@
 import time
 import json
+import msgpack
 import os
+from io import BytesIO
 
-from .pi_lib import Streamer, Request, configure_port, CONFIG_PATH
-from ..lib import DataBuffer, Base
+from ..lib import Base
+from .pi_lib import Streamer, HTTPRequest, configure_port, CONFIG_PATH, PicamOutput
 
 
 class LogStreamer(Streamer):
@@ -23,12 +25,12 @@ class LogStreamer(Streamer):
 
     def START(self, request):
         """
-        Request method START
+        HTTPRequest method START
         Start Streaming continually
         Extended from base class in pi_lib.py
         """
         # send initial information
-        init_req = Request()  # new request
+        init_req = HTTPRequest()  # new request
         init_req.add_request('INIT')  # call INIT method on server handler
         init_req.add_header('client', self.client_name)
         self.send(init_req, request.origin)  # send init request back
@@ -38,7 +40,7 @@ class LogStreamer(Streamer):
 
     def STOP(self, request):
         """
-        Request method STOP
+        HTTPRequest method STOP
         Extended from base class in pi_lib.py
         """
         super().STOP(request)  # stop main loop
@@ -46,7 +48,7 @@ class LogStreamer(Streamer):
 
     def send_log(self):
         """ Send the contents of the local log file to the requesting socket """
-        resp = Request()  # new INGEST request
+        resp = HTTPRequest()  # new INGEST request
         resp.add_request("INGEST")
         with Base.log_lock:  # get read lock on log file
             with open(self.log_path, 'r+') as file:
@@ -63,55 +65,62 @@ class VideoStreamer(Streamer):
         self.handler = 'VideoHandler'
 
         self.camera = None
-        self.resolution = '200x200'  # resolution of stream
-        self.framerate = 10            # camera framerate
+        self.resolution = '300x300'  # resolution of stream
+        self.framerate = 20            # camera framerate
 
         self.frames_sent = 0    # number of frames sent
-        self.time = 0           # time of START
+        self.start_time = 0           # time of START
 
-        self.data_buffer = DataBuffer()  # buffer to hold data as it is collected from the picam
-        self.lock = self.data_buffer.get_ticket()  # lock on data buffer
+        self.picam_buffer = PicamOutput()  # buffer to hold images from the Picam
 
     def loop(self):
         """
         Main execution loop
         """
-        data = self.data_buffer.read(self.lock, block=True)
+        if not self.camera.frame.complete or self.camera.frame.frame_type == self.sps:
+            return
+        image = self.picam_buffer.read()  # get most recent frame
         self.frames_sent += 1
 
-        resp = Request()  # new response
-        resp.add_request("INGEST")
+        resp = HTTPRequest("INGEST")  # new request
         resp.add_header('frames-sent', self.frames_sent)
-        resp.add_header('time', time.time() - self.time)  # time since start
-        resp.add_content(data)
+        resp.add_header('time', self.time())  # time since start
+        resp.add_content(image)
 
+        #t2 = time.time()
         self.send(resp)  # send INGEST request back to source
+        #t3 = time.time()
+        #self.log("sent {} in {:.3}".format(len(image), t3-t2))
 
     def START(self, request):
         """
-        Request method START
+        HTTPRequest method START
         Start Streaming continually
         Extended from base class in pi_lib.py
         """
-        # First send some initial information
-        init_req = Request()  # new request
+        # First send initial information
+        init_req = HTTPRequest()  # new request
         init_req.add_request('INIT')  # call INIT method on server handler
         init_req.add_header('resolution', self.resolution)
         init_req.add_header('framerate', self.framerate)
-        self.send(init_req)  # send init request back to source
+        self.send(init_req)
 
+        if self.camera:
+            return
         # set up camera
-        import picamera
-        self.camera = picamera.PiCamera(resolution=self.resolution, framerate=self.framerate)
-        self.camera.start_recording(self.data_buffer, format='mjpeg')
+        from picamera import PiCamera, PiVideoFrameType
+        self.sps = PiVideoFrameType.sps_header
+        self.camera = PiCamera(resolution=self.resolution, framerate=self.framerate)
+        self.camera.start_recording(self.picam_buffer,
+            format='h264', quality=25, profile='constrained', level='4.2',
+            intra_period=self.framerate, intra_refresh='both', inline_headers=True, sps_timing=True
+        )
         time.sleep(2)  # let camera warm up for a sec. Does weird stuff otherwise.
-        self.time = time.time()  # mark start time
-
         super().START(request)  # Start main loop
 
     def STOP(self, request):
         """
-        Request method STOP
+        HTTPRequest method STOP
         Extended from the base class in pi_lib.py
         """
         super().STOP(request)  # Stop main loop
@@ -147,7 +156,7 @@ class SenseStreamer(Streamer):
             data['yaw'].append(yaw)
             data['time'].append(time.time() - self.time)
 
-        resp = Request()  # new INGEST request
+        resp = HTTPRequest()  # new INGEST request
         resp.add_request("INGEST")
         data = json.dumps(data).encode(self.encoding)  # send as JSON string
         self.frames_sent += self.frames
@@ -157,7 +166,7 @@ class SenseStreamer(Streamer):
 
     def START(self, request):
         """
-        Request method START
+        HTTPRequest method START
         Extended from base class in pi_lib.py
         """
         # enable compass, gyro, and accelerometer to calculate orientation
@@ -167,7 +176,7 @@ class SenseStreamer(Streamer):
 
     def STOP(self, request):
         """
-        Request method STOP
+        HTTPRequest method STOP
         Extended from base class in pi_lib.py
         """
         super().STOP(request)  # stop main loop
@@ -225,7 +234,7 @@ class EEGStreamer(Streamer):
         data = json.dumps(data).encode(self.encoding)
         self.frames_sent += 1
 
-        resp = Request()  # new response
+        resp = HTTPRequest()  # new response
         resp.add_request("INGEST")
         resp.add_header('frames-sent', self.frames_sent)
         resp.add_content(data)
@@ -233,7 +242,7 @@ class EEGStreamer(Streamer):
 
     def START(self, request):
         """
-        Request method START
+        HTTPRequest method START
         Start Streaming continually
         Extended from base class in pi_lib.py
         """
@@ -257,7 +266,7 @@ class EEGStreamer(Streamer):
             return
 
         # First send some initial information
-        req = Request()
+        req = HTTPRequest()
         req.add_request('INIT')
         req.add_header('sample_rate', self.freq)
         req.add_header('channels', ','.join(self.eeg_channel_names))
@@ -267,7 +276,7 @@ class EEGStreamer(Streamer):
 
     def STOP(self, request):
         """
-        Request method STOP
+        HTTPRequest method STOP
         Extended from base class in pi_lib.py
         """
         super().STOP(request)  # extend
@@ -341,7 +350,7 @@ class ECGStreamer(Streamer):
         data = json.dumps(data).encode(self.encoding)
         self.frames_sent += 1
 
-        resp = Request()  # new response
+        resp = HTTPRequest()  # new response
         resp.add_request("INGEST")
         resp.add_header('frames-sent', self.frames_sent)
         resp.add_content(data)
@@ -349,7 +358,7 @@ class ECGStreamer(Streamer):
 
     def START(self, request):
         """
-        Request method START
+        HTTPRequest method START
         Start Streaming continually
         Extended from base class in pi_lib.py
         """
@@ -374,7 +383,7 @@ class ECGStreamer(Streamer):
             return
 
         # First send some initial information
-        req = Request()
+        req = HTTPRequest()
         req.add_request('INIT')
         req.add_header('sample_rate', self.freq)
         req.add_header('ecg_channels', ','.join(self.ecg_channel_names+self.pulse_channel_names))
@@ -385,7 +394,7 @@ class ECGStreamer(Streamer):
 
     def STOP(self, request):
         """
-        Request method STOP
+        HTTPRequest method STOP
         Extended from base class in pi_lib.py
         """
         super().STOP(request)  # stop execution loop
@@ -425,7 +434,7 @@ class SynthEEGStreamer(Streamer):
 
     def loop(self):
         """ Main execution loop """
-        time.sleep(0.2)  # wait a bit for the board to collect another chunk of data
+        time.sleep(0.25)  # wait a bit for the board to collect another chunk of data
         data = {}
         for channel in self.eeg_channel_names:  # lists of channel data
             data[channel] = []
@@ -441,18 +450,22 @@ class SynthEEGStreamer(Streamer):
         for i, j in enumerate(self.eeg_channel_indexes):
             data[self.eeg_channel_names[i]] = list(raw_data[j] / 1000000)  # convert from uV to V
 
-        data = json.dumps(data).encode(self.encoding)
+        data = msgpack.packb(data)  # pack dict object
         self.frames_sent += 1
 
-        resp = Request()  # new response
+        resp = HTTPRequest()  # new response
         resp.add_request("INGEST")
         resp.add_header('frames-sent', self.frames_sent)
         resp.add_content(data)
+
+        #t0 = time.time()
         self.send(resp)
+        #t1 = time.time()
+        #self.log("sent {} in {:.3}".format(len(data), t1-t0))
 
     def START(self, request):
         """
-        Request method START
+        HTTPRequest method START
         Extended from base class in pi_lib.py
         """
         # start EEG stream
@@ -460,7 +473,7 @@ class SynthEEGStreamer(Streamer):
         self.board.start_stream()
 
         # First send some initial information
-        req = Request()
+        req = HTTPRequest()
         req.add_request('INIT')
         req.add_header('sample_rate', self.freq)
         req.add_header('channels', ','.join(self.eeg_channel_names))
@@ -470,7 +483,7 @@ class SynthEEGStreamer(Streamer):
 
     def STOP(self, request):
         """
-        Request method STOP
+        HTTPRequest method STOP
         Extended from base class in pi_lib.py
         """
         super().STOP(request)  # stop main loop

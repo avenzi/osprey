@@ -2,14 +2,19 @@ from bokeh.plotting import figure
 from bokeh.models import AjaxDataSource
 from bokeh.layouts import layout
 from scipy import signal
+from string import Template
 import numpy as np
 import json
+import msgpack
+import time
 
 from .server_lib import Handler, GraphStream, PAGES_PATH, CONFIG_PATH
-from ..lib import Request, Response, DataBuffer, RingBuffer, MovingAverage
+from ..lib import HTTPRequest, HTTPResponse, DataBuffer, RingBuffer, MovingAverage
 
 # EEG page Bokeh Layout
 from .pages.eeg_layout import config, configure_layout, create_filter_sos
+
+from threading import current_thread, active_count
 
 
 class LogHandler(Handler):
@@ -48,7 +53,7 @@ class LogHandler(Handler):
         Return False to fall back to general server response
         """
         if request.path.endswith('/stream'):  # request for data stream page html
-            response = Request()
+            response = HTTPRequest()
             response.add_response(200)
             response.add_header('content-type', 'text/html')
             response.add_content(self.page_html())
@@ -91,6 +96,9 @@ class VideoHandler(Handler):
         self.resolution = None
         self.max_display_height = 600   # maximum height of video in browser
 
+        self.start_time = 0  # time since stream start
+        self.lag_thresh = 1  # time (s) to trigger lag report
+
         self.frames_sent = 0
         self.frames_received = 0
 
@@ -101,14 +109,19 @@ class VideoHandler(Handler):
         self.initialized = True
         self.framerate = request.header['framerate']
         self.resolution = tuple(int(res) for res in request.header['resolution'].split('x'))
+        self.start_time = time.time()
 
     def INGEST(self, request):
         """ Handle image data received from Pi """
         if not self.initialized:
             return
         frame = request.content  # bytes
-        self.frames_received += 1
         self.frames_sent = int(request.header['frames-sent'])
+
+        self.frames_received += 1
+        time_sent = request.header['time']  # time this request was sent after stream start
+
+        # H264 stream should be kept in ring buffer?? not to lose frames???
         self.image_buffer.write(frame)  # raw data needs no modification - it's already an image
 
     def GET(self, request):
@@ -118,33 +131,42 @@ class VideoHandler(Handler):
             return
 
         if request.path.endswith('/stream'):  # request for data stream page html
-            response = Request()
+            response = HTTPRequest()
             response.add_response(200)
             response.add_header('content-type', 'text/html')
-            response.add_content(self.page_html())
+            response.add_content(self.page_html_h264())
             self.send(response, request.origin)
-        elif request.path.endswith('/stream.mjpg'):  # request for an mjpg
-            request.origin.send_multipart(self.image_buffer)
+
+        elif request.path.endswith('/stream.h264'):  # request for h264 stream
+            request.origin.send_h264(self.image_buffer)
+
+        elif request.path.endswith('/jmuxer.min.js'):  # request for js
+            with open(PAGES_PATH+'/jmuxer.min.js', 'r') as file:
+                js = file.read()
+            res = HTTPResponse(200)
+            res.add_header('content-type', 'application/javascript')
+            res.add_content(js)
+            self.send(res, request.origin)
+
         else:
             self.debug("Path not recognized: {}".format(request.path), 2)
 
-    def page_html(self):
-        """ Returns HTML for streaming display page in browser """
+    def page_html_h264(self):
         aspect = self.resolution[0] / self.resolution[1]
         height = self.max_display_height
         width = int(aspect * height)
-        update_url = '/stream.mjpg?id={}'.format(self.id)
-        page = """
-                <html>
-                <head><title>{name}</title></head>
-                <body>
-                    <h1>{name}</h1>
-                    <p><a href='/index.html'>Back</a></p>
-                    <p><img src="{url}" width="{width}" height="{height}" /></p>
-                </body>
-                </html>
-                """.format(name=self.name, url=update_url, width=width, height=height)
-        return page
+
+        with open(PAGES_PATH+'/video_stream.html', 'r') as file:
+            html = file.read()
+
+        stream_url = "/stream.h264"
+        jmuxer_url = "/jmuxer.min.js"
+        template = Template(html)
+        html = template.substitute({
+            'name': self.name,
+            'jmuxer_url': jmuxer_url, 'stream_url': stream_url,
+            'fps': self.framerate, 'width': width, 'height': height})
+        return html
 
 
 class SenseHandler(Handler):
@@ -340,7 +362,7 @@ class ECGHandler(Handler):
 
             # store the new updated value
             self.pulse_threshold = value
-            response = Response(204)  # no content, successful response
+            response = HTTPResponse(204)  # no content, successful response
 
         else:
             self.debug("Path not recognized for POST request: {}".format(request.path), 2)
@@ -426,7 +448,6 @@ class EEGHandler(Handler):
         # configuration already done
         if self.initialized:
             return
-        self.initialized = True
 
         # Massive Bokeh layout configuration imported from /pages/eeg_layout.py
         bokeh_layout = configure_layout(self.id, self.channels)
@@ -450,13 +471,13 @@ class EEGHandler(Handler):
 
         self.spectrogram_buffer = DataBuffer()
         self.spectrogram_lock = self.spectrogram_buffer.get_ticket()
+        self.initialized = True
 
     def INGEST(self, request):
         """ Handle EEG data received from Pi """
         if not self.initialized:
             return
-        data = request.content.decode(request.encoding)  # raw JSON data
-        data = json.loads(data)  # load into a dictionary
+        data = msgpack.unpackb(request.content)  # unpack dict object
         self.filter(data)
         self.eeg_buffer.write(data)  # write data to EEG buffer
         self.frames_received += 1
@@ -477,21 +498,34 @@ class EEGHandler(Handler):
 
         elif request.path.endswith('/update_eeg'):  # request for eeg stream update
             # get update from EEG buffer
+            t0 = time.time()
             response = self.graph.update_json(self.eeg_buffer, self.eeg_lock)
+            t1 = time.time()
+            self.log("UPDATE EEG: {}".format(t1-t0))
 
         elif request.path.endswith('/update_fourier'):  # request for fourier update
             # get update from fourier buffer
+            t0 = time.time()
             self.fourier()  # perform FFT
+            t1 = time.time()
             response = self.graph.update_json(self.fourier_buffer, self.fourier_lock)
+            t2 = time.time()
+            self.log("UPDATE FOURIER: {:.3} {:.3}".format(t1-t0, t2-t1))
 
         elif request.path.endswith('/update_spectrogram'):
             # get update from fourier buffer
+            t0 = time.time()
             response = self.graph.update_json(self.spectrogram_buffer, self.spectrogram_lock)
             if response.code == 200:  # if sending new data (if no data is sent, code is 304)
                 self.spec_time += 1   # increment counter
+            t1 = time.time()
+            self.log("UPDATE SPEC: {:.3}".format(t1-t0))
 
         elif request.path.endswith('/update_headplot'):
+            t0 = time.time()
             response = self.update_headplot()
+            t1 = time.time()
+            self.log("UPDATE HEADPLOT: {:.3}".format(t1-t0))
 
         else:
             self.debug("Path not recognized: {}".format(request.path), 2)
@@ -532,7 +566,7 @@ class EEGHandler(Handler):
 
             # store the new updated value in the page_config dictionary
             self.page_config[key] = value
-            response = Response(204)  # no content, successful response
+            response = HTTPResponse(204)  # no content, successful response
 
         else:
             self.debug("Path not recognized for POST request: {}".format(request.path), 2)
@@ -612,7 +646,7 @@ class EEGHandler(Handler):
 
     def update_headplot(self):
         """ Calculate head plot data values and return a response object to send """
-        response = Request()
+        response = HTTPRequest()
         response.add_header('content-type', 'application/json')
         response.add_header('Cache-Control', 'no-store')
 

@@ -1,10 +1,14 @@
-from threading import Thread, current_thread
+from threading import Thread, current_thread, Lock as TLock, Condition as TCondition
 from multiprocessing import Process, current_process, Pipe, Lock, Condition
-import numpy as np
-from uuid import uuid4
-import traceback
+from concurrent.futures import ThreadPoolExecutor
 import socket
+#import websockets
 from datetime import datetime
+from uuid import uuid4
+from hashlib import sha1
+from base64 import b64encode
+import numpy as np
+import traceback
 import time
 import json
 import os
@@ -87,25 +91,29 @@ class Base:
         """ Return the current time for debugging purposes """
         return datetime.now().strftime("%-H:%-M:%-S:%f")
 
-    def display(self, msg, console=True, file=True):
+    def display(self, msg, console=True, file=True, newline=True):
         """
         display a log message
         <console> whether to send to stdout
         <file> whether to log in the log file
         """
+        if newline:
+            end = '\n'
+        else:
+            end = ''
         try:
             with Base.log_lock:  # get exclusive lock on outputs
                 if console:
-                    print(msg)  # display on console
+                    print(msg, end=end)  # display on console
                 if file and Base.log_file:
                     with open(Base.log_file, 'a') as file:  # write to log file
                         file.write(msg+'\n')
         except:
             return
 
-    def log(self, message):
+    def log(self, message, newline=True):
         """ Outputs a log message """
-        self.display("> {}".format(message))
+        self.display("> {}".format(message), newline=newline)
 
     def debug(self, msg, level=1):
         """ Sends a debug level message """
@@ -180,12 +188,18 @@ class SocketHandler(Base):
         self.peer = "{}:{}".format(*sock.getpeername())  # address of machine on other end of connection                          # unique identifier. Right now it's just the ip of the connecting socket - no need for anything more complicated yet.
 
         self.pull_buffer = sock.makefile('rb')  # incoming stream buffer to read from
-        self.pull_lock = Condition()            # lock for pull_buffer
 
         self.push_buffer = sock.makefile('wb')  # outgoing stream buffer to write to
         self.push_lock = Condition()            # lock for push_buffer
 
-        self.request = Request(origin=self)     # current request being parsed
+        self.protocol = 'HTTP'
+
+        # WebSockets
+        # 0: no fragmented message stored
+        # 1: Message is a text fragment
+        # 2: Message is a binary fragment
+        self.ws_state = 0
+        self.ws_message = b''  # current websocket message fragment
 
     def run(self):
         """
@@ -209,57 +223,15 @@ class SocketHandler(Base):
         """
         try:
             while not self.exit:  # loop until exit condition
-                with self.pull_lock:
-                    request = self.parse_request()  # get the next full request
-                    if request:
-                        self.node.HANDLE(request, threaded=True)   # allow the request to be handled by the parent Connection
+                if self.protocol == 'HTTP':
+                    self.handle_http_request()
+                elif self.protocol == 'WS':
+                    self.handle_ws_request()
         except Exception as e:
             self.throw("Unexpected Exception in running socket: {}".format(self.name), e, trace=True)
             self.shutdown()
 
-    def parse_request(self):
-        """
-        Reads a single request from the stream.
-        Returns a request object when fully parsed.
-        Returns None if not yet finished.
-        """
-        if not self.parse_request_line():
-            return  # error
-        if not self.parse_header():
-            return  # error
-        if not self.validate():  # validate request headers before parsing content
-            return  # error
-        if not self.parse_content():
-            return  # error
-
-        parsed_request = self.request
-        self.request = Request(origin=self)  # ready for new request
-        return parsed_request   # return parsed request
-
-    def validate(self):
-        """
-        Looks for keywords in the Host and User-Agent headers.
-        Right now just used to block some random web scraping bots that keep finding my server
-        """
-        host_keywords = ['webredirect', 'ddnsfree']
-        agent_keywords = ['nimbostratus', 'cloudsystemnetworks', 'bot']  # keywords to look for in User-Agent header
-        host_string = self.request.header.get('host'),
-        agent_string = self.request.header.get('user-agent')
-        valid = True
-        if host_string:
-            for keyword in host_keywords:
-                if keyword in host_string:
-                    valid = False
-        if agent_string:
-            for keyword in agent_keywords:
-                if keyword in agent_string:
-                    valid = False
-        if not valid:
-            self.throw("Blocked Connection from banned source:\n   Address: {}\n   Host: {}\n   User-Agent: {}".format(self.peer, host_string, agent_string))
-            self.debug("FULL HEADER: {}".format(self.request.header))
-        return valid
-
-    def read(self, length, line=False, decode=True):
+    def read(self, length, line=False, decode=False):
         """
         Read and return data from the incoming buffer. Return None if not available.
         If <line> is False:
@@ -300,87 +272,90 @@ class SocketHandler(Base):
         except (ConnectionResetError, BrokenPipeError) as e:  # disconnected
             self.shutdown()
 
-    def parse_request_line(self):
-        """
-        Parses the Request-line of a request, finding the request method, path, and version strings.
-        Return True if found, False if not
-        """
-        max_len = 256  # max length of request-line before throw (arbitrary choice)
+    def handle_http_request(self):
+        """ Handles an HTTP request """
+        request = HTTPRequest(origin=self)  # new HTTP request
+        if request.parse():  # read from socket and parse next request
+            self.node.HANDLE(request, threaded=True)
 
-        line = ''
-        while line == '':  # if blank lines are read, keep reading.
-            line = self.read(max_len, line=True)  # read first line from stream
-            if line is None:  # error reading
-                return
-        words = line.split()
-        if len(words) != 3:
-            err = "Request-Line must conform to HTTP Standard ( METHOD /path HTTP/X.X   or   HTTP/X.X STATUS MESSAGE )"
-            self.throw(err, line)
-            return False
-        # TODO: maybe add compatibility with shorter response lines without a version
-        if words[0].startswith("HTTP/"):  # response
-            self.request.version = words[0]
-            self.request.code = words[1]
-            self.request.message = words[2]
-        else:                             # request
-            self.request.method = words[0]
-            self.request.version = words[2]
-            words[1].strip('?')  # remove any trailing ?
-            query_loc = words[1].find('?')
-            if query_loc != -1:  # found a query
-                path, query = words[1].split('?')
-                self.request.path = path
-                self.request.queries = dict([pair.split('=') for pair in query.split('&')])  # get param dict
-            else:
-                self.request.path = words[1]
-        return True
-
-    def parse_header(self):
-        """
-        Fills the header dictionary from the received header text.
-        Return True if all are found, False if not
-        """
-        max_num = 32  # max number of headers (arbitrary choice)
-        max_len = 1024  # max length each header (arbitrary choice)
-        for _ in range(max_num):
-            line = self.read(max_len, line=True)  # read next line in stream
-            if line is None:  # error reading
-                return False
-            if line == '':  # empty line signaling end of headers
-                self.request.header_received = True  # mark header as received
-                break
-            try:
-                key, val = line.split(':', 1)  # extract field and value by splitting at first colon
-            except ValueError:
-                self.throw("Header line did not match standard format.", "Line: {}".format(line))
-                return False
-
-            self.request.header[key.lower()] = val.strip()  # remove extra whitespace from value
+    def handle_ws_request(self):
+        """ Handles a WebSocket request """
+        request = WSRequest(origin=self)
+        if request.parse():  # read from socket and parse new request
+            # self.log("RECEIVED WS FRAME: {}".format(request))
+            pass
         else:
-            self.throw("Too many headers", "> {}".format(max_num))
-            return False
-        return True
+            return
 
-    def parse_content(self):
-        """
-        Parse request payload, if any.
-        Return True if all are found, False if not
-        """
-        length = self.request.header.get("content-length")
-        if length:  # if content length was sent
-            content = self.read(int(length), decode=False)  # read raw bytes of exact length from stream
-            if content is None:   # error reading
-                return False
-            self.request.content = content
-            return True
-        else:  # no content length specified - assuming no content sent
-            return True
-            # TODO: Check request type to better determine whether a request could have content.
+        if request.code:  # nonzero op-code
+            if request.code == 1:  # text data
+                self.ws_message = request.content.decode('utf-8')
+            elif request.code == 2:  # binary data
+                self.ws_message = request.content
+            elif request.code == 8:  # close
+                res = WSRequest(origin=self, code=8)  # send close frame
+                res.set_content(request.content)  # echo status code and body
+                self.send(res)
+                return
+            else:
+                self.throw("Unknown Websocket op-code: {}".format(request.code))
 
-    def send(self, response):
+            if request.fin:  # single stand-alone frame
+                self.log("RECEIVED SINGLE FRAME")
+                res = WSRequest(origin=self, code=request.code)
+                res.set_content(self.ws_message)
+                self.send(res)
+
+            else:  # start of fragments
+                self.log("START OF FRAGMENTS")
+                self.ws_state = request.code  # set data type
+
+        else:  # fragment
+            if self.ws_state == 1:  # text data
+                self.ws_message += request.content.decode('utf-8')
+            elif self.ws_state == 2:  # binary data
+                self.ws_message += request.content
+            else:
+                self.throw("Unknown Websocket state: {}".format(self.ws_state))
+
+            if request.fin:  # end of fragment
+                self.log("END OF FRAGMENTS")
+
+            else:  # middle fragment
+                self.log("CONTINUING FRAGMENTS")
+
+    def upgrade_protocol(self, request):
+        """ Upgrade socket protocol """
+        protocol = request.header['upgrade']
+        if protocol.lower() == 'websocket':
+            self.websocket_handshake(request)
+        else:
+            self.throw("Socket {} received request for unknown protocol {}".format(self.name, protocol), request)
+
+    def websocket_handshake(self, request):
+        """ Sends a response to a Websocket upgrade request """
+        key = request.header.get('sec-websocket-key')
+        if not key:
+            self.throw("Websocket upgrade request did not contain a websocket key header", request)
+
+        # generate websocket accept key
+        key = key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'  # append websocket magic string
+        h = sha1(key.encode('utf-8')).digest()  # sha-1 hash
+        h64 = b64encode(h).decode('utf-8')  # base-64 encoding, convert to string
+
+        res = HTTPResponse(101)  # switching protocols
+        res.add_header('Upgrade', 'Websocket')
+        res.add_header('Connection', 'Upgrade')
+        res.add_header('Sec-WebSocket-Accept', h64)
+        self.send(res)
+        self.protocol = 'WS'  # upgrade protocol
+
+        self.debug("Sent WebSocket Handshake")
+
+    def send(self, request):
         """ Compiles the response object then adds it to the out_buffer """
-        data = response.get_data()
-        if data is None:  # error which has been caught, hopefully
+        data = request.compile()
+        if data is None:
             self.throw("Request returned no data")
             return
         self.send_raw(data)
@@ -389,26 +364,24 @@ class SocketHandler(Base):
         """ Sends raw bytes data as-is to the out_buffer """
         try:
             with self.push_lock:
-                self.push_buffer.write(data)
+                self.push_buffer.write(data)  # slowed down by network connection
                 self.push_buffer.flush()
         except (ConnectionResetError, BrokenPipeError) as e:  # disconnected
             self.shutdown()
 
     def send_multipart(self, buffer, request=None):
+        """ Runs _multipart() on a new thread """
+        Thread(target=self._multipart, args=(buffer, request), daemon=True).start()
+
+    def _multipart(self, buffer, request=None):
         """
-        Continually creates and sends multipart-type responses to the stream.
+        Continually creates and sends multipart/x-mixed-replace responses to the stream.
         Used to send an image stream from an image_buffer
-        NOTE:
-            - If sending a stream to a browser, do not specify a request object.
-            - If sending a stream to another connection object, use a request
-                object to send a request method denoting which function to call
-                for every data chunk sent - i.e. use add_request().
-                Extra headers may also be added with add_header().
         """
         chunk_header = b'--DATA\r\n'  # sent along with every data chunk
 
         if not request:  # if no request is specified, assume a response header used to initially respond to browser requests.
-            request = Request()
+            request = HTTPRequest()
             request.add_response(200)
             request.add_header('Age', 0)
             #request.add_header('Cache-Control', 'no-cache')
@@ -440,14 +413,14 @@ class SocketHandler(Base):
             length = None
             while not self.exit:
                 if not boundary:
-                    boundary_header = self.read(32, line=True)
+                    boundary_header = self.read(32, line=True, decode=True)
                     if boundary_header == '':
                         continue
                     self.debug("Boundary line: {}".format(boundary_header), 3)
                     boundary = True
                 elif not headers:
                     for _ in range(5):
-                        line = self.read(256, line=True)  # read next line in stream
+                        line = self.read(256, line=True, decode=True)  # read next line in stream
                         self.debug("Read Chunk Header '{}'".format(line), 3)
                         if line == '':  # empty line signaling end of headers
                             self.debug("All chunk headers received", 3)
@@ -471,6 +444,28 @@ class SocketHandler(Base):
                     length = None
         except Exception as e:
             self.throw("BAD", e)
+
+    def send_h264(self, buffer):
+        """ runs _h264 on a new thread """
+        Thread(target=self._h264, args=(buffer,), name='H264-STREAM', daemon=True).start()
+
+    def _h264(self, buffer):
+        """ Continually send h264 stream using a WebSocket stream """
+        if self.protocol != 'WS':
+            self.throw("Socket must be using WebSocket protocol. Currently set to: {}".format(self.protocol))
+            return
+
+        try:
+            resp = WSRequest(origin=self, fin=1, code=2)  # single frame, binary data, unmasked
+            lock = buffer.get_ticket()
+            self.debug("STARTED H264 STREAM")
+            while not self.exit:
+                data = buffer.read(lock)
+                resp.set_content(data)
+                self.send(resp)
+            self.debug("ENDED H264 STREAM")
+        except Exception as e:
+            self.throw('H.264 Stream Disconnected ({})'.format(self.peer), e)
 
     def cleanup(self):
         """ Called when the handler stops running """
@@ -539,22 +534,19 @@ class PipeHandler(Base):
 class SocketPackage:
     """
     Holds a raw socket object and it's original ID.
-    Optionally holds all attributes of a Request.
+    Optionally holds all attributes of a HTTPRequest.
     Can be pickled and sent between processes.
-    Use unpack() to reconstruct a SocketHandler object and Request object.
+    Use unpack() to reconstruct a SocketHandler object and HTTPRequest object.
 
     <sock> A SocketHandler object, or a raw socket object.
-    <request> The optional Request object
+    <request> The optional HTTPRequest object
     """
-    def __init__(self, sock, request=None):
-        if type(sock) == SocketHandler:  # if a handler is given
-            self.socket = sock.socket    # get raw socket
-            self.id = sock.id            # get ID of handler
-        else:
-            self.socket = sock
-            self.id = None
+    def __init__(self, handler, request=None):
+        self.socket = handler.socket      # get raw socket from handler
+        self.id = handler.id              # get ID of handler
+        self.protocol = handler.protocol  # current socket protocol being used
 
-        if request:  # get the information to reconstruct a Request object
+        if request:  # get the information to reconstruct a HTTPRequest object
             self.request = True
             self.method = request.method
             self.path = request.path
@@ -567,16 +559,17 @@ class SocketPackage:
 
     def unpack(self, node):
         """
-        Returns a new SocketHandler and a Request object from this package
+        Returns a new SocketHandler and a HTTPRequest object from this package
         Node is the new parent node for the SocketHandler.
-        Request might be None if no request was sent in this package.
+        HTTPRequest might be None if no request was sent in this package.
         """
         # create a SocketHandler from the raw socket, and provide the ID if it was given
         handler = SocketHandler(self.socket, node, uuid=self.id)
+        handler.protocol = self.protocol  # set protocol
 
         req = None
-        if self.request:  # if a request was given create a new Request object
-            req = Request()
+        if self.request:  # if a request was given create a new HTTPRequest object
+            req = HTTPRequest()
             req.origin = handler
             req.method = self.method
             req.path = self.path
@@ -604,7 +597,12 @@ class Node(Base):
         self.device = device
         self.id = self.generate_uuid()  # unique id
 
-        self.sockets = {}  # index of SocketHandlers associated with this connection. Keys are the ID of the socket
+        # index of SocketHandlers associated with this connection. Keys are the ID of the socket
+        self.sockets = {}
+
+        # Thread pool used by all sockets on this node
+        # default number of threads 5*core count
+        self.pool = ThreadPoolExecutor(thread_name_prefix=self.name)
 
     def add_socket(self, socket_handler):
         """ Add a new SocketHandler the index and return the ID"""
@@ -642,12 +640,12 @@ class Node(Base):
 
     def receive_socket(self, package):
         """
-        Unpacks a SocketPackage to create a SocketHandler and a possible Request
-        Runs the Request on that socket, then runs the SocketHandler to receive subsequent requests.
+        Unpacks a SocketPackage to create a SocketHandler and a possible HTTPRequest
+        Runs the HTTPRequest on that socket, then runs the SocketHandler to receive subsequent requests.
         """
         #self.debug("Node '{}' received a transferred socket.".format(self.name), 2)
 
-        # get the new SocketHandler (with self as the new parent node) and optional Request
+        # get the new SocketHandler (with self as the new parent node) and optional HTTPRequest
         handler, request = package.unpack(self)
         if request:  # if a request was sent with the socket
             if request.method == 'SIGN_ON':
@@ -660,7 +658,7 @@ class Node(Base):
         handler.run()  # then start handling other requests from the socket (on a new thread)
 
     def send(self, request, socket_handler):
-        """ Sends a Request object through a socket. """
+        """ Sends a HTTPRequest object through a socket. """
         socket_handler.send(request)
 
     def HANDLE(self, request, threaded=True):
@@ -668,9 +666,15 @@ class Node(Base):
         Method called for every request that is sent to any of the Connection's sockets.
         Calls other request methods according to the request type (e.g. GET, POST, INIT, etc...)
         """
+        if self.exit or self.close:  # shutting down, don't handle more
+            return
+
         if request.method:  # received request method
-            if threaded:  # run command on a new thread
-                Thread(target=self._execute, args=(request,), name=self.name+'-'+request.method, daemon=True).start()
+            if threaded:  # run command in thread pool
+                try:
+                    self.pool.submit(self._execute, request)
+                except Exception as e:
+                    self.throw("Error scheduling method for request.", e)
             else:
                 self._execute(request)
         elif request.code:  # received a response code
@@ -685,7 +689,7 @@ class Node(Base):
     def _execute(self, request):
         """ Execute the specified command """
         if not hasattr(self, request.method):  # if a method for the request doesn't exist
-            self.debug('Unsupported Request Method {} for {}'.format(request.method, self.name))
+            self.debug('Unsupported HTTPRequest Method {} for {}'.format(request.method, self.name))
             return
         else:
             method_func = getattr(self, request.method)  # get handler method that matches name of request method
@@ -696,7 +700,8 @@ class Node(Base):
             self.throw("Error in command: {}".format(request.method), e, trace=True)
 
     def cleanup(self):
-        """ Shutdown all sockets """
+        """ Shutdown all sockets and terminate running requests """
+        self.pool.shutdown()  # shutdown thread pool
         for sock in list(self.sockets.values()):  # force as iterator because items are removed from the dictionary
             sock.shutdown(block=True)  # block until socket shuts down
         self.debug("All Sockets shut down on Node '{}'".format(self.name))
@@ -790,7 +795,7 @@ class HostNode(Node):
             message = pipe.receive()  # blocks until a message is received
 
             # Handle the message
-            if type(message) == SocketPackage:  # A PickledRequest object containing a request and a new socket
+            if type(message) == SocketPackage:  # A SocketPackage object containing a request and a new socket
                 self.receive_socket(message)
             elif message == 'SHUTDOWN':  # the connection on the other end shut down
                 #self.debug("Host '{}' received SHUTDOWN from worker '{}'".format(self.name, pipe.name), 2)
@@ -898,25 +903,45 @@ class WorkerNode(Node):
 
 class Request(Base):
     """
+    Basic structure of derived request classes.
+    Has a reference to the socket of origin.
+    """
+    def __init__(self, origin=None):
+        super().__init__()
+        self.origin = origin
+
+    def parse(self):
+        """
+        Read from socket and parse data, setting appropriate attributes
+        Overwritten by derived Request classes
+        """
+        pass
+
+    def compile(self):
+        """
+        Returns raw bytes data to be sent over a socket
+        Overwritten by derived Request classes
+        """
+        pass
+
+
+class HTTPRequest(Request):
+    """
     Holds all data from one request.
     Used by Handler class to store incoming/outgoing requests.
     To use, call the appropriate add_ methods to add parts of the HTTP request,
         then pass the object to Handler.send.
-
-    <origin> is the Handler class containing the socket that received the request.
-        This is so that a response can be sent back through the same socket.
     """
 
     def __init__(self, method=None, origin=None):
-        super().__init__()
-        self.origin = origin  # SocketHandler object which received this request
-
+        super().__init__(origin=origin)
         self.method = None   # request method (GET, POST, etc..)
         if method:
             self.add_request(method)
 
         self.code = None  # HTTP response code
-        self.message = None  # Response message
+        self.message = None  # HTTPResponse message
+        self.code_map = {101: 'Switching Protocols', 200: 'OK', 204: 'No Content', 301: 'Moved Permanently', 304: 'Not Modified', 308: 'Permanent Redirect', 404: 'Not Found', 405: 'Method Not Allowed'}
 
         self.version = 'HTTP/1.1'  # request version (HTTP/X.X)
         self.path = None     # request path string without queries
@@ -939,8 +964,7 @@ class Request(Base):
         """ Add a response code, message, version, and default headers. Used to respond to web browsers. """
         self.code = code
         self.version = self.version
-        messages = {200: 'OK', 204: 'No Content', 301: 'Moved Permanently', 304: 'Not Modified', 308: 'Permanent Redirect', 404: 'Not Found', 405: 'Method Not Allowed'}
-        self.message = messages[code]
+        self.message = self.code_map[code]
         self.add_header('Server', 'StreamingServer Python/3.7.3')  # TODO: make the version not hard coded (Not really necessary yet)
         self.add_header('Date', self.get_date())
 
@@ -992,7 +1016,127 @@ class Request(Base):
             text += '\r\n'  # add a blank line to denote end of headers
         return text
 
-    def get_data(self):
+    def validate_source(self):
+        """
+        Looks for keywords in the Host and User-Agent headers.
+        Right now just used to block some random web scraping bots that keep finding my server
+        """
+        host_keywords = ['webredirect', 'ddnsfree']
+        agent_keywords = ['nimbostratus', 'cloudsystemnetworks', 'bot']  # keywords to look for in User-Agent header
+        host_string = self.header.get('host'),
+        agent_string = self.header.get('user-agent')
+        valid = True
+        if host_string:
+            for keyword in host_keywords:
+                if keyword in host_string:
+                    valid = False
+        if agent_string:
+            for keyword in agent_keywords:
+                if keyword in agent_string:
+                    valid = False
+        if not valid:
+            self.throw("Blocked Connection from banned source:\n   Address: {}\n   Host: {}\n   User-Agent: {}".format(self.origin.peer, host_string, agent_string))
+            self.debug("FULL HEADER: {}".format(self.header))
+        return valid
+
+    def parse(self):
+        """
+        Reads new data from the socket, decoding the frame.
+        Sets all relevant attributes to be handled afterward
+        """
+        if not self.parse_request_line():
+            return
+        if not self.parse_header():
+            return
+        if not self.validate_source():  # validate request headers before parsing content
+            return
+        if not self.parse_content():
+            return
+
+        # allow upgrading protocol
+        if self.header.get('upgrade'):
+            self.origin.upgrade_protocol(self)
+        return True
+
+    def parse_request_line(self):
+        """
+        Parses the HTTPRequest-line of a request, finding the request method, path, and version strings.
+        Return True if found, False if not
+        """
+        max_len = 256  # max length of request-line before throw (arbitrary choice)
+        line = ''
+        while line == '':  # if blank lines are read, keep reading.
+            line = self.origin.read(max_len, line=True, decode=True)  # read first line from stream
+            if line is None:
+                return
+
+        words = line.split()
+        if len(words) != 3:
+            err = "HTTPRequest-Line must conform to HTTP Standard ( METHOD /path HTTP/X.X   or   HTTP/X.X STATUS MESSAGE )"
+            self.throw(err, line)
+            return False
+        # TODO: maybe add compatibility with shorter response lines without a version
+        if words[0].startswith("HTTP/"):  # response
+            self.version = words[0]
+            self.code = words[1]
+            self.message = words[2]
+        else:                             # request
+            self.method = words[0]
+            self.version = words[2]
+            words[1].strip('?')  # remove any trailing ?
+            query_loc = words[1].find('?')
+            if query_loc != -1:  # found a query
+                path, query = words[1].split('?')
+                self.path = path
+                self.queries = dict([pair.split('=') for pair in query.split('&')])  # get param dict
+            else:
+                self.path = words[1]
+
+        return True
+
+    def parse_header(self):
+        """
+        Fills the header dictionary from the received header text.
+        Return True if all are found, False if not
+        """
+        max_num = 32  # max number of headers (arbitrary choice)
+        max_len = 1024  # max length each header (arbitrary choice)
+        for _ in range(max_num):
+            line = self.origin.read(max_len, line=True, decode=True)  # read next line in stream
+            if line is None:
+                return False
+            if line == '':  # empty line signaling end of headers
+                self.header_received = True  # mark header as received
+                break
+            try:
+                key, val = line.split(':', 1)  # extract field and value by splitting at first colon
+            except ValueError:
+                self.throw("Header line did not match standard format.", "Line: {}".format(line))
+                return False
+
+            self.header[key.lower()] = val.strip()  # remove extra whitespace from value
+        else:
+            self.throw("Too many headers", "> {}".format(max_num))
+            return False
+        return True
+
+    def parse_content(self):
+        """
+        Parse request payload, if any.
+        Return True if all are found, False if not
+        """
+        length = self.header.get("content-length")
+        if length:  # if content length was sent
+            content = self.origin.read(int(length), decode=False)  # read raw bytes of exact length from stream
+            if content is None:
+                return False
+            self.content = content
+            return True
+        else:  # no content length specified - assuming no content sent
+            return True
+            # TODO: Check request type to better determine whether a request could have content.
+
+    def compile(self):
         """ Formats all data into an encoded HTTP request and returns it """
         if not self.verify():
             return
@@ -1003,20 +1147,176 @@ class Request(Base):
 
         if self.content is not None:
             data += self.content  # content should already be in bytes
-        else:
-            data += b'\r\n'  # if no content, signal end of transmission
+        elif not self.header:
+            data += b'\r\n'  # if no content or header, signal end of transmission
 
         return data
 
 
-class Response(Request):
-    """
-    Inherits request. Same thing, but can be initialized with a response code instead.
-    """
-    def __init__(self, code=None):
+class HTTPResponse(HTTPRequest):
+    """Quick way to initialize an HTTPRequest with a response code."""
+    def __init__(self, code):
         super().__init__()
-        if code:
-            self.add_response(code)
+        self.add_response(code)
+
+
+class WSRequest(Request):
+    """
+    Request using Websocket protocol
+    opcodes:
+        non-control
+            0x0: continuation
+            0x1: text data
+            0x2: binary data
+        control
+            0x8: Close
+            0x9: Ping
+            0xA: Pong
+    """
+    def __init__(self, fin=1, mask=0, code=2, origin=None):
+        super().__init__(origin=origin)
+        self.fin = fin     # fin bit
+        self.mask = mask   # mask bit
+        self.code = code   # opcode (0-15)
+        self.length = 0    # content length in bytes
+        self.content = None
+
+    def __repr__(self):
+        return "Fin: {}, Code: {}, Mask: {}, Length: {}".format(self.fin, self.code, self.mask, self.length)
+
+    def set_fin(self, fin):
+        """ sets the FIN bit of the WS frame """
+        self.fin = fin
+
+    def set_code(self, code):
+        """ Sets the opcode of the WS frame """
+        self.code = code
+
+    def set_content(self, content):
+        """ Add main content payload """
+        if type(content) == str:
+            data = content.encode(self.encoding)  # encode if string
+        elif type(content) == bytes:
+            data = content
+        else:  # type conversion not implemented
+            self.throw("Cannot send content - type not accounted for.", type(content))
+            return
+        if content:
+            self.length = len(data)  # set content length
+        self.content = data
+
+    def xor(self, input, key):
+        """
+        Performs XOR encryption/decryption on <input> using <key>
+        I found that Numpy was the fastest
+        """
+        full_key = key * int(np.ceil(len(input) / 4))  # multiply mask key to exceed input length
+        np_msg = np.frombuffer(input, dtype='uint8')  # convert input to numpy array of bytes
+        np_key = np.frombuffer(full_key, dtype='uint8')[:len(np_msg)]  # convert key, chop off tail
+        return (np_msg ^ np_key).tobytes()  # XOR decryption and convert back to bytes
+
+    def parse(self):
+        """
+        Reads new data from the socket, decoding the frame.
+        Sets all relevant attributes to be handled afterward.
+        """
+        data = self.origin.read(2)  # read 2 bytes
+        if not data: return
+
+        self.fin  = data[0] >> 7   # fin bit
+        self.code = data[0] & 15   # opcode (4-bits)
+        self.mask = data[1] >> 7   # mask bit
+
+        """
+        if not (self.mask):
+            self.log("Server received unmasked websocket request: \n{}".format(self))
+            self.origin.close_websocket()
+            return
+        """
+
+        length = data[1] & 127  # initial payload length  (7-bits)
+        if length <= 125:
+            self.length = length  # actual length
+        elif length == 126:
+            data = self.origin.read(2)  # read next 2 bytes
+            if not data: return
+            self.length = int.from_bytes(data, 'big')  # 16-bit unsigned int
+        elif length == 127:
+            data = self.origin.read(4)  # read next 8 bytes
+            if not data: return
+            self.length = int.from_bytes(data, 'big')  # 64-bit unsigned int
+
+        if self.mask:
+            key = self.origin.read(4)  # read next 4 bytes for mask key
+            if not key: return
+        else:
+            key = None
+
+        if self.length:
+            payload = self.origin.read(self.length)  # read payload
+            if not payload: return
+        else:
+            payload = b''  # empty payload
+
+        if self.mask and self.length:
+            self.content = self.xor(payload, key)
+        else:
+            self.content = payload
+
+        return True  # successful
+
+    def verify(self):
+        """ Verify that this object meets all standards before encoding """
+        if not 0 <= self.fin <= 1:
+            self.throw("FIN must be a single bit", self)
+            return
+        if not 0 <= self.code <= 15:
+            self.throw("Op-code must be a 4-bit unsigned int", self)
+            return
+
+        # TODO: check if request is being sent fron a server or client, check mask bit
+        #  Client -> server requests must be masked.
+        #  Server -> client requests must not be masked
+
+        self.length = len(self.content)
+        if self.length > (2**63)-1:
+            self.throw("I don't know how, but you've exceeded the maximum size of a Websocket payload, which is over 9000 Petabytes.", self)
+            return
+        return True
+
+    def compile(self):
+        """ Encodes the class attributes into bytes ready to send """
+        if not self.verify:
+            return
+
+        # first byte (FIN and opcode)
+        frame = ((128 if self.fin else 0) | self.code).to_bytes(1, 'big')
+
+        self.length = len(self.content)
+        mask = 128 if self.mask else 0
+        if self.length <= 125:  # length can be stored in 7 bits
+            frame += (mask | self.length).to_bytes(1, 'big')
+
+        elif 126 <= self.length <= (2**16)-1:  # length can be stored in 16 bits
+            frame += (mask | 126).to_bytes(1, 'big')
+            frame += self.length.to_bytes(2, 'big')
+
+        elif (2**16)-1 < self.length <= (2**63)-1:  # length can be stored in 63 bits (first bit must be 0. Please someone tell me why this is the case)
+            frame += (mask | 127).to_bytes(1, 'big')
+            frame += self.length.to_bytes(8, 'big')
+
+        else:
+            self.throw("This should not happen. Websocket payload length not accounted for??")
+            return
+
+        if self.mask:
+            key = os.urandom(4)  # generate random 32-bit mask
+            frame += key
+            frame += self.xor(self.content, key)  # encrypt
+        else:
+            frame += self.content
+
+        return frame  # complete frame in bytes, ready to be sent
 
 
 # misc
@@ -1113,7 +1413,7 @@ class ReadWriteLock:
     Requires exclusive lock for writing.
     """
     def __init__(self):
-        self.lock = Condition()  # lock for notifying waiting locks and managing lock attributes
+        self.lock = TCondition()  # lock for notifying waiting locks and managing lock attributes
         self.reading = 0         # number of shared locks
         self.writing = False     # exclusive lock
 
@@ -1166,7 +1466,7 @@ class DataBuffer(Base):
 
         # threading locks
         self.read_lock, self.write_lock = ReadWriteLock().get_locks()
-        self.ready = Condition()  # notifies when new data is available
+        self.ready = TCondition()  # notifies when new data is available
 
     def get_ticket(self):
         """ Returns an ID that should be passed into read() """
@@ -1234,7 +1534,7 @@ class RingBuffer:
 
         # threading locks
         self.read_lock, self.write_lock = ReadWriteLock().get_locks()
-        self.ready = Condition()  # Notifies when new data is ready
+        self.ready = TCondition()  # Notifies when new data is ready
 
         # list of reader positions relative to the head.
         # ex. If reader = 5, then the next read should be from head-5_ to head.
