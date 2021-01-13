@@ -105,12 +105,12 @@ class VideoStreamer(Streamer):
         init_req.add_header('framerate', self.framerate)
         self.send(init_req)
 
-        if self.camera:
-            return
         # set up camera
-        from picamera import PiCamera, PiVideoFrameType
-        self.sps = PiVideoFrameType.sps_header
-        self.camera = PiCamera(resolution=self.resolution, framerate=self.framerate)
+        if not self.camera:
+            from picamera import PiCamera, PiVideoFrameType
+            self.sps = PiVideoFrameType.sps_header
+            self.camera = PiCamera(resolution=self.resolution, framerate=self.framerate)
+
         self.camera.start_recording(self.picam_buffer,
             format='h264', quality=25, profile='constrained', level='4.2',
             intra_period=self.framerate, intra_refresh='both', inline_headers=True, sps_timing=True
@@ -456,6 +456,7 @@ class SynthEEGStreamer(Streamer):
         resp = HTTPRequest()  # new response
         resp.add_request("INGEST")
         resp.add_header('frames-sent', self.frames_sent)
+        resp.add_header('time', time.time())
         resp.add_content(data)
 
         #t0 = time.time()
