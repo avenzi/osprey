@@ -98,6 +98,8 @@ class VideoStreamer(Streamer):
         Start Streaming continually
         Extended from base class in pi_lib.py
         """
+        if self.streaming.is_set():
+            return
         # First send initial information
         init_req = HTTPRequest()  # new request
         init_req.add_request('INIT')  # call INIT method on server handler
@@ -106,11 +108,9 @@ class VideoStreamer(Streamer):
         self.send(init_req)
 
         # set up camera
-        if not self.camera:
-            from picamera import PiCamera, PiVideoFrameType
-            self.sps = PiVideoFrameType.sps_header
-            self.camera = PiCamera(resolution=self.resolution, framerate=self.framerate)
-
+        from picamera import PiCamera, PiVideoFrameType
+        self.sps = PiVideoFrameType.sps_header
+        self.camera = PiCamera(resolution=self.resolution, framerate=self.framerate)
         self.camera.start_recording(self.picam_buffer,
             format='h264', quality=25, profile='constrained', level='4.2',
             intra_period=self.framerate, intra_refresh='both', inline_headers=True, sps_timing=True
