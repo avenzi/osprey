@@ -33,6 +33,12 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### January 13th, 2021:
+
+I have finally found the source of the EEG stream issue (data was occasionally coming in out of order, causing the line graph to jump back and forth across the time axis). I thought it was a problem with the threading control on my RingBuffer, but no amount of locking and queueing fixed it. Eventually I took a look at the requests coming in to the page, and it turns out that sometimes a data packet will take just long enough to send that the AjaxDataSource from boken sends another request, and gets a response before it's finished. The result is that the packet directly after gets loaded in first, and the one that took too long get loaded in after, causing the time jumping. 
+
+The solution to this should be to make sure that the data being sent is no more than necessary. I believe the reason it was taking so long is that the entire contents of the RingBuffer were being sent, when the only data needed is that which can be displayed at once in the EEG figure. This, however, does not account for the possibility of a request taking too long for some other reason. In that case, the only solution would be to slow down the AjaxDataSource. I am not sure whether it is possible to change the polling speed after initialization, but I will give it a try.
+
 ##### January 7/8/9, 2021:
 
 Over the last few days I have managed to implement H.264 compression on the video streams. I found an open source JS script that decodes H.264 frames in-browser. Using this in-browser decoder requires the use of a WebSocket protocol, so I implemented rudimentary WebSocket handling on my server (this is what took most of my time). No extra WebSocket protocols or extensions are supported as of yet, but full encoding/decoding with fragmentation was necessary to support the H.264 stream. On the bright-side, I have now memorized the entire byte structure of a WebSocket frame.
