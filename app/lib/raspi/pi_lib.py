@@ -39,7 +39,7 @@ class Client(HostNode):
     <retry> number of seconds to wait before attempting to connect to the server each time
     <debug> debug level of the client
     """
-    def __init__(self, retry=5, debug=0):
+    def __init__(self, retry=2, debug=0):
         with open(CONFIG_PATH) as file:  # get config options
             self.config = json.load(file)
         self.ip = self.config.get('SERVER_IP_ADDRESS')  # ip address of server
@@ -83,11 +83,11 @@ class Client(HostNode):
                 else:  # not in the config file or not set to be used
                     self.log("Streamer class {} is not being used. Set it's keyword to 'Y' in {} to use".format(member[0], CONFIG_PATH))
 
-    def connect(self, NodeClass):
+    def connect(self, StreamerClass):
         """ Create socket object and try to connect it to the server, then run the Node class on a new process """
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
         try:  # connect socket to given address
-            self.debug("Attempting to connect {} to server".format(NodeClass.__name__), 2)
+            self.debug("Attempting to connect {} to server".format(StreamerClass.__name__), 2)
             sock.connect((self.ip, self.port))
             sock.setblocking(True)
             self.debug("Socket Connected", 2)
@@ -95,7 +95,8 @@ class Client(HostNode):
             self.throw("Failed to connect socket to server:", e)
             return False
 
-        worker = NodeClass()  # create an instance of this node class
+        worker = StreamerClass()  # create an instance of this node class
+        worker.device = self.device
         worker.set_source(sock)  # set this socket as a data-source socket for the client
         self.run_worker(worker)  # run the new worker node on a parallel process
 

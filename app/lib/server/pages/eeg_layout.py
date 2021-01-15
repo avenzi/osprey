@@ -1,6 +1,6 @@
-from bokeh.models import CustomJS, AjaxDataSource
+from bokeh.models import CustomJS, AjaxDataSource, DataRange1d
 from bokeh.models import Panel, Tabs, ColorBar, LogColorMapper, LogTicker
-from bokeh.models import Slider, RangeSlider, Select, Spinner, Toggle
+from bokeh.models import Slider, RangeSlider, Select, Spinner, Toggle, RadioButtonGroup
 from bokeh.layouts import layout, Row, Column
 from bokeh.transform import linear_cmap
 from bokeh.plotting import figure
@@ -115,18 +115,6 @@ def configure_layout(worker_id, channels):
         max_size=2000,
         if_modified=True)
 
-    eeg_source.js_on_change('data',
-        CustomJS(args=dict(  # arguments to be passed into the JS function
-            source=eeg_source
-        ),
-        code="""
-console.log("hello: "+source.references())
-//console.log("DATA: "+figure.data)
-//console.log("START: "+figure.xrange.get('start')+"  STOP: "+figure.xrange.get('stop'))
-"""
-    )
-)
-
     fourier_source = AjaxDataSource(
         data_url='/update_fourier?id={}'.format(worker_id),
         method='GET',
@@ -151,25 +139,78 @@ console.log("hello: "+source.references())
 
 
     ##############
-    # create EEG figures, each with it's own line
-    eeg_panels = []
-    for i in range(len(channels)):
-        eeg = figure(
-            title=channels[i],
-            x_axis_label='time', y_axis_label='Voltage',
-            plot_width=1200, plot_height=150,
-            toolbar_location=None,
-            output_backend=BACKEND
-        )
-        eeg.line(x='time', y=channels[i], color=colors[i], source=eeg_source)
-        eeg_panels.append(Panel(child=eeg, title=channels[i]))
+    # create EEG figure with all EEG lines plotted on it
+    # TODO: Create custom wheel-zoom tool that fixes the center of the zoom to a certain y-value
+    #  currently, the center point is based on the position of the mouse, which is annoying.
+    eeg = figure(
+        title='EEG Channels',
+        x_axis_label='time', y_axis_label='Voltage (V)',
+        x_range=[0, eeg_source.max_size],
+        plot_width=1200, plot_height=200,
+        toolbar_location=None, tools=['ywheel_zoom', 'ypan'], active_scroll='ywheel_zoom', active_drag='ypan',
+        output_backend=BACKEND
+    )
+
+    for i in range(len(channels)):  # plot each line
+        visible = True if i == 0 else False  # first channel visible
+        eeg.line(x='time', y=channels[i], name=channels[i], color=colors[i], source=eeg_source, visible=visible)
+
+    # Radio buttons to select EEG channels
+    eeg_radios = RadioButtonGroup(labels=channels, active=0)
+    eeg_radios.js_on_click(CustomJS(
+        args=dict(
+            fig=eeg,
+            labels=channels
+        ),
+        code="""
+fig.select_one(this.labels[this.active]).visible = true
+for (var label of labels) {
+    if (label != this.labels[this.active]){
+        fig.select_one(label).visible = false
+    }
+}
+"""))
+
+    # Whenever the DataSource data changes, incrementally slide x_range
+    # to give the appearance of continuity.
+    # TODO: make it less choppy?
+    eeg_source.js_on_change('data',
+        CustomJS(args=dict(  # arguments to be passed into the JS function
+            source=eeg_source,
+            figure=eeg
+        ),
+            code="""
+var duration = source.polling_interval
+var current = figure.x_range.end
+
+var end = source.data['time'][source.data['time'].length-1]
+var start = source.data['time'][0]
+
+var diff = end - current
+if (diff > 0) {
+    var slide = setInterval(function(){
+        if (figure.x_range.end < end) {
+            figure.x_range.start += diff/20
+            figure.x_range.end += diff/20
+        }
+    
+    }, duration/20);
+}
+
+setTimeout(function(){
+    clearInterval(slide)
+    figure.x_range.start = start + diff
+    figure.x_range.end = end
+}, duration)
+"""
+))
 
     # fourier figure with a line for each EEG channel
     fourier = figure(
         title="EEG Fourier",
-        x_axis_label='Frequency (Hz)', y_axis_label='Magnitude (log)',
+        x_axis_label='Frequency (Hz)', y_axis_label='Magnitude (log)', y_axis_type="log",
         plot_width=1200, plot_height=400,
-        y_axis_type="log", toolbar_location=None,
+        toolbar_location=None, active_drag=None, active_scroll=None,
         output_backend=BACKEND
     )
     for i in range(len(channels)):
@@ -208,7 +249,7 @@ console.log("hello: "+source.references())
         title="EEG Spectrogram",
         x_axis_label='Frequency (Hz)', y_axis_label='Time',
         plot_width=1200, plot_height=500,
-        toolbar_location=None
+        toolbar_location=None, active_drag=None, active_scroll=None,
     )
     # image glyph
     spec_image = spec.image(
@@ -240,7 +281,7 @@ console.log("hello: "+source.references())
         fig = figure(
             title='{}-band Head Plot'.format(band),
             plot_width=300, plot_height=300,
-            toolbar_location=None,
+            toolbar_location=None, active_drag=None, active_scroll=None,
             output_backend=BACKEND
         )
         # Even though x and y don't change, they have to be gotten from the data source.
@@ -343,8 +384,7 @@ if (low != high) {
     #################
     # Construct final layout
     analysis_tabs = Tabs(tabs=[fourier_panel, head_panel])
-    eeg_tabs = Tabs(tabs=eeg_panels)
-    full_layout = layout([eeg_tabs, widgets_row, analysis_tabs])
+    full_layout = layout([eeg_radios, eeg, widgets_row, analysis_tabs])
     return full_layout
 
 

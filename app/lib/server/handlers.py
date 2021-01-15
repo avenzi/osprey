@@ -404,9 +404,6 @@ class EEGHandler(Handler):
     def __init__(self):
         super().__init__()
 
-        with open(CONFIG_PATH, 'r') as file:  # get config settings
-            self.data_path = json.load(file).get('DATA_PATH')  # path to data directory
-
         self.frames_sent = 0
         self.frames_received = 0
         self.channels = []  # list of channel name strings
@@ -417,6 +414,8 @@ class EEGHandler(Handler):
 
         self.eeg_buffer = None
         self.eeg_lock = None  # ticket to read from EEG buffer
+        self.eeg_done = True  # flag to set when done sending last EEG data packet
+        # this fixes packets getting loaded out of order if one took too long to send.
 
         self.fourier_store_interval = 0  # interval at which to save data in seconds
         self.fourier_buffer = None
@@ -456,7 +455,10 @@ class EEGHandler(Handler):
         # size of EEG buffer (# of data points to keep).
         # FFT window is in seconds, sample rate is data points per second.
         size = int(self.page_config['fourier_window'] * self.sample_rate)
-        self.eeg_buffer = RingBuffer(self.channels+['time'], size, self.data_path+'/EEG_data')
+        with open(CONFIG_PATH, 'r') as file:  # get config settings
+            data_path = json.load(file).get('DATA_PATH')  # path to data directory
+            data_path += '/{}/EEG_DATA'.format(self.device)
+        self.eeg_buffer = RingBuffer(self.channels+['time'], size, data_path)
         self.eeg_lock = self.eeg_buffer.get_ticket()
 
         self.fourier_buffer = DataBuffer()
@@ -477,14 +479,22 @@ class EEGHandler(Handler):
         """ Handle EEG data received from Pi """
         if not self.initialized:
             return
+        self.frames_received += 1
+        '''
+        sent = int(request.header['frames-sent'])
+        if sent != self.frames_received:
+            self.log("DIFF: {}, {}".format(sent, self.frames_received))
+        '''
         data = msgpack.unpackb(request.content)  # unpack dict object
         self.filter(data)
+        t0 = time.time()
         self.eeg_buffer.write(data)  # write data to EEG buffer
-        self.frames_received += 1
+        t1 = time.time()
+        #self.log("{:.3}".format(t1-t0))
 
     def GET(self, request):
         """ Handles a GET request send to the handler """
-        if not self.streaming:
+        if not self.streaming or not self.initialized:
             self.not_active(request)
             return
 
@@ -498,19 +508,25 @@ class EEGHandler(Handler):
 
         elif request.path.endswith('/update_eeg'):  # request for eeg stream update
             # get update from EEG buffer
-            t0 = time.time()
-            response = self.graph.update_json(self.eeg_buffer, self.eeg_lock)
-            t1 = time.time()
-            self.log("UPDATE EEG: {}".format(t1-t0))
+            if self.eeg_done:
+                self.eeg_done = False
+                response = self.graph.update_json(self.eeg_buffer, self.eeg_lock)
+                self.send(response, request.origin)
+                self.eeg_done = True
+            else:  # not done sending last data packet
+                response = HTTPResponse(304)  # send 'not modified' response
+                self.send(response, request.origin)
+            return
 
         elif request.path.endswith('/update_fourier'):  # request for fourier update
             # get update from fourier buffer
             t0 = time.time()
             self.fourier()  # perform FFT
             t1 = time.time()
+
             response = self.graph.update_json(self.fourier_buffer, self.fourier_lock)
             t2 = time.time()
-            self.log("UPDATE FOURIER: {:.3} {:.3}".format(t1-t0, t2-t1))
+            #self.log("UPDATE FOURIER: {:.3} {:.3}".format(t1-t0, t2-t1))
 
         elif request.path.endswith('/update_spectrogram'):
             # get update from fourier buffer
@@ -519,13 +535,13 @@ class EEGHandler(Handler):
             if response.code == 200:  # if sending new data (if no data is sent, code is 304)
                 self.spec_time += 1   # increment counter
             t1 = time.time()
-            self.log("UPDATE SPEC: {:.3}".format(t1-t0))
+            #self.log("UPDATE SPEC: {:.3}".format(t1-t0))
 
         elif request.path.endswith('/update_headplot'):
             t0 = time.time()
             response = self.update_headplot()
             t1 = time.time()
-            self.log("UPDATE HEADPLOT: {:.3}".format(t1-t0))
+            #self.log("UPDATE HEADPLOT: {:.3}".format(t1-t0))
 
         else:
             self.debug("Path not recognized: {}".format(request.path), 2)

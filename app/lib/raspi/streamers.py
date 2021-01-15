@@ -141,7 +141,6 @@ class SenseStreamer(Streamer):
         self.frames = 1           # how many frames are in each request
 
         self.frames_sent = 0    # number of frames sent
-        self.time = 0  # time of START
 
     def loop(self):
         """ Maine execution loop """
@@ -154,7 +153,7 @@ class SenseStreamer(Streamer):
             data['roll'].append(roll)
             data['pitch'].append(pitch)
             data['yaw'].append(yaw)
-            data['time'].append(time.time() - self.time)
+            data['time'].append(self.time())
 
         resp = HTTPRequest()  # new INGEST request
         resp.add_request("INGEST")
@@ -211,7 +210,6 @@ class EEGStreamer(Streamer):
         self.board = BoardShim(self.board_id, params)  # board object
 
         self.frames_sent = 0    # number of frames sent
-        self.time = 0  # time of START
 
     def loop(self):
         """ Main execution loop """
@@ -226,7 +224,7 @@ class EEGStreamer(Streamer):
             return
 
         # convert from epoch time to relative time since session start
-        data['time'] = list(raw_data[self.time_channel] - self.time)
+        data['time'] = list(raw_data[self.time_channel] - self.start_time)
 
         for i, j in enumerate(self.eeg_channel_indexes):
             data[self.eeg_channel_names[i]] = list(raw_data[j] / 1000000)  # convert from uV to V
@@ -323,7 +321,6 @@ class ECGStreamer(Streamer):
         self.board = BoardShim(self.board_id, params)  # board object
 
         self.frames_sent = 0    # number of frames sent
-        self.time = 0  # time of START
 
     def loop(self):
         """ Main execution loop """
@@ -335,7 +332,7 @@ class ECGStreamer(Streamer):
             return
 
         # convert from epoch time to relative time since session start
-        data = {'time': list(raw_data[self.time_channel] - self.time)}
+        data = {'time': list(raw_data[self.time_channel] - self.start_time)}
         for channel in self.ecg_channel_names:  # lists of channel data
             data[channel] = []
 
@@ -430,7 +427,6 @@ class SynthEEGStreamer(Streamer):
         self.board = BoardShim(self.board_id, params)  # board object
 
         self.frames_sent = 0  # number of frames sent
-        self.time = 0  # time of START
 
     def loop(self):
         """ Main execution loop """
@@ -445,7 +441,7 @@ class SynthEEGStreamer(Streamer):
             return
 
         # convert from epoch time to relative time since session start
-        data['time'] = list(raw_data[self.time_channel] - self.time)
+        data['time'] = list(raw_data[self.time_channel] - self.start_time)
 
         for i, j in enumerate(self.eeg_channel_indexes):
             data[self.eeg_channel_names[i]] = list(raw_data[j] / 1000000)  # convert from uV to V

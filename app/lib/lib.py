@@ -819,9 +819,11 @@ class HostNode(Node):
 class WorkerNode(Node):
     """
     This class holds all socket connections to the data-streaming client
+    self.name is the name of the Handler handling this node
+    self.device is the device sending the stream.
     """
-    def __init__(self):
-        super().__init__()
+    def __init__(self, device=None):
+        super().__init__(device=device)
         self.source_id = None  # ID of the main data-streaming socket
         self.pipe = None  # Pipe object to the HostNode
 
@@ -833,7 +835,6 @@ class WorkerNode(Node):
         Should be run on it's own Process's Main Thread
         """
         self.pipe = pipe
-        self.device = self.pipe.device
         #self.debug("Worker '{}' started running on '{}'".format(self.name, self.device), 1)
         Thread(target=self._run, name='RUN', daemon=True).start()
         Thread(target=self._run_pipe, name='PIPE', daemon=True).start()
@@ -901,6 +902,7 @@ class WorkerNode(Node):
         self.pipe.send('SHUTDOWN')  # Signal to the server that this connection is shutting down
 
 
+# Request protocols
 class Request(Base):
     """
     Basic structure of derived request classes.
@@ -952,7 +954,7 @@ class HTTPRequest(Request):
 
     def __repr__(self):
         """ String representation shows only request line and headers """
-        return self.format_request_line() + self.format_headers()
+        return '[{}]'.format(self.compile().decode(self.encoding))
 
     def add_request(self, method, path='/', version='HTTP/1.1'):
         """ Add request method, path, and version """
@@ -1065,7 +1067,7 @@ class HTTPRequest(Request):
         """
         max_len = 256  # max length of request-line before throw (arbitrary choice)
         line = ''
-        while line == '':  # if blank lines are read, keep reading.
+        while line.strip() == '':  # if blank lines are read, keep reading.
             line = self.origin.read(max_len, line=True, decode=True)  # read first line from stream
             if line is None:
                 return
@@ -1147,9 +1149,10 @@ class HTTPRequest(Request):
 
         if self.content is not None:
             data += self.content  # content should already be in bytes
-        elif not self.header:
-            data += b'\r\n'  # if no content or header, signal end of transmission
-
+        elif self.code and self.code in [301, 308]:
+            data += b'\r\n'  # if no content, but body is expected, signal end of transmission
+        elif not self.header:  # no content or headers
+            data += b'\r\n'
         return data
 
 
@@ -1413,7 +1416,7 @@ class ReadWriteLock:
     Requires exclusive lock for writing.
     """
     def __init__(self):
-        self.lock = TCondition()  # lock for notifying waiting locks and managing lock attributes
+        self.lock = Condition()  # lock for notifying waiting locks and managing lock attributes
         self.reading = 0         # number of shared locks
         self.writing = False     # exclusive lock
 
@@ -1466,7 +1469,7 @@ class DataBuffer(Base):
 
         # threading locks
         self.read_lock, self.write_lock = ReadWriteLock().get_locks()
-        self.ready = TCondition()  # notifies when new data is available
+        self.ready = Condition()  # notifies when new data is available
 
     def get_ticket(self):
         """ Returns an ID that should be passed into read() """
@@ -1534,7 +1537,7 @@ class RingBuffer:
 
         # threading locks
         self.read_lock, self.write_lock = ReadWriteLock().get_locks()
-        self.ready = TCondition()  # Notifies when new data is ready
+        self.ready = Condition()  # Notifies when new data is ready
 
         # list of reader positions relative to the head.
         # ex. If reader = 5, then the next read should be from head-5_ to head.
