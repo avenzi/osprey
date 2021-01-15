@@ -33,6 +33,16 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### January 14th, 2021:
+
+I have solved the issue discussed yesterday. The simplest solution I found was to instruct the server to reject any data requests received before it has finished sending the previous one. This prevents any data being sent out of order. 
+
+I was also able to add a "smoothing" feature to the EEG stream. Data chunks are still sent at the same interval (once per second), but the plot now incrementally slides the x-axis range to give the appearance of continuity. This effect is a little choppy at the moment due to the unpredictability of how long it will take for the next data chunk to load in. In the process of adding this feature, I also removed the clutter of numerous figures for each EEG channel in favor of a single figure with toggleable buttons to select which channel to view. I believe this increases performance since only one line plot must be rendered at any given moment.
+
+I also updated the x-axis time tick marks to represent time since the start of the stream instead of raw epoch time.
+
+
+
 ##### January 13th, 2021:
 
 I have finally found the source of the EEG stream issue (data was occasionally coming in out of order, causing the line graph to jump back and forth across the time axis). I thought it was a problem with the threading control on my RingBuffer, but no amount of locking and queueing fixed it. Eventually I took a look at the requests coming in to the page, and it turns out that sometimes a data packet will take just long enough to send that the AjaxDataSource from boken sends another request, and gets a response before it's finished. The result is that the packet directly after gets loaded in first, and the one that took too long get loaded in after, causing the time jumping. 
