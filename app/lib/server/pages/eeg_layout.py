@@ -1,8 +1,8 @@
 from bokeh.models import CustomJS, AjaxDataSource, DataRange1d
-from bokeh.models import Panel, Tabs, ColorBar, LogColorMapper, LogTicker
+from bokeh.models import Panel, Tabs, ColorBar, LogColorMapper, LogTicker, PrintfTickFormatter
 from bokeh.models import Slider, RangeSlider, Select, Spinner, Toggle, RadioButtonGroup
 from bokeh.layouts import layout, Row, Column
-from bokeh.transform import linear_cmap
+from bokeh.transform import log_cmap
 from bokeh.plotting import figure
 from bokeh.palettes import viridis, magma
 
@@ -15,7 +15,7 @@ BACKEND = 'canvas'  # 'webgl' appears to be broken - makes page unresponsive.
 
 # default values of all widgets and figure attributes
 config = {'fourier_window': 5,
-          'spectrogram_range': (-9.0, -2.0),  # color scale range (log)
+          'spectrogram_range': (-3.0, 1.0),  # color scale range (log)
           'spectrogram_size': 30,
 
           'pass_toggle': False,
@@ -100,13 +100,19 @@ def configure_layout(worker_id, channels):
     Configures all Bokeh figures and plots
     :param worker_id: Id of the WorkerNode (just self.id)
     :param channels: List of EEG channels being plotted.
-    :return:
-    # TODO: Split this up into more easily digestible chunks
     """
+    # TODO: Split this up into more easily digestible chunks
+    # TODO: Remove Spectrogram for good. Too much data is required to make it worth while,
+    #  and it's not necessary because of the headplots. Will need to remove the AjaxDataSource,
+    #  spectrogram image and figure creation, the JS callback from the radio buttons targetting the
+    #  spec images, the spectrogram Tab creation, and the code adding/sending data to the browser in
+    #  the EEGHandler class.
+
     colors = viridis(len(channels))  # viridis color palette for channel colors
-    #tools = ['save']  # specify list of tool names for the toolbars. Will need to enable toolbars.
 
     # create AJAX data sources for the plots
+    # the if_modified=True allows it to ignore responses sent with a 304 code.
+
     eeg_source = AjaxDataSource(
         data_url='/update_eeg?id={}'.format(worker_id),
         method='GET',
@@ -122,13 +128,15 @@ def configure_layout(worker_id, channels):
         mode='replace',  # all FFT lines are replaced each update
         if_modified=True)
 
+    '''  # Spectrogram (to remove)
     spectrogram_source = AjaxDataSource(
         data_url='/update_spectrogram?id={}'.format(worker_id),
         method='GET',
-        polling_interval=1000,
+        polling_interval=5000,
         max_size=config['spectrogram_size'],
         mode='append',  # new Spectrogram slices are appended each update
         if_modified=True)
+    '''
 
     headplot_source = AjaxDataSource(
         data_url='/update_headplot?id={}'.format(worker_id),
@@ -137,39 +145,24 @@ def configure_layout(worker_id, channels):
         mode='replace',
         if_modified=True)
 
-
     ##############
     # create EEG figure with all EEG lines plotted on it
-    # TODO: Create custom wheel-zoom tool that fixes the center of the zoom to a certain y-value
-    #  currently, the center point is based on the position of the mouse, which is annoying.
+    # initial x_range must be set in order to disable auto-scaling
+    # initial y_ranges should not be set to enable auto-scaling
     eeg = figure(
         title='EEG Channels',
-        x_axis_label='time', y_axis_label='Voltage (V)',
-        x_range=[0, eeg_source.max_size],
+        x_axis_label='Time (s)', y_axis_label='Voltage (uV)', x_range=[0, 0],
         plot_width=1200, plot_height=200,
-        toolbar_location=None, tools=['ywheel_zoom', 'ypan'], active_scroll='ywheel_zoom', active_drag='ypan',
+        toolbar_location=None, active_scroll=None, active_drag=None,
         output_backend=BACKEND
     )
+
+    # y-axis range will autoscale to currently selected channel
+    eeg.y_range.only_visible = True
 
     for i in range(len(channels)):  # plot each line
         visible = True if i == 0 else False  # first channel visible
         eeg.line(x='time', y=channels[i], name=channels[i], color=colors[i], source=eeg_source, visible=visible)
-
-    # Radio buttons to select EEG channels
-    eeg_radios = RadioButtonGroup(labels=channels, active=0)
-    eeg_radios.js_on_click(CustomJS(
-        args=dict(
-            fig=eeg,
-            labels=channels
-        ),
-        code="""
-fig.select_one(this.labels[this.active]).visible = true
-for (var label of labels) {
-    if (label != this.labels[this.active]){
-        fig.select_one(label).visible = false
-    }
-}
-"""))
 
     # Whenever the DataSource data changes, incrementally slide x_range
     # to give the appearance of continuity.
@@ -187,7 +180,7 @@ var end = source.data['time'][source.data['time'].length-1]
 var start = source.data['time'][0]
 
 var diff = end - current
-if (diff > 0) {
+if (diff > 0 && diff < end-start) {
     var slide = setInterval(function(){
         if (figure.x_range.end < end) {
             figure.x_range.start += diff/20
@@ -195,13 +188,16 @@ if (diff > 0) {
         }
     
     }, duration/20);
-}
-
-setTimeout(function(){
-    clearInterval(slide)
-    figure.x_range.start = start + diff
+    
+    setTimeout(function(){
+        clearInterval(slide)
+        figure.x_range.start = start + diff
+        figure.x_range.end = end
+    }, duration)
+} else {
+    figure.x_range.start = start
     figure.x_range.end = end
-}, duration)
+}
 """
 ))
 
@@ -218,19 +214,22 @@ setTimeout(function(){
     fourier_panel = Panel(child=fourier, title='FFT')  # create a tab for this plot
 
     ################
-    # Color mapper for spectrogram
-    low = 10**(config['spectrogram_range'][0])  # low threshold
-    high = 10**(config['spectrogram_range'][1])  # high threshold
-    palette = magma(20)
-    mapper = LogColorMapper(palette=palette, low=low, high=high)
+    # Color mapper for the headplot ColorBar
+    mapper_low = 10**(config['spectrogram_range'][0])  # low threshold
+    mapper_high = 10**(config['spectrogram_range'][1])  # high threshold
+    mapper_palette = magma(20)
+    mapper = LogColorMapper(palette=mapper_palette, low=mapper_low, high=mapper_high)
+    tick_formatter = PrintfTickFormatter(format="%1e")
     color_bar = ColorBar(
         color_mapper=mapper,
         ticker=LogTicker(),
+        formatter=tick_formatter,
         label_standoff=15,
         border_line_color=None,
         location=(0, 0)
     )
 
+    '''  # Spectrogram stuff. (to remove)
     # Spectrogram data source has 'slice' and 'spec_time' as data lists.
     # 'slice' is a list of images (2D lists), that have only 1 row, but they still must be
     #       passed as a 2D list. The image is a heatmap of the FFT for that slice.
@@ -239,33 +238,85 @@ setTimeout(function(){
     #       incremented whenever a slice is sent.
 
     # First plot a full spectrogram of nothing so new data is added proportionally.
-    spectrogram_source.data = {
-        'slice': [[[0]] for i in range(config['spectrogram_size'])],
-        'spec_time': [i for i in range(config['spectrogram_size'])]
-    }
+    spectrogram_source.data = {'spec_time': [i for i in range(config['spectrogram_size'])]}
+    for name in channels:
+        spectrogram_source.data[name] = [[[0]] for i in range(config['spectrogram_size'])]
 
     # create a spectrogram figure
     spec = figure(
         title="EEG Spectrogram",
-        x_axis_label='Frequency (Hz)', y_axis_label='Time',
+        x_axis_label='Frequency (Hz)', y_axis_label='Time (index)',
         plot_width=1200, plot_height=500,
         toolbar_location=None, active_drag=None, active_scroll=None,
     )
-    # image glyph
-    spec_image = spec.image(
-        image='slice',
-        x=0, y='spec_time',
-        dw=60, dh=1,
-        source=spectrogram_source,
-        color_mapper=mapper
-    )
-    spec.add_layout(color_bar, 'right')
     spec.background_fill_color = "black"
+    spec.add_layout(color_bar, 'left')
     spec.grid.visible = False
+
+    # image glyphs
+    for i in range(len(channels)):  # image for each channel
+        visible = True if i == 0 else False  # first channel visible
+        spec.image(
+            image=channels[i], x=0, y='spec_time', dw=60, dh=1,
+            color_mapper=mapper, source=spectrogram_source,
+            name=channels[i], visible=visible
+        )
+    
+    spectrogram_slider = RangeSlider(
+        title='',
+        start=-10, end=3, step=1,  # log scale
+        orientation='vertical',
+        direction='rtl',  # Right to left, but vertical so top to bottom
+        value=config['spectrogram_range'])
+
+   spectrogram_slider.js_on_change(
+        "value",
+        CustomJS(args=dict(  # arguments to be passed into the JS function
+            fig=spec,
+            names=channels,
+            source=spectrogram_source,
+            color_bar=color_bar
+        ),
+            code="""
+var low = Math.pow(10, this.value[0]);
+var high = Math.pow(10, this.value[1]);
+
+if (low < high) {
+    color_bar.color_mapper.low = low;
+    color_bar.color_mapper.high = high;
+    for (name of names) {
+        var image = fig.select_one(name)
+        image.glyph.color_mapper.low = low;
+        image.glyph.color_mapper.high = high;
+    }
+    source.change.emit();
+}
+"""
+        ))
+    '''
+
+    # Radio buttons to select channels on the EEG figure and Spectrogram figure
+    channel_radios = RadioButtonGroup(labels=channels, active=0)
+    channel_radios.js_on_click(CustomJS(
+        args=dict(
+            eeg_fig=eeg,
+            labels=channels
+        ),
+        code="""
+    eeg_fig.select_one(this.labels[this.active]).visible = true
+    // spec_fig.select_one(this.labels[this.active]).visible = true
+    for (var label of labels) {
+        if (label != this.labels[this.active]){
+            eeg_fig.select_one(label).visible = false
+            // spec_fig.select_one(label).visible = false
+        }
+    }
+    """))
 
     ################
     # Head Plots
 
+    # get 2D positions of all possible headset electrodes
     with open(PAGES_PATH+'/electrodes.json', 'r') as f:
         all_names = json.loads(f.read())
 
@@ -285,80 +336,46 @@ setTimeout(function(){
             output_backend=BACKEND
         )
         # Even though x and y don't change, they have to be gotten from the data source.
-        # Each figure gets its own color mapper and takes
-        #   data from the column with it's band name, which
-        #   contains the color data.
-        mapper = linear_cmap(field_name=band, palette='RdBu11', low=0, high=0.001)
+        # Each figure gets its own color mapper and takes data from the
+        #   column with it's band name, which contains the color data.
+        mapper = log_cmap(field_name=band, palette=mapper_palette, low=mapper_low, high=mapper_high)
         circle = fig.circle(x='x', y='y', source=headplot_source, color=mapper, size=20)
-        fig.xaxis.ticker = []
-        fig.yaxis.ticker = []
+        fig.xaxis.ticker, fig.xaxis.ticker = [], []  # disable axes
         head_figures.append(fig)
         circles.append(circle)
 
-    delta, theta, alpha, beta, gamma = head_figures  # delta, theta, alpha, beta, gamma
-    delta_c, theta_c, alpha_c, beta_c, gamma_c = circles
+    delta, theta, alpha, beta, gamma = head_figures  # figures
+    delta_c, theta_c, alpha_c, beta_c, gamma_c = circles  # glyphs
 
-    # put colorbar on left-most plot and increase width
+    # put colorbar on left-most plot and increase width to accomodate
     delta.add_layout(color_bar, 'left')
-    delta.plot_width = 390
+    delta.plot_width = 390  # this seems to be the right amount (visually)
 
-    # Spectrogram/headplot color scale adjusting slider.
+    # Headplot color scale adjusting slider.
     # This widget needs to be here (as opposed to at the top with all the other widgets) because
     # it needs to get references to all the arguments for the CustomJS.
     # None of the other widgets are in this function because they don't require references.
-    spectrogram_slider = RangeSlider(
-        title='',
-        start=-10, end=1, step=1,  # log scale
-        orientation='vertical',
-        direction='rtl',  # Right to left, but vertical so top to bottom
-        value=config['spectrogram_range'])
-
     headplot_slider = RangeSlider(
         title='',
-        start=-10, end=1, step=1,  # log scale
+        start=-10, end=3, step=1,  # log scale
         orientation='vertical',
         direction='rtl',  # Right to left, but vertical so top to bottom
         value=config['spectrogram_range'])
-
-    spectrogram_slider.js_on_change(
-        "value",
-        CustomJS(args=dict(  # arguments to be passed into the JS function
-            image=spec_image,
-            source=spectrogram_source,
-            color_bar=color_bar,
-            palette=palette,
-        ),
-            code="""
-var low = Math.pow(10, this.value[0]);
-var high = Math.pow(10, this.value[1]);
-if (low != high) {
-    image.glyph.color_mapper.low = low;
-    image.glyph.color_mapper.high = high;
-    image.glyph.color_mapper.palette = palette;
-    color_bar.color_mapper.low = low;
-    color_bar.color_mapper.high = high;
-    color_bar.color_mapper.palette = palette;
-    source.change.emit();
-}
-"""
-        )
-    )
 
     headplot_slider.js_on_change(
         "value",
         CustomJS(args=dict(  # arguments to be passed into the JS function
-            color_bar=color_bar, palette=palette, source=headplot_source,
+            color_bar=color_bar, palette=mapper_palette, source=headplot_source,
             delta=delta_c, theta=theta_c, alpha=alpha_c, beta=beta_c, gamma=gamma_c
         ),
         code="""
 var low = Math.pow(10, this.value[0]);
 var high = Math.pow(10, this.value[1]);
-if (low != high) {
-    color_bar.color_mapper.low = low;
-    color_bar.color_mapper.high = high;
-    color_bar.color_mapper.palette = palette;
-
+if (low < high) {
     var color_mapper = new Bokeh.LogColorMapper({palette:palette, low:low, high:high});
+    
+    color_bar.color_mapper = color_mapper
+
     delta.glyph.fill_color = {field: "Delta", transform: color_mapper};
     delta.glyph.line_color = {field: "Delta", transform: color_mapper};
     theta.glyph.fill_color = {field: "Theta", transform: color_mapper};
@@ -375,8 +392,10 @@ if (low != high) {
         )
     )
 
+    '''  # spectrogram Tab (to remove)
     # Panel for spectrogram has the range slider in it
-    spec_panel = Panel(child=Row(spec, spectrogram_slider), title='Spectrogram')
+    spec_panel = Panel(child=Row(spectrogram_slider, spec), title='Spectrogram')
+    '''
 
     # Panel for head plots
     head_panel = Panel(child=Row(headplot_slider, delta, theta, alpha, beta, gamma), title='Head Plots')  # create a tab for head plots
@@ -384,7 +403,7 @@ if (low != high) {
     #################
     # Construct final layout
     analysis_tabs = Tabs(tabs=[fourier_panel, head_panel])
-    full_layout = layout([eeg_radios, eeg, widgets_row, analysis_tabs])
+    full_layout = layout([channel_radios, eeg, widgets_row, analysis_tabs])
     return full_layout
 
 

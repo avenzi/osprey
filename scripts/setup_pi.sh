@@ -9,7 +9,7 @@ source ./misc.sh  # import loading function
 # ensure python is installed
 sudo apt-get -y install python3
 sudo apt-get -y install python3-pip
-pip3 install -r ./requirements_pi.txt  # install requirements
+sudo pip3 install -r ./requirements_pi.txt  # install requirements
 ) > /dev/null &
 loading $! "Installing Python3 and dependent requirements.... \n\
 Please wait until this is finished to provide configuration information\n"
@@ -60,7 +60,7 @@ sudo apt-get install cmake -y  # make sure cmake is installed
 # build brainflow
 cd ./brainflow
 bash ./tools/build_linux.sh > /dev/null
-pip3 install ./python-package
+sudo pip3 install ./python-package
 
 # for numpy to work properly with brainflow on Raspbian
 sudo apt-get -y install libatlas-base-dev

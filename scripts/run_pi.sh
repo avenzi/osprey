@@ -13,4 +13,4 @@ sudo pkill python3
 sudo pkill python
 
 # run python file to start the client
-python3 ../app/run_pi.py
+sudo python3 ../app/run_pi.py

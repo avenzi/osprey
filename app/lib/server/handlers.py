@@ -324,7 +324,7 @@ class ECGHandler(Handler):
         if not self.initialized:
             return
         data = request.content.decode(request.encoding)  # raw JSON string
-        data = json.loads(data)  # translate to dictionary
+        data = msgpack.unpackb(request.content)  # unpack dict object
         data = self.calculate_heart_rate(data)  # adds heart rate to data
         self.ecg_buffer.write(data)  # save to buffer
         self.frames_received += 1
@@ -471,8 +471,8 @@ class EEGHandler(Handler):
             self.head_x.append(all_names[name][0])
             self.head_y.append(all_names[name][1])
 
-        self.spectrogram_buffer = DataBuffer()
-        self.spectrogram_lock = self.spectrogram_buffer.get_ticket()
+        #self.spectrogram_buffer = RingBuffer(self.channels+['spec_time'], 10)
+        #self.spectrogram_lock = self.spectrogram_buffer.get_ticket()
         self.initialized = True
 
     def INGEST(self, request):
@@ -480,11 +480,6 @@ class EEGHandler(Handler):
         if not self.initialized:
             return
         self.frames_received += 1
-        '''
-        sent = int(request.header['frames-sent'])
-        if sent != self.frames_received:
-            self.log("DIFF: {}, {}".format(sent, self.frames_received))
-        '''
         data = msgpack.unpackb(request.content)  # unpack dict object
         self.filter(data)
         t0 = time.time()
@@ -633,32 +628,30 @@ class EEGHandler(Handler):
             return
 
         freqs = np.fft.fftfreq(N, 1/self.sample_rate)[:N//2]  # frequency array
-        spectro_slice = np.zeros(len(freqs))  # array of zeros for the spectrogram slice
 
-        fourier_dict = {'frequencies': freqs.tolist()}  # numpy types are not JSON serializable
+        # numpy types are not JSON serializable, so they must be converted to a list
+        fourier_dict = {'frequencies': freqs.tolist()}
+        #spectro_dict = {'spec_time': [self.spec_time]}
 
         for name, channel_data in data.items():
+            if name == 'time':
+                continue  # don't perform an FFT on the time series lol
+
             fft = (np.fft.fft(channel_data)[:N//2])/N  # half frequency range and normalize
             fft = np.sqrt(np.real(fft)**2 + np.imag(fft)**2)
 
             # set fft column
             fourier_dict[name] = fft.tolist()
 
-            # Add square of fft to spectrogram slice
-            #spectro_slice += fft*fft
-            if name in ['Fp1', 'Fp2']:
-                spectro_slice += fft
+            #Add square of fft to spectrogram slice
+            #must be 2D list because this is being put into an image glyph
+            #spectro_dict[name] = [[fft.tolist()]]
 
         fourier_json = json.dumps(fourier_dict)
         self.fourier_buffer.write(fourier_json)
 
-        spectro_dict = {
-            #'slice': [[np.sqrt(spectro_slice/len(freqs)).tolist()]],  # normalize + Bokeh format
-            'slice': [[spectro_slice.tolist()]],
-            'spec_time': [self.spec_time]}  # time position of FFT slice
-
-        spectro_json = json.dumps(spectro_dict)
-        self.spectrogram_buffer.write(spectro_json)
+        #spectrogram
+        #self.spectrogram_buffer.write(spectro_dict)
 
     def update_headplot(self):
         """ Calculate head plot data values and return a response object to send """

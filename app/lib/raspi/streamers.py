@@ -219,7 +219,7 @@ class EEGStreamer(Streamer):
             data[channel] = []
 
         try:  # attempt to read from board
-            raw_data = self.board.get_board_data()
+            raw_data = self.board.get_board_data()  # data measured in uV
         except Exception as e:
             return
 
@@ -227,9 +227,9 @@ class EEGStreamer(Streamer):
         data['time'] = list(raw_data[self.time_channel] - self.start_time)
 
         for i, j in enumerate(self.eeg_channel_indexes):
-            data[self.eeg_channel_names[i]] = list(raw_data[j] / 1000000)  # convert from uV to V
+            data[self.eeg_channel_names[i]] = list(raw_data[j])
 
-        data = json.dumps(data).encode(self.encoding)
+        data = msgpack.packb(data)  # pack dict object
         self.frames_sent += 1
 
         resp = HTTPRequest()  # new response
@@ -344,7 +344,7 @@ class ECGStreamer(Streamer):
         for i, j in enumerate(self.pulse_channel_indexes):
             data[self.pulse_channel_names[i]] = list(raw_data[j])
 
-        data = json.dumps(data).encode(self.encoding)
+        data = msgpack.packb(data)  # pack dict object
         self.frames_sent += 1
 
         resp = HTTPRequest()  # new response
@@ -435,7 +435,9 @@ class SynthEEGStreamer(Streamer):
         for channel in self.eeg_channel_names:  # lists of channel data
             data[channel] = []
 
-        try:  # attempt to read from board
+        # attempt to read from board
+        # data collected in uV
+        try:
             raw_data = self.board.get_board_data()
         except Exception as e:
             return
@@ -444,7 +446,7 @@ class SynthEEGStreamer(Streamer):
         data['time'] = list(raw_data[self.time_channel] - self.start_time)
 
         for i, j in enumerate(self.eeg_channel_indexes):
-            data[self.eeg_channel_names[i]] = list(raw_data[j] / 1000000)  # convert from uV to V
+            data[self.eeg_channel_names[i]] = list(raw_data[j])
 
         data = msgpack.packb(data)  # pack dict object
         self.frames_sent += 1

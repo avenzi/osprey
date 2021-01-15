@@ -12,4 +12,4 @@ sudo pkill python
 sudo pkill python3
 
 # run python file that starts the server
-python3 ../app/run_server.py
+sudo python3 ../app/run_server.py
