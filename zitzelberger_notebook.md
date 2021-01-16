@@ -33,6 +33,18 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### January 15th, 2021:
+
+Today I fixed an issue with the EEG x-axis starting at the wrong location when first entering the EEG stream page. Additionally, the y-axis range now automatically adjusts to match the range of each EEG channel individually (using the handy figure.y_range.only_visible attribute). To do this, however, I had to remove the panning/zooming tools as they disabled the auto-scaling.
+
+I also fixed an issue with the color mapping of the head plots. It turns out that adding a non-default tick formatter to the colorbar breaks the setter function for the low and high color mapper values (I used a custom formatter to increase clarity of the tick marks). According to the bokeh documentation, this is intended behavior for some reason. To work around this, a new ColorMapper object needs to replace the old one each time, which is a little annoying. 
+
+I also experimented with bringing back the spectrogram, this time utilizing the new radio buttons I added yesterday to select an individual channel. However this means that the full spectrogram data for each channel needs to be sent to the browser, and each image rendered individually. This significantly decreased performance so I decided to leave it out. Incidentally, I did figure out why occasional blank spectrogram slices were appearing - it's because I'm using my DataBuffer class, which only stores one time instance. When switching to the RingBuffer, the blank lines were gone but my RingBuffer class is not designed to handle 2D arrays. So, if I were to implement the spectrogram figures in the future (which I doubt), I would need to subclass the RungBuffer class and reconfigure how data is written into it's internal buffer.
+
+Tomorrow I will look into using msgpack to send data to the browser to decrease the payload size. This will require the use of an adapter function for the AjaxDataSource to understand it, and I'm not sure how much of a performance decrease that will entail. I expect that it will be a net overall positive.
+
+I also have recurring unsolved issue where the server and pi processes fail to terminate when issuing a keyboard interrupt. I am unsure of the cause and would like to do some digging.
+
 ##### January 14th, 2021:
 
 I have solved the issue discussed yesterday. The simplest solution I found was to instruct the server to reject any data requests received before it has finished sending the previous one. This prevents any data being sent out of order. 
@@ -40,8 +52,6 @@ I have solved the issue discussed yesterday. The simplest solution I found was t
 I was also able to add a "smoothing" feature to the EEG stream. Data chunks are still sent at the same interval (once per second), but the plot now incrementally slides the x-axis range to give the appearance of continuity. This effect is a little choppy at the moment due to the unpredictability of how long it will take for the next data chunk to load in. In the process of adding this feature, I also removed the clutter of numerous figures for each EEG channel in favor of a single figure with toggleable buttons to select which channel to view. I believe this increases performance since only one line plot must be rendered at any given moment.
 
 I also updated the x-axis time tick marks to represent time since the start of the stream instead of raw epoch time.
-
-
 
 ##### January 13th, 2021:
 
