@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block title %}Connected Streams{% endblock %}
+
+{% block content %}
+  <ul>
+    {% for stream_key in g.redis.execute_command('keys info:*') %}
+    {% set stream_name = g.redis.execute_command('hget {} name'.format(stream_key)) %}
+      <li><a href="{{ url_for('streams.stream', name=stream_name) }}">{{ stream_name }}</a>
+    {% endfor %}
+  </ul>
+{% endblock %}

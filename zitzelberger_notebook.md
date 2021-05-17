@@ -33,6 +33,18 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### May 17th, 2021:
+
+Over the last semester I have been working to rewrite the entire application to use high-level infrastructure. I have chosen to use Flask as the front-end to replace the browser oriented functionality, and Redis as the middleware database to store the sensor streams.
+
+As of today, I have rewritten the application to use Flask and Redis, however the sensor streams are not yet fully functional. I am currently using my nodal structure and sockets to stream data from the Raspberri Pis to the server, but instead of storing the data in my circular buffers, the data gets dumped into the redis database. Eventually I would like to completely remove my nodal structure in favor of streaming the data directly from the Pis to the redis database on the server, and I will begin work on that once I have the current setup functional.
+
+I am starting a new branch on the GitLab dedicated to this rework, called development_branch, as I hope this will become the main focus of all further development. 
+
+My main focus right now is to create a reasonable structure within the redis database in which to store the sensor streams. My current idea is to have each sensor stream in a separate "STREAM" data type in redis, denoted with the key "stream:StreamName". There will then be a small table associated with each stream denoted by "info:StreamName" that will hold any information that the Flask application needs access to, such as what type of data the stream holds and whether it is currently active. I also need to create a method to separate out streaming sessions by storing a session to disk when it is stopped and starting an empty database for each new session.
+
+
+
 ##### January 15th, 2021:
 
 Today I fixed an issue with the EEG x-axis starting at the wrong location when first entering the EEG stream page. Additionally, the y-axis range now automatically adjusts to match the range of each EEG channel individually (using the handy figure.y_range.only_visible attribute). To do this, however, I had to remove the panning/zooming tools as they disabled the auto-scaling.

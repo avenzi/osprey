@@ -1,5 +1,6 @@
 # machine-specific config files
-config.json
+config/server_config.json
+config/pi_config.json
 
 # Ignore Python bytecode
 __pycache__
@@ -9,10 +10,14 @@ __pycache__
 venv/*
 
 # Ignore Log file
-*.Log
+logs/*
+*.log
 
-# Raspberry Pi .gitignore
-__pycache__
+# Ignore data
+data/*
 *.mp3
 *.wav
 *.jpg
+
+# Ignore .idea
+.idea
