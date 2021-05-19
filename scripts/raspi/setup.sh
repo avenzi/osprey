@@ -19,6 +19,7 @@ pip3 install -r scripts/raspi/python_requirements.txt  # install requirements (d
 #loading $! "Installing Python3 and dependent requirements.... \n\
 #Please wait until this is finished to provide configuration information\n"
 
+. venv/bin/activate
 python3 data_transfer_lib/setup_pi.py # Get configuration from user
 printf "No further interaction is required.\nInstallation will continue, and afterward the Pi will reboot.\n"
 sleep 3

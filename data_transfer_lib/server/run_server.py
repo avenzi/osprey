@@ -1,5 +1,4 @@
 import json
-
 from server.server_lib import Server, CONFIG_PATH
 
 # get configured settings if they already exist

@@ -31,5 +31,6 @@ pip3 install -r scripts/server/python_requirements.txt  # install requirements (
 #loading $! "Installing Python3 and dependent requirements.... \n\
 #Please wait until this is finished to provide configuration information\n"
 
+. venv/bin/activate
 python3 data_transfer_lib/setup_server.py # Get configuration from user
 exit

@@ -7,7 +7,7 @@ from io import BytesIO
 from random import random
 
 from lib import Base
-from raspi.pi_lib import Streamer, HTTPRequest, configure_port, CONFIG_PATH, PicamOutput
+from raspi.pi_lib import Streamer, RedisStreamer, HTTPRequest, configure_port, CONFIG_PATH, PicamOutput
 
 
 class TestStreamer(Streamer):
@@ -29,7 +29,7 @@ class TestStreamer(Streamer):
             self.val_1 += random()-0.5
             self.val_2 += random()-0.5
             self.val_3 += random()-0.5
-            data['time'].append(time.time())
+            data['time'].append(self.time())
             data['val_1'].append(self.val_1)
             data['val_2'].append(self.val_2)
             data['val_3'].append(self.val_3)
@@ -56,6 +56,38 @@ class TestStreamer(Streamer):
         Extended from base class in pi_lib.py
         """
         super().STOP(request)  # stop main loop
+
+
+class TestRedisStreamer(RedisStreamer):
+    def __init__(self):
+        super().__init__()
+        self.type = 'plot'
+
+        self.frames = 1           # how many frames are in each request
+        self.frames_sent = 0      # number of frames sent
+
+        self.val_1 = 0
+        self.val_2 = 1
+        self.val_3 = 2
+
+    def loop(self):
+        """ Maine execution loop """
+        data = {'time': [], 'val_1': [], 'val_2': [], 'val_3': []}
+        for i in range(10):
+            self.val_1 += random()-0.5
+            self.val_2 += random()-0.5
+            self.val_3 += random()-0.5
+            data['time'].append(self.time())
+            data['val_1'].append(self.val_1)
+            data['val_2'].append(self.val_2)
+            data['val_3'].append(self.val_3)
+            time.sleep(0.01)
+
+        pipe = self.redis.pipeline()
+        for i in range(len(data['time'])):
+            # get slice of each data point as dictionary
+            pipe.xadd('stream:'+self.name, {key: data[key][i] for key in data.keys()})
+        pipe.execute()
 
 
 class LogStreamer(Streamer):

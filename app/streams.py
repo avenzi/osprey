@@ -82,7 +82,7 @@ def plot_layout():
     # Get full layout json string for this stream
     # TODO: Not hard-code the various stream types here.
     #  It should be able to look through /boheh_layouts and find the right layout
-    if stream_name == 'TestStreamer':
+    if stream_name in ['TestStreamer', 'TestRedisStreamer']:
         layout = TestStreamer.lay
     elif stream_name == 'SenseStreamer':
         layout = SenseStreamer.lay

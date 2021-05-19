@@ -9,6 +9,8 @@ import inspect
 import time
 import os
 
+import redis
+
 from lib import HostNode, WorkerNode, HTTPRequest, SocketHandler
 
 CONFIG_PATH = '../config/raspi_config.json'
@@ -55,7 +57,7 @@ class Client(HostNode):
         """
         Overwritten from HostNode.run()
         Must be called on the main thread of a process.
-        Calls idle() and _run() on a new thread and waits for exit status.
+        Calls idle() on a new thread and waits for exit status.
         Blocks until exit status set (because this is the main thread)
         """
         self.log("Name: {}".format(self.name))
@@ -136,7 +138,7 @@ class Streamer(WorkerNode):
 
     def send(self, request, socket_handler=None):
         """
-        Overwriting WorkerNone send method
+        Overwriting WorkerNode send method
         Adds a user-agent header that identifies this request as being from a client streamer.
         """
         request.add_header('user-agent', 'STREAMER')
@@ -195,6 +197,183 @@ class Streamer(WorkerNode):
         self.start_time = time.time()
 
     def STOP(self, request):
+        """
+        Should be extended in streamers.py
+        Ends the streaming process
+        """
+        self.streaming.clear()  # stop streaming, stopping the main execution while loop
+        self.log("Stopped {}".format(self.name))
+
+
+class RedisClient(HostNode):
+    """
+    Makes a connection to the server.
+    Handler classes are used to handle individual requests.
+    call run() to start.
+    <retry> number of seconds to wait before attempting to connect to the server each time
+    <debug> debug level of the client
+    """
+    def __init__(self, retry=2, debug=0):
+        with open(CONFIG_PATH) as file:  # get config options
+            self.config = json.load(file)
+        self.ip = self.config.get('SERVER_IP_ADDRESS')  # ip address of server
+        self.server_port = self.config.get('SERVER_PORT')
+        self.redis_port = self.config.get('REDIS_PORT')  # port to connect through
+        self.password = self.config.get('REDIS_PASS')
+
+        name = self.config.get('NAME')  # display name of this Client
+        super().__init__(name, auto=False)
+        self.set_debug(debug)
+        self.set_log_path(self.config.get('LOG_PATH'))
+        self.retry = retry
+
+    def run(self):
+        """
+        Overwritten from HostNode.run()
+        Must be called on the main thread of a process.
+        Calls idle() on a new thread and waits for exit status.
+        Blocks until exit status set (because this is the main thread)
+        """
+        self.log("Name: {}".format(self.name))
+        self.log("Device IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
+        self.log("Server IP: {}".format(self.ip))
+
+        # search for a server to connect to, call _run() when found.
+        Thread(target=self.idle, name=self.name+'-IDLE', daemon=True).start()
+        self.run_exit_trigger(block=True)  # block main thread until exit
+
+    def _run(self):
+        """
+        Called by self.run() on a new thread.
+        Creates one instance of each handler type from collection_lib
+            For each handler class, listens for new connections then starts them on their own thread.
+        """
+        # get selected handler classes
+        from . import streamers
+        members = inspect.getmembers(streamers, inspect.isclass)  # all classes [(name, class), ]
+        for member in members:
+            if member[1].__module__.split('.')[-1] == 'streamers':  # imported from the streamers.py file
+                config = self.config['STREAMERS'].get(member[0])  # configuration of whether this class is to be used or not
+                if config and config.upper() == 'Y':  # this class is in the config file and set to be used
+                    self.connect(member[1])  # connect this StreamerClass to the server
+                else:  # not in the config file or not set to be used
+                    self.log("Streamer class {} is not being used. Set it's keyword to 'Y' in {} to use".format(member[0], CONFIG_PATH))
+
+    def connect(self, StreamerClass):
+        """ Create socket object and try to connect it to the server, then run the Node class on a new process """
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
+        try:  # connect socket to given address
+            self.debug("Attempting to connect {} to server".format(StreamerClass.__name__), 2)
+            sock.connect((self.ip, self.server_port))
+            sock.setblocking(True)
+            self.debug("Socket Connected", 2)
+        except Exception as e:
+            self.throw("Failed to connect socket to server:", e)
+            return False
+
+        r = redis.Redis(host=self.ip, port=self.redis_port, password=self.password)
+        try:
+            if r.ping():
+                self.log("Connection to Redis Database verified on {}:{}".format(self.ip, self.redis_port))
+        except Exception as e:
+            self.throw("Could not connect to Redis Database", e)
+            return False
+
+        worker = StreamerClass()  # create an instance of this node class
+        worker.ip = self.ip
+        worker.device = self.device
+        worker.server_port = self.server_port
+        worker.redis_port = self.redis_port
+        worker.password = self.password
+        worker.set_source(sock)  # set this socket as a data-source socket for the client
+        self.run_worker(worker)  # run the new worker node on a parallel process
+
+    def idle(self):
+        """
+        Attempts to connect a dummy socket to the server.
+            If no server found, waits some amount of time then tries again.
+            Once found, closes the dummy socket and calls self._run()
+        """
+        self.log("Waiting to find server...")
+        while True:  # try to connect every interval
+            time.sleep(self.retry)  # wait to try again
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # AF_INET = IP, SOCK_STREAM = TCP
+            try:  # connect socket to given address
+                sock.connect((self.ip, self.server_port))
+                self.log("Server found.")
+                sock.shutdown(socket.SHUT_RDWR)
+                sock.close()
+                break
+            except Exception as e:  # failed to connect
+                pass
+
+        # Server was found, run on a new thread
+        Thread(target=self._run, name=self.name+'-RUN', daemon=True).start()
+
+
+class RedisStreamer(WorkerNode):
+    """
+    To be used on a client to send requests to a remote Redis database
+    """
+    def __init__(self):
+        super().__init__()
+        self.streaming = Event()  # threading event flag set when actively streaming
+
+        self.device = None
+        self.ip = None
+        self.server_port = None
+        self.redis_port = None
+        self.password = None
+        self.type = None  # determined by derived class
+        self.redis = None
+
+        self.start_time = 0  # start time
+
+    def time(self):
+        """ Get time passed since the stream started """
+        return time.time() - self.start_time
+
+    def _run(self):
+        """
+        Overwrites _run method
+        Also runs the self._loop() method on a new thread
+        """
+        # start main execution loop
+        Thread(target=self._loop, name='{}-LOOP'.format(self.name), daemon=True).start()
+
+    def _loop(self):
+        """
+        Main execution loop for the streamer.
+        Runs self.loop defined by user in derived class.
+        """
+        # get connection to database and send stream info
+        self.redis = redis.Redis(host=self.ip, port=self.redis_port, password=self.password)
+        self.redis.hmset('info:'+self.name, {'name':self.name, 'device':self.device, 'type':self.type})
+        self.start()
+        while not self.exit:  # run until application shutdown
+            self.streaming.wait()  # wait until streaming
+            self.loop()  # call user-defined main execution
+
+    def loop(self):
+        """
+        Should be overwritten by derived class.
+        Should not be called anywhere other than _loop()
+        """
+        pass
+
+    def start(self):
+        """
+        Should be extended in streamers.py
+        Begins the stream
+        """
+        if self.streaming.is_set():
+            self.log("{} received START request, but it is already running".format(self.name))
+            return
+        self.streaming.set()  # set streaming, which starts the main execution while loop
+        self.log("Started {}".format(self.name))
+        self.start_time = time.time()
+
+    def stop(self):
         """
         Should be extended in streamers.py
         Ends the streaming process

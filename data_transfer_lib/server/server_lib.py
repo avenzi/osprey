@@ -161,7 +161,6 @@ class Server(HostNode):
         self.log("New connection from {} on {} ({})".format(display_name, device_name, request.origin.peer))
 
 
-
 class Handler(WorkerNode):
     """
     Worker node for the Server

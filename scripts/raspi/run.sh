@@ -16,4 +16,7 @@ cd ../../
 #sudo pkill python
 
 # run python file to start the client
-sudo python3 data_transfer_lib/run_pi.py
+. venv/bin/activate
+# can't run with sudo, or it won't be run inside virtual environment.
+# This might mess up acessing certain files, though.
+python3 data_transfer_lib/run_pi.py
