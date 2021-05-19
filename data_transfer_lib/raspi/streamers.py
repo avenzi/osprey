@@ -26,13 +26,14 @@ class TestStreamer(Streamer):
         """ Maine execution loop """
         data = {'time': [], 'val_1': [], 'val_2': [], 'val_3': []}
         for i in range(10):
-            self.val_1 += random()
-            self.val_2 += random()
-            self.val_3 += random()
+            self.val_1 += random()-0.5
+            self.val_2 += random()-0.5
+            self.val_3 += random()-0.5
             data['time'].append(time.time())
             data['val_1'].append(self.val_1)
             data['val_2'].append(self.val_2)
             data['val_3'].append(self.val_3)
+            time.sleep(0.01)
 
         resp = HTTPRequest()  # new INGEST request
         resp.add_request("INGEST")
@@ -41,7 +42,6 @@ class TestStreamer(Streamer):
         resp.add_header('frames-sent', self.frames_sent)
         resp.add_content(data)
         self.send(resp)
-        time.sleep(1)
 
     def START(self, request):
         """

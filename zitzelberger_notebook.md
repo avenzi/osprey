@@ -33,6 +33,13 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### May 18th, 2021:
+
+Today I was able to get a synthetic data stream functional on the new Flask+Redis system. There were some unfortunate problems with Redis that I did not predict. Everything read from the database must first be converted into a python dictionary by looping over each data entry and adding it to a list while also converting it to a float, which is extremely inefficient. There does not seem to be a way to natively do this in redis-py. I do not yet know if this will be a major issue as haven't yet tried multiple high-capacity streams at once. Luckily, this should not be as a much of a problem with the video stream as each frame should just remain as bytes until it reaches the browser where it is displayed - no data type conversion will be necessary at any stage.
+
+Also I have noticed that due the the asynchronous access that Flask has to the redis database, requests are not guaranteed to send data to the browser in the right order. I could fix this by serializing access to the database, but I am afraid that will cause problems in the future, so I'd rather it be a last resort. This only seems to happen with AjaxDataSources with high polling rates, so I would like to try and pull the same trick that I did awhile ago with the EEG stream, where the browser receives large chunk of data and scrolls the plot to give the illusion of continuity. This will allow me to reduce the polling rate of the AjaxDataSource.
+
+
 ##### May 17th, 2021:
 
 Over the last semester I have been working to rewrite the entire application to use high-level infrastructure. I have chosen to use Flask as the front-end to replace the browser oriented functionality, and Redis as the middleware database to store the sensor streams.
@@ -789,5 +796,4 @@ Preliminary OpenBCI Purchase List:
 * EMG/ECG Foam Solid Gel Electrodes (30/pack) (2x): $13 x2
 * EMG/ECG Snap Electrode Cables: (x2) $40 x2
 * Total cost: ~$1,811
-
 

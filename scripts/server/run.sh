@@ -25,8 +25,8 @@ sudo fuser -k 5002/tcp  # clear activity on port 5002
 # start redis server
 redis-server config/redis.conf
 
-# run data transfer application (in background) and dump to log file
-python3 data_transfer_lib/run_server.py #&> logs/data_tramsfer.log &
+# run data transfer application in background
+python3 data_transfer_lib/run_server.py &
 
 # call gunicorn with appropriate config file
 gunicorn -c config/gunicorn_prod.conf.py "app.__init__:create_app()"

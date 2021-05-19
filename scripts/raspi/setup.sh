@@ -8,17 +8,16 @@ source ../misc.sh  # import loading function
 # navigate to top level dir
 cd ../../
 
-python3 data_transfer_lib/setup_pi.py # Get configuration from user
-exit
-
 (
 # ensure python is installed
-sudo apt-get -y install python3
-sudo apt-get -y install python3-pip
-sudo pip3 install -r ./python_requirements.txt  # install requirements
-) > /dev/null &
-loading $! "Installing Python3 and dependent requirements.... \n\
-Please wait until this is finished to provide configuration information\n"
+#sudo apt-get -y install python3
+#sudo apt-get -y install python3-pip
+python3 -m venv venv
+. venv/bin/activate
+pip3 install -r scripts/raspi/python_requirements.txt  # install requirements (don't use sudo in venv!)
+) #> /dev/null &
+#loading $! "Installing Python3 and dependent requirements.... \n\
+#Please wait until this is finished to provide configuration information\n"
 
 python3 data_transfer_lib/setup_pi.py # Get configuration from user
 printf "No further interaction is required.\nInstallation will continue, and afterward the Pi will reboot.\n"
@@ -26,7 +25,7 @@ sleep 3
 
 (
 # Add crontab line to start the app on boot, targetting data-hub/main/run.sh
-run_path="$(pwd -P)/run_pi.sh"  # get absolute path of run.sh
+run_path="$(pwd -P)/run.sh"  # get absolute path of run.sh
 (sudo crontab -l ; echo "@reboot sh ${run_path}") 2>/dev/null | sort | uniq | sudo crontab -
 ) > /dev/null &
 loading $! "Writing Crontab line to start the application on boot..."

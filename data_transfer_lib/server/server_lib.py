@@ -5,7 +5,6 @@ import json
 import inspect
 import time
 
-from bokeh.embed import json_item
 from lib import Base, HostNode, WorkerNode, SocketHandler, HTTPRequest, HTTPResponse
 
 CONFIG_PATH = '../config/server_config.json'
@@ -148,20 +147,19 @@ class Server(HostNode):
             self.throw("Handler Class '{}' not found in handlers.py".format(class_name))
             return
 
+        worker = HandlerClass(name=display_name, device=device_name)  # create new worker node
+
+        request.origin.halt()     # stop running this socket
+        worker.set_source(request.origin.socket)  # extract the raw socket and set it as the new source
+        self.remove_socket(request.origin.id)  # remove the handler from this node
+        self.run_worker(worker)   # run the Worker on a new process
+
         # TODO: If we want the stream to start automatically as soon as it's connected, this is a good place to do it
         start_req = HTTPRequest()
         start_req.add_request('START')
         self.send(start_req, request.origin)  # send start request back to client
         self.log("New connection from {} on {} ({})".format(display_name, device_name, request.origin.peer))
 
-        worker = HandlerClass()  # create new worker node
-        worker.name = display_name
-        worker.device = device_name
-
-        request.origin.halt()     # stop running this socket
-        worker.set_source(request.origin.socket)  # extract the raw socket and set it as the new source
-        self.remove_socket(request.origin.id)  # remove the handler from this node
-        self.run_worker(worker)   # run the Worker on a new process
 
 
 class Handler(WorkerNode):
@@ -180,7 +178,6 @@ class Handler(WorkerNode):
         # with open(CONFIG_PATH, 'r') as file:  # get config settings
             # config = json.load(file)
         self.redis = redis.Redis(host='127.0.0.1', port=5001, password='thisisthepasswordtotheredisserver', decode_responses=True)
-        self.redis_pipe = self.redis.pipeline()
 
     def HANDLE(self, request, threaded=True):
         """
@@ -216,55 +213,3 @@ class Handler(WorkerNode):
     def time(self):
         """ Get time passed since the stream started """
         return time.time() - self.start_time
-
-
-class GraphStream(Base):
-    """
-    Used to format data to be send to a browser with a Bokeh plot
-    <layout> is a Bokeh layout object.
-    """
-    def __init__(self, layout):
-        self.layout = layout
-
-    def stream_page(self):
-        """ Returns the response for the plot page """
-        response = HTTPRequest()
-        response.add_response(200)
-        response.add_header('content-type', 'text/html')
-
-        with open(PAGES_PATH+'/plot_page.html', 'r') as file:
-            html = file.read()
-        response.add_content(html)  # send initial page html
-        return response
-
-    def plot_json(self):
-        """
-        Returns response with full JSON of serialized plot object to be displayed in HTML.
-        This is before any data is updated - it's just the basic plot layout.
-        """
-        response = HTTPResponse(200)
-        response.add_header('content-type', 'application/json')
-        response.add_content(json.dumps(json_item(self.layout)))  # send plot JSON
-        return response
-
-    def update_json(self, buffer, event):
-        """
-        Returns a response constructed from the data in the given buffer.
-        Assumes the buffer read() method retrieves the appropriate data.
-            (i.e. whether the data is meant to be appended to a plot or replace it)
-        <buffer> is the data buffer from which to read.
-        <event> is the event object needed to read from the buffer.
-            - Obtained from buffer.get_read_lock()
-        """
-        data = buffer.read(event, block=False)  # read most recent data from the buffer
-        if data is not None:  # new data
-            # if data is str, assume it's already in JSON format
-            if type(data) != str:
-                data = json.dumps(data)  # convert to json
-            response = HTTPResponse(200)
-            response.add_header('content-type', 'application/json')
-            response.add_header('Cache-Control', 'no-store')  # don't store old data or it will try to write it again when 304 code is received.
-            response.add_content(data)
-        else:  # no new data
-            response = HTTPResponse(304)  # send 'not modified' response
-        return response

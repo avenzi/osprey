@@ -9,16 +9,18 @@ import msgpack
 import time
 
 from lib import HTTPRequest, HTTPResponse, DataBuffer, RingBuffer, MovingAverage
-from server.server_lib import Handler, GraphStream, CONFIG_PATH
+from server.server_lib import Handler, CONFIG_PATH
 
 
 class TestHandler(Handler):
     """ Handles RedisTest stream """
-    def __init__(self):
+    def __init__(self, name, device):
         super().__init__()
+        self.name = name
+        self.device = device
 
         self.type = 'plot'  # stream type to match html template
-        self.redis.execute_command('HMSET info:{0} name {0} type {1}'.format(self.name, self.type))
+        self.redis.hmset('info:'+self.name, {'name':self.name, 'device':self.device, 'type':self.type})
 
         self.frames_sent = 0
         self.frames_received = 0
@@ -26,10 +28,11 @@ class TestHandler(Handler):
     def INGEST(self, request):
         """ Handle table data received from Pi """
         data = json.loads(request.content.decode(request.encoding))  # raw data
+        pipe = self.redis.pipeline()
         for i in range(len(data['time'])):
             # get slice of each data point as dictionary
-            self.redis_pipe.xadd(self.name, {key: data[key][i] for key in data.keys()})
-        self.redis_pipe.execute()
+            pipe.xadd('stream:'+self.name, {key: data[key][i] for key in data.keys()})
+        pipe.execute()
         self.frames_received += 1
 
 
@@ -219,8 +222,6 @@ class SenseHandler(Handler):
 
         # create layout
         lay = layout([[humid, temp], [press, orient]])
-        # pass layout into GraphStream object, polling interval in ms, domain of x values to display
-        self.graph = GraphStream(lay)
 
         self.buffer = DataBuffer()
         self.buffer_lock = self.buffer.get_ticket()
@@ -329,7 +330,6 @@ class ECGHandler(Handler):
 
         # create layout
         lay = layout([[ecg_list, [pulse, heart_rate]]])
-        self.graph = GraphStream(lay)  # pass layout into GraphStream object
 
         size = int(self.ecg_store_interval * self.sample_rate)  # store interval in number of samples
         self.ecg_buffer = RingBuffer(self.ecg_channels+['heart_rate', 'time'], size, self.data_path+'/ECG_data')
@@ -465,7 +465,6 @@ class EEGHandler(Handler):
 
         # Massive Bokeh layout configuration imported from /pages/eeg_layout.py
         bokeh_layout = configure_layout(self.id, self.channels)
-        self.graph = GraphStream(bokeh_layout)  # pass into graphstream
 
         # size of EEG buffer (# of data points to keep).
         # FFT window is in seconds, sample rate is data points per second.
