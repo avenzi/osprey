@@ -1,6 +1,6 @@
 # machine-specific config files
 config/server_config.json
-config/pi_config.json
+config/raspi_config.json
 
 # Ignore Python bytecode
 __pycache__
