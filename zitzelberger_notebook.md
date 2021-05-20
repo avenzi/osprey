@@ -33,6 +33,12 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### May 19th, 2021:
+
+Today I was able to make a functional test stream of data from a Pi to the server without using my data transfer application as an in-between. I did this by connecting directly to the redis database from the Pi. I had no idea whether this would be faster or slower, because while this bypasses my data transfer code, it also might introduce network latency into the redis operations (but I can't be sure, I don't know how redis handles it). The two test streams (one using my data-transfer app and the other connecting directly to redis) appear identical as of right now, so I am going to continue using them both until I can tell which is better.
+
+I also worked on adding buttons to the website that control whether or not the streams are active. These buttons start and stop the redis database server and also control where the redis database dump file is moved to afterward. This effectively means that starting and stopping the database separates the streaming sessions into separate dump files.
+
 ##### May 18th, 2021:
 
 Today I was able to get a synthetic data stream functional on the new Flask+Redis system. There were some unfortunate problems with Redis that I did not predict. Everything read from the database must first be converted into a python dictionary by looping over each data entry and adding it to a list while also converting it to a float, which is extremely inefficient. There does not seem to be a way to natively do this in redis-py. I do not yet know if this will be a major issue as haven't yet tried multiple high-capacity streams at once. Luckily, this should not be as a much of a problem with the video stream as each frame should just remain as bytes until it reaches the browser where it is displayed - no data type conversion will be necessary at any stage.
