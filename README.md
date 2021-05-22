@@ -1,10 +1,10 @@
 ##### Setup
 
-On the data server, run           $bash scripts/setup_server.sh
-On any raspberry pi, run         $bash scripts/setup_pi.sh
+On the data server, run           $bash scripts/server/setup.sh
+On any raspberry pi, run         $bash scripts/raspi/setup.sh
 Follow the instructions given.
 
-All configuration options can be modified in app/lib/raspi/config.json and app/lib/server/config.json
+All configuration options can be modified in config/server_config.json and config/raspi_config.json
 
 ##### Running the application
 
@@ -12,7 +12,7 @@ On the pi, no further interaction is necessary. The application will automatical
 
 For the server, make sure that the port you wish to use is open on the network the server is connected to.
 
-Start the server by running  $bash scripts/run_server.sh
+Start the server by running  $bash scripts/server/run.sh
 
 Use a browser to navigate to the IP of the server with the port number you assigned (e.g. 123.456.78.9:12345). 
 

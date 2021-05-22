@@ -25,4 +25,3 @@ orient.line(x='time', y='yaw', legend_label='Yaw', color='red', source=source)
 
 # create layout
 lay = layout([[humid, temp], [press, orient]])
-lay = json.dumps(json_item(lay))  # convert to json string

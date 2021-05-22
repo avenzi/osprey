@@ -2,11 +2,58 @@
 
 {% block title %}Connected Streams{% endblock %}
 
+{% block head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script type="text/javascript" charset="utf-8">
+    function log(msg) {
+        console.log(msg)
+        $('#logs').append('> ' + msg + '<br>');  // append a message to the log
+    }
+
+    $(document).ready(function() {
+        namespace = '/browser';  // namespace for talking with front-end server
+        var socket = io(namespace);
+
+        socket.on('connect', function() {
+            log("SocketIO connected to server");
+        });
+
+        socket.on('disconnect', function() {
+            log("SocketIO disconnected from server");
+        });
+
+        socket.on('log', function(msg) {
+            log(msg);
+        });
+
+        socket.on('update', function(data) {
+            $('#streams ul').empty()
+            data.forEach(function(name) {
+                $('#streams ul').append(`<li><a href='/stream?name=${name}'>${name}</a></li>`);
+            });
+        });
+
+        $('button.command').on('click', function(event) {
+            socket.emit('command', event.target.value);
+        });
+    });
+</script>
+{% endblock %}
+
 {% block content %}
-  <ul>
-    {% for stream_key in g.redis.execute_command('keys info:*') %}
-    {% set stream_name = g.redis.execute_command('hget {} name'.format(stream_key)) %}
-      <li><a href="{{ url_for('streams.stream', name=stream_name) }}">{{ stream_name }}</a>
-    {% endfor %}
-  </ul>
+<div id="commands">
+  {% for label, command in commands.items() %}
+      <button class="command" value="{{ command }}">{{ label }}</button>
+  {% endfor %}
+</div>
+
+<h2>Connected Streams</h2>
+<div id="streams">
+  <ul></ul>
+</div>
+
+<h2>Logs</h2>
+<div id="logs"></div>
+
 {% endblock %}

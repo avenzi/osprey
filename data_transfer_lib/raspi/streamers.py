@@ -4,6 +4,8 @@ import msgpack
 import os
 from io import BytesIO
 
+import socketio
+
 from random import random
 
 from lib import Base

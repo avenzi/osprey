@@ -27,7 +27,7 @@ class Base:
         self.close = False  # status flag to determine when the class should completely shutdown
         self.exit_condition = Condition()  # condition lock to stop running
         self.shutdown_condition = Condition()  # condition lock block until everything is completely shutdown
-        self.encoding = 'iso-8859-1'  # encoding for all data streams (latin-1)
+        self.encoding = 'iso-8859-1'  # encoding for all data main (latin-1)
 
     def run_exit_trigger(self, block=False):
         """
@@ -834,6 +834,7 @@ class WorkerNode(Node):
         Should be run on it's own Process's Main Thread
         """
         self.pipe = pipe
+        self.log("RUNNING")
         #self.debug("Worker '{}' started running on '{}'".format(self.name, self.device), 1)
         Thread(target=self._run, name='RUN', daemon=True).start()
         Thread(target=self._run_pipe, name='PIPE', daemon=True).start()

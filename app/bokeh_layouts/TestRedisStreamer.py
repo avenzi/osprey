@@ -5,7 +5,7 @@ from bokeh.embed import json_item
 import json
 
 source = AjaxDataSource(
-    data_url='/stream/update?name={}'.format('TestStreamer'),
+    data_url='/stream/update?name={}'.format('TestRedisStreamer'),
     method='GET',
     polling_interval=500,  # in milliseconds
     mode='append',  # append to existing data
