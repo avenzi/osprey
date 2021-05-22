@@ -33,6 +33,20 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### May 22nd, 2021:
+
+One problem that I discovered with my redis-streaming setup from earlier in the week is that I have no way to communicate with the Raspberry Pis once the stream has started. This is because I am no longer using my socket-based application to send commands like when to start and stop. This is a problem because I want minimal interaction with the Pis themself - everything should be able to be done in a web browser connected to the server.
+
+It was at this point that I started looking into the Flask-socketIO package, which is a flask extension of the  python-socketIO package, which is in turn a python extension of the socketIO library. This package would allow me to essentially replace my entire socket-based messaging system with an external library. Ideally, I would be able to use this to send commands back to the raspberry Pis to notify when they should start and  stop the data-read loops. As I was researching this, I also discovered that the socketIO library can be used as an implementation of a websocket protocol for webpages - this is also really fortunate because I will need a way to deal with websockets for the video stream.
+
+Getting flask-socketIO and python-socketIO functioning was rather difficult, as I had to integrate it into my current stack of Gunicorn + Redis. I ended up choosing Eventlet for an asynchronous worker (at the recommendation of the Flask-socketIO documentation), and was able to get the gunicorn application running with it. However, one problem is that Redis is single-threaded, so it does not benefit from Eventlet workers. Eventually I would like to move away from redis to something more robust like InfluxDB, but I am sticking with redis for now due to it's simplicity.
+
+Also it is important to note that I had to use a previous version of Eventlet (0.30.2 as opposed to the current 0.31.0) due to a bug in the current patch that breaks with gunicorn.
+
+After finally getting this stack to play nicely with each other, I was able to implement a command system on the website. The Flask server has a defined set of events that can respond to socketIO messages from the Streamer classes on the Raspberry Pis and a connected web browser. I made some simple buttons on the browser that send commands to the server which then relays the messages to the Pis, giving me a method of communication from the browser to the Pis. 
+
+Finally, now that my socket-based data transfer layer is no longer being used, I cleaned out everything related to that library (which was painful yet cathartic because I spent so much time on it over the last year). All that remains is the threading/process structure that runs on the Pi's and runs the streamer classes on separate processes. Eventually I would also like to replace this with another library, but it is not causing any problems at the moment so I will leave it for now.
+
 ##### May 19th, 2021:
 
 Today I was able to make a functional test stream of data from a Pi to the server without using my data transfer application as an in-between. I did this by connecting directly to the redis database from the Pi. I had no idea whether this would be faster or slower, because while this bypasses my data transfer code, it also might introduce network latency into the redis operations (but I can't be sure, I don't know how redis handles it). The two test streams (one using my data-transfer app and the other connecting directly to redis) appear identical as of right now, so I am going to continue using them both until I can tell which is better.
