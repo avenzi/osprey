@@ -2,8 +2,8 @@ import json
 import os
 
 from lib import validate_input
-from server.server_lib import CONFIG_PATH
 
+CONFIG_PATH = '../config/server_config.json'
 
 updating = False  # flag if updating existing config settings
 

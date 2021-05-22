@@ -1,5 +1,5 @@
 import json
-from raspi.pi_lib import Client, RedisClient, CONFIG_PATH
+from raspi.pi_lib import Client, CONFIG_PATH
 
 # get configured settings if they already exist
 try:
@@ -11,7 +11,7 @@ except Exception as e:
     quit()
 
 
-client = RedisClient(debug=2)  # create client
+client = Client(debug=2)  # create client
 client.run()  # run the client
 
 

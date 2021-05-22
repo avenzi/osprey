@@ -8,8 +8,7 @@ import json
 import msgpack
 import time
 
-from lib import HTTPRequest, HTTPResponse, DataBuffer, RingBuffer, MovingAverage
-from server.server_lib import Handler, CONFIG_PATH
+from lib import MovingAverage
 
 
 class TestHandler(Handler):
@@ -451,7 +450,7 @@ class EEGHandler(Handler):
         self.stop_sos_init = []
         self.stop_update = True
 
-        # dictionary of values for all widgets, imported from /pages/eeg_widgets
+        # dictionary of values for all widgets, imported from /old_server_stuff/eeg_widgets
         self.page_config = config
 
     def INIT(self, request):
@@ -463,7 +462,7 @@ class EEGHandler(Handler):
         if self.initialized:
             return
 
-        # Massive Bokeh layout configuration imported from /pages/eeg_layout.py
+        # Massive Bokeh layout configuration imported from /old_server_stuff/eeg_layout.py
         bokeh_layout = configure_layout(self.id, self.channels)
 
         # size of EEG buffer (# of data points to keep).
