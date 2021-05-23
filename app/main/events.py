@@ -13,28 +13,30 @@ def get_time():
 
 
 @socketio.on('connect', namespace='/browser')
-def connect():
+def browser_connect():
     """ On connecting to the browser """
     print('Browser connected: {}'.format(request.sid))
     browser_command('REFRESH')  # send streams immediately on connecting
 
 
 @socketio.on('disconnect', namespace='/browser')
-def disconnect():
+def browser_disconnect():
     """ On disconnecting from the browser """
     print('Browser disconnected: {}'.format(request.sid))
 
 
 @socketio.on('connect', namespace='/streamer')
-def connect():
-    """ On connecting to a streamer """
-    socketio.emit('log', 'Streamer connected', namespace='/browser')
+def streamer_connect():
+    """ On disconnecting from a streamer """
+    # TODO: this method does not seem to trigger. Not a big deal, but it should.
+    print("A Streamer connected")
 
 
 @socketio.on('disconnect', namespace='/streamer')
-def disconnect():
+def streamer_disconnect():
     """ On disconnecting from a streamer """
-    socketio.emit('log', 'Streamer disconnected', namespace='/browser')
+    # TODO: same issue as streamer_connect()
+    print("A Streamer disconnected")
 
 
 @socketio.on('log', namespace='/streamers')

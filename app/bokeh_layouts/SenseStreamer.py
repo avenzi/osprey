@@ -1,15 +1,13 @@
 from bokeh.plotting import figure
 from bokeh.models import AjaxDataSource
 from bokeh.layouts import layout
-from bokeh.embed import json_item
-import json
 
 source = AjaxDataSource(
-    data_url='/update?name={}'.format('SenseStreamer'),
+    data_url='/stream/update?name={}'.format('SenseStreamer'),
     method='GET',
-    polling_interval=100,  # in milliseconds
+    polling_interval=500,  # in milliseconds
     mode='append',  # append to existing data
-    max_size=100,  # Keep last 1000 data points
+    max_size=100,  # Keep last 100 data points
     if_modified=True)  # if_modified ignores responses sent with code 304 and not cached.
 
 humid = figure(title='Humidity', x_axis_label='time', y_axis_label='Percent', toolbar_location=None, plot_width=600, plot_height=300)

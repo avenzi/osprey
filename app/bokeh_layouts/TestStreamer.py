@@ -1,8 +1,6 @@
 from bokeh.plotting import figure
 from bokeh.models import AjaxDataSource
 from bokeh.layouts import layout
-from bokeh.embed import json_item
-import json
 
 source = AjaxDataSource(
     data_url='/stream/update?name={}'.format('TestStreamer'),

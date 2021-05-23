@@ -368,14 +368,13 @@ class WorkerNode(Node):
         Should be run on it's own Process's Main Thread
         """
         self.pipe = pipe
-        self.log("RUNNING")
         #self.debug("Worker '{}' started running on '{}'".format(self.name, self.device), 1)
         Thread(target=self._run, name='RUN', daemon=True).start()
         Thread(target=self._run_pipe, name='PIPE', daemon=True).start()
         self.run_exit_trigger(block=True)  # Wait for exit status on new thread
 
     def _run(self):
-        """ Starts running all sockets, if any. """
+        """ Starts running main event loop """
         pass
 
     def _run_pipe(self):

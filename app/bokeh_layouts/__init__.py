@@ -1,6 +1,6 @@
 from bokeh.embed import json_item
 from json import dumps
-from . import TestStreamer, TestRedisStreamer, SenseStreamer
+from . import TestStreamer, SenseStreamer
 
 
 def get_layout(name):
@@ -9,8 +9,6 @@ def get_layout(name):
     #  It should be able to look through /boheh_layouts and find the right layout
     if name == 'TestStreamer':
         layout = TestStreamer.lay
-    elif name == 'TestRedisStreamer':
-        layout = TestRedisStreamer.lay
     elif name == 'SenseStreamer':
         layout = SenseStreamer.lay
     else:

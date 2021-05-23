@@ -5,7 +5,7 @@ import time
 from random import random
 
 
-class TestRedisStreamer(Streamer):
+class TestStreamer(Streamer):
     def __init__(self):
         super().__init__()
         self.type = 'plot'
@@ -35,6 +35,47 @@ class TestRedisStreamer(Streamer):
             # get slice of each data point as dictionary
             pipe.xadd('stream:'+self.name, {key: data[key][i] for key in data.keys()})
         pipe.execute()
+
+
+class SenseStreamer(Streamer):
+    def __init__(self):
+        super().__init__()
+        self.type = 'plot'
+
+        from sense_hat import SenseHat
+        self.sense = SenseHat()   # sense hat object
+        self.frames = 1           # how many frames are in each request
+
+        self.frames_sent = 0    # number of frames sent
+
+    def loop(self):
+        """ Maine execution loop """
+        data = {'time': [], 'humidity': [], 'pressure': [], 'temperature': [], 'pitch': [], 'roll': [], 'yaw': []}
+        for i in range(self.frames):
+            roll, pitch, yaw = self.sense.get_orientation_degrees().values()
+            data['humidity'].append(self.sense.get_humidity())
+            data['pressure'].append(self.sense.get_pressure())
+            data['temperature'].append((self.sense.get_temperature_from_humidity() + self.sense.get_temperature_from_pressure()) / 2)
+            data['roll'].append(roll)
+            data['pitch'].append(pitch)
+            data['yaw'].append(yaw)
+            data['time'].append(self.time())
+
+        pipe = self.redis.pipeline()
+        for i in range(len(data['time'])):
+            pipe.xadd('stream:'+self.name, {key: data[key][i] for key in data.keys()})
+        pipe.execute()
+
+    def start(self):
+        """ Extended from base class in pi_lib.py """
+        # enable compass, gyro, and accelerometer to calculate orientation
+        self.sense.set_imu_config(True, True, True)
+
+        super().start()
+
+    def stop(self):
+        """ Extended from base class in pi_lib.py """
+        super().stop()
 
 
 class LogStreamer(Streamer):
@@ -160,56 +201,6 @@ class VideoStreamer(Streamer):
             self.camera.close()  # close camera resources
         except:
             pass
-
-
-class SenseStreamer(Streamer):
-    def __init__(self):
-        super().__init__()
-        self.handler = 'SenseHandler'
-
-        from sense_hat import SenseHat
-        self.sense = SenseHat()   # sense hat object
-        self.frames = 1           # how many frames are in each request
-
-        self.frames_sent = 0    # number of frames sent
-
-    def loop(self):
-        """ Maine execution loop """
-        data = {'time': [], 'humidity': [], 'pressure': [], 'temperature': [], 'pitch': [], 'roll': [], 'yaw': []}
-        for i in range(self.frames):
-            roll, pitch, yaw = self.sense.get_orientation_degrees().values()
-            data['humidity'].append(self.sense.get_humidity())
-            data['pressure'].append(self.sense.get_pressure())
-            data['temperature'].append((self.sense.get_temperature_from_humidity() + self.sense.get_temperature_from_pressure()) / 2)
-            data['roll'].append(roll)
-            data['pitch'].append(pitch)
-            data['yaw'].append(yaw)
-            data['time'].append(self.time())
-
-        resp = HTTPRequest()  # new INGEST request
-        resp.add_request("INGEST")
-        data = json.dumps(data).encode(self.encoding)  # send as JSON string
-        self.frames_sent += self.frames
-        resp.add_header('frames-sent', self.frames_sent)
-        resp.add_content(data)
-        self.send(resp)
-
-    def START(self, request):
-        """
-        HTTPRequest method START
-        Extended from base class in pi_lib.py
-        """
-        # enable compass, gyro, and accelerometer to calculate orientation
-        self.sense.set_imu_config(True, True, True)
-
-        super().START(request)  # start main loop
-
-    def STOP(self, request):
-        """
-        HTTPRequest method STOP
-        Extended from base class in pi_lib.py
-        """
-        super().STOP(request)  # stop main loop
 
 
 class EEGStreamer(Streamer):
