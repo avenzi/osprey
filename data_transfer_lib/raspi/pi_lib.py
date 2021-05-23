@@ -59,7 +59,7 @@ class Client(HostNode):
         Blocks until exit status set (because this is the main thread)
         """
         self.log("Name: {}".format(self.name))
-        self.log("Device IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
+        #self.log("Device IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
         self.log("Server IP: {}:{}".format(self.ip, self.server_port))
         self.log("Database IP: {}:{}".format(self.ip, self.db_port))
         super().run()
@@ -107,46 +107,63 @@ class Streamer(WorkerNode):
         self.type = None  # determined by derived class
         self.redis = None
 
-    def get_redis(self):
-        """ Connects to Redis"""
-        try:
-            self.redis = redis.Redis(host=self.ip, port=self.db_port, password=self.db_password)
-            if self.redis.ping():
-                return True
-        except Exception as e:
-            self.throw("{} failed to connect to Redis: ".format(self.name, e))
+    def get_database(self):
+        """
+        Attempt to get database connection.
+        Loop indefinitely if unsuccessful.
+        """
+        while not self.exit:
+            try:  # try to get connection to the database
+                self.redis = redis.Redis(host=self.ip, port=self.db_port, password=self.db_password)
+                if self.redis.ping():
+                    #self.log("{} connected to Database".format(self.name))
+                    return True
+            except Exception as e:
+                #self.log("{} failed to connect to Database: ".format(self.name, e))
+                pass
+            time.sleep(1)  # wait before trying again
 
     def get_socketio(self):
-        """ Connects to the server sockerIO"""
-        try:
-            self.sio = socketio.Client()
-            self.sio.register_namespace(SocketCommunicator(self, '/streamers'))
-            self.sio.connect('http://{}:{}'.format(self.ip, self.server_port))
-            return True
-        except Exception as e:
-            self.throw("{} failed to connect to server socketIO: {}".format(self.name, e))
+        """
+        Attempt to get socketIO connection.
+        Loop indefinitely if unsuccessful.
+        Interestingly, it appears that if the socketIO gets disconnected and even triggers
+            on_disconnect, the Client still considers it connected and any attempts to call
+            connect() again will fail with the error "Already Connected." When the server
+            socketIO is available again, it will reconnect automatically.
+        """
+        while not self.exit:
+            try:
+                self.sio = socketio.Client()
+                self.sio.register_namespace(SocketCommunicator(self, '/streamers'))
+                self.sio.connect('http://{}:{}'.format(self.ip, self.server_port))
+                return True
+            except Exception as e:
+                #self.log("{} failed to connect to server socketIO: {}".format(self.name, e))
+                pass
+            time.sleep(1)
 
     def time(self):
         """ Get time passed since the stream started """
         return time.time() - self.start_time
 
     def _run(self):
-        """
-        Overwrites _run method
-        Runs the self._loop() method
-        """
-        # get socketio connections
+        """ Runs main execution loop """
+        # get connection to socketIO server.
         self.get_socketio()
-        self.log("{} connected to server".format(self.name))
 
-        # start main execution loop
         while not self.exit:  # run until application shutdown
-            self.streaming.wait()  # wait until streaming
-            try:
-                self.loop()  # call user-defined main execution
-            except Exception as e:
-                self.stop()  # stop streaming
-                continue  # wait to start again
+            self.get_database()  # try to get connection to database
+
+            # start main execution loop
+            while not self.exit:  # run until exit
+                self.streaming.wait()  # block until streaming event is set
+                try:
+                    self.loop()  # call user-defined main execution
+                except Exception as e:
+                    # TODO: Only try to reconnect if the problem was a broken connection
+                    #  otherwise just shut down the streamer
+                    break  # break out of main execution, try to connect again
 
     def loop(self):
         """
@@ -162,10 +179,9 @@ class Streamer(WorkerNode):
         """
         if self.streaming.is_set():  # already running
             return
-        self.start_time = self.time()
-        self.get_redis()  # connect to database
-        self.redis.hmset('info:'+self.name, {'name':self.name, 'device':self.device, 'type':self.type})
         self.streaming.set()  # set streaming, which starts the main execution while loop
+        self.start_time = self.time()
+        self.redis.hmset('info:'+self.name, {'name':self.name, 'device':self.device, 'type':self.type})
         self.log("Started {}".format(self.name))
         self.sio.emit('log', "Started Streamer {}".format(self.name), namespace='/streamers')
 
@@ -191,7 +207,8 @@ class SocketCommunicator(socketio.ClientNamespace):
         self.emit('log', '{} connected to server'.format(self.streamer.name))
 
     def on_disconnect(self):
-        self.streamer.log("{} disconnected from socketIO server".format(self.streamer.name))
+        #self.streamer.log("{} disconnected from socketIO server".format(self.streamer.name))
+        pass
 
     def on_command(self, comm):
         if comm == 'START':
