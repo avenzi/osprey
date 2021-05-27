@@ -7,9 +7,8 @@ import functools
 import json
 import redis
 
-from .auth_routes import login_required
-from . import socketio
-from ..bokeh_layouts import get_layout
+from app.main.auth_routes import login_required
+from app.bokeh_layouts import get_layout
 
 
 def get_redis():
@@ -45,33 +44,33 @@ def read_stream(stream_name):
     Should decorate calling function with @redis_required.
     """
     # get ID to start reading from, if any
-    last_read = session.get('last_read')
+    idx = 'last_read_{}'.format(stream_name)
+    last_read = session.get(idx)
     if not last_read:
-        session['last_read'] = current_app.redis.execute_command('XREVRANGE stream:{} + - COUNT 1'.format(stream_name))[0][0]
+        session[idx] = current_app.redis.xrevrange('stream:'+stream_name, count=1)[0][0]
 
     # Get data from redis server
-    stream = current_app.redis.execute_command('XREAD STREAMS stream:{} {}'.format(stream_name, session['last_read']))
+    stream = current_app.redis.xread({'stream:'+stream_name: session[idx]}, None, 0)  # BLOCK 0
     if not stream:  # no new data
         return
+    session[idx] = stream[0][1][-1][0]
 
     # get keys, which are every other element in first data list
-    keys = stream[0][1][0][1][::2]
-    output = {key:[] for key in keys}
+    keys = stream[0][1][0][1].keys()
+    output = {key: [] for key in keys}
 
     # loop through stream data
     for data in stream[0][1]:
         # data[0] is the timestamp ID
-        for i, val in enumerate(data[1][1::2]):  # data only
-            output[keys[i]].append(float(val))   # convert to float and append
-
-    # store the last ID read in session data
-    session['last_read'] = stream[0][1][-1][0]
+        d = data[1]  # data dict
+        for key in keys:
+            output[key].append(float(d[key]))  # convert to float and append
 
     return json.dumps(output)
 
 
 # import blueprint
-from . import streams
+from app.main import streams
 
 
 @streams.route('/', methods=['GET', 'POST'])
@@ -87,7 +86,7 @@ def index():
 @redis_required
 def stream():
     stream_name = request.args.get('name')
-    stream_type = g.redis.execute_command('hmget info:{} type'.format(stream_name))[0]
+    stream_type = g.redis.hget('info:'+stream_name, 'type')
 
     # get stream page template according to stream type
     template_path = '/streams/{}.html'.format(stream_type)
@@ -103,7 +102,7 @@ def stream():
 def plot_layout():
     """ Returns the layout JSON for the bokeh plot """
     stream_name = request.args.get('name')
-    #stream_type = g.redis.execute_command('hget info:{} type'.format(stream_name))[0]
+    #stream_type = g.redis.hget('info:'+stream_name, 'type')
 
     # Get full layout json string for this stream
     layout = get_layout(stream_name)

@@ -3,8 +3,8 @@ from datetime import datetime
 from time import sleep
 import os
 
-from . import socketio
-from .stream_routes import get_redis
+from app.main import socketio
+from app.main.stream_routes import get_redis
 
 
 def get_time():
@@ -40,8 +40,14 @@ def streamer_disconnect():
 
 
 @socketio.on('log', namespace='/streamers')
-def streamer_response(resp):
+def streamer_log(resp):
     """ On receiving logs from streamers, forward to the browser log """
+    socketio.emit('log', resp, namespace='/browser')
+
+
+@socketio.on('log', namespace='/analyzers')
+def analyzer_log(resp):
+    """ On receiving logs from analyzers, forward to the browser log """
     socketio.emit('log', resp, namespace='/browser')
 
 
@@ -68,7 +74,7 @@ def browser_command(comm):
         stream_names = []
         if get_redis():
             for key in g.redis.execute_command('keys info:*'):
-                stream_names.append(g.redis.execute_command('hget {} name'.format(key)))
+                stream_names.append(g.redis.hget(key, 'name'))
         socketio.emit('update', stream_names, namespace='/browser')
 
     else:

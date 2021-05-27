@@ -1,5 +1,0 @@
-{% extends 'streams/stream_base.html' %}
-
-{% block content %}
-{{ g.redis.execute_command('XRANGE stream:{} - +'.format(stream_name)) }}
-{% endblock %}

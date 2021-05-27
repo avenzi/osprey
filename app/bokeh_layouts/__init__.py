@@ -7,10 +7,10 @@ def get_layout(name):
     """ Retrieves or creates the appropriate Bokeh Layout object """
     # TODO: Not hard-code the various stream types here.
     #  It should be able to look through /boheh_layouts and find the right layout
-    if name == 'TestStreamer':
-        layout = TestStreamer.lay
+    if name == 'TestStreamer' or name == 'TestAnalyzer':
+        layout = TestStreamer.create_layout(name)
     elif name == 'SenseStreamer':
-        layout = SenseStreamer.lay
+        layout = SenseStreamer.create_layout(name)
     else:
         raise Exception("Layout for {} not found".format(name))
 

@@ -6,10 +6,9 @@ import json
 import os
 
 
-from lib import validate_input
+from utils import validate_input
 from raspi import streamers
 from raspi.pi_lib import CONFIG_PATH
-
 
 
 def dmesg():
@@ -59,7 +58,7 @@ else:
 
 
 # get all settings in the file, which will be None if they don't exist
-ip = config.get('SERVER_IP_ADDRESS')  # ip address of server
+ip = config.get('SERVER_IP')  # ip address of server
 port = config.get('PORT')             # port to connect through
 name = config.get('NAME')             # display name of this Client
 selected = config.get('STREAMERS')    # Dictionary of streamer class to choose from
@@ -92,8 +91,8 @@ if ip and port and name and selected and vcp and all_in_config and updating:
 # TODO: Add regex input validation to all these options?
 print("> Please provide the following information. These can be changed in {}\n".format(CONFIG_PATH))
 if not ip:
-    config['SERVER_IP_ADDRESS'] = input("IP address of server: ")
-if not redis_port:
+    config['SERVER_IP'] = input("IP address of server: ")
+if not port:
     config['SERVER_PORT'] = int(input("Server Port: "))
 if not redis_port:
     config['REDIS_PORT'] = int(input("Redis Database Port: "))

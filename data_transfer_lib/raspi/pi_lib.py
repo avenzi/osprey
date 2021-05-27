@@ -1,18 +1,10 @@
-from threading import Thread, Condition
-from multiprocessing import Event
-from requests import get
+from threading import Condition
 from io import BytesIO
 import subprocess
-import socket
-import json
 import inspect
-import time
 import os
 
-import redis
-import socketio
-
-from lib import HostNode, WorkerNode, Base
+from lib import Client
 
 CONFIG_PATH = '../config/raspi_config.json'
 
@@ -34,42 +26,19 @@ def configure_port(dev_path):
         return False
 
 
-class Client(HostNode):
-    """
-    Makes a connection to the Redis server.
-    call run() to start.
-    <retry> number of seconds to wait before attempting to connect to the server each time
-    <debug> debug level of the client
-    """
-    def __init__(self, debug=0):
-        with open(CONFIG_PATH) as file:  # get config options
-            self.config = json.load(file)
-        self.ip = self.config.get('SERVER_IP_ADDRESS')  # ip address of server
-        self.server_port = self.config.get('SERVER_PORT')  # port of server (used for socketIO)
-        self.db_port = self.config.get('REDIS_PORT')  # port to Redis on server
-
-        name = self.config.get('NAME')  # display name of this Client
-        super().__init__(name, auto=False)
-        self.set_debug(debug)
-        self.set_log_path(self.config.get('LOG_PATH'))
-
-    def run(self):
-        """
-        Must be called on the main thread of a process.
-        Blocks until exit status set (because this is the main thread)
-        """
-        self.log("Name: {}".format(self.name))
-        #self.log("Device IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
-        self.log("Server IP: {}:{}".format(self.ip, self.server_port))
-        self.log("Database IP: {}:{}".format(self.ip, self.db_port))
-        super().run()
-
+class RaspiClient(Client):
+    """ Extends the Client HostNode to run Streamers on a Raspberry Pi """
     def _run(self):
         """
         Called by self.run() on a new thread.
         Creates one instance of each handler type from collection_lib
             For each handler class, listens for new connections then starts them on their own thread.
         """
+        self.log("Name: {}".format(self.name))
+        #self.log("Device IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
+        self.log("Server IP: {}:{}".format(self.config['SERVER_IP'], self.config['SERVER_PORT']))
+        self.log("Database IP: {}:{}".format(self.config['SERVER_IP'], self.config['REDIS_PORT']))
+
         # get selected handler classes
         from . import streamers
         members = inspect.getmembers(streamers, inspect.isclass)  # all classes [(name, class), ]
@@ -77,146 +46,9 @@ class Client(HostNode):
             if member[1].__module__.split('.')[-1] == 'streamers':  # imported from the streamers.py file
                 config = self.config['STREAMERS'].get(member[0])  # configuration of whether this class is to be used or not
                 if config and config.upper() == 'Y':  # this class is in the config file and set to be used
-                    self.create_worker(member[1])  # connect this StreamerClass to the server
+                    self.run_worker(member[1])  # create a new worker and on a parallel process
                 else:  # not in the config file or not set to be used
                     self.debug("Streamer class {} is not being used. Set it's keyword to 'Y' in {} to use".format(member[0], CONFIG_PATH))
-
-    def create_worker(self, StreamerClass):
-        """ Run the Node class on a new process """
-        worker = StreamerClass()  # create an instance of this node class
-        worker.device = self.device
-        self.run_worker(worker)  # run the new worker node on a parallel process
-
-
-class Streamer(WorkerNode):
-    """ To be used on a client to send requests to a remote Redis database """
-    def __init__(self):
-        super().__init__()
-        with open(CONFIG_PATH) as file:  # get config options
-            self.config = json.load(file)
-        self.ip = self.config.get('SERVER_IP_ADDRESS')  # ip address of server
-        self.server_port = self.config.get('SERVER_PORT')  # port of server (used for socketIO)
-        self.db_port = self.config.get('REDIS_PORT')  # port to Redis on server
-        self.db_password = self.config.get('REDIS_PASS')
-
-        self.streaming = Event()  # threading event flag set when actively streaming
-        self.start_time = 0  # start time
-        self.sio = None  # socketio client
-
-        self.device = None
-        self.type = None  # determined by derived class
-        self.redis = None
-
-    def get_database(self):
-        """
-        Attempt to get database connection.
-        Loop indefinitely if unsuccessful.
-        """
-        while not self.exit:
-            try:  # try to get connection to the database
-                self.redis = redis.Redis(host=self.ip, port=self.db_port, password=self.db_password)
-                if self.redis.ping():
-                    #self.log("{} connected to Database".format(self.name))
-                    return True
-            except Exception as e:
-                #self.log("{} failed to connect to Database: ".format(self.name, e))
-                pass
-            time.sleep(1)  # wait before trying again
-
-    def get_socketio(self):
-        """
-        Attempt to get socketIO connection.
-        Loop indefinitely if unsuccessful.
-        Interestingly, it appears that if the socketIO gets disconnected and even triggers
-            on_disconnect, the Client still considers it connected and any attempts to call
-            connect() again will fail with the error "Already Connected." When the server
-            socketIO is available again, it will reconnect automatically.
-        """
-        while not self.exit:
-            try:
-                self.sio = socketio.Client()
-                self.sio.register_namespace(SocketCommunicator(self, '/streamers'))
-                self.sio.connect('http://{}:{}'.format(self.ip, self.server_port))
-                return True
-            except Exception as e:
-                #self.log("{} failed to connect to server socketIO: {}".format(self.name, e))
-                pass
-            time.sleep(1)
-
-    def time(self):
-        """ Get time passed since the stream started """
-        return time.time() - self.start_time
-
-    def _run(self):
-        """ Runs main execution loop """
-        # get connection to socketIO server.
-        self.get_socketio()
-
-        while not self.exit:  # run until application shutdown
-            self.get_database()  # try to get connection to database
-
-            # start main execution loop
-            while not self.exit:  # run until exit
-                self.streaming.wait()  # block until streaming event is set
-                try:
-                    self.loop()  # call user-defined main execution
-                except Exception as e:
-                    # TODO: Only try to reconnect if the problem was a broken connection
-                    #  otherwise just shut down the streamer
-                    break  # break out of main execution, try to connect again
-
-    def loop(self):
-        """
-        Should be overwritten by derived class.
-        Should not be called anywhere other than _loop()
-        """
-        pass
-
-    def start(self):
-        """
-        Should be extended in streamers.py
-        Begins the stream
-        """
-        if self.streaming.is_set():  # already running
-            return
-        self.streaming.set()  # set streaming, which starts the main execution while loop
-        self.start_time = self.time()
-        self.redis.hmset('info:'+self.name, {'name':self.name, 'device':self.device, 'type':self.type})
-        self.log("Started {}".format(self.name))
-        self.sio.emit('log', "Started Streamer {}".format(self.name), namespace='/streamers')
-
-    def stop(self):
-        """
-        Should be extended in streamers.py
-        Ends the streaming process
-        """
-        if not self.streaming.is_set():  # already stopped
-            return
-        self.streaming.clear()  # stop streaming, stopping the main execution while loop
-        self.log("Stopped {}".format(self.name))
-        self.sio.emit('log', "Stopped Streamer {}".format(self.name), namespace='/streamers')
-
-
-class SocketCommunicator(socketio.ClientNamespace):
-    """ All methods but begin with prefix "on_" followed by the usual socketio naming convention """
-    def __init__(self, streamer, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.streamer = streamer
-
-    def on_connect(self):
-        self.emit('log', '{} connected to server'.format(self.streamer.name))
-
-    def on_disconnect(self):
-        #self.streamer.log("{} disconnected from socketIO server".format(self.streamer.name))
-        pass
-
-    def on_command(self, comm):
-        if comm == 'START':
-            self.streamer.start()
-        elif comm == 'STOP':
-            self.streamer.stop()
-        else:
-            self.streamer.log("Unrecognized Command: {}".format(comm))
 
 
 class PicamOutput():

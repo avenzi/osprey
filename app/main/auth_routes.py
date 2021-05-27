@@ -5,7 +5,7 @@ from flask import (
 from werkzeug.security import check_password_hash, generate_password_hash
 
 # import blueprint
-from . import auth
+from app.main import auth
 
 
 @auth.route('/register', methods=('GET', 'POST'))
@@ -38,20 +38,20 @@ def login():
     if request.method == 'POST':
         submit_username = request.form['username']
         submit_password = request.form['password']
-        red = current_app.redis
 
         error = None
-        pass_hash = red.get(submit_username)
+        if submit_password != 'password':
+            error = 'Incorrect Password'
 
-        if pass_hash is None:
-            error = 'Username does not exist.'
-        elif not check_password_hash(pass_hash, submit_password):
-            error = 'Incorrect password.'
+        #if pass_hash is None:
+            #error = 'Username does not exist.'
+        #if not check_password_hash(pass_hash, submit_password):
+            #error = 'Incorrect password.'
 
         if error is None:
             session.clear()
             session['username'] = submit_username
-            return redirect(url_for('main.index'))
+            return redirect(url_for('index'))
 
         flash(error)
     return render_template('auth/login.html')
@@ -66,7 +66,7 @@ def login_required(view):
     """ Decorator to validate user login before accessing a route """
     @functools.wraps(view)
     def wrapped_view(**kwargs):
-        #if session.get('username') is None:
-            #return redirect(url_for('auth.login'))
+        if session.get('username') is None:
+            return redirect(url_for('auth.login'))
         return view(**kwargs)
     return wrapped_view

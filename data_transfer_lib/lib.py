@@ -1,12 +1,14 @@
+from multiprocessing import Process, current_process, Pipe, Lock, Condition, Event
 from threading import Thread, current_thread
-from multiprocessing import Process, current_process, Pipe, Lock, Condition
-from concurrent.futures import ThreadPoolExecutor
+
 from datetime import datetime
 from uuid import uuid4
-import numpy as np
 import traceback
 import time
 import os
+
+import socketio
+import redis
 
 
 class Base:
@@ -23,7 +25,6 @@ class Base:
         self.close = False  # status flag to determine when the class should completely shutdown
         self.exit_condition = Condition()  # condition lock to stop running
         self.shutdown_condition = Condition()  # condition lock block until everything is completely shutdown
-        self.encoding = 'iso-8859-1'  # encoding for all data main (latin-1)
 
     def run_exit_trigger(self, block=False):
         """
@@ -168,8 +169,6 @@ class PipeHandler(Base):
     def __init__(self, node, conn, process=None):
         super().__init__()
         self.name = node.name
-        self.device = node.device
-
         self.pipe = conn
         self.process = process
 
@@ -210,16 +209,15 @@ class PipeHandler(Base):
 
 class Node(Base):
     """
-    Base class for Connection Nodes.
-    Holds an index of IPC pipes to other Nodes.
+    Old class that was used to run threading pools
     """
-    def __init__(self, name=None, device='Unnamed_Device'):
+    def __init__(self, name=None):
         super().__init__()
         if not name:
             name = self.__class__.__name__
         self.name = name
-        self.device = device
-        self.id = self.generate_uuid()  # unique id
+
+        from concurrent.futures import ThreadPoolExecutor
 
         # Thread pool used by all sockets on this node
         # default number of threads 5*core count
@@ -244,17 +242,21 @@ class Node(Base):
         self.debug("All Sockets shut down on Node '{}'".format(self.name))
 
 
-class HostNode(Node):
+class Client(Base):
     """
-    The main hosting connection (a Server or Client).
+    The master Node, which delegates Streamer nodes to different processes
     Run on the main process.
     Worker connections are started on new processed and communicated with using pipes.
+    <name> Display name of this Client.
+    <config> Dictionary of network config options
     <auto> Boolean: whether to automatically shutdown when all worker nodes have shutdown.
     """
-    def __init__(self, name, auto=True):
-        super().__init__(name=name, device=name)  # node name is the device name for the host
-        self.automatic_shutdown = auto
-        self.pipes = {}   # index of Pipe objects, each connecting to a WorkerConnection
+    def __init__(self, config, debug=0):
+        super().__init__()
+        self.config = config
+        self.name = config['NAME']
+        self.set_debug(debug)
+        self.pipes = {}   # index of Pipe objects, each connecting to a WorkerNode
 
     def run(self):
         """
@@ -272,18 +274,14 @@ class HostNode(Node):
         """
         pass
 
-    def idle(self):
+    def run_worker(self, WorkerClass):
         """
-        Optional default action when all workers are terminated and automatic_shutdown is not set.
-        Called on a new thread.
-        """
-        pass
-
-    def run_worker(self, worker):
-        """
-        Start the given worker node on a new process.
+        Creates an instance of the given WorkerClass, then runs it on a new process.
         Adds the new Pipe to the pipe index, and starts reading from it on a new thread.
         """
+        # create instance of WorkerClass, pass on necessary info
+        worker = WorkerClass(self.config)
+
         # multiprocessing duplex connections (doesn't matter which end of the pipe is which)
         host_conn, worker_conn = Pipe()
 
@@ -314,11 +312,8 @@ class HostNode(Node):
             return
         del self.pipes[pipe_id]  # remove from index
         if not self.pipes:  # all workers have disconnected
-            if self.automatic_shutdown:  # shutdown because no workers left
-                self.debug("No workers left - shutting down '{}'".format(self.name))
-                self.shutdown()
-            else:  # put in idle mode because no workers left
-                Thread(target=self.idle, name=self.name+'-IDLE', daemon=True).start()
+            self.debug("No workers left - shutting down '{}'".format(self.name))
+            self.shutdown()
 
     def _run_pipe(self, pipe_id):
         """
@@ -350,15 +345,19 @@ class HostNode(Node):
         self.debug("All worker nodes terminated on Host '{}'".format(self.name), 1)
 
 
-class WorkerNode(Node):
+class WorkerNode(Base):
     """
     Delegated tasks by a host node, run on it's own process.
     self.name is the name of the Handler handling this node
     self.device is the device sending the stream.
     """
-    def __init__(self, device=None):
-        super().__init__(device=device)
+    def __init__(self, config):
+        super().__init__()
+        self.config = config
+        self.name = self.__class__.__name__
+        self.client = config['NAME']  # client that is hosting this worker
         self.pipe = None  # Pipe object to the HostNode
+        self.id = self.generate_uuid()
 
     def run(self, pipe):
         """
@@ -368,7 +367,7 @@ class WorkerNode(Node):
         Should be run on it's own Process's Main Thread
         """
         self.pipe = pipe
-        #self.debug("Worker '{}' started running on '{}'".format(self.name, self.device), 1)
+        self.debug("Worker '{}' started running on '{}'".format(self.name, self.client), 1)
         Thread(target=self._run, name='RUN', daemon=True).start()
         Thread(target=self._run_pipe, name='PIPE', daemon=True).start()
         self.run_exit_trigger(block=True)  # Wait for exit status on new thread
@@ -400,59 +399,141 @@ class WorkerNode(Node):
     def cleanup(self):
         """ Shutdown all handlers associated with this connection and signal that it shut down """
         super().cleanup()
-        self.debug("{} from {} Closed.".format(self.name, self.device))
+        self.debug("{} from {} Closed.".format(self.name, self.client))
         self.pipe.send('SHUTDOWN')  # Signal to the server that this connection is shutting down
 
 
-# misc
-class MovingAverage:
+class Streamer(WorkerNode):
     """
-    Keeps a moving average using a ring buffer
-    <size> Size of the moving average buffer
+    Used to interface with a local or remote Redis database and server socketIO
     """
-    def __init__(self, size):
-        self.size = size  # max size
-        self.length = 0  # current size
+    def __init__(self, config):
+        super().__init__(config)
+        self.socket = None  # socketio client
+        self.redis = None  # connection to redis database
+        self.type = None  # string determined by derived class
 
-        self.array = []  # value array
-        self.head = 0  # next index at which to place a value
+        self.ip = self.config.get('SERVER_IP')  # ip address of server
+        self.server_port = self.config.get('SERVER_PORT')  # port of server (used for socketIO)
+        self.db_port = self.config.get('REDIS_PORT')  # port to Redis on server
+        self.db_password = self.config.get('REDIS_PASS')
+        self.set_log_path(self.config.get('LOG_PATH'))
 
-        self.value = 0  # current average
+        self.streaming = Event()  # threading event flag set when actively streaming
+        self.start_time = 0  # start time
 
-    def calculate(self):
-        """ calculate the current average """
-        self.value = np.average(self.array)
+    def get_database(self):
+        """
+        Attempt to get database connection.
+        Loop indefinitely if unsuccessful.
+        """
+        while not self.exit:
+            try:  # try to get connection to the database
+                self.redis = redis.Redis(host=self.ip, port=self.db_port, password=self.db_password, decode_responses=True)
+                if self.redis.ping():
+                    self.log("{} connected to server Database".format(self.name))
+                    return True
+            except Exception as e:
+                #self.log("{} failed to connect to Database: ".format(self.name, e))
+                pass
+            time.sleep(1)  # wait before trying again
 
-    def add(self, val):
-        """ Add a value to the moving average """
-        if self.length < self.size:  # not full
-            self.array.append(val)
-            self.length += 1
-        else:  # full
-            self.array[self.head] = val
-        self.head = (self.head + 1) % self.size
-        self.calculate()
-        return self.value
+    def get_socketio(self):
+        """
+        Attempt to get socketIO connection.
+        Loop indefinitely if unsuccessful.
+        Interestingly, it appears that if the socketIO gets disconnected and even triggers
+            on_disconnect, the Client still considers it connected and any attempts to call
+            connect() again will fail with the error "Already Connected." When the server
+            socketIO is available again, it will reconnect automatically.
+        """
+        while not self.exit:
+            try:
+                self.socket = socketio.Client()
+                self.socket.register_namespace(SocketCommunicator(self, '/streamers'))
+                self.socket.connect('http://{}:{}'.format(self.ip, self.server_port))
+                self.log("{} Connected to server socketIO".format(self.name))
+                return True
+            except Exception as e:
+                #self.log("{} failed to connect to server socketIO: {}".format(self.name, e))
+                pass
+            time.sleep(1)
+
+    def time(self):
+        """ Get time passed since the stream started """
+        return time.time() - self.start_time
+
+    def _run(self):
+        """ Runs main execution loop """
+        # get connection to socketIO server.
+        self.log("Attempting to connect socketIO to {}:{}".format(self.ip, self.server_port))
+        self.get_socketio()
+
+        while not self.exit:  # run until application shutdown
+            self.get_database()  # try to get connection to database
+
+            # start main execution loop
+            while not self.exit:  # run until exit
+                self.streaming.wait()  # block until streaming event is set
+                try:
+                    self.loop()  # call user-defined main execution
+                except redis.exceptions.ConnectionError as e:
+                    self.stop()
+                    break
+                except Exception as e:
+                    self.throw("BREAK: {}".format(e), trace=True)
+                    time.sleep(1)
+                    break
+
+    def loop(self):
+        """
+        Should be overwritten by derived class.
+        Should not be called anywhere other than _loop()
+        """
+        pass
+
+    def start(self):
+        """
+        Should be extended in streamers.py
+        Begins the stream
+        """
+        if self.streaming.is_set():  # already running
+            return
+        self.streaming.set()  # set streaming, which starts the main execution while loop
+        self.start_time = self.time()
+        self.redis.hmset('info:' + self.name, {'name': self.name, 'client': self.client, 'type': self.type})
+        self.log("Started {}".format(self.name))
+        self.socket.emit('log', "Started Streamer {}".format(self.name), namespace='/streamers')
+
+    def stop(self):
+        """
+        Should be extended in streamers.py
+        Ends the streaming process
+        """
+        if not self.streaming.is_set():  # already stopped
+            return
+        self.streaming.clear()  # stop streaming, stopping the main execution while loop
+        self.log("Stopped {}".format(self.name))
+        self.socket.emit('log', "Stopped Streamer {}".format(self.name), namespace='/streamers')
 
 
-def validate_input(message, expecting, case=False):
-    """
-    Wrapper to validate input from a user
-    <message> input message to be displayed
-    <expecting> List of expected strings
-    <case> Bool, whether case sensitive. If False, answer is always converted to lower case.
-    """
-    # TODO: add regex option to the <expecting> argument
-    if not case:  # not case sensitive
-        expecting = [s.lower() for s in expecting]
+class SocketCommunicator(socketio.ClientNamespace):
+    """ All methods must begin with prefix "on_" followed by socketIO message name"""
+    def __init__(self, streamer, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.streamer = streamer
 
-    while True:
-        ans = input(message).strip()
-        if not case:
-            ans = ans.lower()
-        if ans in expecting:  # valid
-            break
-        else:  # invalid
-            print("Invalid input. Expecting: {}".format(expecting))
+    def on_connect(self):
+        self.emit('log', '{} connected to server'.format(self.streamer.name))
 
-    return ans
+    def on_disconnect(self):
+        #self.streamer.log("{} disconnected from socketIO server".format(self.streamer.name))
+        pass
+
+    def on_command(self, comm):
+        if comm == 'START':
+            self.streamer.start()
+        elif comm == 'STOP':
+            self.streamer.stop()
+        else:
+            self.streamer.log("Unrecognized Command: {}".format(comm))

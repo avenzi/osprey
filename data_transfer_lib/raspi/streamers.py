@@ -1,16 +1,18 @@
-from lib import Base
-from raspi.pi_lib import Streamer, configure_port, CONFIG_PATH, PicamOutput
+from lib import Base, Streamer
+from raspi.pi_lib import configure_port, PicamOutput
 
-import time
 from random import random
+import time
+import msgpack
 
 
 class TestStreamer(Streamer):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.name = 'TestStreamer'
         self.type = 'plot'
 
-        self.frames = 1           # how many frames are in each request
+        self.frames = 10           # how many frames are in each request
         self.frames_sent = 0      # number of frames sent
 
         self.val_1 = 0
@@ -20,7 +22,7 @@ class TestStreamer(Streamer):
     def loop(self):
         """ Maine execution loop """
         data = {'time': [], 'val_1': [], 'val_2': [], 'val_3': []}
-        for i in range(10):
+        for i in range(self.frames):
             self.val_1 += random()-0.5
             self.val_2 += random()-0.5
             self.val_3 += random()-0.5
@@ -28,7 +30,7 @@ class TestStreamer(Streamer):
             data['val_1'].append(self.val_1)
             data['val_2'].append(self.val_2)
             data['val_3'].append(self.val_3)
-            time.sleep(0.01)
+            time.sleep(0.05)
 
         pipe = self.redis.pipeline()
         for i in range(len(data['time'])):
@@ -38,13 +40,13 @@ class TestStreamer(Streamer):
 
 
 class SenseStreamer(Streamer):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args):
+        super().__init__(*args)
         self.type = 'plot'
 
         from sense_hat import SenseHat
         self.sense = SenseHat()   # sense hat object
-        self.frames = 1           # how many frames are in each request
+        self.frames = 10           # how many frames are in each request
 
         self.frames_sent = 0    # number of frames sent
 
@@ -70,7 +72,6 @@ class SenseStreamer(Streamer):
         """ Extended from base class in pi_lib.py """
         # enable compass, gyro, and accelerometer to calculate orientation
         self.sense.set_imu_config(True, True, True)
-
         super().start()
 
     def stop(self):
@@ -79,8 +80,8 @@ class SenseStreamer(Streamer):
 
 
 class LogStreamer(Streamer):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args):
+        super().__init__(*args)
         self.handler = 'LogHandler'
 
         with open(CONFIG_PATH) as config_file:
@@ -428,9 +429,9 @@ class SynthEEGStreamer(Streamer):
     """
     Synthetic EEG streamer class for testing
     """
-    def __init__(self):
-        super().__init__()
-        self.handler = 'EEGHandler'
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.type = 'plot'
 
         from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds
 
@@ -470,48 +471,30 @@ class SynthEEGStreamer(Streamer):
         for i, j in enumerate(self.eeg_channel_indexes):
             data[self.eeg_channel_names[i]] = list(raw_data[j])
 
-        data = msgpack.packb(data)  # pack dict object
         self.frames_sent += 1
 
-        resp = HTTPRequest()  # new response
-        resp.add_request("INGEST")
-        resp.add_header('frames-sent', self.frames_sent)
-        resp.add_header('time', time.time())
-        resp.add_content(data)
+        pipe = self.redis.pipeline()
+        for i in range(len(data['time'])):
+            pipe.xadd('stream:'+self.name, {key: data[key][i] for key in data.keys()})
+        pipe.execute()
 
-        #t0 = time.time()
-        self.send(resp)
-        #t1 = time.time()
-        #self.log("sent {} in {:.3}".format(len(data), t1-t0))
-
-    def START(self, request):
-        """
-        HTTPRequest method START
-        Extended from base class in pi_lib.py
-        """
+    def start(self):
+        """ Extended from base class in pi_lib.py """
         # start EEG stream
         self.board.prepare_session()
         self.board.start_stream()
 
         # First send some initial information
-        req = HTTPRequest()
-        req.add_request('INIT')
-        req.add_header('sample_rate', self.freq)
-        req.add_header('channels', ','.join(self.eeg_channel_names))
-        self.send(req, request.origin)
+        self.socket.emit('eeg_info', {'sample_rate': self.freq, 'channels': self.eeg_channel_names})
+        #req.add_header('sample_rate', self.freq)
+        #req.add_header('channels', ','.join(self.eeg_channel_names)
+        super().start()  # start main loop
 
-        super().START(request)  # start main loop
-
-    def STOP(self, request):
-        """
-        HTTPRequest method STOP
-        Extended from base class in pi_lib.py
-        """
-        super().STOP(request)  # stop main loop
+    def stop(self):
+        """ Extended from base class in pi_lib.py """
+        super().stop()  # stop main loop
         try:
             self.board.stop_stream()
             self.board.release_session()
         except:
             pass
-
-

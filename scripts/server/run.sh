@@ -23,10 +23,11 @@ sudo fuser -k 5002/tcp  # clear activity on port 5002
 . venv/bin/activate
 
 # run python in background
-#python3 path/to/pythonfile.py &
+python3 data_transfer_lib/run_analysis.py &
 
+# start redis server
 redis-server config/redis.conf
 
 # call gunicorn with appropriate config file
-gunicorn -c config/gunicorn_prod.conf.py "app:create_app()"
+gunicorn -c config/gunicorn.conf.py "app:create_app()"
 

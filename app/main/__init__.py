@@ -11,8 +11,5 @@ socketio = SocketIO()
 
 # these are imported below to avoid recursive imports when importing the above objects
 
-# import routes associated with the blueprints
-from . import auth_routes, stream_routes
-
-# import events associated with the socketio
-from . import events
+# import routes/events associated with these blueprints/socket
+from app.main import auth_routes, stream_routes, events, EEG_stream
