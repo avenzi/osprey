@@ -33,6 +33,14 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates:
 
+##### May 27th, 2021:
+
+I have gotten the SenseHat stream functional - it was relatively similar to the random data stream that I have been using for testing.
+
+The tricky part is the EEG stream because it requires processing on the server - fourier analysis and signal filtering. To prepare for this, I decided that I would attempt to emulate an external algorithm manipulating the data in the database. To do this I re-structure my Node classes to allow a Streamer to run on the server instead of just a Pi. This streamer acts just like the streamer on a Pi, except that it reads data from the database, modifies it in some way, the streams it back to the database. As a result, in the browser we see two streams for that data - the raw stream and the modified stream. Of course seeing the raw stream is not necessary, so for the EEG stream only the modified data will be viewable. For testing purposes though, I have both the raw and modified data for my random testing data streamer.
+
+Building this also let me discover some other problems with Redis: it doesn't work well with requests from bokeh. This is because Redis' built-in method for keeping track of what data has been already read from a stream assumes that data will be delivered in the order that it returns it, which is not the case for when the data is being sent via a response to an HTTP request by Bokeh. I was able to get around this issue by instead manually keeping track of the last data point read using the session variable, and updating it with respect to the bokeh plot rather than redis. Even so, this still does not completely solve a similar issue that I mentioned awhile ago where too-fast requesting of data leads to data overlapping in the browser. This is not something I want to try to solve yet as it can be avoided by lowering the polling frequency of the AjaxDataRequest, and it doesn't affect the integrity of the data at all. Hopefully this is something that will be solved by a more specialized time-series oriented database.
+
 ##### May 22nd, 2021:
 
 One problem that I discovered with my redis-streaming setup from earlier in the week is that I have no way to communicate with the Raspberry Pis once the stream has started. This is because I am no longer using my socket-based application to send commands like when to start and stop. This is a problem because I want minimal interaction with the Pis themself - everything should be able to be done in a web browser connected to the server.
