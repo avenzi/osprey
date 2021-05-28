@@ -31,15 +31,25 @@ By working on this project you are agreeing to abide by the following expectatio
     3. making regular code commits with meaningful commit messages and,
     4. organizing the contents of the project into a logical directory structure.
 
-### Daily Updates:
+### Daily Updates
 
 ##### May 27th, 2021:
+
+(really this was from last night but I was too tired to write up a log)
 
 I have gotten the SenseHat stream functional - it was relatively similar to the random data stream that I have been using for testing.
 
 The tricky part is the EEG stream because it requires processing on the server - fourier analysis and signal filtering. To prepare for this, I decided that I would attempt to emulate an external algorithm manipulating the data in the database. To do this I re-structure my Node classes to allow a Streamer to run on the server instead of just a Pi. This streamer acts just like the streamer on a Pi, except that it reads data from the database, modifies it in some way, the streams it back to the database. As a result, in the browser we see two streams for that data - the raw stream and the modified stream. Of course seeing the raw stream is not necessary, so for the EEG stream only the modified data will be viewable. For testing purposes though, I have both the raw and modified data for my random testing data streamer.
 
 Building this also let me discover some other problems with Redis: it doesn't work well with requests from bokeh. This is because Redis' built-in method for keeping track of what data has been already read from a stream assumes that data will be delivered in the order that it returns it, which is not the case for when the data is being sent via a response to an HTTP request by Bokeh. I was able to get around this issue by instead manually keeping track of the last data point read using the session variable, and updating it with respect to the bokeh plot rather than redis. Even so, this still does not completely solve a similar issue that I mentioned awhile ago where too-fast requesting of data leads to data overlapping in the browser. This is not something I want to try to solve yet as it can be avoided by lowering the polling frequency of the AjaxDataRequest, and it doesn't affect the integrity of the data at all. Hopefully this is something that will be solved by a more specialized time-series oriented database.
+
+(actually from today)
+
+I was planning on getting the EEG stream working today but I decided that I should abstract the connection to the redis database sooner rather than later, because the longer I go without doing it the harder it will be in the long run. The EEG stream will have to wait for tomorrow.
+
+I created a Database class that can be accessed by the Streamers and the Flask app, and it implements the necessary read and writes that I've been using with redis. I also implemented a custom exception that can be handled outside of the function call without relying on any of the redis-specific exceptions. Hopefully this will make any transition easier in the future when I decide to switch to a different database. It's not perfect, but I tackled a lot of issues that I would have had to deal with later anyway. My only concern is that I have no idea what sort of information any other database system will need, or even if it will be capable of both a time series data stream and a key-value store like redis. I suspect that it's possible I may even continue using redis as a key-value store if the other database isn't built for it. In that case, swapping out the redis stream functionality alone should be fine. Ill just write another class to deal with the other database and swap out those method calls in the flask server.
+
+I was also able to make the browser's list of connected streams live. By that I mean that when you do hit 'start' or 'stop', the list of currently connected streams updates live. I kept the 'refresh' button in there just in case for not, because the streams don't always terminate fast enough. 
 
 ##### May 22nd, 2021:
 
