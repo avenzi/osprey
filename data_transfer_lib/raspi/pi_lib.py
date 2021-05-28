@@ -37,7 +37,7 @@ class RaspiClient(Client):
         self.log("Name: {}".format(self.name))
         #self.log("Device IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
         self.log("Server IP: {}:{}".format(self.config['SERVER_IP'], self.config['SERVER_PORT']))
-        self.log("Database IP: {}:{}".format(self.config['SERVER_IP'], self.config['REDIS_PORT']))
+        self.log("Database IP: {}:{}".format(self.config['SERVER_IP'], self.config['DB_PORT']))
 
         # get selected handler classes
         from . import streamers

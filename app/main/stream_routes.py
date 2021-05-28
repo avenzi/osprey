@@ -9,7 +9,6 @@ from app.main.auth_routes import login_required
 from app.bokeh_layouts import get_layout
 from app import Database
 
-
 # import blueprint
 from app.main import streams
 

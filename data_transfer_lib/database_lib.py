@@ -164,7 +164,7 @@ class Database:
         <data> must be a dictionary of lists, where keys are data column names.
         """
         pipe = self.redis.pipeline()  # pipeline queues a series of commands at once
-        for i in range(len(data[data.keys()[0]])):  # get length of a random key (all the same)
+        for i in range(len(data[list(data.keys())[0]])):  # get length of a random key (all the same)
             # get slice of each data point as dictionary
             pipe.xadd('stream:'+stream, {key: data[key][i] for key in data.keys()})
         pipe.execute()

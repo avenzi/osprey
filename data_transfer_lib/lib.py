@@ -432,6 +432,7 @@ class Streamer(WorkerNode):
             connect() again will fail with the error "Already Connected." When the server
             socketIO is available again, it will reconnect automatically.
         """
+        self.debug("{} attempting to connect socketIO to {}:{}".format(self.name, self.ip, self.server_port))
         while not self.exit:
             try:
                 self.socket = socketio.Client()
@@ -451,7 +452,6 @@ class Streamer(WorkerNode):
     def _run(self):
         """ Runs main execution loop """
         # get connection to socketIO server.
-        self.log("Attempting to connect socketIO to {}:{}".format(self.ip, self.server_port))
         self.get_socketio()
 
         while not self.exit:  # run until application shutdown

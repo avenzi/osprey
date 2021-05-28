@@ -24,6 +24,7 @@ def streamer_connect():
     """ On disconnecting from a streamer """
     # TODO: this method does not seem to trigger. Not a big deal, but it should.
     print("A Streamer connected")
+    browser_refresh()
 
 
 @socketio.on('disconnect', namespace='/streamer')
@@ -31,6 +32,7 @@ def streamer_disconnect():
     """ On disconnecting from a streamer """
     # TODO: same issue as streamer_connect()
     print("A Streamer disconnected")
+    browser_refresh()
 
 
 @socketio.on('log', namespace='/streamers')
