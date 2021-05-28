@@ -3,7 +3,7 @@ import inspect
 
 from lib import Client
 
-CONFIG_PATH = '../config/analyzer_config.json'
+CONFIG_PATH = '../config/server_streamer_config.json'
 
 
 class AnalyzerClient(Client):

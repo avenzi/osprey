@@ -32,11 +32,7 @@ class TestStreamer(Streamer):
             data['val_3'].append(self.val_3)
             time.sleep(0.05)
 
-        pipe = self.redis.pipeline()
-        for i in range(len(data['time'])):
-            # get slice of each data point as dictionary
-            pipe.xadd('stream:'+self.name, {key: data[key][i] for key in data.keys()})
-        pipe.execute()
+        self.database.write_data(self.name, data)
 
 
 class SenseStreamer(Streamer):
@@ -63,10 +59,7 @@ class SenseStreamer(Streamer):
             data['yaw'].append(yaw)
             data['time'].append(self.time())
 
-        pipe = self.redis.pipeline()
-        for i in range(len(data['time'])):
-            pipe.xadd('stream:'+self.name, {key: data[key][i] for key in data.keys()})
-        pipe.execute()
+        self.database.write_data(self.name, data)
 
     def start(self):
         """ Extended from base class in pi_lib.py """

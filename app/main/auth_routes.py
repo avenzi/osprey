@@ -56,6 +56,7 @@ def login():
         flash(error)
     return render_template('auth/login.html')
 
+
 @auth.route('/logout')
 def logout():
     session.clear()

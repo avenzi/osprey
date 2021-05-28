@@ -63,8 +63,8 @@ port = config.get('PORT')             # port to connect through
 name = config.get('NAME')             # display name of this Client
 selected = config.get('STREAMERS')    # Dictionary of streamer class to choose from
 vcp = config.get('VCP')               # Dictionary mapping streamers to Virtual COM Ports that will receive data from the dongles
-redis_port = config.get('REDIS_PORT') # port for redis server
-redis_pass = config.get('REDIS_PASS') # password to redis server
+redis_port = config.get('DB_PORT')    # port for redis server
+redis_pass = config.get('DB_PASS')    # password to redis server
 
 # get all classes defined in 'streamers.py'
 streamer_classes = []
@@ -95,9 +95,9 @@ if not ip:
 if not port:
     config['SERVER_PORT'] = int(input("Server Port: "))
 if not redis_port:
-    config['REDIS_PORT'] = int(input("Redis Database Port: "))
+    config['DB_PORT'] = int(input("Database Port: "))
 if not redis_pass:
-    config['REDIS_PASS'] = input("Redis Database Password: ")
+    config['DB_PASS'] = input("Database Password: ")
 if not name:
     config['NAME'] = input("Client name: ")
 if not selected:

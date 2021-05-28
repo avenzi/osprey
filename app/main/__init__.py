@@ -8,7 +8,6 @@ streams = Blueprint('streams', __name__)
 # Flask-SocketIO object to send and receive messages
 socketio = SocketIO()
 
-
 # these are imported below to avoid recursive imports when importing the above objects
 
 # import routes/events associated with these blueprints/socket

@@ -8,7 +8,8 @@ import time
 import os
 
 import socketio
-import redis
+
+from database_lib import Database
 
 
 class Base:
@@ -410,33 +411,17 @@ class Streamer(WorkerNode):
     def __init__(self, config):
         super().__init__(config)
         self.socket = None  # socketio client
-        self.redis = None  # connection to redis database
         self.type = None  # string determined by derived class
 
         self.ip = self.config.get('SERVER_IP')  # ip address of server
         self.server_port = self.config.get('SERVER_PORT')  # port of server (used for socketIO)
-        self.db_port = self.config.get('REDIS_PORT')  # port to Redis on server
-        self.db_password = self.config.get('REDIS_PASS')
         self.set_log_path(self.config.get('LOG_PATH'))
+
+        # connection to database
+        self.database = Database(self.ip, config['DB_PORT'], config['DB_PASS'])
 
         self.streaming = Event()  # threading event flag set when actively streaming
         self.start_time = 0  # start time
-
-    def get_database(self):
-        """
-        Attempt to get database connection.
-        Loop indefinitely if unsuccessful.
-        """
-        while not self.exit:
-            try:  # try to get connection to the database
-                self.redis = redis.Redis(host=self.ip, port=self.db_port, password=self.db_password, decode_responses=True)
-                if self.redis.ping():
-                    self.log("{} connected to server Database".format(self.name))
-                    return True
-            except Exception as e:
-                #self.log("{} failed to connect to Database: ".format(self.name, e))
-                pass
-            time.sleep(1)  # wait before trying again
 
     def get_socketio(self):
         """
@@ -470,18 +455,19 @@ class Streamer(WorkerNode):
         self.get_socketio()
 
         while not self.exit:  # run until application shutdown
-            self.get_database()  # try to get connection to database
+            self.database.connect()  # try to get connection to database
 
             # start main execution loop
             while not self.exit:  # run until exit
                 self.streaming.wait()  # block until streaming event is set
                 try:
                     self.loop()  # call user-defined main execution
-                except redis.exceptions.ConnectionError as e:
-                    self.stop()
-                    break
+                except self.database.Error:
+                    self.stop()  # stop stream
+                    time.sleep(1)
+                    break  # break execution and attempt to reconnect
                 except Exception as e:
-                    self.throw("BREAK: {}".format(e), trace=True)
+                    self.throw("Unhandled exception: {}".format(e), trace=True)
                     time.sleep(1)
                     break
 
@@ -499,9 +485,9 @@ class Streamer(WorkerNode):
         """
         if self.streaming.is_set():  # already running
             return
+        self.database.write_info(self.name, {'name': self.name, 'client': self.client, 'type': self.type})
         self.streaming.set()  # set streaming, which starts the main execution while loop
         self.start_time = self.time()
-        self.redis.hmset('info:' + self.name, {'name': self.name, 'client': self.client, 'type': self.type})
         self.log("Started {}".format(self.name))
         self.socket.emit('log', "Started Streamer {}".format(self.name), namespace='/streamers')
 
@@ -530,10 +516,10 @@ class SocketCommunicator(socketio.ClientNamespace):
         #self.streamer.log("{} disconnected from socketIO server".format(self.streamer.name))
         pass
 
-    def on_command(self, comm):
-        if comm == 'START':
-            self.streamer.start()
-        elif comm == 'STOP':
-            self.streamer.stop()
-        else:
-            self.streamer.log("Unrecognized Command: {}".format(comm))
+    def on_start(self):
+        """ start message from server """
+        self.streamer.start()
+
+    def on_stop(self):
+        """ stop message from server """
+        self.streamer.stop()

@@ -1,12 +1,23 @@
 from flask import Flask, send_from_directory
 import os
+import json
+
+from data_transfer_lib.database_lib import Database
 
 
 def create_app():
     """ Application factory to create the app and be passed to workers """
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_mapping(SECRET_KEY='thisisthesecretkeytotheflaskserver')
-    app.redis = None  # to hold reference to Redis database connection
+
+    # get database config options
+    try:
+        with open('config/server_streamer_config.json') as file:
+            config = json.load(file)
+    except Exception as e:
+        raise Exception('No database config file found. Please run the appropriate setup script first.')
+
+    app.database = Database(config['SERVER_IP'], config['DB_PORT'], config['DB_PASS'])
 
     # add basic favicon
     @app.route('/favicon.ico')

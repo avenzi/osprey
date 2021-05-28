@@ -23,9 +23,8 @@ else:
 
 # get all settings in the file, which will be None if they don't exist
 port = config.get('SERVER_PORT')
-name = config.get('NAME')
-redis_port = config.get('REDIS_PORT') # port for redis server
-redis_pass = config.get('REDIS_PASS') # password to redis server
+redis_port = config.get('DB_PORT')  # port for redis server
+redis_pass = config.get('DB_PASS')  # password to redis server
 
 # all settings present, not overwriting
 if port and name and updating:
@@ -35,21 +34,19 @@ if port and name and updating:
 # file doesn't exist, or overwriting existing file
 # TODO: Add regex input validation to all these options?
 print("> Please provide the following information. These can be changed in {}\n".format(CONFIG_PATH))
-if not name:
-    config['NAME'] = input("Server display name: ")
 if not port:
     config['SERVER_PORT'] = int(input("Server Port: "))
 if not redis_port:
-    config['REDIS_PORT'] = int(input("Redis Database Port: "))
+    config['DB_PORT'] = int(input("Database Port: "))
 if not redis_pass:
-    config['REDIS_PASS'] = input("Redis Database Password: ")
-
-config['SERVER_IP'] = get('http://ipinfo.io/ip').text.strip()
+    config['DB_PASS'] = input("Database Password: ")
 
 # set log file path and data file path.
-# TODO: Option to configure this
+# TODO: Option to configure these?
 config['LOG_PATH'] = '../logs'
 config['DATA_PATH'] = '../data'
+config['NAME'] = 'Server Streaming Client'
+config['SERVER_IP'] = get('http://ipinfo.io/ip').text.strip()
 
 # After all config options set
 with open(CONFIG_PATH, 'w+') as file:
