@@ -19,15 +19,22 @@ class DatabaseError(Exception):
 
 
 def handle_errors(method):
-    """ method wrapper to throw custom errors """
+    """
+    Method wrapper to catch some disconnection issues
+    Also throws custom errors that can be caught in an outer scope
+    """
     @functools.wraps(method)
     def wrapped(self, *args, **kwargs):
         if not self.redis:
-            raise self.Error('Database not initialized. Use database.connect() first.')
+            if not self.connect(repeat=1):  # attempt to connect once
+                raise self.Error('Could not connect to database')
         try:
             return method(self, *args, **kwargs)
         except redis.ConnectionError as e:
-            raise self.Error('Database connection error: {}'.format(e))
+            if self.connect(repeat=1):  # attempt to connect once
+                return method(self, *args, **kwargs)
+            else:  # failed
+                raise self.Error('Database connection error: {}'.format(e))
     return wrapped
 
 
@@ -49,7 +56,10 @@ class Database:
         self.exit = False  # flag to determine when to stop running if looping
 
     def init(self):
-        """ Initialize database process """
+        """
+        Initialize database process.
+        Obviously only used on the machine that is hosting the redis server
+        """
         os.system("redis-server config/redis.conf")
 
     def shutdown(self):
@@ -77,7 +87,7 @@ class Database:
                 self.redis = redis.Redis(host=self.ip, port=self.port, password=self.password, decode_responses=True)
                 if self.redis.ping():
                     return True
-            except Exception as e:
+            except ConnectionError as e:
                 if repeat is None or tries < repeat:
                     tries += 1
                     sleep(delay)
@@ -128,13 +138,16 @@ class Database:
     @handle_errors
     def read_data_since(self, stream, last_read, to_json=False):
         """
-        Gets data since <last_read> ID from data column <stream>.
+        Gets data since <last_read> ID from data column stream:<stream>.
         <to_json> whether to convert to json string. If False, outputs a dictionary of lists.
         Redis uses '$' to denote most recent data ID.
         Returns a tuple of data and last read ID.
         """
         if not last_read:  # get last ID if not given
-            last_read = self.redis.xrevrange('stream:'+stream, count=1)[0][0]
+            try:
+                last_read = self.redis.xrevrange('stream:'+stream, count=1)[0][0]
+            except IndexError:
+                return None, None
 
         stream = self.redis.xread({'stream:'+stream: last_read})
         if not stream:
@@ -160,7 +173,7 @@ class Database:
     @handle_errors
     def write_data(self, stream, data):
         """
-        Writes <data> to <stream>.
+        Writes <data> to stream:<stream>.
         <data> must be a dictionary of lists, where keys are data column names.
         """
         pipe = self.redis.pipeline()  # pipeline queues a series of commands at once
@@ -170,28 +183,33 @@ class Database:
         pipe.execute()
 
     @handle_errors
-    def read_info(self, key, name):
+    def read_info(self, ID, name=None):
         """
-        Reads <name> from map with key <key>
+        Reads <name> from map with key info:<key>
+        if <name> not specified, gives dictionary with all key value pairs
         """
-        return self.redis.hget('info:'+key, name)
+        if name is not None:
+            return self.redis.hget('info:'+ID, name)
+        else:
+            data = self.redis.hgetall('info:' + ID)
+            return data
 
     @handle_errors
     def write_info(self, key, data):
         """
-        Writes <data> to <key>
+        Writes <data> to info:<key>
         <data> must be a dictionary of key-value pairs.
         <key> is the key for this data set
         """
         self.redis.hmset('info:'+key, data)
 
     @handle_errors
-    def get_info_keys(self):
-        """ Gets a list of all info keys """
-        stream_names = []
+    def get_all_info(self):
+        """ Gets a list of dictionaries containing info for all connected streams """
+        info = []
         for key in self.redis.execute_command('keys info:*'):
-            stream_names.append(self.redis.hget(key, 'name'))
-        return stream_names
+            info.append(self.redis.hgetall(key))
+        return info
 
 
 

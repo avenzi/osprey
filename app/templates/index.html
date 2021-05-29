@@ -34,11 +34,10 @@
         });
 
         socket.on('update', function(data) {
-            console.log('Received updated list: ')
-            console.log(data)
+            // data is a list of dictionaries with info on each stream
             $('#streams ul').empty()
-            data.forEach(function(name) {
-                $('#streams ul').append(`<li><a href='/stream?name=${name}'>${name}</a></li>`);
+            data.forEach(function(info) {
+                $('#streams ul').append(`<li><a href='/stream?id=${info['id']}'>${info['name']}</a></li>`);
             });
         });
 

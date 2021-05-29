@@ -46,7 +46,8 @@ class RaspiClient(Client):
             if member[1].__module__.split('.')[-1] == 'streamers':  # imported from the streamers.py file
                 config = self.config['STREAMERS'].get(member[0])  # configuration of whether this class is to be used or not
                 if config and config.upper() == 'Y':  # this class is in the config file and set to be used
-                    self.run_worker(member[1])  # create a new worker and on a parallel process
+                    worker = member[1](self.config)  # create a new worker instnace
+                    self.run_worker(worker)  # run on a parallel process
                 else:  # not in the config file or not set to be used
                     self.debug("Streamer class {} is not being used. Set it's keyword to 'Y' in {} to use".format(member[0], CONFIG_PATH))
 

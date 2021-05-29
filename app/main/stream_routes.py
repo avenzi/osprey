@@ -26,17 +26,17 @@ def index():
 @login_required
 @streams.route('/stream', methods=('GET', 'POST'))
 def stream():
-    stream_name = request.args.get('name')
+    stream_id = request.args.get('id')
     try:
-        stream_type = current_app.database.read_info(stream_name, 'type')
+        info = current_app.database.read_info(stream_id)  # get info dict
     except Database.Error as e:
-        print('Database Error occurred when trying to read from stream: {}'.format(e))
+        print('Database Error occurred when trying to read stream info: {}'.format(e))
         return
 
     # get stream page template according to stream type
-    template_path = '/streams/{}.html'.format(stream_type)
+    template_path = '/streams/{}.html'.format(info['type'])
     try:
-        return render_template(template_path, stream_name=stream_name)
+        return render_template(template_path)
     except TemplateNotFound as e:
         return render_template('/error.html', error="Template Not Found: \"{}\"".format(template_path))
 
@@ -45,19 +45,21 @@ def stream():
 @streams.route('/stream/plot_layout', methods=('GET', 'POST'))
 def plot_layout():
     """ Returns the layout JSON for the bokeh plot """
-    stream_name = request.args.get('name')
+    stream_id = request.args.get('id')
 
     try:
-        stream_type = current_app.database.read_info(stream_name, 'type')
+        info = current_app.database.read_info(stream_id)  # get info dict
     except Database.Error as e:
-        print(e)
+        print('Database Error occurred when trying to read stream info: {}'.format(e))
         return
 
+    stream_type = info['type']
+
     if stream_type == 'plot':  # bokeh plot
-        layout = get_layout(stream_name)  # Get full layout json string for this stream
+        layout = get_layout(info)  # Get full layout json string for this stream
         resp = Response(response=layout, content_type='application/json')
     else:
-        print("UNKNOWN STREAM TYPE: {}".format(stream_type))
+        print("Stream of unknown type '{}' requested a plot_layout.".format(stream_type))
         resp = render_template()
         return
 
@@ -68,11 +70,11 @@ def plot_layout():
 @streams.route('/stream/update', methods=('GET', 'POST'))
 def plot_update():
     """ Returns the json to update a plot """
-    stream_name = request.args.get('name')
+    stream_id = request.args.get('id')
 
     try:
-        key = 'last_read_{}'.format(stream_name)  # key in session for last read
-        data, last_read = current_app.database.read_data_since(stream_name, last_read=session[key], to_json=True)
+        key = 'last_read_{}'.format(stream_id)  # key in session for last read
+        data, last_read = current_app.database.read_data_since(stream_id, last_read=session.get(key), to_json=True)
         session[key] = last_read
     except Database.Error:
         return "", 404

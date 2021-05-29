@@ -19,20 +19,25 @@ def browser_disconnect():
     pass
 
 
-@socketio.on('connect', namespace='/streamer')
+@socketio.on('connect', namespace='/streamers')
 def streamer_connect():
     """ On disconnecting from a streamer """
-    # TODO: this method does not seem to trigger. Not a big deal, but it should.
-    print("A Streamer connected")
-    browser_refresh()
+    #print("A Streamer connected")
+    pass
 
 
-@socketio.on('disconnect', namespace='/streamer')
+@socketio.on('disconnect', namespace='/streamers')
 def streamer_disconnect():
     """ On disconnecting from a streamer """
-    # TODO: same issue as streamer_connect()
-    print("A Streamer disconnected")
+    #print("A Streamer disconnected")
+    pass
+
+
+@socketio.on('ready', namespace='/streamers')
+def streamer_ready(info):
+    """ message confirming that the streamer is ready """
     browser_refresh()
+    socketio.emit('ready', info, namespace='/analyzer_client')  # give info to analyzer client
 
 
 @socketio.on('log', namespace='/streamers')
@@ -58,18 +63,15 @@ BUTTONS = [{'label': 'Init',     'command': 'initialize', 'tooltip': 'Initialize
 def database_init():
     """ start database process """
     current_app.database.init()  # start database process
-    sleep(0.1)
-    if current_app.database.connect(repeat=5):
-        socketio.emit('log', 'Started Redis server', namespace='/browser')
-        browser_refresh()
-    else:
-        socketio.emit('log', 'Failed to connect to database', namespace='/browser')
+    sleep(0.1)  # give it sec to start up
+    socketio.emit('log', 'Started Redis server', namespace='/browser')
+    browser_refresh()
 
 
 @socketio.on('shutdown', namespace='/browser')
 def database_shutdown():
     """ stop database process and dump data """
-    browser_stop()  # stop streams first
+    socketio.emit('stop', namespace='/streamers')  # stop streams first
     current_app.database.shutdown()  # stop database process
     socketio.emit('log', 'Shut down Database', namespace='/browser')
     browser_refresh()
@@ -98,9 +100,9 @@ def browser_refresh():
     """ refresh list of connected streams """
     sleep(0.1)
     try:
-        stream_names = current_app.database.get_info_keys()
+        info = current_app.database.get_all_info()
     except Database.Error:
-        stream_names = []
+        info = []
 
-    socketio.emit('update', stream_names, namespace='/browser')
+    socketio.emit('update', info, namespace='/browser')
 

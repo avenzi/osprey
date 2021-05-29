@@ -32,7 +32,7 @@ class TestStreamer(Streamer):
             data['val_3'].append(self.val_3)
             time.sleep(0.05)
 
-        self.database.write_data(self.name, data)
+        self.database.write_data(self.id, data)
 
 
 class SenseStreamer(Streamer):
@@ -59,7 +59,7 @@ class SenseStreamer(Streamer):
             data['yaw'].append(yaw)
             data['time'].append(self.time())
 
-        self.database.write_data(self.name, data)
+        self.database.write_data(self.id, data)
 
     def start(self):
         """ Extended from base class in pi_lib.py """
@@ -466,10 +466,7 @@ class SynthEEGStreamer(Streamer):
 
         self.frames_sent += 1
 
-        pipe = self.redis.pipeline()
-        for i in range(len(data['time'])):
-            pipe.xadd('stream:'+self.name, {key: data[key][i] for key in data.keys()})
-        pipe.execute()
+        self.database.write_data(self.id, data)
 
     def start(self):
         """ Extended from base class in pi_lib.py """
@@ -477,8 +474,8 @@ class SynthEEGStreamer(Streamer):
         self.board.prepare_session()
         self.board.start_stream()
 
-        # First send some initial information
-        self.socket.emit('eeg_info', {'sample_rate': self.freq, 'channels': self.eeg_channel_names})
+        # First send some initial information to this stream's info channel
+        self.database.write_info(self.id, {'sample_rate': self.freq, 'channels': self.eeg_channel_names})
         #req.add_header('sample_rate', self.freq)
         #req.add_header('channels', ','.join(self.eeg_channel_names)
         super().start()  # start main loop

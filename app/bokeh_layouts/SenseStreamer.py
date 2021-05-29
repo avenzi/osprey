@@ -3,9 +3,9 @@ from bokeh.models import AjaxDataSource
 from bokeh.layouts import layout
 
 
-def create_layout(name):
+def create_layout(info):
     source = AjaxDataSource(
-        data_url='/stream/update?name={}'.format(name),
+        data_url='/stream/update?id={}'.format(info['id']),
         method='GET',
         polling_interval=500,  # in milliseconds
         mode='append',  # append to existing data

@@ -275,14 +275,11 @@ class Client(Base):
         """
         pass
 
-    def run_worker(self, WorkerClass):
+    def run_worker(self, worker):
         """
-        Creates an instance of the given WorkerClass, then runs it on a new process.
+        Runs the given worker class on a new process.
         Adds the new Pipe to the pipe index, and starts reading from it on a new thread.
         """
-        # create instance of WorkerClass, pass on necessary info
-        worker = WorkerClass(self.config)
-
         # multiprocessing duplex connections (doesn't matter which end of the pipe is which)
         host_conn, worker_conn = Pipe()
 
@@ -412,6 +409,7 @@ class Streamer(WorkerNode):
         super().__init__(config)
         self.socket = None  # socketio client
         self.type = None  # string determined by derived class
+        self.id = self.generate_uuid()  # unique id
 
         self.ip = self.config.get('SERVER_IP')  # ip address of server
         self.server_port = self.config.get('SERVER_PORT')  # port of server (used for socketIO)
@@ -421,7 +419,7 @@ class Streamer(WorkerNode):
         self.database = Database(self.ip, config['DB_PORT'], config['DB_PASS'])
 
         self.streaming = Event()  # threading event flag set when actively streaming
-        self.start_time = 0  # start time
+        self.start_time = time.time()  # start time
 
     def get_socketio(self):
         """
@@ -455,7 +453,8 @@ class Streamer(WorkerNode):
         self.get_socketio()
 
         while not self.exit:  # run until application shutdown
-            self.database.connect()  # try to get connection to database
+            self.database.connect()  # get connection to database
+            self.send_ready()  # send info and ready signal
 
             # start main execution loop
             while not self.exit:  # run until exit
@@ -468,8 +467,7 @@ class Streamer(WorkerNode):
                     break  # break execution and attempt to reconnect
                 except Exception as e:
                     self.throw("Unhandled exception: {}".format(e), trace=True)
-                    time.sleep(1)
-                    break
+                    return
 
     def loop(self):
         """
@@ -478,6 +476,12 @@ class Streamer(WorkerNode):
         """
         pass
 
+    def send_ready(self):
+        """ Send info to server and signal ready """
+        info = {'id': self.id, 'name': self.name, 'client': self.client, 'type': self.type}
+        self.database.write_info(self.id, info)
+        self.socket.emit('ready', info, namespace='/streamers')
+
     def start(self):
         """
         Should be extended in streamers.py
@@ -485,9 +489,8 @@ class Streamer(WorkerNode):
         """
         if self.streaming.is_set():  # already running
             return
-        self.database.write_info(self.name, {'name': self.name, 'client': self.client, 'type': self.type})
+        self.send_ready()  # send info again (since database might have been wiped since last time)
         self.streaming.set()  # set streaming, which starts the main execution while loop
-        self.start_time = self.time()
         self.log("Started {}".format(self.name))
         self.socket.emit('log', "Started Streamer {}".format(self.name), namespace='/streamers')
 
