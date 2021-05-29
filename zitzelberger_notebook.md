@@ -33,6 +33,16 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### May 28th, 2021:
+
+I started today by trying to get the EEGStreamer running, but I soon realized that I don't currently have a way to have the Pi send more information about the stream, like the sampling frequency or list of channel names. I solved this temporarily by sending this info along with the dictionary written to the database initially. 
+
+More importantly, however, I also realized that I will need a way for the analyzers to differentiate between multiple instances of the same stream even on multiple raspis. The problem is that I am currently identifying streams by the class name given on the PI side, but this definitely won't work with multiple instances of the same stream. I decided to use the UUID package to generate unique IDs for each stream, and that is what will identify different streams on both the browser and in the database. In order to make this work with the Analyzer classes, I had to rewrite the Analyzer Client on the server to have socketIO instance that is notified whenever a new stream is connected to the server. The Analyzer Client receives the info that the Pi sent, including the unique ID and name. If the streamer name matches one of the Analyzers' designated targets, the Analyzer Client creates an instance of that Analyzer and runs it on a new process. This ensures that even multiple instances of the same stream type will have it's own Analyzer instance. 
+
+I also had to redo some of the abstracted database internals, as I was having too much trouble handling connection errors. I decided to implement a small failsafe in the database read/write methods themselves: if a ConnectionError is encountered while reading or writing, the database automatically tries to establish a new connection. Only if that fails does it let the Error propagate through to the outer scope. This still leaves me with a bunch of try/catch clauses in the flask app which I am not happy about, but I'm not sure how else to go about it.
+
+Unfortunately, I was still not able to start on the EEG stream because of all this, but I will try again tomorrow.
+
 ##### May 27th, 2021:
 
 (really this was from last night but I was too tired to write up a log)
