@@ -10,6 +10,7 @@ import json
 from scipy import signal
 
 BACKEND = 'canvas'  # 'webgl' appears to be broken - makes page unresponsive.
+ELECTRODES_PATH = 'static/electrodes.json'
 
 # default values of all widgets and figure attributes
 config = {
@@ -160,19 +161,19 @@ def create_layout(info):
     # y-axis range will autoscale to currently selected channel
     eeg.y_range.only_visible = True
 
-    for i in range(len(channels)):  # plot each line
+    for i in range(len(stream_channels)):  # plot each line
         visible = True if i == 0 else False  # first channel visible
-        eeg.line(x='time', y=channels[i], name=channels[i], color=colors[i], source=eeg_source, visible=visible)
+        eeg.line(x='time', y=stream_channels[i], name=stream_channels[i], color=colors[i], source=eeg_source, visible=visible)
 
     # Whenever the DataSource data changes, incrementally slide x_range
     # to give the appearance of continuity.
     # TODO: make it less choppy?
     eeg_source.js_on_change('data',
-                            CustomJS(args=dict(  # arguments to be passed into the JS function
-                                source=eeg_source,
-                                figure=eeg
-                            ),
-                                code="""
+        CustomJS(args=dict(  # arguments to be passed into the JS function
+            source=eeg_source,
+            figure=eeg
+        ),
+            code="""
 var duration = source.polling_interval
 var current = figure.x_range.end
 
@@ -199,7 +200,7 @@ if (diff > 0 && diff < end-start) {
     figure.x_range.end = end
 }
 """
-                            ))
+    ))
 
     # fourier figure with a line for each EEG channel
     fourier = figure(
@@ -209,8 +210,8 @@ if (diff > 0 && diff < end-start) {
         toolbar_location=None, active_drag=None, active_scroll=None,
         output_backend=BACKEND
     )
-    for i in range(len(channels)):
-        fourier.line(x='frequencies', y=channels[i], color=colors[i], source=fourier_source)
+    for i in range(len(stream_channels)):
+        fourier.line(x='frequencies', y=stream_channels[i], color=colors[i], source=fourier_source)
     fourier_panel = Panel(child=fourier, title='FFT')  # create a tab for this plot
 
     ################
@@ -296,19 +297,19 @@ if (low < high) {
     '''
 
     # Radio buttons to select channels on the EEG figure and Spectrogram figure
-    channel_radios = RadioButtonGroup(labels=channels, active=0)
+    channel_radios = RadioButtonGroup(labels=stream_channels, active=0)
     channel_radios.js_on_click(CustomJS(
         args=dict(
             eeg_fig=eeg,
-            labels=channels
+            labels=stream_channels
         ),
         code="""
     eeg_fig.select_one(this.labels[this.active]).visible = true
-    // spec_fig.select_one(this.labels[this.active]).visible = true
+    // spec_fig.select_one(this.labels[this.active]).visible = true (to remove)
     for (var label of labels) {
         if (label != this.labels[this.active]){
             eeg_fig.select_one(label).visible = false
-            // spec_fig.select_one(label).visible = false
+            // spec_fig.select_one(label).visible = false (to remove)
         }
     }
     """))
@@ -317,11 +318,11 @@ if (low < high) {
     # Head Plots
 
     # get 2D positions of all possible headset electrodes
-    with open(PAGES_PATH + '/electrodes.json', 'r') as f:
+    with open(ELECTRODES_PATH, 'r') as f:
         all_names = json.loads(f.read())
 
     x, y = [], []
-    for name in channels:  # get coordinates of electrodes by name
+    for name in stream_channels:  # get coordinates of electrodes by name
         x.append(all_names[name][0])
         y.append(all_names[name][1])
 
@@ -335,7 +336,7 @@ if (low < high) {
             toolbar_location=None, active_drag=None, active_scroll=None,
             output_backend=BACKEND
         )
-        # Even though x and y don't change, they have to be gotten from the data source.
+        # Even though x and y of each point don't change, they have to be gotten from the data source.
         # Each figure gets its own color mapper and takes data from the
         #   column with it's band name, which contains the color data.
         mapper = log_cmap(field_name=band, palette=mapper_palette, low=mapper_low, high=mapper_high)
@@ -347,9 +348,9 @@ if (low < high) {
     delta, theta, alpha, beta, gamma = head_figures  # figures
     delta_c, theta_c, alpha_c, beta_c, gamma_c = circles  # glyphs
 
-    # put colorbar on left-most plot and increase width to accomodate
+    # put colorbar on left-most plot and increase width to accommodate
     delta.add_layout(color_bar, 'left')
-    delta.plot_width = 390  # this seems to be the right amount (visually)
+    delta.plot_width = 390  # this seems to be the right amount visually
 
     # Headplot color scale adjusting slider.
     # This widget needs to be here (as opposed to at the top with all the other widgets) because

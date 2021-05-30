@@ -47,7 +47,7 @@ class AnalyzerClient(Client):
         # if this Analyzer class exists and a streamer with this ID isn't already being analyzed
         if AnalyzerClass and streamer_id not in self.active_analyzers:
             self.active_analyzers.append(streamer_id)  # add to list of streamer IDs being analyzed
-            self.log("Analyzer {} bound to incoming stream: {} identified".format(AnalyzerClass.__name__, stream_name))
+            self.log("Analyzer {} bound to incoming stream: {} identified".format(AnalyzerClass.__name__, streamer_name))
             worker = AnalyzerClass(self.config)
             worker.target_id = info['id']  # give it the streamer id
             self.run_worker(worker)

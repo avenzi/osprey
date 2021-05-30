@@ -41,16 +41,16 @@ def detect_vcp(event):
     event.set()
 
 
-updating = False  # flag if updating existing config settings
+updating = False  # flag if overwriting existing config file
 
 # check for existing config file
 if os.path.isfile(CONFIG_PATH):
-    ans = validate_input("Found an existing config file.\nOverwrite? (y/n): ", ['y', 'n'])
+    ans = validate_input("> Found an existing config file.\nOverwrite? (y/n): ", ['y', 'n'])
     if ans == 'y':
-        print("All config setting will be overwritten.")
+        print("> All config setting will be overwritten.")
+        updating = True
         config = {}
     else:
-        updating = True
         with open(CONFIG_PATH) as file:
             config = json.load(file)
 else:
@@ -73,18 +73,21 @@ for member in inspect.getmembers(streamers, inspect.isclass):
         streamer_classes.append(member)
 
 # Check to see if all classes are included in the config options
-all_in_config = True
+all_streamers_in_selected = True
+all_streamers_in_vcp = True
 if selected:
     for member in streamer_classes:
         if member[0] not in selected.keys():
-            all_in_config = False
+            all_streamers_in_selected = False
+if vcp:
+    for member in streamer_classes:
         if member[0] not in vcp.keys():
-            all_in_config = False
+            all_streamers_in_vcp = False
 
 
-# all settings present, not overwriting
-if ip and port and name and selected and vcp and all_in_config and updating:
-    print("\nAll config options are set. \nIf you wish to change anything you can edit '{}', \nor restart this script and choose to overwrite.".format(CONFIG_PATH))
+# Not overwriting
+if not updating:
+    print("> Keeping current config. If you wish to change anything you can edit '{}', or restart this script and choose to overwrite.".format(CONFIG_PATH))
     quit()
 
 # file doesn't exist, or overwriting existing file
