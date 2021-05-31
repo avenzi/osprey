@@ -408,7 +408,8 @@ class Streamer(WorkerNode):
     def __init__(self, config):
         super().__init__(config)
         self.socket = None  # socketio client
-        self.type = None  # string determined by derived class
+        self.type = ''  # string determined by derived class
+        self.show = 'true'  # string, either 'true' or 'false'. Whether to show stream in browser
         self.id = self.generate_uuid()  # unique id
 
         self.ip = self.config.get('SERVER_IP')  # ip address of server
@@ -478,7 +479,7 @@ class Streamer(WorkerNode):
 
     def send_ready(self):
         """ Send info to server and signal ready """
-        info = {'id': self.id, 'name': self.name, 'client': self.client, 'type': self.type}
+        info = {'id': self.id, 'name': self.name, 'client': self.client, 'type': self.type, 'show': self.show}
         self.database.write_info(self.id, info)
         self.socket.emit('ready', info, namespace='/streamers')
 

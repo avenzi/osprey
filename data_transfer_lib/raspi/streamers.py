@@ -475,9 +475,7 @@ class SynthEEGStreamer(Streamer):
         self.board.start_stream()
 
         # First send some initial information to this stream's info channel
-        self.database.write_info(self.id, {'sample_rate': self.freq, 'channels': self.eeg_channel_names})
-        #req.add_header('sample_rate', self.freq)
-        #req.add_header('channels', ','.join(self.eeg_channel_names)
+        self.database.write_info(self.id, {'sample_rate': self.freq, 'channels': ','.join(self.eeg_channel_names)})
         super().start()  # start main loop
 
     def stop(self):

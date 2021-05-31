@@ -47,13 +47,21 @@ class Database:
     Error = DatabaseError
 
     def __init__(self, ip, port, password):
-        super().__init__()
-        self.redis = None
         self.ip = ip  # ip of database
         self.port = port  # database port
         self.password = password  # database password
 
+        # not sure how to give Redis instances to certain sessions.
+        self.pool = redis.ConnectionPool(host=ip, port=port, password=password, decode_responses=True)
+        self.redis = redis.Redis(connection_pool=self.pool)
+
         self.exit = False  # flag to determine when to stop running if looping
+
+        # For different threads to keep track of their own last read operation point.
+        # Dictionary of dictionaries: First level key is ID of each separate reader.
+        # Each of those dictionaries has keys for each stream in the database, with values
+        # of the last stream ID read from it.
+        self.bookmarks = {}
 
     def init(self):
         """
@@ -61,11 +69,13 @@ class Database:
         Obviously only used on the machine that is hosting the redis server
         """
         os.system("redis-server config/redis.conf")
+        self.exit = False
 
     def shutdown(self):
         """ Shut down database process and save data """
+        self.exit = True
         if not self.redis:
-           return
+            return False
         try:
             self.redis.shutdown(save=True)
             os.system("mv data/dump.rdb data/redis_dumps/{}.rdb".format(get_time()))
@@ -84,7 +94,7 @@ class Database:
         tries = 0
         while not self.exit:  # until node exits
             try:
-                self.redis = redis.Redis(host=self.ip, port=self.port, password=self.password, decode_responses=True)
+                self.redis = redis.Redis(connection_pool=self.pool)
                 if self.redis.ping():
                     return True
             except ConnectionError as e:
@@ -93,13 +103,6 @@ class Database:
                     sleep(delay)
                 else:
                     return False
-
-    def disconnect(self):
-        """
-        Disconnect from database
-        Redis uses pools and doesn't require an explicit disconnect
-        """
-        self.exit = True
 
     def ping(self):
         """ Ping database to ensure connecting is functioning """
@@ -110,22 +113,37 @@ class Database:
             return False
 
     @handle_errors
-    def read_data(self, stream, to_json=False):
+    def read_data(self, reader, stream, to_json=False):
         """
-        Gets newest data from data column <stream>.
-        <to_json> whether to convert to json string. if False, uses dictionary of lists
-        Redis uses '$' to denote most recent data ID.
+        Gets newest data for <reader> from data column <stream>.
+        <reader> is some ID that will keep track of it's own read head position.
+        <stream> is some ID that identifies the stream in the database.
+        <to_json> whether to convert to json string. if False, uses dictionary of lists.
         """
-        stream = self.redis.xread({'stream:'+stream: '$'}, None, 0)  # BLOCK 0
-        if not stream:
+        bookmarks = self.bookmarks.get(reader)  # get reader-specific bookmarks
+        if not bookmarks:  # this reader hasn't read before
+            bookmarks = {}
+            self.bookmarks[reader] = bookmarks
+
+        last_read = bookmarks.get(stream)
+        if last_read:  # last read spot exists
+            response = self.redis.xread({'stream:' + stream: last_read})
+
+        else:  # no last spot, start reading from latest, block for 1 sec
+            response = self.redis.xread({'stream:'+stream: '$'}, None, 1000)
+
+        if not response:
             return None
 
-        # get keys, which are every other element in first data list
-        keys = stream[0][1][0][1].keys()
+        # store the last ID of this stream
+        self.bookmarks[reader][stream] = response[0][1][-1][0]
+
+        # get keys from data dict
+        keys = response[0][1][0][1].keys()
         output = {key: [] for key in keys}
 
         # loop through stream data
-        for data in stream[0][1]:
+        for data in response[0][1]:
             # data[0] is the timestamp ID
             d = data[1]  # data dict
             for key in keys:

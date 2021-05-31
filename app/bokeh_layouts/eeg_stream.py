@@ -10,7 +10,7 @@ import json
 from scipy import signal
 
 BACKEND = 'canvas'  # 'webgl' appears to be broken - makes page unresponsive.
-ELECTRODES_PATH = 'static/electrodes.json'
+ELECTRODES_PATH = 'app/static/electrodes.json'
 
 # default values of all widgets and figure attributes
 config = {
@@ -46,13 +46,13 @@ def js_request(key, attribute='value'):
     widget_path = 'widgets'  # request path
 
     code = """
-        var req = new XMLHttpRequest();
-        url = window.location.pathname;
-        queries = window.location.search;  // get ID of current stream
-        req.open("POST", url+'/{path}'+queries, true);
-        req.setRequestHeader('Content-Type', 'application/json');
-        var json = JSON.stringify({{{key}: this.{attribute}}});
-        req.send(json);
+        //var req = new XMLHttpRequest();
+        //url = window.location.pathname;
+        //queries = window.location.search;  // get ID of current stream
+        //req.open("POST", url+'/{path}/'+queries, true);
+        //req.setRequestHeader('Content-Type', 'application/json');
+        //var json = JSON.stringify({{{key}: this.{attribute}}});
+        //req.send(json);
         console.log('{key}: ' + this.{attribute});
     """
     return code.format(path=widget_path, key=key, attribute=attribute)
@@ -107,15 +107,14 @@ def create_layout(info):
     #  spec images, the spectrogram Tab creation, and the code adding/sending data to the browser in
     #  the EEGHandler class.
     stream_id = info['id']
-    stream_channels = info['channels']
-    print("Channels in create_layout: ", stream_channels)
+    stream_channels = info['channels'].split(',')  # it's a comma separated string
 
     colors = viridis(len(stream_channels))  # viridis color palette for channel colors
 
     # create AJAX data sources for the plots
     # the if_modified=True allows it to ignore responses sent with a 304 code.
     eeg_source = AjaxDataSource(
-        data_url='/update_eeg?id={}'.format(stream_id),
+        data_url='/stream/update?id={}'.format(stream_id),
         method='GET',
         polling_interval=1000,
         mode='append',
@@ -123,7 +122,7 @@ def create_layout(info):
         if_modified=True)
 
     fourier_source = AjaxDataSource(
-        data_url='/update_fourier?id={}'.format(stream_id),
+        data_url='/stream/update?id=fourier:{}'.format(stream_id),
         method='GET',
         polling_interval=1000,
         mode='replace',  # all FFT lines are replaced each update
@@ -136,11 +135,11 @@ def create_layout(info):
         polling_interval=5000,
         max_size=config['spectrogram_size'],
         mode='append',  # new Spectrogram slices are appended each update
-        if_modified=True)
+        if_modified=True)vb
     '''
 
     headplot_source = AjaxDataSource(
-        data_url='/update_headplot?id={}'.format(stream_id),
+        data_url='/stream/update?id=headplot:{}'.format(stream_id),
         method='GET',
         polling_interval=1000,
         mode='replace',
@@ -154,7 +153,7 @@ def create_layout(info):
         title='EEG Channels',
         x_axis_label='Time (s)', y_axis_label='Voltage (uV)', x_range=[0, 0],
         plot_width=1200, plot_height=200,
-        toolbar_location=None, active_scroll=None, active_drag=None,
+        toolbar_location=None, active_scroll='auto', active_drag='auto',
         output_backend=BACKEND
     )
 
@@ -207,7 +206,7 @@ if (diff > 0 && diff < end-start) {
         title="EEG Fourier",
         x_axis_label='Frequency (Hz)', y_axis_label='Magnitude (log)', y_axis_type="log",
         plot_width=1200, plot_height=400,
-        toolbar_location=None, active_drag=None, active_scroll=None,
+        toolbar_location=None, active_drag='auto', active_scroll='auto',
         output_backend=BACKEND
     )
     for i in range(len(stream_channels)):
@@ -333,7 +332,7 @@ if (low < high) {
         fig = figure(
             title='{}-band Head Plot'.format(band),
             plot_width=300, plot_height=300,
-            toolbar_location=None, active_drag=None, active_scroll=None,
+            toolbar_location=None, active_drag='auto', active_scroll='auto',
             output_backend=BACKEND
         )
         # Even though x and y of each point don't change, they have to be gotten from the data source.

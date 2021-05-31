@@ -1,6 +1,6 @@
 from bokeh.embed import json_item
 from json import dumps
-from . import TestStreamer, SenseStreamer, EEGStreamer
+from . import test_stream, sense_stream, eeg_stream
 
 
 def get_layout(info):
@@ -9,14 +9,14 @@ def get_layout(info):
     <info> dictionary of attributes associated with this stream
     """
     # TODO: Not hard-code the various stream types here.
-    #  It should be able to look through /boheh_layouts and find the right layout
+    #  Maybe send the info about which one to pick in the info dictionary
     name = info['name']
-    if name == 'TestStreamer' or name == 'TestAnalyzer':
-        layout = TestStreamer.create_layout(info)
+    if name == 'TestStreamer':
+        layout = test_stream.create_layout(info)
     elif name == 'SenseStreamer':
-        layout = SenseStreamer.create_layout(info)
-    elif name == 'EEGStreamer':
-        layout = EEGStreamer.create_layout(info)
+        layout = sense_stream.create_layout(info)
+    elif name == 'EEGStreamer' or name == 'SynthEEGStreamer':
+        layout = eeg_stream.create_layout(info)
     else:
         raise Exception("Layout for {} not found".format(info['name']))
 

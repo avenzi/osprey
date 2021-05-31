@@ -1,3 +1,6 @@
+#from eventlet import monkey_patch as monkey_patch
+#monkey_patch()
+
 from flask import Flask, send_from_directory
 import os
 import json

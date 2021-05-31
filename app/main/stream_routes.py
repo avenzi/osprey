@@ -70,12 +70,10 @@ def plot_layout():
 @streams.route('/stream/update', methods=('GET', 'POST'))
 def plot_update():
     """ Returns the json to update a plot """
-    stream_id = request.args.get('id')
+    request_id = request.args.get('id')
 
     try:
-        key = 'last_read_{}'.format(stream_id)  # key in session for last read
-        data, last_read = current_app.database.read_data_since(stream_id, last_read=session.get(key), to_json=True)
-        session[key] = last_read
+        data = current_app.database.read_data(request_id, request_id, to_json=True)
     except Database.Error:
         return "", 404
 
