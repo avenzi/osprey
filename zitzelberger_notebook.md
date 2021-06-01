@@ -33,6 +33,16 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### May 31st, 2021:
+
+I have been struggling with an issue where data streamed to the browser appears to overlap. I had previously thought that this was due to the way in which Redis was keeping track of the previous read position, but it turns out I was just doing it very wrong. I am still keeping track of the read position manually (now part of my database class), but it turns out that is actually how you are intended to do it. Redis itself does not keep track of anything. What I previously thought was a method to keep track of the last read position was in fact not intended for that purpose at all. With this fix, the data *appears* to be not overlapping that I can see, even with multiple streams reading from the database at a time.
+
+I then set out to get the EEG stream up (again), and so far I have the raw eeg data streaming to the browser. The issue now is getting the widget values from the browser to interact with the analyzer client running on a separate process. I first decided to do this by forwarding the widget updates through the Flask socketIO to a socketIO client on the analyzer, but this ended up being really messy, and adds an additional step to creating an analyzer class that has any interaction. Another possibility would be to use the Redis info hash, as the analyzer already has access to it. I'm fairly certain this would be slightly less efficient, but it would eliminate reliance on callbacks to update the information. However this also does not solve the problem of the extra step when creating an interactive page.
+
+##### May 30th, 2021:
+
+Started today by working on a method of streaming two different data columns in the database to the same browser page. This involved changing the database schema a bit, so now analyzer streams are formatted like "stream:some_name:uuid_of_original_stream". Note that the uuid is not the analyzer stream id, but rather the id of the raw data stream. This is because otherwise there would be no way for the create_layout function to find it, because all it knows is the id of the raw stream. This way a single bokeh layout can request data from multiple streams. However this method is not perfect as it still would not allow one page to request streams from unrelated data sources, like a sense stream and video stream at once. I think I would rather reformat everything so this is possible.
+
 ##### May 28th, 2021:
 
 I started today by trying to get the EEGStreamer running, but I soon realized that I don't currently have a way to have the Pi send more information about the stream, like the sampling frequency or list of channel names. I solved this temporarily by sending this info along with the dictionary written to the database initially. 
