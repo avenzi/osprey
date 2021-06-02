@@ -2,9 +2,9 @@ import socketio
 import numpy as np
 import inspect
 
-from lib import Client
+from lib.lib import Client
 
-CONFIG_PATH = '../config/server_streamer_config.json'
+CONFIG_PATH = 'config/server_streamer_config.json'
 
 
 class AnalyzerClient(Client):

@@ -154,41 +154,6 @@ class Database:
         return output
 
     @handle_errors
-    def read_data_since(self, stream, last_read, to_json=False):
-        """
-        Gets data since <last_read> ID from data column stream:<stream>.
-        <to_json> whether to convert to json string. If False, outputs a dictionary of lists.
-        Redis uses '$' to denote most recent data ID.
-        Returns a tuple of data and last read ID.
-        """
-        if not last_read:  # get last ID if not given
-            try:
-                last_read = self.redis.xrevrange('stream:'+stream, count=1)[0][0]
-            except IndexError:
-                return None, None
-
-        stream = self.redis.xread({'stream:'+stream: last_read})
-        if not stream:
-            return None, last_read
-
-        last_read = stream[0][1][-1][0]  # last ID from stream
-
-        # get keys, which are every other element in first data list
-        keys = stream[0][1][0][1].keys()
-        output = {key: [] for key in keys}
-
-        # loop through stream data
-        for data in stream[0][1]:
-            # data[0] is the timestamp ID
-            d = data[1]  # data dict
-            for key in keys:
-                output[key].append(float(d[key]))  # convert to float and append
-
-        if to_json:
-            output = json.dumps(output)
-        return output, last_read
-
-    @handle_errors
     def write_data(self, stream, data):
         """
         Writes <data> to stream:<stream>.

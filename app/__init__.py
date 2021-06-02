@@ -5,7 +5,7 @@ from flask import Flask, send_from_directory
 import os
 import json
 
-from data_transfer_lib.database_lib import Database
+from lib.database import Database
 
 
 def create_app():

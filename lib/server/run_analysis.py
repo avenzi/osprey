@@ -1,5 +1,5 @@
 import json
-from server.analysis_lib import AnalyzerClient, CONFIG_PATH
+from lib.server.analysis_lib import AnalyzerClient, CONFIG_PATH
 
 # get configured settings if they already exist
 try:

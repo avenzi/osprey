@@ -1,5 +1,5 @@
-from lib import Base, Streamer
-from raspi.pi_lib import configure_port, PicamOutput
+from lib.lib import Base, Streamer
+from lib.raspi.pi_lib import configure_port, PicamOutput
 
 from random import random
 import time

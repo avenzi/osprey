@@ -2,8 +2,8 @@ import json
 import os
 from requests import get
 
-from utils import validate_input
-from server.analysis_lib import CONFIG_PATH
+from lib.utils import validate_input
+from lib.server.analysis_lib import CONFIG_PATH
 
 updating = False  # flag if updating existing config settings
 

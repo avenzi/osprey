@@ -9,7 +9,7 @@ import os
 
 import socketio
 
-from database_lib import Database
+from lib.database import Database
 
 
 class Base:

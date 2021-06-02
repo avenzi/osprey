@@ -23,7 +23,7 @@ sudo fuser -k 5002/tcp  # clear activity on port 5002
 . venv/bin/activate
 
 # run python in background
-python3 data_transfer_lib/run_analysis.py &
+python3 -m lib.server.run_analysis &
 
 # start redis server
 redis-server config/redis.conf

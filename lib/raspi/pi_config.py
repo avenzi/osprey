@@ -6,9 +6,9 @@ import json
 import os
 
 
-from utils import validate_input
-from raspi import streamers
-from raspi.pi_lib import CONFIG_PATH
+from lib.utils import validate_input
+from lib.raspi import streamers
+from lib.raspi.pi_lib import CONFIG_PATH
 
 
 def dmesg():

@@ -1,5 +1,5 @@
 import json
-from raspi.pi_lib import RaspiClient, CONFIG_PATH
+from lib.raspi.pi_lib import RaspiClient, CONFIG_PATH
 
 # get configured settings if they already exist
 try:

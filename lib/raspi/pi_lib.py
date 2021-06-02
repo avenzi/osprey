@@ -4,9 +4,9 @@ import subprocess
 import inspect
 import os
 
-from lib import Client
+from lib.lib import Client
 
-CONFIG_PATH = '../config/raspi_config.json'
+CONFIG_PATH = 'config/raspi_config.json'
 
 
 def configure_port(dev_path):
