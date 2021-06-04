@@ -132,7 +132,7 @@ def create_layout(info):
         if_modified=True)
 
     fourier_source = AjaxDataSource(
-        data_url='/stream/update?id=fourier:{}'.format(stream_id),
+        data_url='/stream/update?id=fourier:{}&format=snapshot'.format(stream_id),
         method='GET',
         polling_interval=1000,
         mode='replace',  # all FFT lines are replaced each update
@@ -149,7 +149,7 @@ def create_layout(info):
     '''
 
     headplot_source = AjaxDataSource(
-        data_url='/stream/update?id=headplot:{}'.format(stream_id),
+        data_url='/stream/update?id=headplot:{}&format=snapshot'.format(stream_id),
         method='GET',
         polling_interval=1000,
         mode='replace',

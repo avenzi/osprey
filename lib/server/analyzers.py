@@ -101,8 +101,8 @@ class EEGAnalyzer(Streamer):
         fourier_data = self.fourier(filtered_data)
         headplot_data = self.headplot(fourier_data)
 
-        self.database.write_data('fourier:'+self.target_id, fourier_data)
-        self.database.write_data('headplot:'+self.target_id, headplot_data)
+        self.database.write_snapshot('fourier:'+self.target_id, fourier_data)
+        self.database.write_snapshot('headplot:'+self.target_id, headplot_data)
 
     def filter(self, data):
         """ Performs frequency filters on the input dictionary of data """

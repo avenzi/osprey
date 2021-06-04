@@ -71,9 +71,16 @@ def plot_layout():
 def plot_update():
     """ Returns the json to update a plot """
     request_id = request.args.get('id')
+    request_format = request.args.get('format')
 
     try:
-        data = current_app.database.read_data(request_id, request_id, to_json=True)
+        if not request_format or request_format == 'series':
+            data = current_app.database.read_data(request_id, request_id, to_json=True)
+        elif request_format == 'snapshot':
+            data = current_app.database.read_snapshot(request_id, to_json=True)
+        else:
+            print('Bokeh request for data specified an unknown request format')
+            return "", 404
     except Database.Error:
         return "", 404
 

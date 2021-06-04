@@ -113,6 +113,18 @@ class Database:
             return False
 
     @handle_errors
+    def write_data(self, stream, data):
+        """
+        Writes time series <data> to stream:<stream>.
+        <data> must be a dictionary of lists, where keys are data column names.
+        """
+        pipe = self.redis.pipeline()  # pipeline queues a series of commands at once
+        for i in range(len(data[list(data.keys())[0]])):  # get length of a random key (all the same)
+            # get slice of each data point as dictionary
+            pipe.xadd('stream:'+stream, {key: data[key][i] for key in data.keys()})
+        pipe.execute()
+
+    @handle_errors
     def read_data(self, reader, stream, count=None, to_json=False):
         """
         Gets newest data for <reader> from data column <stream>.
@@ -128,53 +140,88 @@ class Database:
             self.bookmarks[reader] = bookmarks
 
         if count:  # get COUNT data regardless of last read
-            response = self.redis.xread({'stream:' + stream: '0'}, count)
+            response = self.redis.xrevrange('stream:'+stream, count=count)
 
         else:  # get data since last read
             last_read = bookmarks.get(stream)
-            if stream.startswith('fourier:'):
-                print("LAST READ: {}: {}".format(stream, last_read))
             if last_read:  # last read spot exists
                 response = self.redis.xread({'stream:'+stream: last_read})
-
             else:  # no last spot, start reading from latest, block for 1 sec
                 response = self.redis.xread({'stream:'+stream: '$'}, None, 1000)
 
         if not response:
             return None
 
-        # store the last ID of this stream
-        self.bookmarks[reader][stream] = response[0][1][-1][0]
+        # store the last ID of this stream and get list of data dicts
+        if count:
+            self.bookmarks[reader][stream] = response[-1][0]
+            data_list = response
+        else:
+            self.bookmarks[reader][stream] = response[0][1][-1][0]
+            data_list = response[0][1]
 
         # get keys from data dict
-        keys = response[0][1][0][1].keys()
+        keys = data_list[0][1].keys()
         output = {key: [] for key in keys}
 
         # loop through stream data
-        for data in response[0][1]:
+        for data in data_list:
             # data[0] is the timestamp ID
             d = data[1]  # data dict
             for key in keys:
                 output[key].append(float(d[key]))  # convert to float and append
 
-        if stream.startswith('fourier:'):
-            key = list(output.keys())[0]
-            print("{}: {}".format(key, len(output[key])))
         if to_json:
             return json.dumps(output)
         return output
 
     @handle_errors
-    def write_data(self, stream, data):
+    def write_snapshot(self, stream, data):
         """
-        Writes <data> to stream:<stream>.
+        Writes a snapshot of data <data> to stream:<stream>.
         <data> must be a dictionary of lists, where keys are data column names.
+        Note that this method is for data which is not consecutive (like time series).
+        It is for data that is meant to be viewed a chunk at a time.
+        It places each list of data values as a comma separated list under one key.
         """
-        pipe = self.redis.pipeline()  # pipeline queues a series of commands at once
-        for i in range(len(data[list(data.keys())[0]])):  # get length of a random key (all the same)
-            # get slice of each data point as dictionary
-            pipe.xadd('stream:'+stream, {key: data[key][i] for key in data.keys()})
-        pipe.execute()
+        new_data = {}
+        for key in data.keys():
+            new_data[key] = ','.join(str(val) for val in data[key])
+
+        self.redis.xadd('stream:'+stream, new_data)
+
+    @handle_errors
+    def read_snapshot(self, stream, to_json=False):
+        """
+        Gets latest snapshot for <reader> from data column <stream>.
+        <stream> is some ID that identifies the stream in the database.
+        <to_json> whether to convert to json string. if False, uses dictionary of lists.
+        Since this is a snapshot (not time series), gets last 1 data point from redis
+        """
+        response = self.redis.xrevrange('stream:'+stream, count=1)
+        if not response:
+            return None
+
+        data = response[0][1]  # data dict
+        keys = data.keys()  # get keys from data dict
+        output = {key: [] for key in keys}
+
+        for key in keys:
+            vals = data[key].split(',')
+            output[key] = [float(val) for val in vals]
+
+        if to_json:
+            return json.dumps(output)
+        return output
+
+    @handle_errors
+    def write_info(self, key, data):
+        """
+        Writes <data> to info:<key>
+        <data> must be a dictionary of key-value pairs.
+        <key> is the key for this data set
+        """
+        self.redis.hmset('info:'+key, data)
 
     @handle_errors
     def read_info(self, ID, name=None):
@@ -187,15 +234,6 @@ class Database:
         else:
             data = self.redis.hgetall('info:' + ID)
             return data
-
-    @handle_errors
-    def write_info(self, key, data):
-        """
-        Writes <data> to info:<key>
-        <data> must be a dictionary of key-value pairs.
-        <key> is the key for this data set
-        """
-        self.redis.hmset('info:'+key, data)
 
     @handle_errors
     def get_all_info(self):
