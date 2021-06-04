@@ -2,24 +2,27 @@ import socketio
 import numpy as np
 import inspect
 
-from lib.lib import Client
+from lib.lib import Client, Namespace
 
 CONFIG_PATH = 'config/server_streamer_config.json'
 
 
 class AnalyzerClient(Client):
-    """ Extends the Client class to run Streamers on the server """
+    """
+    Extends the Client class to run Streamers on the server
+
+    """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.socket = socketio.Client()
-        self.socket.register_namespace(SocketCommunicator(self, '/analyzer_client'))
+        self.socket.register_namespace(AnalyzerClientNamespace(self, '/analyzer_client'))
 
-        # dict of worker classes (not instances)
-        self.analyzer_classes = {}  # {target_stream_name: analyzer_class, ...}
+        # dict of worker classes (not instances) associated with each target stream name
+        self.analyzer_classes = {}  # {target_stream_name: [analyzer_class1, analyzer_class2, ...], ...}
 
         # list of IDs from remote streamers that have analyzers already deployed.
-        self.active_analyzers = []
+        self.active_analyzers = {}  # {target_stream_id: [analyzer_class1, analyzer_class2, ...], ...}
 
     def _run(self):
         """
@@ -32,41 +35,52 @@ class AnalyzerClient(Client):
         from . import analyzers
         members = inspect.getmembers(analyzers, inspect.isclass)  # all classes [(name, class), ]
         for member in members:
-            if member[1].__module__.split('.')[-1] == 'analyzers':  # imported from the streamers.py file
+            if member[1].__module__.split('.')[-1] == 'analyzers':  # imported from the analyzers.py file
                 worker_class = member[1]
-                self.analyzer_classes[worker_class.target_name] = worker_class
+
+                # list of classes meant to analyze that target streamer name
+                analyzer_class_list = self.analyzer_classes.get(worker_class.target_name)
+
+                # add this class to the list
+                if analyzer_class_list is None:
+                    self.analyzer_classes[worker_class.target_name] = [worker_class]
+                else:
+                    self.analyzer_classes[worker_class.target_name].append(worker_class)
 
     def create_analyzer(self, info):
         """ Create analyzer to analyze stream with given ID """
         streamer_name = info['name']
         streamer_id = info['id']
 
-        # get an Analyzer class made for this streamer name
-        AnalyzerClass = self.analyzer_classes.get(streamer_name)
+        # get list of Analyzer classes made for this streamer name
+        classes = self.analyzer_classes.get(streamer_name)
 
-        # if this Analyzer class exists and a streamer with this ID isn't already being analyzed
-        if AnalyzerClass and streamer_id not in self.active_analyzers:
-            self.active_analyzers.append(streamer_id)  # add to list of streamer IDs being analyzed
-            self.log("Analyzer {} bound to incoming stream: {} identified".format(AnalyzerClass.__name__, streamer_name))
-            worker = AnalyzerClass(self.config)
-            worker.target_id = info['id']  # give it the streamer id
-            self.run_worker(worker)
+        # if no classes exist to analyze this streamer name
+        if not classes:
+            return
+
+        # get active analyzer classes for this streamer ID
+        active_classes = self.active_analyzers.get(streamer_id, [])
+        if not active_classes:
+            self.active_analyzers[streamer_id] = []
+
+        for AnalyzerClass in classes:
+            # if this class isn't already bound to this Streamer ID
+            if AnalyzerClass not in active_classes:
+                self.active_analyzers[streamer_id].append(AnalyzerClass)  # add to the list
+                self.log("Analyzer {} bound to incoming stream: {} identified".format(AnalyzerClass.__name__, streamer_name))
+                worker = AnalyzerClass(self.config)
+
+                # give it the streamer ID
+                worker.target_id = streamer_id
+
+                # override it's own ID with the prefixed streamer ID
+                worker.id = worker.name + ':' + streamer_id
+                self.run_worker(worker)
 
 
-class SocketCommunicator(socketio.ClientNamespace):
-    """ All methods must begin with prefix "on_" followed by socketIO message name"""
-    def __init__(self, streamer, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.streamer = streamer
-
-    def on_connect(self):
-        self.emit('log', '{} connected to server'.format(self.streamer.name))
-
-    def on_disconnect(self):
-        #self.streamer.log("{} disconnected from socketIO server".format(self.streamer.name))
-        pass
-
-    def on_ready(self, info):
+class AnalyzerClientNamespace(Namespace):
+    def on_init(self, info):
         """ Passed info from a recently connected stream """
         self.streamer.create_analyzer(info)
 

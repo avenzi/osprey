@@ -33,6 +33,22 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### June 3rd, 2021:
+
+So all the ideas I had yesterday were garbage. The Streamers have no way of knowing when the database disconnects, except if it tries to perform a read/write and the connection is refused, and I don't intend to implement any kind of polling. Instead I think I need to solve the problem on the server side. 
+
+New option 1: 
+	I will continue wiping the whole database as usual, but when the database starts up again, immediately send a socketio message to request that all streamers send their info package again. At the moment I don't see a downside but I'm sure something will come up. I'm gonna try this next
+
+New option 2, incase option 1 doesn't work: 
+	Instead of wiping the database each time it is shutdown for a new streaming session, I will instead only wipe the streams, keeping the previous stream info. This way the database can be restarted without any communication to the streamers and retain everything it needs. Of course, the dangerous part about this would be that the database may then fill up with info columns, which would have to be manually cleared.
+
+I have now implemented option 1, and I think it's working well. I had to create two socket methods, "init" and "update". The init method is called when the server starts the database, and requests that the streamers respond with an init message. This lets the analyzers look at all the streams connecting and decide if new analyzers are necessary. The update method is sent by the streamers to let the server know that the info column in the database has updated, and the server also refreshes the links in the browser. The init method also calls the update method, but the reason they are distinct is because I don't want the analyzers looking at all the streams every time one of them updates - that would just be wasteful. 
+
+Now that that is solved, I need to make sure that the Analyzer received the notification that particular bokeh buttons have been pressed on the stream. The main problem here is that the browser stream doesn't have access to the Analyzer's stream ID. The only thing that the browser knows is the ID of the stream sending the raw data. I think the way to solve this is make the analyzer stream's ID based on the raw data stream ID in a predictable way - like prepending it with some name so like "fourier:<id>". This would allow the bokeh layouts to specify which stream to send the button updates, but only knowing the raw stream ID. 
+
+After implementing this, I discovered a major issue with how I am handling the fourier data. It isn't a time series data set, but redis treats it like one, so all the fourier data is being appended one after the other just like any other time series data set. I am debating whether to create a separate database stream types specifically designed for this, or to read it out of the database in a way that accurately picks out the data I want. I am not yet sure what the best course of action is. On one hand, creating a separate stream type in the database is more efficient but will also require yet another thing to change when a new database is used, and also allows for the possibility of other data types needing their own stream schema as well. On the other hand, reading the data out differently is less efficient but would be the same regardless of the database being used. In the long run, the former option is best, given that switching out databases is not the primary goal of this project. I'll work on that tomorrow.
+
 ##### June 2nd, 2021:
 
 Today I FINALLY restructured the horrible way that I was running the startup scripts. I had been having trouble with python imports back in the original app design, so my solution was to have python files in the top level directory that just import the scripts I want to run. That way, any imports are always relative to top level. However apparently there is already a way to do this, but the python documentation on imports never bothered to make it clear. All I had to do was use the -m flag to make python treat the scripts like packages, and all my import problems went away. I feel so stupid but so smart at the same time. 

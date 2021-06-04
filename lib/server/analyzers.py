@@ -3,14 +3,15 @@ from scipy import signal
 from time import sleep
 import json
 
-from lib.lib import Streamer
+from lib.lib import Streamer, Namespace
 from app.bokeh_layouts.eeg_stream import config, create_filter_sos
 
 """
 Analyzer streams in Redis are indexed like so:
 stream:string_identifier:target_stream_id
 Note that it is identified by the original stream's ID, not by it's own.
-However, the info hash is still identified by it's own ID per usual.
+The info hash is identified the same way:
+info:analyzer_prefix:target_stream_id
 """
 
 
@@ -69,11 +70,17 @@ class EEGAnalyzer(Streamer):
 
     def start(self):
         """ extends streamer start method before loop """
-        info = self.database.read_info(self.id)  # get info dict
-        self.sample_rate = info['sample_rate']
+        info = self.database.read_info(self.target_id)  # get info dict
+        self.sample_rate = int(info['sample_rate'])
         self.channels = info['channels'].split(',')
 
-        with open('../app/static/electrodes.json', 'r') as f:
+        # register namespace to receive widget updates (namespace is own ID)
+        class AnalyzerNamespace(Namespace):
+            def on_options(self, option_json):
+                print("ANALYZER RECEIVED: ", option_json)
+        self.register_namespace(AnalyzerNamespace, '/'+self.id)
+
+        with open('app/static/electrodes.json', 'r') as f:
             all_names = json.loads(f.read())
         for name in self.channels:  # get coordinates of electrodes by name
             self.head_x.append(all_names[name][0])
@@ -83,9 +90,9 @@ class EEGAnalyzer(Streamer):
 
     def loop(self):
         """ Maine execution loop """
-        # get most recent data from raw data stream
-        sleep(self.widgets['fourier_window'])  # wait long enough to get right amount of data
-        data = self.database.read_data(self.id, self.target_id)
+        # samples needed to read for a given time window
+        samples = int(self.widgets['fourier_window'] * self.sample_rate)
+        data = self.database.read_data(self.id, self.target_id, count=samples)
         if not data:
             return
 
@@ -93,9 +100,9 @@ class EEGAnalyzer(Streamer):
         filtered_data = self.filter(data)
         fourier_data = self.fourier(filtered_data)
         headplot_data = self.headplot(fourier_data)
-        
+
         self.database.write_data('fourier:'+self.target_id, fourier_data)
-        self.database.write_data('headplot:' + self.target_id, headplot_data)
+        self.database.write_data('headplot:'+self.target_id, headplot_data)
 
     def filter(self, data):
         """ Performs frequency filters on the input dictionary of data """
@@ -132,9 +139,6 @@ class EEGAnalyzer(Streamer):
 
     def fourier(self, data):
         """ Calculates the FFT of a slice of data """
-        # used to be how many samples were needed to read
-        samples = int(self.widgets['fourier_window'] * self.sample_rate)
-        
         N = len(list(data.values())[0])  # length of each channel in eeg data (should all be the same)
         freqs = np.fft.fftfreq(N, 1/self.sample_rate)[:N//2]  # frequency array
 
@@ -189,8 +193,10 @@ class EEGAnalyzer(Streamer):
 
         return headplot
 
-    def update_widget_values(self, json_string):
+    def json(self, json_string):
         """ Gets updated widget values from a socket """
+        super().json(json_string)
+        return
         # Content is a JSON string with a single key-value pair
         key, value = list(json.loads(json_string).items())[0]
         print("WIDGETS: ", key, value)
@@ -222,7 +228,6 @@ class EEGAnalyzer(Streamer):
 
         # store the new updated value in the page_config dictionary
         self.widgets[key] = value
-
 
 
 

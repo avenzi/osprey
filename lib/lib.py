@@ -248,9 +248,7 @@ class Client(Base):
     The master Node, which delegates Streamer nodes to different processes
     Run on the main process.
     Worker connections are started on new processed and communicated with using pipes.
-    <name> Display name of this Client.
     <config> Dictionary of network config options
-    <auto> Boolean: whether to automatically shutdown when all worker nodes have shutdown.
     """
     def __init__(self, config, debug=0):
         super().__init__()
@@ -407,7 +405,6 @@ class Streamer(WorkerNode):
     """
     def __init__(self, config):
         super().__init__(config)
-        self.socket = None  # socketio client
         self.type = ''  # string determined by derived class
         self.show = 'true'  # string, either 'true' or 'false'. Whether to show stream in browser
         self.id = self.generate_uuid()  # unique id
@@ -416,13 +413,20 @@ class Streamer(WorkerNode):
         self.server_port = self.config.get('SERVER_PORT')  # port of server (used for socketIO)
         self.set_log_path(self.config.get('LOG_PATH'))
 
+        # connection with socketio
+        self.socket = socketio.Client()
+
         # connection to database
         self.database = Database(self.ip, config['DB_PORT'], config['DB_PASS'])
 
         self.streaming = Event()  # threading event flag set when actively streaming
         self.start_time = time.time()  # start time
 
-    def get_socketio(self):
+    def register_namespace(self, NamespaceClass, namespace):
+        """ Register a socketio namespace """
+        self.socket.register_namespace(NamespaceClass(self, namespace))
+
+    def connect_socket(self):
         """
         Attempt to get socketIO connection.
         Loop indefinitely if unsuccessful.
@@ -434,8 +438,6 @@ class Streamer(WorkerNode):
         self.debug("{} attempting to connect socketIO to {}:{}".format(self.name, self.ip, self.server_port))
         while not self.exit:
             try:
-                self.socket = socketio.Client()
-                self.socket.register_namespace(SocketCommunicator(self, '/streamers'))
                 self.socket.connect('http://{}:{}'.format(self.ip, self.server_port))
                 self.log("{} Connected to server socketIO".format(self.name))
                 return True
@@ -450,12 +452,16 @@ class Streamer(WorkerNode):
 
     def _run(self):
         """ Runs main execution loop """
+
         # get connection to socketIO server.
-        self.get_socketio()
+        self.register_namespace(StreamerNamespace, '/streamers')
+        self.register_namespace(StreamerNamespace, '/'+self.id)
+        self.connect_socket()
 
         while not self.exit:  # run until application shutdown
             self.database.connect()  # get connection to database
-            self.send_ready()  # send info and ready signal
+            # TODO: put database connect() on a separate thread similar to this one with en Event tied to it?
+            self.init()  # send preliminary info once connected
 
             # start main execution loop
             while not self.exit:  # run until exit
@@ -463,7 +469,6 @@ class Streamer(WorkerNode):
                 try:
                     self.loop()  # call user-defined main execution
                 except self.database.Error:
-                    self.stop()  # stop stream
                     time.sleep(1)
                     break  # break execution and attempt to reconnect
                 except Exception as e:
@@ -477,11 +482,16 @@ class Streamer(WorkerNode):
         """
         pass
 
-    def send_ready(self):
-        """ Send info to server and signal ready """
+    def init(self):
+        """ Send signal to server that this streamer is ready """
+        self.update()  # send all info first
+        self.socket.emit('init', self.id, namespace='/streamers')
+
+    def update(self):
+        """ Send info to database and signal update to server """
         info = {'id': self.id, 'name': self.name, 'client': self.client, 'type': self.type, 'show': self.show}
         self.database.write_info(self.id, info)
-        self.socket.emit('ready', info, namespace='/streamers')
+        self.socket.emit('update', self.id, namespace='/streamers')
 
     def start(self):
         """
@@ -490,10 +500,10 @@ class Streamer(WorkerNode):
         """
         if self.streaming.is_set():  # already running
             return
-        self.send_ready()  # send info again (since database might have been wiped since last time)
         self.streaming.set()  # set streaming, which starts the main execution while loop
         self.log("Started {}".format(self.name))
         self.socket.emit('log', "Started Streamer {}".format(self.name), namespace='/streamers')
+        self.update()
 
     def stop(self):
         """
@@ -505,9 +515,14 @@ class Streamer(WorkerNode):
         self.streaming.clear()  # stop streaming, stopping the main execution while loop
         self.log("Stopped {}".format(self.name))
         self.socket.emit('log', "Stopped Streamer {}".format(self.name), namespace='/streamers')
+        self.update()
+
+    def json(self, json):
+        """ To be called in response to the socketio receiving json data """
+        self.log("{} RECEIVED JSON".format(self.name))
 
 
-class SocketCommunicator(socketio.ClientNamespace):
+class Namespace(socketio.ClientNamespace):
     """ All methods must begin with prefix "on_" followed by socketIO message name"""
     def __init__(self, streamer, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -520,6 +535,16 @@ class SocketCommunicator(socketio.ClientNamespace):
         #self.streamer.log("{} disconnected from socketIO server".format(self.streamer.name))
         pass
 
+
+class StreamerNamespace(Namespace):
+    def on_init(self):
+        """ Init message from server """
+        self.streamer.init()
+
+    def on_update(self):
+        """ Update message from server """
+        self.streamer.update()
+
     def on_start(self):
         """ start message from server """
         self.streamer.start()
@@ -527,3 +552,6 @@ class SocketCommunicator(socketio.ClientNamespace):
     def on_stop(self):
         """ stop message from server """
         self.streamer.stop()
+
+    def on_json(self, json):
+        self.streamer.json(json)

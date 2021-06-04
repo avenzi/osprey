@@ -425,6 +425,7 @@ class SynthEEGStreamer(Streamer):
     def __init__(self, *args):
         super().__init__(*args)
         self.type = 'plot'
+        self.name = 'EEGStreamer'
 
         from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds
 
@@ -468,6 +469,11 @@ class SynthEEGStreamer(Streamer):
 
         self.database.write_data(self.id, data)
 
+    def update(self):
+        """ Extending from base class """
+        self.database.write_info(self.id, {'sample_rate': self.freq, 'channels': ','.join(self.eeg_channel_names)})
+        super().update()
+
     def start(self):
         """ Extended from base class in pi_lib.py """
         # start EEG stream
@@ -475,7 +481,6 @@ class SynthEEGStreamer(Streamer):
         self.board.start_stream()
 
         # First send some initial information to this stream's info channel
-        self.database.write_info(self.id, {'sample_rate': self.freq, 'channels': ','.join(self.eeg_channel_names)})
         super().start()  # start main loop
 
     def stop(self):

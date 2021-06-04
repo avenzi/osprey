@@ -14,7 +14,7 @@ ELECTRODES_PATH = 'app/static/electrodes.json'
 
 # default values of all widgets and figure attributes
 config = {
-    'fourier_window': 5,
+    'fourier_window': 2,
     'spectrogram_range': (-3.0, 1.0),  # color scale range (log)
     'spectrogram_size': 30,
 
@@ -36,65 +36,71 @@ config = {
 }
 
 
-def js_request(key, attribute='value'):
+def js_request(ID, key, attribute='value'):
     """
-    Generates callback JS code to send an HTTPRequest
+    Generates callback JS code to send an HTTPRequest.
+    <ID> is the ID to send this request to.
+    <key> is the key in the JSON string being sent to associate with this value
+    <attribute> is the attribute of the JS object to send.
     'this.value' refers to the new value of the Bokeh object.
         - In some cases (like buttons) Bokeh uses 'this.active'
-    <key> is the key in the JSON string being sent to associate with this value
     """
-    widget_path = 'widgets'  # request path
 
     code = """
-        //var req = new XMLHttpRequest();
-        //url = window.location.pathname;
-        //queries = window.location.search;  // get ID of current stream
-        //req.open("POST", url+'/{path}/'+queries, true);
-        //req.setRequestHeader('Content-Type', 'application/json');
-        //var json = JSON.stringify({{{key}: this.{attribute}}});
-        //req.send(json);
+        var req = new XMLHttpRequest();
+        url = window.location.pathname;
+        req.open("POST", url+'/widgets'+'?id={ID}', true);
+        req.setRequestHeader('Content-Type', 'application/json');
+        var json = JSON.stringify({{{key}: this.{attribute}}});
+        req.send(json);
         console.log('{key}: ' + this.{attribute});
     """
-    return code.format(path=widget_path, key=key, attribute=attribute)
+    return code.format(ID=ID, key=key, attribute=attribute)
 
 
-# Fourier Window sliders
-fourier_window = Spinner(title="FFT Window (s)", low=1, high=10, step=1, width=90, value=config['fourier_window'])
-fourier_window.js_on_change("value", CustomJS(code=js_request('fourier_window')))
+def create_widgits(stream_id):
+    """
+    Create bokeh row of widgets that need to info back to the server.
+    <stream_id> is the ID to send all widget updates to
+    """
 
-# Toggle buttons
-pass_toggle = Toggle(label="Bandpass", button_type="success", width=100, margin=(24, 5, 0, 5), active=config['pass_toggle'])
-pass_toggle.js_on_click(CustomJS(code=js_request('pass_toggle', 'active')))
+    # Fourier Window sliders
+    fourier_window = Spinner(title="FFT Window (s)", low=1, high=10, step=1, width=90, value=config['fourier_window'])
+    fourier_window.js_on_change("value", CustomJS(code=js_request(stream_id, 'fourier_window')))
 
-stop_toggle = Toggle(label="Bandstop", button_type="success", width=100, margin=(24, 5, 0, 5), active=config['stop_toggle'])
-stop_toggle.js_on_click(CustomJS(code=js_request('stop_toggle', 'active')))
+    # Toggle buttons
+    pass_toggle = Toggle(label="Bandpass", button_type="success", width=100, margin=(24, 5, 0, 5), active=config['pass_toggle'])
+    pass_toggle.js_on_click(CustomJS(code=js_request(stream_id, 'pass_toggle', 'active')))
 
-# Range sliders
-pass_range = RangeSlider(title="Range", start=0.1, end=100, step=0.1, value=config['pass_range'])
-pass_range.js_on_change("value_throttled", CustomJS(code=js_request('pass_range')))
+    stop_toggle = Toggle(label="Bandstop", button_type="success", width=100, margin=(24, 5, 0, 5), active=config['stop_toggle'])
+    stop_toggle.js_on_click(CustomJS(code=js_request(stream_id, 'stop_toggle', 'active')))
 
-stop_range = RangeSlider(title="Range", start=40, end=70, step=0.5, value=config['stop_range'])
-stop_range.js_on_change("value_throttled", CustomJS(code=js_request('stop_range')))
+    # Range sliders. "value_throttled" only takes the slider value once sliding has stopped
+    pass_range = RangeSlider(title="Range", start=0.1, end=100, step=0.1, value=config['pass_range'])
+    pass_range.js_on_change("value_throttled", CustomJS(code=js_request(stream_id, 'pass_range')))
 
-# filter style selectors
-pass_style = Select(title="Filters:", width=110, options=['Butterworth', 'Bessel', 'Chebyshev 1', 'Chebyshev 2', 'Elliptic'], value=config['pass_style'])
-pass_style.js_on_change("value", CustomJS(code=js_request('pass_style')))
+    stop_range = RangeSlider(title="Range", start=40, end=70, step=0.5, value=config['stop_range'])
+    stop_range.js_on_change("value_throttled", CustomJS(code=js_request(stream_id, 'stop_range')))
 
-stop_style = Select(title="Filters:", width=110, options=['Butterworth', 'Bessel', 'Chebyshev 1', 'Chebyshev 2', 'Elliptic'], value=config['stop_style'])
-stop_style.js_on_change("value", CustomJS(code=js_request('stop_style')))
+    # filter style selectors
+    pass_style = Select(title="Filters:", width=110, options=['Butterworth', 'Bessel', 'Chebyshev 1', 'Chebyshev 2', 'Elliptic'], value=config['pass_style'])
+    pass_style.js_on_change("value", CustomJS(code=js_request(stream_id, 'pass_style')))
 
-# Order spinners
-pass_order = Spinner(title="Order", low=1, high=10, step=1, width=60, value=config['pass_order'])
-pass_order.js_on_change("value", CustomJS(code=js_request('pass_order')))
+    stop_style = Select(title="Filters:", width=110, options=['Butterworth', 'Bessel', 'Chebyshev 1', 'Chebyshev 2', 'Elliptic'], value=config['stop_style'])
+    stop_style.js_on_change("value", CustomJS(code=js_request(stream_id, 'stop_style')))
 
-stop_order = Spinner(title="Order", low=1, high=10, step=1, width=60, value=config['stop_order'])
-stop_order.js_on_change("value", CustomJS(code=js_request('stop_order')))
+    # Order spinners
+    pass_order = Spinner(title="Order", low=1, high=10, step=1, width=60, value=config['pass_order'])
+    pass_order.js_on_change("value", CustomJS(code=js_request(stream_id, 'pass_order')))
 
-# Used to construct the Bokeh layout of widgets
-widgets_row = [fourier_window, [[pass_toggle, pass_style, pass_order, pass_range], [stop_toggle, stop_style, stop_order, stop_range]]]
+    stop_order = Spinner(title="Order", low=1, high=10, step=1, width=60, value=config['stop_order'])
+    stop_order.js_on_change("value", CustomJS(code=js_request(stream_id, 'stop_order')))
+
+    # Used to construct the Bokeh layout of widgets
+    widgets_row = [fourier_window, [[pass_toggle, pass_style, pass_order, pass_range], [stop_toggle, stop_style, stop_order, stop_range]]]
+    return widgets_row
 
 
-# Bokeh Figures
 def create_layout(info):
     """
     Configures all Bokeh figures and plots
@@ -105,9 +111,13 @@ def create_layout(info):
     #  and it's not necessary because of the headplots. Will need to remove the AjaxDataSource,
     #  spectrogram image and figure creation, the JS callback from the radio buttons targetting the
     #  spec images, the spectrogram Tab creation, and the code adding/sending data to the browser in
-    #  the EEGHandler class.
+    #  the EEGHandler class. It's a good example of how to do a spectrogram in Bokeh, though, so
+    #  I may want to keep it somewhere as a reference for later.
     stream_id = info['id']
     stream_channels = info['channels'].split(',')  # it's a comma separated string
+
+    # create row of widgets that send data to the eeg analyzer stream with this ID
+    widgets_row = create_widgits('EEGAnalyzer:'+stream_id)
 
     colors = viridis(len(stream_channels))  # viridis color palette for channel colors
 

@@ -9,8 +9,8 @@ from app.main.auth_routes import login_required
 from app.bokeh_layouts import get_layout
 from app import Database
 
-# import blueprint
-from app.main import streams
+# import blueprint + socket
+from app.main import streams, socketio
 
 # import browser buttons
 from app.main.events import BUTTONS
@@ -83,3 +83,16 @@ def plot_update():
         return resp
     else:
         return "", 304  # not modified (no new data)
+
+
+@login_required
+@streams.route('/stream/widgets', methods=('GET', 'POST'))
+def widget_update():
+    request_id = request.args.get('id')
+    widget_json = request.json
+    print("FLASK GOT JSON: ", widget_json)
+
+    # use the ID as the socket namespace on which to send this info
+    socketio.emit('json', widget_json, namespace='/'+request_id)
+    return "", 2000
+

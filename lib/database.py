@@ -113,11 +113,13 @@ class Database:
             return False
 
     @handle_errors
-    def read_data(self, reader, stream, to_json=False):
+    def read_data(self, reader, stream, count=None, to_json=False):
         """
         Gets newest data for <reader> from data column <stream>.
         <reader> is some ID that will keep track of it's own read head position.
         <stream> is some ID that identifies the stream in the database.
+        <count> is the number of data points to read (ignoring whether the point have already been read.
+            - If None, read as many new points as possible.
         <to_json> whether to convert to json string. if False, uses dictionary of lists.
         """
         bookmarks = self.bookmarks.get(reader)  # get reader-specific bookmarks
@@ -125,12 +127,18 @@ class Database:
             bookmarks = {}
             self.bookmarks[reader] = bookmarks
 
-        last_read = bookmarks.get(stream)
-        if last_read:  # last read spot exists
-            response = self.redis.xread({'stream:' + stream: last_read})
+        if count:  # get COUNT data regardless of last read
+            response = self.redis.xread({'stream:' + stream: '0'}, count)
 
-        else:  # no last spot, start reading from latest, block for 1 sec
-            response = self.redis.xread({'stream:'+stream: '$'}, None, 1000)
+        else:  # get data since last read
+            last_read = bookmarks.get(stream)
+            if stream.startswith('fourier:'):
+                print("LAST READ: {}: {}".format(stream, last_read))
+            if last_read:  # last read spot exists
+                response = self.redis.xread({'stream:'+stream: last_read})
+
+            else:  # no last spot, start reading from latest, block for 1 sec
+                response = self.redis.xread({'stream:'+stream: '$'}, None, 1000)
 
         if not response:
             return None
@@ -149,6 +157,9 @@ class Database:
             for key in keys:
                 output[key].append(float(d[key]))  # convert to float and append
 
+        if stream.startswith('fourier:'):
+            key = list(output.keys())[0]
+            print("{}: {}".format(key, len(output[key])))
         if to_json:
             return json.dumps(output)
         return output
