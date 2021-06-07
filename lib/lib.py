@@ -3,6 +3,7 @@ from threading import Thread, current_thread
 
 from datetime import datetime
 from uuid import uuid4
+import json
 import traceback
 import time
 import os
@@ -248,12 +249,20 @@ class Client(Base):
     The master Node, which delegates Streamer nodes to different processes
     Run on the main process.
     Worker connections are started on new processed and communicated with using pipes.
-    <config> Dictionary of network config options
+    <workers> list of worker classes to run
+    <config> path to config file
     """
-    def __init__(self, config, debug=0):
+    def __init__(self, workers, config, debug=0):
         super().__init__()
-        self.config = config
-        self.name = config['NAME']
+        try:  # get configured settings if they already exist
+            with open(config) as file:
+                self.config = json.load(file)
+        except Exception as e:
+            print('No config file found. Please run the appropriate setup script.')
+            quit()
+
+        self.workers = workers
+        self.name = self.config['NAME']
         self.set_debug(debug)
         self.pipes = {}   # index of Pipe objects, each connecting to a WorkerNode
 
@@ -263,15 +272,12 @@ class Client(Base):
         Must be called on the main thread of a process.
         Blocks until exit status set.
         """
-        Thread(target=self._run, name=self.name+'-RUN', daemon=True).start()
-        self.run_exit_trigger(block=True)  # block main thread until exit
+        for worker in self.workers:
+            worker.set_config(self.config)
+            self.run_worker(worker)  # run on a parallel process
 
-    def _run(self):
-        """
-        Called by run() on a new thread.
-        Performs main execution cycle of the derived host object.
-        """
-        pass
+        # block main thread until exit
+        self.run_exit_trigger(block=True)
 
     def run_worker(self, worker):
         """
@@ -334,7 +340,6 @@ class Client(Base):
 
     def cleanup(self):
         """ End all worker process and sockets """
-        super().cleanup()  # shutdown all sockets
         for pipe in list(self.pipes.values()):  # force as iterator because items are removed from the dictionary
             pipe.send('SHUTDOWN')  # signal all workers to shutdown
             pipe.terminate()  # terminate the process if not already
@@ -347,23 +352,21 @@ class WorkerNode(Base):
     self.name is the name of the Handler handling this node
     self.device is the device sending the stream.
     """
-    def __init__(self, config):
+    def __init__(self):
         super().__init__()
-        self.config = config
         self.name = self.__class__.__name__
-        self.client = config['NAME']  # client that is hosting this worker
         self.pipe = None  # Pipe object to the HostNode
         self.id = self.generate_uuid()
 
     def run(self, pipe):
         """
         Main entry point.
-        Run this Worker on a new process.
+        Run this Worker on a new thread.
         pipe must be a PipeHandler leading to the host node.
-        Should be run on it's own Process's Main Thread
+        Should be run on it's own Process's Main Thread.
         """
         self.pipe = pipe
-        self.debug("Worker '{}' started running on '{}'".format(self.name, self.client), 1)
+        self.debug("Worker '{}' started running.".format(self.name), 1)
         Thread(target=self._run, name='RUN', daemon=True).start()
         Thread(target=self._run_pipe, name='PIPE', daemon=True).start()
         self.run_exit_trigger(block=True)  # Wait for exit status on new thread
@@ -395,7 +398,7 @@ class WorkerNode(Base):
     def cleanup(self):
         """ Shutdown all handlers associated with this connection and signal that it shut down """
         super().cleanup()
-        self.debug("{} from {} Closed.".format(self.name, self.client))
+        self.debug("Worker {} Closed.".format(self.name))
         self.pipe.send('SHUTDOWN')  # Signal to the server that this connection is shutting down
 
 
@@ -403,24 +406,49 @@ class Streamer(WorkerNode):
     """
     Used to interface with a local or remote Redis database and server socketIO
     """
-    def __init__(self, config):
-        super().__init__(config)
-        self.type = ''  # string determined by derived class
-        self.show = 'true'  # string, either 'true' or 'false'. Whether to show stream in browser
-        self.id = self.generate_uuid()  # unique id
+    def __init__(self, name, group_name):
+        super().__init__()
+        self.name = name    # unique name within the group
+        self.group = group_name  # unique group name that this stream is a part of
 
-        self.ip = self.config.get('SERVER_IP')  # ip address of server
-        self.server_port = self.config.get('SERVER_PORT')  # port of server (used for socketIO)
-        self.set_log_path(self.config.get('LOG_PATH'))
+        # config settings
+        self.config = None  # dict of all general config parameters
+        self.client = None  # name of client that is hosting this worker
+        self.ip = None
+        self.server_port = None
 
         # connection with socketio
         self.socket = socketio.Client()
 
         # connection to database
-        self.database = Database(self.ip, config['DB_PORT'], config['DB_PASS'])
+        self.database = None  # Database object
+        self.info = {}  # info dict to be written to the database
 
+        # streaming stuff
         self.streaming = Event()  # threading event flag set when actively streaming
         self.start_time = time.time()  # start time
+
+    def set_config(self, config):
+        """ Set config dictionary and all attributes obtianed from it """
+        self.config = config
+        self.client = config['NAME']
+        self.ip = self.config['SERVER_IP']  # ip address of server
+        self.server_port = self.config['SERVER_PORT']  # port of server (used for socketIO)
+        self.set_log_path(self.config['LOG_PATH'])
+        self.database = Database(self.ip, config['DB_PORT'], config['DB_PASS'])
+
+        # info dict (info sent to database)
+        self.info['id'] = self.id
+        self.info['name'] = self.name
+        self.info['group'] = self.group
+        self.info['client'] = self.client
+
+    def run(self, *args):
+        """ Extends worker.run to make various checks before running"""
+        if not self.config:
+            print("Could not run {}. No config set with set_config()".format(self.name))
+            return
+        super().run(*args)
 
     def register_namespace(self, NamespaceClass, namespace):
         """ Register a socketio namespace """
@@ -439,41 +467,44 @@ class Streamer(WorkerNode):
         while not self.exit:
             try:
                 self.socket.connect('http://{}:{}'.format(self.ip, self.server_port))
-                self.log("{} Connected to server socketIO".format(self.name))
+                self.log("{} : {} Connected to server socketIO".format(self.group, self.name))
                 return True
             except Exception as e:
                 #self.log("{} failed to connect to server socketIO: {}".format(self.name, e))
                 pass
             time.sleep(1)
 
-    def time(self):
-        """ Get time passed since the stream started """
-        return time.time() - self.start_time
+    def init(self):
+        """ Initialize connections """
+        # general namespace for all streamers
+        self.register_namespace(StreamerNamespace, '/streamers')
+
+        # namespace for this streamer specifically
+        self.register_namespace(StreamerNamespace, '/'+self.id)
+
+        # get connection to server socketIO
+        self.connect_socket()
+
+        # get connection to database
+        self.database.connect()
+        # TODO: put database connect() on a separate thread similar to this one
+        #  with en Event tied to it? OOH put it in the database class
 
     def _run(self):
         """ Runs main execution loop """
+        self.init()  # initialize all connections
+        self.update()  # send info to database
 
-        # get connection to socketIO server.
-        self.register_namespace(StreamerNamespace, '/streamers')
-        self.register_namespace(StreamerNamespace, '/'+self.id)
-        self.connect_socket()
-
-        while not self.exit:  # run until application shutdown
-            self.database.connect()  # get connection to database
-            # TODO: put database connect() on a separate thread similar to this one with en Event tied to it?
-            self.init()  # send preliminary info once connected
-
-            # start main execution loop
-            while not self.exit:  # run until exit
-                self.streaming.wait()  # block until streaming event is set
-                try:
-                    self.loop()  # call user-defined main execution
-                except self.database.Error:
-                    time.sleep(1)
-                    break  # break execution and attempt to reconnect
-                except Exception as e:
-                    self.throw("Unhandled exception: {}".format(e), trace=True)
-                    return
+        while not self.exit:  # run until exit
+            self.streaming.wait()  # block until streaming event is set
+            try:
+                self.loop()  # call user-defined main execution
+            except self.database.Error:
+                time.sleep(1)
+                break  # break execution and attempt to reconnect
+            except Exception as e:
+                self.throw("Unhandled exception: {}".format(e), trace=True)
+                return
 
     def loop(self):
         """
@@ -482,15 +513,15 @@ class Streamer(WorkerNode):
         """
         pass
 
-    def init(self):
-        """ Send signal to server that this streamer is ready """
-        self.update()  # send all info first
-        self.socket.emit('init', self.id, namespace='/streamers')
-
     def update(self):
         """ Send info to database and signal update to server """
-        info = {'id': self.id, 'name': self.name, 'client': self.client, 'type': self.type, 'show': self.show}
-        self.database.write_info(self.id, info)
+        # add name and ID to group column if not already
+        self.database.write_group(self.group, {self.name: self.id, 'name': self.group})
+
+        # write stream info
+        self.database.write_info(self.id, self.info)
+
+        # notify server of update
         self.socket.emit('update', self.id, namespace='/streamers')
 
     def start(self):
@@ -501,8 +532,8 @@ class Streamer(WorkerNode):
         if self.streaming.is_set():  # already running
             return
         self.streaming.set()  # set streaming, which starts the main execution while loop
-        self.log("Started {}".format(self.name))
-        self.socket.emit('log', "Started Streamer {}".format(self.name), namespace='/streamers')
+        self.log("Started {}:{}".format(self.group, self.name))
+        self.socket.emit('log', "Started Streamer {}:{}".format(self.group, self.name), namespace='/streamers')
         self.update()
 
     def stop(self):
@@ -517,9 +548,85 @@ class Streamer(WorkerNode):
         self.socket.emit('log', "Stopped Streamer {}".format(self.name), namespace='/streamers')
         self.update()
 
-    def json(self, json):
-        """ To be called in response to the socketio receiving json data """
-        self.log("{} RECEIVED JSON".format(self.name))
+    def json(self, dic):
+        """ To be called in response to the socketio receiving json (dict) data """
+        self.log("{} Received JSON: {}".format(self.name, dic))
+        pass
+
+    def time(self):
+        """ Get time passed since the stream started """
+        return time.time() - self.start_time
+
+
+class Analyzer(Streamer):
+    """
+    Used to interface with a local or remote Redis database and server socketIO.
+    Meant to read data form the database, perform some transformation on the data,
+        and dump the result back into the database in a new stream.
+    """
+
+    def __init__(self, name, group_name, target_name, target_group=None):
+        super().__init__(name, group_name)
+        if target_group:
+            self.target_group = target_group
+        else:
+            self.target_group = group_name
+
+        self.target_name = target_name
+        self.target_id = None  # ID of target streamer. Set when the stream is found.
+
+        # event to control when the analyzer is waiting for the incoming stream
+        self.looking = Event()
+
+        # list of keys in the info dict that are unique to this analyzer.
+        # anything not in this list will be overwritten by the stream it is reading from.
+        self.unique_keys = ['id', 'name', 'client', 'type', 'show']
+
+    def init(self):
+        """ Extend init to look for the target stream """
+        super().init()
+
+        # TODO: Trigger the self.looking event early when a new stream connects,
+        #  and make the timeout longer?
+        #  Also should find a way to make this while loop run again if a stream is deleted
+        #  from the database alltogether. This analyzer should behave as if it was restarted,
+        #  and starts the loop of looking for the target stream.
+
+        # look for targeted stream in database
+        while not self.exit:
+            try:
+                info_list = self.database.read_all_info()
+            except Exception as e:
+                self.throw("{} failed to get info from database.".format(self.name))
+                return
+
+            for info in info_list:
+                # found the targeted stream
+                if info['group'] == self.target_group and info['name'] == self.target_name:
+                    self.target_id = info['id']  # get ID of this stream
+                    print("{} Found target stream: {}".format(self.name, self.target_name))
+                    break
+            else:  # none found
+                self.looking.wait(timeout=1)  # wait 5 seconds or until triggered to try again
+                continue
+
+            # found, copy target info and break out of loop
+            self.copy_info(info)
+            break
+
+    def copy_info(self, target_info=None):
+        """ Copy extra info from the target stream """
+        if not target_info:
+            try:
+                target_info = self.database.read_info(self.target_id)
+            except Database.Error as e:
+                self.throw("{} Failed to copy info from target {}".format(self.name, self.target_name))
+                return
+
+        for key in target_info.keys():
+            if key in self.unique_keys:  # stream-specific, don't copy it
+                continue
+            self.info[key] = target_info[key]  # not stream-specific. Copy the value from target.
 
 
 class Namespace(socketio.ClientNamespace):
@@ -537,9 +644,6 @@ class Namespace(socketio.ClientNamespace):
 
 
 class StreamerNamespace(Namespace):
-    def on_init(self):
-        """ Init message from server """
-        self.streamer.init()
 
     def on_update(self):
         """ Update message from server """
@@ -553,5 +657,5 @@ class StreamerNamespace(Namespace):
         """ stop message from server """
         self.streamer.stop()
 
-    def on_json(self, json):
-        self.streamer.json(json)
+    def on_json(self, dic):
+        self.streamer.json(dic)

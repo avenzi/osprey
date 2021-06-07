@@ -9,11 +9,8 @@ import msgpack
 class TestStreamer(Streamer):
     def __init__(self, *args):
         super().__init__(*args)
-        self.name = 'TestStreamer'
-        self.type = 'plot'
-
         self.frames = 10           # how many frames are in each request
-        self.frames_sent = 0      # number of frames sent
+        self.frames_sent = 0       # number of frames sent
 
         self.val_1 = 0
         self.val_2 = 1
@@ -38,8 +35,6 @@ class TestStreamer(Streamer):
 class SenseStreamer(Streamer):
     def __init__(self, *args):
         super().__init__(*args)
-        self.type = 'plot'
-
         from sense_hat import SenseHat
         self.sense = SenseHat()   # sense hat object
         self.frames = 10           # how many frames are in each request
@@ -201,9 +196,8 @@ class EEGStreamer(Streamer):
     """
     EEG Streamer class for an OpenBCI board (Cyton, Cyton+Daisy, Ganglion)
     """
-    def __init__(self):
-        super().__init__()
-        self.handler = 'EEGHandler'
+    def __init__(self, *args):
+        super().__init__(*args)
 
         from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds
 
@@ -305,9 +299,8 @@ class ECGStreamer(Streamer):
     """
     ECG Streamer class for an OpenBCI board (Cyton, Cyton+Daisy, Ganglion)
     """
-    def __init__(self):
-        super().__init__()
-        self.handler = 'ECGHandler'
+    def __init__(self, *args):
+        super().__init__(*args)
 
         from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds
 
@@ -424,9 +417,6 @@ class SynthEEGStreamer(Streamer):
     """
     def __init__(self, *args):
         super().__init__(*args)
-        self.type = 'plot'
-        self.name = 'EEGStreamer'
-
         from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds
 
         self.board_id = BoardIds.SYNTHETIC_BOARD.value  # synthetic board (-1)
@@ -438,11 +428,12 @@ class SynthEEGStreamer(Streamer):
 
         # BoardShim.enable_dev_board_logger()
         BoardShim.disable_board_logger()  # disable logger
-
         params = BrainFlowInputParams()
-
         self.board = BoardShim(self.board_id, params)  # board object
 
+        # add info to send to database
+        self.info['sample_rate'] = self.freq
+        self.info['channels'] = ','.join(self.eeg_channel_names)
         self.frames_sent = 0  # number of frames sent
 
     def loop(self):
@@ -468,11 +459,6 @@ class SynthEEGStreamer(Streamer):
         self.frames_sent += 1
 
         self.database.write_data(self.id, data)
-
-    def update(self):
-        """ Extending from base class """
-        self.database.write_info(self.id, {'sample_rate': self.freq, 'channels': ','.join(self.eeg_channel_names)})
-        super().update()
 
     def start(self):
         """ Extended from base class in pi_lib.py """

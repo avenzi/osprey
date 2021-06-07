@@ -1,16 +1,21 @@
-import json
-from lib.raspi.pi_lib import RaspiClient, CONFIG_PATH
+from lib.raspi.pi_lib import RaspiClient
+from lib.raspi.streamers import *
 
-# get configured settings if they already exist
-try:
-    with open(CONFIG_PATH) as file:
-        config = json.load(file)
-except Exception as e:
-    print('No config file found. Please run the appropriate setup script first.')
-    quit()
+# initialize list of streamer instances
+# Each must have a globally unique group name and a locally unique name within that group
+# name, group_name
+streamers = [
+    TestStreamer('Random 1', 'TestGroup'),
+    TestStreamer('Random 2', 'TestGroup'),
+    TestStreamer('Random 1', 'TestGroup 2'),
+    TestStreamer('Random 2', 'TestGroup 2'),
+    SenseStreamer('Sense Hat', 'SenseHat 1'),
+    SynthEEGStreamer('Raw EEG', 'EEG 1')
+]
 
+config = 'config/raspi_config.json'
 
-client = RaspiClient(config, debug=2)
+client = RaspiClient(streamers, config, debug=2)
 client.run()
 
 

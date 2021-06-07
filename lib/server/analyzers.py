@@ -3,26 +3,13 @@ from scipy import signal
 from time import sleep
 import json
 
-from lib.lib import Streamer, Namespace
-from app.bokeh_layouts.eeg_stream import config, create_filter_sos
-
-"""
-Analyzer streams in Redis are indexed like so:
-stream:string_identifier:target_stream_id
-Note that it is identified by the original stream's ID, not by it's own.
-The info hash is identified the same way:
-info:analyzer_prefix:target_stream_id
-"""
+from lib.lib import Analyzer
+from app.bokeh_layouts.eeg_stream import config as WIDGET_CONFIG
 
 
-class TestAnalyzer(Streamer):
-    target_name = 'TestStreamer'  # name of streamer type to analyze
-
+class TestAnalyzer(Analyzer):
     def __init__(self, *args):
         super().__init__(*args)
-        self.type = 'plot'
-        self.show = 'false'
-        self.target_id = None
 
     def loop(self):
         """ Maine execution loop """
@@ -40,45 +27,26 @@ class TestAnalyzer(Streamer):
                 data[key][i] *= 10
 
         # output processed data to new stream
-        self.database.write_data('multiplied:'+self.target_id, data)
+        self.database.write_data(self.id, data)
 
 
-class EEGAnalyzer(Streamer):
-    target_name = 'EEGStreamer'  # name of streamer type to analyze
-
+class EEGAnalyzer(Analyzer):
+    """ Base class for the other two EEG analyzer streams"""
     def __init__(self, *args):
         super().__init__(*args)
-        self.type = 'plot'
-        self.show = 'false'
-        self.target_id = None
 
         # Initial information
         self.sample_rate = None
         self.channels = []
-        self.widgets = config  # all widget parameters for fourier and filtering
-        
-        # EEG filtering
-        self.pass_sos = None     # current SOS. Created by create_filter_sos() in eeg_stream.py
-        self.pass_sos_init = []  # list of SOS initial values
-        self.pass_update = True  # Flag to set when a new SOS is requestedm
-        self.stop_sos = None
-        self.stop_sos_init = []
-        self.stop_update = True
+        self.widgets = WIDGET_CONFIG  # all widget parameters for fourier and filtering
 
-        # headplot values
-        self.head_x, self.head_y = [], []  # x/y positions for electrodes in head plots
+        # x/y positions for electrodes in head plots
+        self.head_x, self.head_y = [], []
 
     def start(self):
         """ extends streamer start method before loop """
-        info = self.database.read_info(self.target_id)  # get info dict
-        self.sample_rate = int(info['sample_rate'])
-        self.channels = info['channels'].split(',')
-
-        # register namespace to receive widget updates (namespace is own ID)
-        class AnalyzerNamespace(Namespace):
-            def on_options(self, option_json):
-                print("ANALYZER RECEIVED: ", option_json)
-        self.register_namespace(AnalyzerNamespace, '/'+self.id)
+        self.sample_rate = int(self.info['sample_rate'])
+        self.channels = self.info['channels'].split(',')  # its a comma separated string
 
         with open('app/static/electrodes.json', 'r') as f:
             all_names = json.loads(f.read())
@@ -88,28 +56,54 @@ class EEGAnalyzer(Streamer):
 
         super().start()
 
+    def json(self, dic):
+        """ Gets updated widget values from a socketIO json message """
+        # Content is a JSON string with a single key-value pair
+        key, value = list(dic.items())[0]
+
+        # prevent bandpass/bandstop range sliders from hitting the edges
+        if key in ['pass_range', 'stop_range']:
+            if value[1] >= self.sample_rate/2:
+                value[1] = (self.sample_rate/2 - 0.5)
+            if value[0] <= 0:
+                value[0] = 0.1
+
+        # filters needs to be updated
+        if 'pass' in key:
+            self.pass_update = True
+        elif 'stop' in key:
+            self.stop_update = True
+
+        # store the new updated value
+        self.widgets[key] = value
+
+
+class EEGFilterStream(EEGAnalyzer):
+    """ Analyzes the raw EEG data for filtering """
+
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.pass_sos = None     # current SOS. Created by create_filter_sos() in eeg_stream.py
+        self.pass_sos_init = []  # list of SOS initial values
+        self.pass_update = True  # Flag to set when a new SOS is requestedm
+        self.stop_sos = None
+        self.stop_sos_init = []
+        self.stop_update = True
+
     def loop(self):
         """ Maine execution loop """
-        # samples needed to read for a given time window
-        samples = int(self.widgets['fourier_window'] * self.sample_rate)
-        data = self.database.read_data(self.id, self.target_id, count=samples)
+        data = self.database.read_data(self.id, self.target_id)
         if not data:
             return
-
-        # perform analysis
-        filtered_data = self.filter(data)
-        fourier_data = self.fourier(filtered_data)
-        headplot_data = self.headplot(fourier_data)
-
-        self.database.write_snapshot('fourier:'+self.target_id, fourier_data)
-        self.database.write_snapshot('headplot:'+self.target_id, headplot_data)
+        filtered_data = self.filter(data)  # perform filtering
+        self.database.write_data(self.id, filtered_data)
 
     def filter(self, data):
         """ Performs frequency filters on the input dictionary of data """
         # Bandpass filters
         if self.widgets['pass_toggle']:
             if self.pass_update:  # a new filter was requested
-                self.pass_sos = create_filter_sos('pass', self.sample_rate, self.widgets)
+                self.pass_sos = self.create_filter_sos('pass')
                 init = signal.sosfilt_zi(self.pass_sos)  # get initial conditions for this sos
                 self.pass_sos_init = [init] * len(self.channels)  # for each channel
                 self.pass_update = False  # filter has been updated
@@ -119,10 +113,9 @@ class EEGAnalyzer(Streamer):
                 data[name], self.pass_sos_init[i] = signal.sosfilt(self.pass_sos, data[name], zi=self.pass_sos_init[i])
 
         # notch filter
-        # TODO: Use small bandpass filter instead?
         if self.widgets['stop_toggle']:
             if self.stop_update:  # a new filter was requested
-                self.stop_sos = create_filter_sos('stop', self.sample_rate, self.widgets)
+                self.stop_sos = self.create_filter_sos('stop')
                 init = signal.sosfilt_zi(self.stop_sos)  # get initial conditions for this (b, a)
                 self.stop_sos_init = [init] * len(self.channels)  # for each channel
                 self.stop_update = False  # filter has been updated
@@ -137,34 +130,83 @@ class EEGAnalyzer(Streamer):
         #  is a way around this, though.
         return data
 
+    def create_filter_sos(self, name):
+        """
+        Returns the Second Order Sections of the given filter design.
+        [name] prefix used to get config attributes
+
+        [self.widgets] dict: Configuration dictionary seen in bokeh_layouts/eeg_stream.py
+            [name_type] string: bandpass, bandstop, lowpass, highpass
+            [name_style] string: Bessel, Butterworth, Chebyshev 1, Chebyshev 2, Elliptic
+            [name_crit] tuple: (low, high) critical values for the filter cutoffs
+            [name_order] int: Order of filter polynomial
+            [name_ripple] tuple: (max gain, max attenuation) for chebyshev and elliptic filters
+        """
+        type = self.widgets[name + '_type']
+        style = self.widgets[name + '_style']
+        range = self.widgets[name + '_range']
+        order = self.widgets[name + '_order']
+        ripple = self.widgets[name + '_ripple']
+
+        if style == 'Bessel':
+            sos = signal.bessel(order, range, fs=self.sample_rate, btype=type, output='sos')
+        elif style == 'Butterworth':
+            sos = signal.butter(order, range, fs=self.sample_rate, btype=type, output='sos')
+        elif style == 'Chebyshev 1':
+            sos = signal.cheby1(order, ripple[0], range, fs=self.sample_rate, btype=type, output='sos')
+        elif style == 'Chebyshev 2':
+            sos = signal.cheby2(order, ripple[1], range, fs=self.sample_rate, btype=type, output='sos')
+        elif style == 'Elliptic':
+            sos = signal.ellip(order, ripple[0], ripple[1], range, fs=self.sample_rate, btype=type, output='sos')
+        else:
+            return None
+        return sos
+
+
+class EEGFourierStream(EEGAnalyzer):
+    """ Analyzes the filtered data from EEGFilterStream """
+    def loop(self):
+        """ Maine execution loop """
+        # samples needed to read for a given time window
+        samples = int(self.widgets['fourier_window'] * self.sample_rate)
+        filtered_data = self.database.read_data(self.id, self.target_id, count=samples)
+        if not filtered_data:
+            return
+
+        fourier_data = self.fourier(filtered_data)  # fourier analysis
+        headplot_data = self.headplot(fourier_data)  # headplot spectrogram from fourier
+
+        self.database.write_snapshot('fourier:' + self.id, fourier_data)
+        self.database.write_snapshot('headplot:' + self.id, headplot_data)
+
     def fourier(self, data):
         """ Calculates the FFT of a slice of data """
         N = len(list(data.values())[0])  # length of each channel in eeg data (should all be the same)
-        freqs = np.fft.fftfreq(N, 1/self.sample_rate)[:N//2]  # frequency array
+        freqs = np.fft.fftfreq(N, 1 / self.sample_rate)[:N // 2]  # frequency array
 
         # numpy types are not JSON serializable, so they must be converted to a list
         fourier_dict = {'frequencies': freqs.tolist()}
-        #spectro_dict = {'spec_time': [self.spec_time]}
+        # spectro_dict = {'spec_time': [self.spec_time]}
 
         for name, channel_data in data.items():
             if name == 'time':
                 continue  # don't perform an FFT on the time series lol
 
-            fft = (np.fft.fft(channel_data)[:N//2])/N  # half frequency range and normalize
-            fft = np.sqrt(np.real(fft)**2 + np.imag(fft)**2)
+            fft = (np.fft.fft(channel_data)[:N // 2]) / N  # half frequency range and normalize
+            fft = np.sqrt(np.real(fft) ** 2 + np.imag(fft) ** 2)
 
             # set fft column
             fourier_dict[name] = fft.tolist()
 
-            #Add square of fft to spectrogram slice
-            #must be 2D list because this is being put into an image glyph
-            #spectro_dict[name] = [[fft.tolist()]]
+            # Add square of fft to spectrogram slice
+            # must be 2D list because this is being put into an image glyph
+            # spectro_dict[name] = [[fft.tolist()]]
 
         return fourier_dict
 
-        #spectrogram
-        #self.spectrogram_buffer.write(spectro_dict)
-        
+        # spectrogram
+        # self.spectrogram_buffer.write(spectro_dict)
+
     def headplot(self, fourier_data):
         """ Calculates headplot values, then dumps it to a new stream """
         # data to send will be a dictionary of band names with amplitude data
@@ -193,41 +235,7 @@ class EEGAnalyzer(Streamer):
 
         return headplot
 
-    def json(self, json_string):
-        """ Gets updated widget values from a socket """
-        super().json(json_string)
-        return
-        # Content is a JSON string with a single key-value pair
-        key, value = list(json.loads(json_string).items())[0]
-        print("WIDGETS: ", key, value)
 
-        # Converting the value from JS types in string form to python types
-        if key in ['pass_toggle', 'stop_toggle']:  # JS bools
-            if value == 'false':  # I am ashamed that I have to do this
-                value = False
-            if value == 'true':
-                value = True
-
-        elif key in ['pass_range', 'stop_range']:  # range slider gives comma-separated values
-            value = [float(i) for i in value]
-            if value[1] >= self.sample_rate/2:
-                value[1] = (self.sample_rate/2 - 0.5)
-            if value[0] <= 0:
-                value[0] = 0.1
-
-        elif key in ['pass_order', 'stop_order', 'fourier_window']:  # ints
-            value = int(value)
-
-        # filter style is already a string
-
-        # filters needs to be updated
-        if 'pass' in key:
-            self.pass_update = True
-        if 'stop' in key:
-            self.stop_update = True
-
-        # store the new updated value in the page_config dictionary
-        self.widgets[key] = value
 
 
 

@@ -58,53 +58,11 @@ def js_request(ID, key, attribute='value'):
     return code.format(ID=ID, key=key, attribute=attribute)
 
 
-def create_widgits(stream_id):
-    """
-    Create bokeh row of widgets that need to info back to the server.
-    <stream_id> is the ID to send all widget updates to
-    """
-
-    # Fourier Window sliders
-    fourier_window = Spinner(title="FFT Window (s)", low=1, high=10, step=1, width=90, value=config['fourier_window'])
-    fourier_window.js_on_change("value", CustomJS(code=js_request(stream_id, 'fourier_window')))
-
-    # Toggle buttons
-    pass_toggle = Toggle(label="Bandpass", button_type="success", width=100, margin=(24, 5, 0, 5), active=config['pass_toggle'])
-    pass_toggle.js_on_click(CustomJS(code=js_request(stream_id, 'pass_toggle', 'active')))
-
-    stop_toggle = Toggle(label="Bandstop", button_type="success", width=100, margin=(24, 5, 0, 5), active=config['stop_toggle'])
-    stop_toggle.js_on_click(CustomJS(code=js_request(stream_id, 'stop_toggle', 'active')))
-
-    # Range sliders. "value_throttled" only takes the slider value once sliding has stopped
-    pass_range = RangeSlider(title="Range", start=0.1, end=100, step=0.1, value=config['pass_range'])
-    pass_range.js_on_change("value_throttled", CustomJS(code=js_request(stream_id, 'pass_range')))
-
-    stop_range = RangeSlider(title="Range", start=40, end=70, step=0.5, value=config['stop_range'])
-    stop_range.js_on_change("value_throttled", CustomJS(code=js_request(stream_id, 'stop_range')))
-
-    # filter style selectors
-    pass_style = Select(title="Filters:", width=110, options=['Butterworth', 'Bessel', 'Chebyshev 1', 'Chebyshev 2', 'Elliptic'], value=config['pass_style'])
-    pass_style.js_on_change("value", CustomJS(code=js_request(stream_id, 'pass_style')))
-
-    stop_style = Select(title="Filters:", width=110, options=['Butterworth', 'Bessel', 'Chebyshev 1', 'Chebyshev 2', 'Elliptic'], value=config['stop_style'])
-    stop_style.js_on_change("value", CustomJS(code=js_request(stream_id, 'stop_style')))
-
-    # Order spinners
-    pass_order = Spinner(title="Order", low=1, high=10, step=1, width=60, value=config['pass_order'])
-    pass_order.js_on_change("value", CustomJS(code=js_request(stream_id, 'pass_order')))
-
-    stop_order = Spinner(title="Order", low=1, high=10, step=1, width=60, value=config['stop_order'])
-    stop_order.js_on_change("value", CustomJS(code=js_request(stream_id, 'stop_order')))
-
-    # Used to construct the Bokeh layout of widgets
-    widgets_row = [fourier_window, [[pass_toggle, pass_style, pass_order, pass_range], [stop_toggle, stop_style, stop_order, stop_range]]]
-    return widgets_row
-
-
 def create_layout(info):
     """
     Configures all Bokeh figures and plots
-    <info> must contain a 'channels' key
+    <info> dict. keys are stream names assigned in this group.
+        Values are dictionaries of the info given to that stream.
     """
     # TODO: Split this up into more easily digestible chunks?
     # TODO: Remove Spectrogram for good. Too much data is required to make it worth while,
@@ -113,18 +71,59 @@ def create_layout(info):
     #  spec images, the spectrogram Tab creation, and the code adding/sending data to the browser in
     #  the EEGHandler class. It's a good example of how to do a spectrogram in Bokeh, though, so
     #  I may want to keep it somewhere as a reference for later.
-    stream_id = info['id']
-    stream_channels = info['channels'].split(',')  # it's a comma separated string
 
-    # create row of widgets that send data to the eeg analyzer stream with this ID
-    widgets_row = create_widgits('EEGAnalyzer:'+stream_id)
+    # get channel names
+    stream_channels = info['Raw EEG']['channels'].split(',')  # it's a comma separated string
 
-    colors = viridis(len(stream_channels))  # viridis color palette for channel colors
+    # viridis color palette for channel colors
+    colors = viridis(len(stream_channels))
 
+    # get stream IDs
+    filtered_id = info['Filtered EEG']['id']  # Filter Analyzer ID
+    fourier_id = info['Fourier EEG']['id']  # Fourier Analyzer ID
+
+    ##########################
+    # create row of widgets that send data to the analyzer streams
+    # Fourier Window sliders
+    fourier_window = Spinner(title="FFT Window (s)", low=1, high=10, step=1, width=90, value=config['fourier_window'])
+    fourier_window.js_on_change("value", CustomJS(code=js_request(fourier_id, 'fourier_window')))
+
+    # Toggle buttons
+    pass_toggle = Toggle(label="Bandpass", button_type="success", width=100, margin=(24, 5, 0, 5), active=config['pass_toggle'])
+    pass_toggle.js_on_click(CustomJS(code=js_request(filtered_id, 'pass_toggle', 'active')))
+
+    stop_toggle = Toggle(label="Bandstop", button_type="success", width=100, margin=(24, 5, 0, 5), active=config['stop_toggle'])
+    stop_toggle.js_on_click(CustomJS(code=js_request(filtered_id, 'stop_toggle', 'active')))
+
+    # Range sliders. "value_throttled" only takes the slider value once sliding has stopped
+    pass_range = RangeSlider(title="Range", start=0.1, end=100, step=0.1, value=config['pass_range'])
+    pass_range.js_on_change("value_throttled", CustomJS(code=js_request(filtered_id, 'pass_range')))
+
+    stop_range = RangeSlider(title="Range", start=40, end=70, step=0.5, value=config['stop_range'])
+    stop_range.js_on_change("value_throttled", CustomJS(code=js_request(filtered_id, 'stop_range')))
+
+    # filter style selectors
+    pass_style = Select(title="Filters:", width=110, options=['Butterworth', 'Bessel', 'Chebyshev 1', 'Chebyshev 2', 'Elliptic'], value=config['pass_style'])
+    pass_style.js_on_change("value", CustomJS(code=js_request(filtered_id, 'pass_style')))
+
+    stop_style = Select(title="Filters:", width=110, options=['Butterworth', 'Bessel', 'Chebyshev 1', 'Chebyshev 2', 'Elliptic'], value=config['stop_style'])
+    stop_style.js_on_change("value", CustomJS(code=js_request(filtered_id, 'stop_style')))
+
+    # Order spinners
+    pass_order = Spinner(title="Order", low=1, high=10, step=1, width=60, value=config['pass_order'])
+    pass_order.js_on_change("value", CustomJS(code=js_request(filtered_id, 'pass_order')))
+
+    stop_order = Spinner(title="Order", low=1, high=10, step=1, width=60, value=config['stop_order'])
+    stop_order.js_on_change("value", CustomJS(code=js_request(filtered_id, 'stop_order')))
+
+    # Used to construct the Bokeh layout of widgets
+    widgets_row = [fourier_window, [[pass_toggle, pass_style, pass_order, pass_range], [stop_toggle, stop_style, stop_order, stop_range]]]
+
+    ###################################
     # create AJAX data sources for the plots
     # the if_modified=True allows it to ignore responses sent with a 304 code.
     eeg_source = AjaxDataSource(
-        data_url='/stream/update?id={}'.format(stream_id),
+        data_url='/stream/update?id={}'.format(filtered_id),
         method='GET',
         polling_interval=1000,
         mode='append',
@@ -132,7 +131,7 @@ def create_layout(info):
         if_modified=True)
 
     fourier_source = AjaxDataSource(
-        data_url='/stream/update?id=fourier:{}&format=snapshot'.format(stream_id),
+        data_url='/stream/update?id=fourier:{}&format=snapshot'.format(fourier_id),
         method='GET',
         polling_interval=1000,
         mode='replace',  # all FFT lines are replaced each update
@@ -149,13 +148,13 @@ def create_layout(info):
     '''
 
     headplot_source = AjaxDataSource(
-        data_url='/stream/update?id=headplot:{}&format=snapshot'.format(stream_id),
+        data_url='/stream/update?id=headplot:{}&format=snapshot'.format(fourier_id),
         method='GET',
         polling_interval=1000,
         mode='replace',
         if_modified=True)
 
-    ##############
+    #############################################
     # create EEG figure with all EEG lines plotted on it
     # initial x_range must be set in order to disable auto-scaling
     # initial y_ranges should not be set to enable auto-scaling
@@ -174,9 +173,9 @@ def create_layout(info):
         visible = True if i == 0 else False  # first channel visible
         eeg.line(x='time', y=stream_channels[i], name=stream_channels[i], color=colors[i], source=eeg_source, visible=visible)
 
-    # Whenever the DataSource data changes, incrementally slide x_range
-    # to give the appearance of continuity.
-    # TODO: make it less choppy?
+    # Whenever the DataSource data changes, incrementally slide x_range over the length of the
+    # new incoming data to give smooth appearance.
+    # TODO: can it be made less choppy?
     eeg_source.js_on_change('data',
         CustomJS(args=dict(  # arguments to be passed into the JS function
             source=eeg_source,
@@ -415,37 +414,4 @@ if (low < high) {
     analysis_tabs = Tabs(tabs=[fourier_panel, head_panel])
     full_layout = layout([channel_radios, eeg, widgets_row, analysis_tabs])
     return full_layout
-
-
-def create_filter_sos(name, sample_rate, config):
-    """
-    Returns the Second Order Sections of the given filter design.
-    [name] prefix used to get config attributes
-    [sample rate] int: Number of samples per second
-    [config] dict: Configuration dictionary seen at the top of this file. Must contain:
-        [name_type] string: bandpass, bandstop, lowpass, highpass
-        [name_style] string: Bessel, Butterworth, Chebyshev 1, Chebyshev 2, Elliptic
-        [name_crit] tuple: (low, high) critical values for the filter cutoffs
-        [name_order] int: Order of filter polynomial
-        [name_ripple] tuple: (max gain, max attenuation) for chebyshev and elliptic filters
-    """
-    type = config[name + '_type']
-    style = config[name + '_style']
-    range = config[name + '_range']
-    order = config[name + '_order']
-    ripple = config[name + '_ripple']
-
-    if style == 'Bessel':
-        sos = signal.bessel(order, range, fs=sample_rate, btype=type, output='sos')
-    elif style == 'Butterworth':
-        sos = signal.butter(order, range, fs=sample_rate, btype=type, output='sos')
-    elif style == 'Chebyshev 1':
-        sos = signal.cheby1(order, ripple[0], range, fs=sample_rate, btype=type, output='sos')
-    elif style == 'Chebyshev 2':
-        sos = signal.cheby2(order, ripple[1], range, fs=sample_rate, btype=type, output='sos')
-    elif style == 'Elliptic':
-        sos = signal.ellip(order, ripple[0], ripple[1], range, fs=sample_rate, btype=type, output='sos')
-    else:
-        return None
-    return sos
 

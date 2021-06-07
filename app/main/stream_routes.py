@@ -3,10 +3,12 @@ from flask import (
 )
 
 from jinja2.exceptions import TemplateNotFound
+from bokeh.embed import json_item
+from json import dumps
 import functools
 
 from app.main.auth_routes import login_required
-from app.bokeh_layouts import get_layout
+from app import stream_config
 from app import Database
 
 # import blueprint + socket
@@ -26,15 +28,16 @@ def index():
 @login_required
 @streams.route('/stream', methods=('GET', 'POST'))
 def stream():
-    stream_id = request.args.get('id')
-    try:
-        info = current_app.database.read_info(stream_id)  # get info dict
-    except Database.Error as e:
-        print('Database Error occurred when trying to read stream info: {}'.format(e))
-        return
+    group_name = request.args.get('group')
 
-    # get stream page template according to stream type
-    template_path = '/streams/{}.html'.format(info['type'])
+    # get stream page template
+    file = stream_config.pages.get(group_name)
+    if not file:
+        print("No stream page for: {}".format(file))
+        return "", 404
+
+    template_path = '/streams/{}'.format(file)
+
     try:
         return render_template(template_path)
     except TemplateNotFound as e:
@@ -45,31 +48,28 @@ def stream():
 @streams.route('/stream/plot_layout', methods=('GET', 'POST'))
 def plot_layout():
     """ Returns the layout JSON for the bokeh plot """
-    stream_id = request.args.get('id')
+    group_name = request.args.get('group')
 
     try:
-        info = current_app.database.read_info(stream_id)  # get info dict
+        # get info dict of all streams in this group
+        info = current_app.database.read_group(group_name)
     except Database.Error as e:
         print('Database Error occurred when trying to read stream info: {}'.format(e))
         return
 
-    stream_type = info['type']
+    # get bokeh layout function associated with this group
+    create_layout = stream_config.bokeh_layouts[group_name]
+    layout = create_layout(info)  # bokeh layout object
+    json_layout = dumps(json_item(layout))
 
-    if stream_type == 'plot':  # bokeh plot
-        layout = get_layout(info)  # Get full layout json string for this stream
-        resp = Response(response=layout, content_type='application/json')
-    else:
-        print("Stream of unknown type '{}' requested a plot_layout.".format(stream_type))
-        resp = render_template()
-        return
-
+    resp = Response(response=json_layout, content_type='application/json')
     return resp
 
 
 @login_required
 @streams.route('/stream/update', methods=('GET', 'POST'))
 def plot_update():
-    """ Returns the json to update a plot """
+    """ Returns the json to update a bokeh plot """
     request_id = request.args.get('id')
     request_format = request.args.get('format')
 
@@ -96,10 +96,10 @@ def plot_update():
 @streams.route('/stream/widgets', methods=('GET', 'POST'))
 def widget_update():
     request_id = request.args.get('id')
-    widget_json = request.json
-    print("FLASK GOT JSON: ", widget_json)
+    widget_dict = request.json
 
     # use the ID as the socket namespace on which to send this info
-    socketio.emit('json', widget_json, namespace='/'+request_id)
-    return "", 2000
+    # JSON is automatically converted to python types
+    socketio.emit('json', widget_dict, namespace='/'+request_id)
+    return "", 200
 

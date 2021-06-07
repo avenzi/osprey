@@ -1,17 +1,18 @@
-import json
-from lib.server.analysis_lib import AnalyzerClient, CONFIG_PATH
+from lib.lib import Client
+from lib.server.analyzers import *
 
-# get configured settings if they already exist
-try:
-    with open(CONFIG_PATH) as file:
-        config = json.load(file)
-except Exception as e:
-    # TODO: Send an error message to the log
-    print('No config file found. Please run the appropriate setup script.')
-    quit()
+# name, group_name, target_name, target_group (if not same group)
 
+analyzers = [
+    TestAnalyzer('Random Analyzer 1', 'TestGroup', 'Random 1'),
+    TestAnalyzer('Random Analyzer 1', 'TestGroup 2', 'Random 1'),
+    EEGFilterStream('Filtered EEG', 'EEG 1', 'Raw EEG'),
+    EEGFourierStream('Fourier EEG', 'EEG 1', 'Filtered EEG')
+]
 
-client = AnalyzerClient(config, debug=2)
+config = 'config/server_streamer_config.json'
+
+client = Client(analyzers, config, debug=2)
 client.run()
 
 

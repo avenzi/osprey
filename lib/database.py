@@ -79,6 +79,8 @@ class Database:
         try:
             self.redis.shutdown(save=True)
             os.system("mv data/dump.rdb data/redis_dumps/{}.rdb".format(get_time()))
+            # TODO: Make a copy of the file, but don't remove the current one, then wipe the whole database.
+            #  This might avoid problems with shutting it down entirely.
             self.redis = None
             return True
         except Exception as e:
@@ -236,12 +238,49 @@ class Database:
             return data
 
     @handle_errors
-    def get_all_info(self):
+    def read_all_info(self):
         """ Gets a list of dictionaries containing info for all connected streams """
         info = []
         for key in self.redis.execute_command('keys info:*'):
             info.append(self.redis.hgetall(key))
         return info
+
+    @handle_errors
+    def write_group(self, key, data):
+        """
+        Writes <data> to group:<key>
+        <data> must be a dictionary of key-value pairs.
+        <key> is the key for this data set
+        """
+        self.redis.hmset('group:'+key, data)
+
+    @handle_errors
+    def read_group(self, name, stream=None):
+        """
+        Gets an info dict from stream with name <stream> in group_name <name>
+        if <name> not specified, gives list of all dicts in that group
+        """
+        if stream is not None:  # stream name specified
+            stream_id = self.redis.hget('group:'+name, stream)  # get stream ID from group dict
+            return self.read_info(stream_id)  # return dict for that stream
+
+        else:  # no stream name specified - get whole group
+            data = {}  # name: {stream info dict}
+            group = self.redis.hgetall('group:'+name)  # name:ID
+            for key in group.keys():  # for each stream name
+                data[key] = self.read_info(group[key])
+            return data
+
+    @handle_errors
+    def read_all_groups(self):
+        """ Gets a list of dictionaries containing name and ID info for all connected streams """
+        info = []
+        for key in self.redis.execute_command('keys group:*'):
+            info.append(self.redis.hgetall(key))
+        return info
+
+
+
 
 
 

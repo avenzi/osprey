@@ -1,12 +1,10 @@
 from threading import Condition
 from io import BytesIO
 import subprocess
-import inspect
+import json
 import os
 
 from lib.lib import Client
-
-CONFIG_PATH = 'config/raspi_config.json'
 
 
 def configure_port(dev_path):
@@ -27,32 +25,15 @@ def configure_port(dev_path):
 
 
 class RaspiClient(Client):
-    """ Extends the Client HostNode to run Streamers on a Raspberry Pi """
-    def _run(self):
-        """
-        Called by self.run() on a new thread.
-        Creates one instance of each handler type from collection_lib
-            For each handler class, listens for new connections then starts them on their own thread.
-        """
+    def run(self):
+        """ Just extending to print out some info """
         self.log("Name: {}".format(self.name))
-        #self.log("Device IP: {}".format(get('http://ipinfo.io/ip').text.strip()))  # show this machine's public ip
         self.log("Server IP: {}:{}".format(self.config['SERVER_IP'], self.config['SERVER_PORT']))
         self.log("Database IP: {}:{}".format(self.config['SERVER_IP'], self.config['DB_PORT']))
-
-        # get selected handler classes
-        from . import streamers
-        members = inspect.getmembers(streamers, inspect.isclass)  # all classes [(name, class), ]
-        for member in members:
-            if member[1].__module__.split('.')[-1] == 'streamers':  # imported from the streamers.py file
-                config = self.config['STREAMERS'].get(member[0])  # configuration of whether this class is to be used or not
-                if config and config.upper() == 'Y':  # this class is in the config file and set to be used
-                    worker = member[1](self.config)  # create a new worker instnace
-                    self.run_worker(worker)  # run on a parallel process
-                else:  # not in the config file or not set to be used
-                    self.debug("Streamer class {} is not being used. Set it's keyword to 'Y' in {} to use".format(member[0], CONFIG_PATH))
+        super().run()
 
 
-class PicamOutput():
+class PicamOutput:
     """ Data Buffer class to collect data from a Picam. """
     def __init__(self):
         self.buffer = BytesIO()

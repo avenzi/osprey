@@ -36,17 +36,6 @@ def streamer_disconnect():
     pass
 
 
-@socketio.on('init', namespace='/streamers')
-def streamer_init(stream_id):
-    """ notified that a new streamer has initialized """
-    try:
-        info = current_app.database.read_info(stream_id)
-    except Database.Error:
-        print("Streamer initialized, but failed to get info for a stream with ID: {}".format(stream_id))
-        return
-    socketio.emit('init', info, namespace='/analyzer_client')  # give info to analyzer client
-
-
 @socketio.on('update', namespace='/streamers')
 def streamer_update(stream_id):
     """ notified that the streamer's info has updated """
@@ -78,7 +67,7 @@ def database_init():
     current_app.database.init()  # start database process
     sleep(0.1)  # give it sec to start up
     socketio.emit('log', 'Started Redis server', namespace='/browser')  # log on browser
-    socketio.emit('init', namespace='/streamers')  # request init from streamers
+    socketio.emit('update', namespace='/streamers')  # request update from streamers
 
 
 @socketio.on('shutdown', namespace='/browser')
@@ -110,10 +99,9 @@ def browser_stop():
 @socketio.on('refresh', namespace='/browser')
 def browser_refresh():
     """ refresh list of connected streams """
-    try:
-        info = current_app.database.get_all_info()
+    try:  # attempt to read list of group names
+        groups = current_app.database.read_all_groups()
     except Database.Error:
-        info = []
-
-    socketio.emit('update', info, namespace='/browser')
+        groups = []
+    socketio.emit('update', groups, namespace='/browser')
 

@@ -35,11 +35,11 @@
 
         socket.on('update', function(data) {
             // data is a list of dictionaries with info on each stream
+            console.log("getting update");
             $('#streams ul').empty()
             data.forEach(function(info) {
-                if (info['show'] == 'true') {
-                    $('#streams ul').append(`<li><a href='/stream?id=${info['id']}'>${info['name']}</a></li>`);
-                };
+                console.log(info);
+                $('#streams ul').append(`<li><a href='/stream?group=${info['name']}'>${info['name']}</a></li>`);
             });
         });
 
