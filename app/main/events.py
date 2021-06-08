@@ -4,6 +4,13 @@ from time import sleep
 from app.main import socketio
 from app import Database
 
+"""
+Namespaces:
+    UUID of stream: only that stream
+    "/analyzers": all analyzer streams
+    "/streamers": all streams (including analyzers)
+"""
+
 
 @socketio.on('connect', namespace='/browser')
 def browser_connect():
@@ -34,6 +41,13 @@ def streamer_disconnect():
     """ On disconnecting from a streamer """
     #print("A Streamer disconnected")
     pass
+
+
+@socketio.on('init', namespace='/streamers')
+def streamer_init(stream_id):
+    """ notified when a new stream has been initialized """
+    # tell waiting analyzers to check to see if this is their target
+    socketio.emit('check_database', stream_id, namespace='/analyzers')
 
 
 @socketio.on('update', namespace='/streamers')

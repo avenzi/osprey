@@ -58,8 +58,13 @@ def plot_layout():
         return
 
     # get bokeh layout function associated with this group
-    create_layout = stream_config.bokeh_layouts[group_name]
-    layout = create_layout(info)  # bokeh layout object
+    try:
+        create_layout = stream_config.bokeh_layouts[group_name]
+        layout = create_layout(info)  # bokeh layout object
+    except Exception as e:
+        print("Failed to create layout for group {}: {}".format(group_name, e))
+        return "", 404
+
     json_layout = dumps(json_item(layout))
 
     resp = Response(response=json_layout, content_type='application/json')

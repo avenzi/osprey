@@ -462,9 +462,10 @@ class SynthEEGStreamer(Streamer):
 
     def start(self):
         """ Extended from base class in pi_lib.py """
-        # start EEG stream
-        self.board.prepare_session()
-        self.board.start_stream()
+        # start EEG stream if not already
+        if not self.streaming.is_set():
+            self.board.prepare_session()
+            self.board.start_stream()
 
         # First send some initial information to this stream's info channel
         super().start()  # start main loop

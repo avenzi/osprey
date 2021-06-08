@@ -419,17 +419,18 @@ class Streamer(WorkerNode):
 
         # connection with socketio
         self.socket = socketio.Client()
+        self.namespaces = ['/streamers', '/'+self.id]  # list of namespaces to connect to
 
         # connection to database
         self.database = None  # Database object
         self.info = {}  # info dict to be written to the database
 
-        # streaming stuff
-        self.streaming = Event()  # threading event flag set when actively streaming
+        # flags and events
+        self.streaming = Event()  # threading event flag set to activate stream
         self.start_time = time.time()  # start time
 
     def set_config(self, config):
-        """ Set config dictionary and all attributes obtianed from it """
+        """ Set config dictionary and all attributes obtained from it """
         self.config = config
         self.client = config['NAME']
         self.ip = self.config['SERVER_IP']  # ip address of server
@@ -442,6 +443,7 @@ class Streamer(WorkerNode):
         self.info['name'] = self.name
         self.info['group'] = self.group
         self.info['client'] = self.client
+        self.info['updated'] = 0  # last update time
 
     def run(self, *args):
         """ Extends worker.run to make various checks before running"""
@@ -449,6 +451,27 @@ class Streamer(WorkerNode):
             print("Could not run {}. No config set with set_config()".format(self.name))
             return
         super().run(*args)
+
+    def _run(self):
+        """ Runs main execution loop """
+        self.init()  # initialize all connections
+        self.update()  # send info to database
+        self.socket.emit('init', self.id, namespace='/streamers')  # notify server
+
+        while not self.exit:  # run until exit
+            self.streaming.wait()  # block until streaming event is set
+            try:
+                self.loop()  # call user-defined main execution
+            except Exception as e:
+                self.throw("Unhandled exception: {}".format(e), trace=True)
+                return
+
+    def loop(self):
+        """
+        Should be overwritten by derived class.
+        Should not be called anywhere other than _loop()
+        """
+        pass
 
     def register_namespace(self, NamespaceClass, namespace):
         """ Register a socketio namespace """
@@ -476,42 +499,15 @@ class Streamer(WorkerNode):
 
     def init(self):
         """ Initialize connections """
-        # general namespace for all streamers
-        self.register_namespace(StreamerNamespace, '/streamers')
-
-        # namespace for this streamer specifically
-        self.register_namespace(StreamerNamespace, '/'+self.id)
+        # register each namespace
+        for namespace in self.namespaces:
+            self.register_namespace(StreamerNamespace, namespace)
 
         # get connection to server socketIO
         self.connect_socket()
 
         # get connection to database
         self.database.connect()
-        # TODO: put database connect() on a separate thread similar to this one
-        #  with en Event tied to it? OOH put it in the database class
-
-    def _run(self):
-        """ Runs main execution loop """
-        self.init()  # initialize all connections
-        self.update()  # send info to database
-
-        while not self.exit:  # run until exit
-            self.streaming.wait()  # block until streaming event is set
-            try:
-                self.loop()  # call user-defined main execution
-            except self.database.Error:
-                time.sleep(1)
-                break  # break execution and attempt to reconnect
-            except Exception as e:
-                self.throw("Unhandled exception: {}".format(e), trace=True)
-                return
-
-    def loop(self):
-        """
-        Should be overwritten by derived class.
-        Should not be called anywhere other than _loop()
-        """
-        pass
 
     def update(self):
         """ Send info to database and signal update to server """
@@ -519,6 +515,7 @@ class Streamer(WorkerNode):
         self.database.write_group(self.group, {self.name: self.id, 'name': self.group})
 
         # write stream info
+        self.info['updated'] = time.time()
         self.database.write_info(self.id, self.info)
 
         # notify server of update
@@ -578,41 +575,48 @@ class Analyzer(Streamer):
         # event to control when the analyzer is waiting for the incoming stream
         self.looking = Event()
 
+        # add namespace unique to analyzers
+        self.namespaces.append('/analyzers')
+
         # list of keys in the info dict that are unique to this analyzer.
         # anything not in this list will be overwritten by the stream it is reading from.
-        self.unique_keys = ['id', 'name', 'client', 'type', 'show']
+        self.unique_keys = ['id', 'name', 'client', 'type', 'show', 'updated']
 
     def init(self):
         """ Extend init to look for the target stream """
         super().init()
+        self.get_target()  # check for target stream
 
-        # TODO: Trigger the self.looking event early when a new stream connects,
-        #  and make the timeout longer?
-        #  Also should find a way to make this while loop run again if a stream is deleted
-        #  from the database alltogether. This analyzer should behave as if it was restarted,
-        #  and starts the loop of looking for the target stream.
-
-        # look for targeted stream in database
-        while not self.exit:
+    def get_target(self, stream_id=None):
+        """
+        Check if given stream is the target stream. If it is, copy it's info.
+        If no stream ID is given, look through all info dicts currently on the database.
+        """
+        if not stream_id:
             try:
                 info_list = self.database.read_all_info()
+                if not info_list:
+                    raise Exception("Database Read operation returned nothing.")
             except Exception as e:
-                self.throw("{} failed to get info from database.".format(self.name))
+                print("{} failed to get target info from database: {}".format(self.name, e))
                 return
+        else:  # stream ID given
+            info_list = [self.database.read_info(stream_id)]
 
-            for info in info_list:
-                # found the targeted stream
-                if info['group'] == self.target_group and info['name'] == self.target_name:
-                    self.target_id = info['id']  # get ID of this stream
-                    print("{} Found target stream: {}".format(self.name, self.target_name))
-                    break
-            else:  # none found
-                self.looking.wait(timeout=1)  # wait 5 seconds or until triggered to try again
-                continue
+        # The update time used in case multiple streams with the same group and name are found.
+        # The most recently updated one will be selected.
+        update_time = 0  # last update time of the most recent stream
+        target_info = {}  # target info
+        for info in info_list:
+            # found the targeted stream
+            if info['group'] == self.target_group and info['name'] == self.target_name:
+                if float(info['updated']) > update_time:  # newer stream
+                    target_info = info
 
-            # found, copy target info and break out of loop
-            self.copy_info(info)
-            break
+        if target_info:  # target stream found
+            print("{} Found target stream: {}".format(self.name, self.target_name))
+            self.target_id = target_info['id']  # get ID of this stream
+            self.copy_info(target_info)
 
     def copy_info(self, target_info=None):
         """ Copy extra info from the target stream """
@@ -623,10 +627,24 @@ class Analyzer(Streamer):
                 self.throw("{} Failed to copy info from target {}".format(self.name, self.target_name))
                 return
 
+        modified = False  # if the info dict has been modified
         for key in target_info.keys():
             if key in self.unique_keys:  # stream-specific, don't copy it
                 continue
-            self.info[key] = target_info[key]  # not stream-specific. Copy the value from target.
+            if self.info.get(key) == target_info[key]:  # not modified
+                continue
+
+            # key is not stream-specific and has changed since last copy
+            self.info[key] = target_info[key]
+            modified = True
+
+        if modified:  # if any info has been updated from the target
+            print("{} info updated.".format(self.name))
+            self.update()  # update database
+
+            # signal other analyzers to update their own info
+            # incase any of them rely on this analyzer's info.
+            self.socket.emit('init', self.id, namespace='/streamers')
 
 
 class Namespace(socketio.ClientNamespace):
@@ -644,10 +662,13 @@ class Namespace(socketio.ClientNamespace):
 
 
 class StreamerNamespace(Namespace):
-
     def on_update(self):
         """ Update message from server """
         self.streamer.update()
+
+    def on_check_database(self, stream_id):
+        """ Used to notify analyzers that a new stream has been initialized on the database """
+        self.streamer.get_target(stream_id)
 
     def on_start(self):
         """ start message from server """

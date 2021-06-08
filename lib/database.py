@@ -1,11 +1,10 @@
-from time import sleep
+from time import time, sleep
 from datetime import datetime
 import functools
 import json
 import os
 
 import redis
-from redis.exceptions import ConnectionError
 
 
 def get_time():
@@ -18,23 +17,27 @@ class DatabaseError(Exception):
     pass
 
 
-def handle_errors(method):
+def maintain_connection(method):
     """
     Method wrapper to catch some disconnection issues
-    Also throws custom errors that can be caught in an outer scope
+    Also throws custom error that can be caught in an outer scope
     """
     @functools.wraps(method)
     def wrapped(self, *args, **kwargs):
         if not self.redis:
-            if not self.connect(repeat=1):  # attempt to connect once
-                raise self.Error('Could not connect to database')
-        try:
-            return method(self, *args, **kwargs)
-        except redis.ConnectionError as e:
-            if self.connect(repeat=1):  # attempt to connect once
+            if not self.connect():  # attempt to connect
+                raise self.Error('Could not connect to database.')
+
+        while not self.exit:
+            try:  # attempt to perform database operation
                 return method(self, *args, **kwargs)
-            else:  # failed
-                raise self.Error('Database connection error: {}'.format(e))
+            except (redis.exceptions.ConnectionError, ConnectionResetError, ConnectionRefusedError)as e:
+                if self.connect():  # attempt to connect
+                    continue
+                else:
+                    raise self.Error('Database connection error: {}'.format(e))
+            except Exception as e:
+                raise self.Error('Database error: {}'.format(e))
     return wrapped
 
 
@@ -68,12 +71,12 @@ class Database:
         Initialize database process.
         Obviously only used on the machine that is hosting the redis server
         """
+        # move old file if it's there
         os.system("redis-server config/redis.conf")
         self.exit = False
 
     def shutdown(self):
         """ Shut down database process and save data """
-        self.exit = True
         if not self.redis:
             return False
         try:
@@ -81,30 +84,37 @@ class Database:
             os.system("mv data/dump.rdb data/redis_dumps/{}.rdb".format(get_time()))
             # TODO: Make a copy of the file, but don't remove the current one, then wipe the whole database.
             #  This might avoid problems with shutting it down entirely.
-            self.redis = None
+            self.disconnect()
             return True
         except Exception as e:
             print("Failed to shutdown or save database: {}".format(e))
             return False
 
-    def connect(self, repeat=None, delay=1):
+    def connect(self, timeout=None, delay=1):
         """
         Attempt to connect to database
-        <repeat> Max number of retries. Infinitely loops if None.
+        <timeout> Time until error returned. None never stops.
         <delay> Delay in seconds before repeating each time
         """
-        tries = 0
+        start = time()
+        t = 0
         while not self.exit:  # until node exits
             try:
                 self.redis = redis.Redis(connection_pool=self.pool)
-                if self.redis.ping():
-                    return True
-            except ConnectionError as e:
-                if repeat is None or tries < repeat:
-                    tries += 1
+                self.redis.ping()
+            except Exception as e:
+                if timeout is None or time()-start < timeout:
+                    t += 1
                     sleep(delay)
+                    continue
                 else:
                     return False
+            return True  # successful ping
+
+    def disconnect(self):
+        """ Disconnect from database """
+        self.exit = True
+        self.redis = None
 
     def ping(self):
         """ Ping database to ensure connecting is functioning """
@@ -114,7 +124,7 @@ class Database:
         except:
             return False
 
-    @handle_errors
+    @maintain_connection
     def write_data(self, stream, data):
         """
         Writes time series <data> to stream:<stream>.
@@ -126,7 +136,7 @@ class Database:
             pipe.xadd('stream:'+stream, {key: data[key][i] for key in data.keys()})
         pipe.execute()
 
-    @handle_errors
+    @maintain_connection
     def read_data(self, reader, stream, count=None, to_json=False):
         """
         Gets newest data for <reader> from data column <stream>.
@@ -177,7 +187,7 @@ class Database:
             return json.dumps(output)
         return output
 
-    @handle_errors
+    @maintain_connection
     def write_snapshot(self, stream, data):
         """
         Writes a snapshot of data <data> to stream:<stream>.
@@ -192,7 +202,7 @@ class Database:
 
         self.redis.xadd('stream:'+stream, new_data)
 
-    @handle_errors
+    @maintain_connection
     def read_snapshot(self, stream, to_json=False):
         """
         Gets latest snapshot for <reader> from data column <stream>.
@@ -216,7 +226,7 @@ class Database:
             return json.dumps(output)
         return output
 
-    @handle_errors
+    @maintain_connection
     def write_info(self, key, data):
         """
         Writes <data> to info:<key>
@@ -225,7 +235,7 @@ class Database:
         """
         self.redis.hmset('info:'+key, data)
 
-    @handle_errors
+    @maintain_connection
     def read_info(self, ID, name=None):
         """
         Reads <name> from map with key info:<key>
@@ -237,7 +247,7 @@ class Database:
             data = self.redis.hgetall('info:' + ID)
             return data
 
-    @handle_errors
+    @maintain_connection
     def read_all_info(self):
         """ Gets a list of dictionaries containing info for all connected streams """
         info = []
@@ -245,7 +255,7 @@ class Database:
             info.append(self.redis.hgetall(key))
         return info
 
-    @handle_errors
+    @maintain_connection
     def write_group(self, key, data):
         """
         Writes <data> to group:<key>
@@ -254,7 +264,7 @@ class Database:
         """
         self.redis.hmset('group:'+key, data)
 
-    @handle_errors
+    @maintain_connection
     def read_group(self, name, stream=None):
         """
         Gets an info dict from stream with name <stream> in group_name <name>
@@ -271,7 +281,7 @@ class Database:
                 data[key] = self.read_info(group[key])
             return data
 
-    @handle_errors
+    @maintain_connection
     def read_all_groups(self):
         """ Gets a list of dictionaries containing name and ID info for all connected streams """
         info = []
