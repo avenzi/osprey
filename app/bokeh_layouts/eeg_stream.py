@@ -162,9 +162,10 @@ def create_layout(info):
         title='EEG Channels',
         x_axis_label='Time (s)', y_axis_label='Voltage (uV)', x_range=[0, 0],
         plot_width=1200, plot_height=200,
-        toolbar_location=None, active_scroll='auto', active_drag='auto',
+        toolbar_location=None,
         output_backend=BACKEND
     )
+    eeg.toolbar.active_drag = None  # disable drag
 
     # y-axis range will autoscale to currently selected channel
     eeg.y_range.only_visible = True
@@ -215,9 +216,11 @@ if (diff > 0 && diff < end-start) {
         title="EEG Fourier",
         x_axis_label='Frequency (Hz)', y_axis_label='Magnitude (log)', y_axis_type="log",
         plot_width=1200, plot_height=400,
-        toolbar_location=None, active_drag='auto', active_scroll='auto',
+        toolbar_location=None,
         output_backend=BACKEND
     )
+    fourier.toolbar.active_drag = None  # disable drag
+
     for i in range(len(stream_channels)):
         fourier.line(x='frequencies', y=stream_channels[i], color=colors[i], source=fourier_source)
     fourier_panel = Panel(child=fourier, title='FFT')  # create a tab for this plot
@@ -344,6 +347,7 @@ if (low < high) {
             toolbar_location=None, active_drag='auto', active_scroll='auto',
             output_backend=BACKEND
         )
+        fig.toolbar.active_drag = None  # disable drag
         # Even though x and y of each point don't change, they have to be gotten from the data source.
         # Each figure gets its own color mapper and takes data from the
         #   column with it's band name, which contains the color data.

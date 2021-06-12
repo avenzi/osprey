@@ -29,16 +29,19 @@ def create_layout(info):
         if_modified=True)  # if_modified ignores responses sent with code 304 and not cached.
 
     data1 = figure(title='Sample Data 1', x_axis_label='time', y_axis_label='Data', toolbar_location=None, plot_width=600, plot_height=300)
+    data1.toolbar.active_drag = None
     data1.line(x='time', y='val_1', legend_label='Val 1', color='blue', source=source1)
     data1.line(x='time', y='val_2', legend_label='Val 2', color='green', source=source1)
     data1.line(x='time', y='val_3', legend_label='Val 3', color='red', source=source1)
 
     data2 = figure(title='Sample Data 2', x_axis_label='time', y_axis_label='Data', toolbar_location=None, plot_width=600, plot_height=300)
+    data2.toolbar.active_drag = None
     data2.line(x='time', y='val_1', legend_label='Val 1', color='blue', source=source2)
     data2.line(x='time', y='val_2', legend_label='Val 2', color='green', source=source2)
     data2.line(x='time', y='val_3', legend_label='Val 3', color='red', source=source2)
 
     data3 = figure(title='Transformed Data 1', x_axis_label='time', y_axis_label='Data', toolbar_location=None, plot_width=600, plot_height=300)
+    data3.toolbar.active_drag = None
     data3.line(x='time', y='val_1', legend_label='Val 1', color='blue', source=source3)
     data3.line(x='time', y='val_2', legend_label='Val 2', color='green', source=source3)
     data3.line(x='time', y='val_3', legend_label='Val 3', color='red', source=source3)
