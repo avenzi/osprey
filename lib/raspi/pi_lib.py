@@ -28,8 +28,8 @@ class RaspiClient(Client):
     def run(self):
         """ Just extending to print out some info """
         self.log("Name: {}".format(self.name))
-        self.log("Server IP: {}:{}".format(self.config['SERVER_IP'], self.config['SERVER_PORT']))
-        self.log("Database IP: {}:{}".format(self.config['SERVER_IP'], self.config['DB_PORT']))
+        self.log("Server IP: {}:{}".format(self.ip, self.port))
+        self.log("Database IP: {}:{}".format(self.ip, self.port))
         super().run()
 
 

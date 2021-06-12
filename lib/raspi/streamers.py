@@ -187,15 +187,13 @@ class EEGStreamer(Streamer):
     """
     EEG Streamer class for an OpenBCI board (Cyton, Cyton+Daisy, Ganglion)
     """
-    def __init__(self, *args):
+    def __init__(self, dev_path, *args):
         super().__init__(*args)
 
         from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds
 
         self.board_id = BoardIds.CYTON_DAISY_BOARD.value   # Cyton+Daisy borad ID (2)
-        with open(CONFIG_PATH) as config_file:  # get device path
-            config = json.load(config_file)
-        self.serial_port = config['VCP'][self.__class__.__name__]
+        self.serial_port = dev_path
 
         self.eeg_channel_indexes = BoardShim.get_eeg_channels(self.board_id)  # list of EEG channel indexes
         self.eeg_channel_names = BoardShim.get_eeg_names(self.board_id)       # list of EEG channel names
@@ -290,16 +288,13 @@ class ECGStreamer(Streamer):
     """
     ECG Streamer class for an OpenBCI board (Cyton, Cyton+Daisy, Ganglion)
     """
-    def __init__(self, *args):
+    def __init__(self, dev_port, *args):
         super().__init__(*args)
 
         from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds
 
         self.board_id = BoardIds.CYTON_BOARD.value   # Cyton board ID (0)
-
-        with open(CONFIG_PATH) as config_file:  # get device path
-            config = json.load(config_file)
-        self.serial_port = config['VCP'][self.__class__.__name__]
+        self.serial_port = dev_port
 
         # Note that the channels returned would be for EEG channels
         self.ecg_channel_indexes = BoardShim.get_ecg_channels(self.board_id)

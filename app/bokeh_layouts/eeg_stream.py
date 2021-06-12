@@ -375,6 +375,9 @@ if (low < high) {
         direction='rtl',  # Right to left, but vertical so top to bottom
         value=config['spectrogram_range'])
 
+    # TODO: The colorbar is not updating in the plot. The circle glyphs are updating just fine,
+    #  but no matter what I try the colorbar doesn't change its color range or tickmarks.
+
     headplot_slider.js_on_change(
         "value",
         CustomJS(args=dict(  # arguments to be passed into the JS function

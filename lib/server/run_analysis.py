@@ -12,9 +12,11 @@ workers = [
     EEGFourierStream('Fourier EEG', 'EEG 1', 'Filtered EEG')
 ]
 
-config = 'config/server_streamer_config.json'
-
-client = Client(workers, config, debug=2)
+client = Client(
+    workers=workers, name='AWS Local Client', debug=2,
+    server_ip='3.131.117.61', port=5000,
+    db_port=5001, db_pass='thisisthepasswordtotheredisserver'
+)
 client.run()
 
 

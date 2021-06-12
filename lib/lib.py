@@ -252,17 +252,14 @@ class Client(Base):
     <workers> list of worker classes to run
     <config> path to config file
     """
-    def __init__(self, workers, config, debug=0):
+    def __init__(self, workers, name, server_ip, port, db_port, db_pass, debug=0):
         super().__init__()
-        try:  # get configured settings if they already exist
-            with open(config) as file:
-                self.config = json.load(file)
-        except Exception as e:
-            print('No config file found. Please run the appropriate setup script.')
-            quit()
-
         self.workers = workers
-        self.name = self.config['NAME']
+        self.name = name
+        self.ip = server_ip
+        self.port = port
+        self.db_port = db_port
+        self.db_pass = db_pass
         self.set_debug(debug)
         self.pipes = {}   # index of Pipe objects, each connecting to a WorkerNode
 
@@ -273,7 +270,7 @@ class Client(Base):
         Blocks until exit status set.
         """
         for worker in self.workers:
-            worker.set_config(self.config)
+            worker.set_info(self)  # give worker some of the config params
             self.run_worker(worker)  # run on a parallel process
 
         # block main thread until exit
@@ -412,10 +409,11 @@ class Streamer(WorkerNode):
         self.group = group_name  # unique group name that this stream is a part of
 
         # config settings
-        self.config = None  # dict of all general config parameters
         self.client = None  # name of client that is hosting this worker
         self.ip = None
-        self.server_port = None
+        self.port = None
+        self.db_port = None
+        self.db_pass = None
 
         # connection with socketio
         self.socket = socketio.Client()
@@ -429,14 +427,13 @@ class Streamer(WorkerNode):
         self.streaming = Event()  # threading event flag set to activate stream
         self.start_time = time.time()  # start time
 
-    def set_config(self, config):
-        """ Set config dictionary and all attributes obtained from it """
-        self.config = config
-        self.client = config['NAME']
-        self.ip = self.config['SERVER_IP']  # ip address of server
-        self.server_port = self.config['SERVER_PORT']  # port of server (used for socketIO)
-        self.set_log_path(self.config['LOG_PATH'])
-        self.database = Database(self.ip, config['DB_PORT'], config['DB_PASS'])
+    def set_info(self, parent):
+        """ Takes some parameters from the parent CLient class and sets the worker's info dict """
+        self.client = parent.name
+        self.ip = parent.ip
+        self.port = parent.port
+        self.db_port = parent.db_port
+        self.db_pass = parent.db_pass
 
         # info dict (info sent to database)
         self.info['id'] = self.id
@@ -444,13 +441,6 @@ class Streamer(WorkerNode):
         self.info['group'] = self.group
         self.info['client'] = self.client
         self.info['updated'] = 0  # last update time
-
-    def run(self, *args):
-        """ Extends worker.run to make various checks before running"""
-        if not self.config:
-            print("Could not run {}. No config set with set_config()".format(self.name))
-            return
-        super().run(*args)
 
     def _run(self):
         """ Runs main execution loop """
@@ -486,10 +476,10 @@ class Streamer(WorkerNode):
             connect() again will fail with the error "Already Connected." When the server
             socketIO is available again, it will reconnect automatically.
         """
-        self.debug("{} attempting to connect socketIO to {}:{}".format(self.name, self.ip, self.server_port))
+        self.debug("{} attempting to connect socketIO to {}:{}".format(self.name, self.ip, self.port))
         while not self.exit:
             try:
-                self.socket.connect('http://{}:{}'.format(self.ip, self.server_port))
+                self.socket.connect('http://{}:{}'.format(self.ip, self.port))
                 self.log("{} : {} Connected to server socketIO".format(self.group, self.name))
                 return True
             except Exception as e:
@@ -507,6 +497,7 @@ class Streamer(WorkerNode):
         self.connect_socket()
 
         # get connection to database
+        self.database = Database(self.ip, self.db_port, self.db_pass)
         self.database.connect()
 
     def update(self):

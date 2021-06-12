@@ -13,14 +13,8 @@ def create_app():
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_mapping(SECRET_KEY='thisisthesecretkeytotheflaskserver')
 
-    # get database config options
-    try:
-        with open('config/server_streamer_config.json') as file:
-            config = json.load(file)
-    except Exception as e:
-        raise Exception('No database config file found. Please run the appropriate setup script first.')
-
-    app.database = Database(config['SERVER_IP'], config['DB_PORT'], config['DB_PASS'])
+    # initialize database connection
+    app.database = Database('3.131.117.61', 5001, 'thisisthepasswordtotheredisserver')
 
     # add basic favicon
     @app.route('/favicon.ico')

@@ -9,8 +9,8 @@ class AnalyzerClient(Client):
     Extends the Client class to run Streamers on the server dynamically.
     Streamer classes are not given, but rather created as needed.
     """
-    def __init__(self, analyzers, config, debug):
-        super().__init__(analyzers, config, debug)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.socket = socketio.Client()
         self.socket.register_namespace(Namespace(self, '/analyzer_client'))
@@ -18,7 +18,7 @@ class AnalyzerClient(Client):
     def run(self):
         """ Create workers to run on new processes """
         try:
-            self.socket.connect('http://{}:{}'.format(self.config['SERVER_IP'], self.config['SERVER_PORT']))
+            self.socket.connect('http://{}:{}'.format(self.ip, self.port))
             self.log("{} Connected to server socketIO".format(self.name))
         except:
             self.throw("{} Failed to connect to socketIO".format(self.name))
