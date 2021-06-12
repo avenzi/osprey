@@ -419,7 +419,7 @@ class Streamer(WorkerNode):
 
         # connection with socketio
         self.socket = socketio.Client()
-        self.namespaces = ['/streamers', '/'+self.id]  # list of namespaces to connect to
+        self.namespaces = ['/streamers']  # list of namespaces to connect to
 
         # connection to database
         self.database = None  # Database object
@@ -529,7 +529,7 @@ class Streamer(WorkerNode):
         if self.streaming.is_set():  # already running
             return
         self.streaming.set()  # set streaming, which starts the main execution while loop
-        self.log("Started {}:{}".format(self.group, self.name))
+        self.log("Started {}:{}:{}".format(self.group, self.name, self.id))
         self.socket.emit('log', "Started Streamer {}:{}".format(self.group, self.name), namespace='/streamers')
         self.update()
 
@@ -614,8 +614,8 @@ class Analyzer(Streamer):
                     target_info = info
 
         if target_info:  # target stream found
-            print("{} Found target stream: {}".format(self.name, self.target_name))
             self.target_id = target_info['id']  # get ID of this stream
+            print("{} Found target stream: {}:{}".format(self.name, self.target_name, self.target_id))
             self.copy_info(target_info)
 
     def copy_info(self, target_info=None):

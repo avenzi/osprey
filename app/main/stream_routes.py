@@ -1,10 +1,11 @@
 from flask import (
-    flash, g, current_app, render_template, request, session, Response
+    flash, g, current_app, render_template, request, session, Response, send_from_directory
 )
 
 from jinja2.exceptions import TemplateNotFound
 from bokeh.embed import json_item
 from json import dumps
+import os
 import functools
 
 from app.main.auth_routes import login_required
@@ -39,9 +40,12 @@ def stream():
     template_path = '/streams/{}'.format(file)
 
     try:
-        return render_template(template_path)
+        info = current_app.database.read_group(group_name)
+        return render_template(template_path, info=info, title=group_name)
     except TemplateNotFound as e:
         return render_template('/error.html', error="Template Not Found: \"{}\"".format(template_path))
+    except Database.Error as e:
+        print("Could not read from database for template '{}'.".format(template_path))
 
 
 @login_required
@@ -58,12 +62,17 @@ def plot_layout():
         return
 
     # get bokeh layout function associated with this group
+    create_layout = stream_config.bokeh_layouts.get(group_name)
+    if not create_layout:
+        err = "No layout function specified for group '{}'".format(group_name)
+
     try:
-        create_layout = stream_config.bokeh_layouts[group_name]
         layout = create_layout(info)  # bokeh layout object
     except Exception as e:
-        print("Failed to create layout for group {}: {}".format(group_name, e))
-        return "", 404
+        err = "Failed to create layout for group {}. {}: {}".format(group_name, e.__class__.__name__, e)
+        flash(err)
+        print(err)
+        return err, 404
 
     json_layout = dumps(json_item(layout))
 

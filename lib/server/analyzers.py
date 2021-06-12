@@ -14,7 +14,7 @@ class TestAnalyzer(Analyzer):
     def loop(self):
         """ Maine execution loop """
         # get most recent data from raw data stream
-        data = self.database.read_data(self.id, self.target_id)
+        data = self.database.read_data(self.target_id, self.id)
         if not data:
             sleep(0.1)
             return
@@ -92,7 +92,7 @@ class EEGFilterStream(EEGAnalyzer):
 
     def loop(self):
         """ Maine execution loop """
-        data = self.database.read_data(self.id, self.target_id)
+        data = self.database.read_data(self.target_id, self.id)
         if not data:
             return
         filtered_data = self.filter(data)  # perform filtering
@@ -169,7 +169,7 @@ class EEGFourierStream(EEGAnalyzer):
         """ Maine execution loop """
         # samples needed to read for a given time window
         samples = int(self.widgets['fourier_window'] * self.sample_rate)
-        filtered_data = self.database.read_data(self.id, self.target_id, count=samples)
+        filtered_data = self.database.read_data(self.target_id, self.id, count=samples)
         if not filtered_data:
             return
 

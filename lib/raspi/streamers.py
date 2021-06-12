@@ -119,15 +119,8 @@ class LogStreamer(Streamer):
 
 
 class VideoStreamer(Streamer):
-    def __init__(self):
-        super().__init__()
-        self.handler = 'VideoHandler'
-
-        self.camera = None
-        self.resolution = '300x300'  # resolution of stream
-        self.framerate = 20            # camera framerate
-        self.rotation = 180
-
+    def __init__(self, *args):
+        super().__init__(*args)
         self.frames_sent = 0    # number of frames sent
         self.start_time = 0           # time of START
 
@@ -142,17 +135,14 @@ class VideoStreamer(Streamer):
         image = self.picam_buffer.read()  # get most recent frame
         self.frames_sent += 1
 
-        resp = HTTPRequest("INGEST")  # new request
-        resp.add_header('frames-sent', self.frames_sent)
-        resp.add_header('time', self.time())  # time since start
-        resp.add_content(image)
+        data = {
+            'time': self.time(),
+            'frame': image
+        }
 
-        #t2 = time.time()
-        self.send(resp)  # send INGEST request back to source
-        #t3 = time.time()
-        #self.log("sent {} in {:.3}".format(len(image), t3-t2))
+        self.database.write_data(self.id, data)
 
-    def START(self, request):
+    def start(self):
         """
         HTTPRequest method START
         Start Streaming continually
@@ -160,31 +150,32 @@ class VideoStreamer(Streamer):
         """
         if self.streaming.is_set():
             return
-        # First send initial information
-        init_req = HTTPRequest()  # new request
-        init_req.add_request('INIT')  # call INIT method on server handler
-        init_req.add_header('resolution', self.resolution)
-        init_req.add_header('framerate', self.framerate)
-        self.send(init_req)
 
-        # set up camera
+        # for some reason if the PiCamera object is defined on a different thread, start_recording will hang.
         from picamera import PiCamera, PiVideoFrameType
+        self.camera = PiCamera(resolution='300x300', framerate=20)
+        self.camera.rotation = 180
         self.sps = PiVideoFrameType.sps_header
-        self.camera = PiCamera(resolution=self.resolution, framerate=self.framerate)
-        self.camera.rotation = self.rotation
+
+        # info to send to database
+        self.info['framerate'] = self.camera.framerate[0]
+        self.info['width'] = self.camera.resolution.width
+        self.info['height'] = self.camera.resolution.height
+
+        # start recording
         self.camera.start_recording(self.picam_buffer,
             format='h264', quality=25, profile='constrained', level='4.2',
-            intra_period=self.framerate, intra_refresh='both', inline_headers=True, sps_timing=True
+            intra_period=self.info['framerate'], intra_refresh='both', inline_headers=True, sps_timing=True
         )
         time.sleep(2)  # let camera warm up for a sec. Does weird stuff otherwise.
-        super().START(request)  # Start main loop
+        super().start()  # Start main loop
 
-    def STOP(self, request):
+    def stop(self):
         """
         HTTPRequest method STOP
         Extended from the base class in pi_lib.py
         """
-        super().STOP(request)  # Stop main loop
+        super().stop()  # Stop main loop
         try:
             self.camera.stop_recording()
             self.camera.close()  # close camera resources

@@ -1,8 +1,4 @@
 {% extends 'base.html' %}
-
-{% block title %}{{ stream_name }}{% endblock %}
-{% block style %}
-{{ super() }}
-{% endblock %}
-
+{% block title %}{{ title }}{% endblock %}
+{% block style %}{{ super() }}{% endblock %}
 {% block back %}<a href="{{ url_for('streams.index') }}">Back</a>{% endblock %}

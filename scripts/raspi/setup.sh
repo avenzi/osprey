@@ -19,11 +19,6 @@ pip3 install -r scripts/raspi/python_requirements.txt  # install requirements (d
 #loading $! "Installing Python3 and dependent requirements.... \n\
 #Please wait until this is finished to provide configuration information\n"
 
-. venv/bin/activate
-python3 lib/setup_pi.py # Get configuration from user
-printf " > No further interaction is required.\nInstallation will continue, and afterward the Pi will reboot.\n"
-sleep 3
-
 # Add crontab line to start the app on boot, targetting data-hub/main/run.sh
 echo "Writing Crontab line to start the application on boot..."
 run_path="$(pwd -P)/run.sh"  # get absolute path of run.sh

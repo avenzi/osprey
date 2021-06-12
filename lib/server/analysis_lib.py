@@ -13,7 +13,7 @@ class AnalyzerClient(Client):
         super().__init__(analyzers, config, debug)
 
         self.socket = socketio.Client()
-        self.socket.register_namespace(AnalyzerClientNamespace(self, '/analyzer_client'))
+        self.socket.register_namespace(Namespace(self, '/analyzer_client'))
 
     def run(self):
         """ Create workers to run on new processes """
@@ -25,12 +25,6 @@ class AnalyzerClient(Client):
             return
 
         super().run()
-
-
-class AnalyzerClientNamespace(Namespace):
-    def on_init(self, info):
-        """ Passed info from a recently connected stream """
-        self.streamer.create_analyzer(info)
 
 
 class MovingAverage:

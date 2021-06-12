@@ -37,7 +37,7 @@ def maintain_connection(method):
                 else:
                     raise self.Error('Database connection error: {}'.format(e))
             except Exception as e:
-                raise self.Error('Database error: {}'.format(e))
+                raise self.Error('Error in Database. {}: {}'.format(e.__class__.__name__, e))
     return wrapped
 
 
@@ -54,9 +54,12 @@ class Database:
         self.port = port  # database port
         self.password = password  # database password
 
+        # Separate redis pools for reading decoded data or reading raw bytes data.
         # not sure how to give Redis instances to certain sessions.
         self.pool = redis.ConnectionPool(host=ip, port=port, password=password, decode_responses=True)
+        self.bytes_pool = redis.ConnectionPool(host=ip, port=port, password=password, decode_responses=False)
         self.redis = redis.Redis(connection_pool=self.pool)
+        self.bytes_redis = redis.Redis(connection_pool=self.bytes_pool)
 
         self.exit = False  # flag to determine when to stop running if looping
 
@@ -101,7 +104,9 @@ class Database:
         while not self.exit:  # until node exits
             try:
                 self.redis = redis.Redis(connection_pool=self.pool)
+                self.bytes_redis = redis.Redis(connection_pool=self.bytes_pool)
                 self.redis.ping()
+                self.bytes_redis.ping()
             except Exception as e:
                 if timeout is None or time()-start < timeout:
                     t += 1
@@ -115,6 +120,7 @@ class Database:
         """ Disconnect from database """
         self.exit = True
         self.redis = None
+        self.bytes_redis = None
 
     def ping(self):
         """ Ping database to ensure connecting is functioning """
@@ -130,36 +136,48 @@ class Database:
         Writes time series <data> to stream:<stream>.
         <data> must be a dictionary of lists, where keys are data column names.
         """
-        pipe = self.redis.pipeline()  # pipeline queues a series of commands at once
-        for i in range(len(data[list(data.keys())[0]])):  # get length of a random key (all the same)
-            # get slice of each data point as dictionary
-            pipe.xadd('stream:'+stream, {key: data[key][i] for key in data.keys()})
-        pipe.execute()
+        if type(data[list(data.keys())[0]]) == list:  # list of data points
+            pipe = self.redis.pipeline()  # pipeline queues a series of commands at once
+            for i in range(len(data[list(data.keys())[0]])):  # get length of a random key (all the same)
+                # get slice of each data point as dictionary
+                pipe.xadd('stream:'+stream, {key: data[key][i] for key in data.keys()})
+            pipe.execute()
+        else:  # assume this is a single data point
+            self.redis.xadd('stream:'+stream, {key: data[key] for key in data.keys()})
 
     @maintain_connection
-    def read_data(self, reader, stream, count=None, to_json=False):
+    def read_data(self, stream, reader, count=None, numerical=True, to_json=False, decode=True):
         """
         Gets newest data for <reader> from data column <stream>.
-        <reader> is some ID that will keep track of it's own read head position.
         <stream> is some ID that identifies the stream in the database.
+        <reader> is some ID that will keep track of it's own read head position.
         <count> is the number of data points to read (ignoring whether the point have already been read.
             - If None, read as many new points as possible.
+        <numerical>  Whether the data needs to be converted python float type
+        <decode> Whether to decode the result into strings.
+            If False, only values will remain as bytes. Keys will still be decoded.
         <to_json> whether to convert to json string. if False, uses dictionary of lists.
         """
+        if decode:
+            red = self.redis
+        else:
+            numerical = False
+            red = self.bytes_redis
+
         bookmarks = self.bookmarks.get(reader)  # get reader-specific bookmarks
         if not bookmarks:  # this reader hasn't read before
             bookmarks = {}
             self.bookmarks[reader] = bookmarks
 
         if count:  # get COUNT data regardless of last read
-            response = self.redis.xrevrange('stream:'+stream, count=count)
+            response = red.xrevrange('stream:'+stream, count=count)
 
         else:  # get data since last read
             last_read = bookmarks.get(stream)
             if last_read:  # last read spot exists
-                response = self.redis.xread({'stream:'+stream: last_read})
+                response = red.xread({'stream:'+stream: last_read})
             else:  # no last spot, start reading from latest, block for 1 sec
-                response = self.redis.xread({'stream:'+stream: '$'}, None, 1000)
+                response = red.xread({'stream:'+stream: '$'}, None, 1000)
 
         if not response:
             return None
@@ -173,15 +191,28 @@ class Database:
             data_list = response[0][1]
 
         # get keys from data dict
-        keys = data_list[0][1].keys()
-        output = {key: [] for key in keys}
+        keys = list(data_list[0][1].keys())
+        if decode:  # keys already decoded
+            output_keys = keys
+        else:  # don't leave keys encoded
+            output_keys = [key.decode('utf-8') for key in keys]
+
+        # create final output dict
+        output = {key: [] for key in output_keys}
 
         # loop through stream data
-        for data in data_list:
-            # data[0] is the timestamp ID
-            d = data[1]  # data dict
-            for key in keys:
-                output[key].append(float(d[key]))  # convert to float and append
+        if numerical:
+            for data in data_list:
+                # data[0] is the timestamp ID
+                d = data[1]  # data dict
+                for i in range(len(keys)):
+                    output[output_keys[i]].append(float(d[keys[i]]))  # convert to float and append
+        else:
+            for data in data_list:
+                # data[0] is the timestamp ID
+                d = data[1]  # data dict
+                for i in range(len(keys)):
+                    output[output_keys[i]].append(d[keys[i]])
 
         if to_json:
             return json.dumps(output)
@@ -203,14 +234,19 @@ class Database:
         self.redis.xadd('stream:'+stream, new_data)
 
     @maintain_connection
-    def read_snapshot(self, stream, to_json=False):
+    def read_snapshot(self, stream, to_json=False, decode=True):
         """
         Gets latest snapshot for <reader> from data column <stream>.
         <stream> is some ID that identifies the stream in the database.
         <to_json> whether to convert to json string. if False, uses dictionary of lists.
         Since this is a snapshot (not time series), gets last 1 data point from redis
         """
-        response = self.redis.xrevrange('stream:'+stream, count=1)
+        if decode:
+            red = self.redis
+        else:
+            red = self.bytes_redis
+
+        response = red.xrevrange('stream:'+stream, count=1)
         if not response:
             return None
 

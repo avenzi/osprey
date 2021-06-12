@@ -8,8 +8,8 @@ streamers = [
     TestStreamer('Random 1', 'TestGroup'),
     TestStreamer('Random 2', 'TestGroup'),
     TestStreamer('Random 1', 'TestGroup 2'),
-    TestStreamer('Random 2', 'TestGroup 2'),
     SenseStreamer('Sense Hat', 'SenseHat 1'),
+    VideoStreamer('Video', 'Video 1'),
     SynthEEGStreamer('Raw EEG', 'EEG 1')
 ]
 

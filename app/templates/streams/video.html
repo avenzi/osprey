@@ -1,0 +1,60 @@
+{% extends 'streams/stream_base.html' %}
+{% block head %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="/js/jmuxer.min.js"></script>
+{% endblock %}
+{% block content %}
+<div id="streamtage">
+    <video controls autoplay muted id="stream" onplay="skip()"></video>
+    <script>
+        // original width and height sent from stream
+        var stream_width = {{info['Video']['width']}};
+        var stream_height = {{info['Video']['height']}};
+        var ratio = stream_width/stream_height
+        var height = 600; // desired height in browser
+        var width = Math.round(ratio*height)  // width to maintain aspect ratio
+
+        var vid = document.getElementById("stream");
+        vid.setAttribute("width", width);
+        vid.setAttribute("height", height);
+    </script>
+</div>
+
+<script type="text/javascript">
+	window.onload = function(){
+		var jmuxer = new JMuxer({
+			node: 'stream',
+			mode: 'video',
+			flushingTime: 0,
+			fps: {{info['Video']['framerate']}},
+			debug: false
+		});
+
+		var vid = document.getElementById("stream");
+		vid.playbackRate = 1.1;  // catch up to current position if fall behind
+		skip = function() {  // called onplay to skip to live stream
+		    vid.currentTime = Math.floor(vid.duration);
+		}
+
+		var id = "{{info['Video']['id']}}";
+
+        // socketio namespace specifies ID of the stream
+        var socket = io('/video_stream');
+
+        socket.on('connect', function() {
+            console.log("Video streaming socketIO connected to server");
+            console.log(id);
+            socket.emit('start', id);
+        });
+
+		host = window.location.host
+		path = window.location.pathname
+		queries = window.location.search
+
+        // feed data into jmuxer when received
+		socket.on('data', (frame) => {
+			jmuxer.feed({video: new Uint8Array(frame)});
+		});
+	}
+</script>
+{% endblock %}

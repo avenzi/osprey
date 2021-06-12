@@ -27,6 +27,11 @@ def create_app():
     def favicon():
         return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
+    # server static js files
+    @app.route('/js/<filename>')
+    def serve_js(filename):
+        return send_from_directory(os.path.join(app.root_path, 'static', 'js'), filename)
+
     # register blueprints and sockets
     from app.main import auth
     app.register_blueprint(auth)
