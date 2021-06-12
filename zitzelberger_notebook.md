@@ -33,6 +33,12 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### June 11th, 2021
+
+So I've been trying to get the video stream working for the last few days, and so far I've built the following structure:
+		The Flask server has socketIO handlers for a "/video_stream" namespace, and the video stream html page has JS socketIO clients ready to connect. When a browser client connects, that client is added to a socketIO room with the ID of the video stream's ID. Any other browsers wanting to see that video stream will be sent to the same room. This is to avoid reading the same video data from the database multiple times. (Note here that this is not yet implemented in the Bokeh plots - each separate viewing of the data requires separate reads, but I will leave that to be solved when I move the bokeh plots to a separate dedicated server). Once a video stream room is created, a new thread is started which reads from the database and emits the video frame data to the /video_stream namespace to the room with the stream's ID.
+		In theory, this should all be fine - however I am having trouble given the way in which the H264 stream is structured - there aren't individual "frames" of data, rather the H264 encoding sends information about what changes from frame to frame, with full key frames interspersed. However the streamer on the Raspi still treats it like a regular time series data stream, with each section of data being timestamped and put in a separate time slot in the database. I am not certain whether this is the cause of my issues (because in theory that should not be a problem), so I am continuing to investigate. Another possibility is that there is a bug somewhere else that is causing the stream to not work. I also had to add additional functionality to my database class, forcing it to not decode the data sent by the Picam. Normally python-redis decodes the data in utf-8 (because it's read in as raw byes), but obviously the H264 video encoding should not be decoded. 
+
 ##### June 6th, 2021:
 
 So I rewrote the whole structure of identifying and keeping track of streams. Here's how it works:
