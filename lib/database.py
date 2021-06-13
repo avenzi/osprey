@@ -136,9 +136,9 @@ class Database:
         Writes time series <data> to stream:<stream>.
         <data> must be a dictionary of lists, where keys are data column names.
         """
-        if type(data[list(data.keys())[0]]) == list:  # list of data points
+        if hasattr(type(list(data.values())[0]), '__iter__'):  # if an iterable sequence of data points
             pipe = self.redis.pipeline()  # pipeline queues a series of commands at once
-            for i in range(len(data[list(data.keys())[0]])):  # get length of a random key (all the same)
+            for i in range(len(list(data.values())[0])):  # get length of a random key (all the same)
                 # get slice of each data point as dictionary
                 pipe.xadd('stream:'+stream, {key: data[key][i] for key in data.keys()})
             pipe.execute()

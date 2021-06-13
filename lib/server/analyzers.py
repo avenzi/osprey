@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import signal
-from time import sleep
+from time import sleep, time
 import json
 
 from lib.lib import Analyzer
@@ -94,6 +94,7 @@ class EEGFilterStream(EEGAnalyzer):
         """ Maine execution loop """
         data = self.database.read_data(self.target_id, self.id)
         if not data:
+            sleep(0.1)
             return
         filtered_data = self.filter(data)  # perform filtering
         self.database.write_data(self.id, filtered_data)
@@ -171,6 +172,7 @@ class EEGFourierStream(EEGAnalyzer):
         samples = int(self.widgets['fourier_window'] * self.sample_rate)
         filtered_data = self.database.read_data(self.target_id, self.id, count=samples)
         if not filtered_data:
+            sleep(0.1)
             return
 
         fourier_data = self.fourier(filtered_data)  # fourier analysis
@@ -178,6 +180,12 @@ class EEGFourierStream(EEGAnalyzer):
 
         self.database.write_snapshot('fourier:' + self.id, fourier_data)
         self.database.write_snapshot('headplot:' + self.id, headplot_data)
+
+        # Slow down rate of performing fourier transforms.
+        # They appear to be having a significant impact on CPU usage.
+        # The process of writing the data to the database still takes longer, but
+        # it looks like the FFT is the CPU intensive part, especially with high FFT time windows.
+        sleep(0.5)
 
     def fourier(self, data):
         """ Calculates the FFT of a slice of data """

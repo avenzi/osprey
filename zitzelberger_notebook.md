@@ -33,6 +33,16 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### June 13th, 2021:
+
+I wrote the run_pi.py file for each Raspberry Pi and added those streams to the server_stream_config.py file, and everything works as expected. Each stream is separately viewable in the browser, and I could even combine streams from the two Pis into one page just as I intended. I'm very glad that there weren't any major unexpected problems. I did move the run_pi.py and run_server.pi out of the lib/ directory because I realized that every time I wrote that directory to the devices it would overwrite the device-specific code. I also added them to the git-ignore so they wouldn't be overwritten that way either.
+
+Also I noticed that the CPU usage on the AWS is really high when running the app. I don't think redis is causing it, so it is likely in my code for analyzing the EEG data as it is being read from the database.
+
+Turns out it was exactly that - specifically the FFT. Since the previous version of the app I increased the rate at which FFTs are performed from once every two seconds to multiple times every second. I figured more data in general is better, but I guess the AWS instance couldn't handle that much. I've dialed it back a bit to about twice per second, but upon further investigation it looks like the main cause of delay is writing the FFT data to the database, especially at high time windows, where the write operation takes 10x longer than the actual FFT. I might consider decreasing the rate of writes if this becomes a larger problem.
+
+Also apparently the EEG filtering algorithm has been broken for awhile but I didn't notice because the widget data communication was also broken and thus never triggered the data filtering. Once I fixed the widgets I found that the modification to the database read_data() methods which I made yesterday weren't compatible with the numpy arrays that the Filtering algorithm outputs. That is now fixed using this disgusting one-liner: if hasattr(type(list(data.values())[0]), '\__iter__').
+
 ##### June 12th, 2021:
 
 ​	Figured it out! Turns out I just wasn't reading the full binary image data from the redis database. After I fixed that, the video stream worked! Best of all, the latency appears to be just as fast as it was before - less than a half second delay in the video. A couple things to note, though: I had to add a line in the JS that plays the video at 110% speed so that it is always caught up to the live stream. Otherwise, when the video is played it tried to skip to the live timestamp but never quite gets all the way there. The increased speed ensures it always catches up even if there is a momentary delay between the Pi and the server. Also I had a conditional statement in the webpage that only processed video frames if the tab was selected because I figured that would just make it generally more efficient when viewing multiple things in separate tabs. However, due to how H264 encoding works, when you switch back to that tab the image gets really garbled for a second because the stream may not have received any keyframes before any drastic changes in the video. I disabled that conditional for now, and I don't think it will be a problem because viewing multiple streams at once isn't really the intended purpose here.

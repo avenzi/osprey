@@ -7,9 +7,10 @@ from lib.raspi.streamers import *
 workers = [
     TestAnalyzer('Random Analyzer 1', 'TestGroup', 'Random 1'),
     TestAnalyzer('Random Analyzer 1', 'TestGroup 2', 'Random 1'),
-    TestStreamer('Random 2', 'TestGroup 2'),  # regular streamer
     EEGFilterStream('Filtered EEG', 'EEG 1', 'Raw EEG'),
-    EEGFourierStream('Fourier EEG', 'EEG 1', 'Filtered EEG')
+    EEGFourierStream('Fourier EEG', 'EEG 1', 'Filtered EEG'),
+    EEGFilterStream('Filtered EEG', 'EEG 2', 'Raw EEG'),
+    EEGFourierStream('Fourier EEG', 'EEG 2', 'Filtered EEG')
 ]
 
 client = Client(

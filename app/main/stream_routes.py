@@ -1,15 +1,13 @@
 from flask import (
-    flash, g, current_app, render_template, request, session, Response, send_from_directory
+    flash, current_app, render_template, request, Response
 )
 
 from jinja2.exceptions import TemplateNotFound
 from bokeh.embed import json_item
 from json import dumps
-import os
-import functools
 
 from app.main.auth_routes import login_required
-from app import stream_config
+from local import server_stream_config
 from app import Database
 
 # import blueprint + socket
@@ -32,7 +30,7 @@ def stream():
     group_name = request.args.get('group')
 
     # get stream page template
-    file = stream_config.pages.get(group_name)
+    file = server_stream_config.pages.get(group_name)
     if not file:
         print("No stream page for: {}".format(file))
         return "", 404
@@ -62,7 +60,7 @@ def plot_layout():
         return
 
     # get bokeh layout function associated with this group
-    create_layout = stream_config.bokeh_layouts.get(group_name)
+    create_layout = server_stream_config.bokeh_layouts.get(group_name)
     if not create_layout:
         err = "No layout function specified for group '{}'".format(group_name)
 
@@ -109,6 +107,10 @@ def plot_update():
 @login_required
 @streams.route('/stream/widgets', methods=('GET', 'POST'))
 def widget_update():
+    """
+    Received Bokeh widget updates from a browser.
+    Passes the update to the namespace of the associated streamer.
+    """
     request_id = request.args.get('id')
     widget_dict = request.json
 

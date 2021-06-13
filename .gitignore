@@ -1,7 +1,3 @@
-# machine-specific config files
-config/server_config.json
-config/raspi_config.json
-
 # Ignore Python bytecode
 __pycache__
 *.pyc
@@ -9,15 +5,15 @@ __pycache__
 # Ignore virtual environment
 venv/*
 
+# ignore local files
+local/*
+
 # Ignore Log file
 logs/*
 *.log
 
 # Ignore data
 data/*
-*.mp3
-*.wav
-*.jpg
 
 # Ignore .idea
 .idea
