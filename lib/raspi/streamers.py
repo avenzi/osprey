@@ -3,7 +3,6 @@ from lib.raspi.pi_lib import configure_port, PicamOutput
 
 from random import random
 import time
-import msgpack
 
 
 class TestStreamer(Streamer):
