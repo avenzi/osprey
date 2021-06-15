@@ -187,37 +187,42 @@ class EEGStreamer(Streamer):
     EEG Streamer class for an OpenBCI board (Cyton, Cyton+Daisy, Ganglion)
     """
     def __init__(self, dev_path, *args):
+        """ Dev path is the device path of the dongle"""
         super().__init__(*args)
 
         from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds
 
         self.board_id = BoardIds.CYTON_DAISY_BOARD.value   # Cyton+Daisy borad ID (2)
-        self.serial_port = dev_path
 
         self.eeg_channel_indexes = BoardShim.get_eeg_channels(self.board_id)  # list of EEG channel indexes
         self.eeg_channel_names = BoardShim.get_eeg_names(self.board_id)       # list of EEG channel names
         self.time_channel = BoardShim.get_timestamp_channel(self.board_id)    # index of timestamp channel
         self.freq = BoardShim.get_sampling_rate(self.board_id)  # sample frequency
+        self.serial_port = dev_path
 
         # BoardShim.enable_dev_board_logger()
         BoardShim.disable_board_logger()  # disable logger
 
         params = BrainFlowInputParams()
-
-        params.serial_port = self.serial_port  # serial port of dongle
+        params.serial_port = dev_path  # serial port of dongle
         self.board = BoardShim(self.board_id, params)  # board object
 
+        # add info to send to database
+        self.info['sample_rate'] = self.freq
+        self.info['channels'] = ','.join(self.eeg_channel_names)
         self.frames_sent = 0    # number of frames sent
 
     def loop(self):
         """ Main execution loop """
-        time.sleep(0.2)  # wait a bit for the board to collect another chunk of data
+        time.sleep(0.25)  # wait a bit for the board to collect another chunk of data
         data = {}
         for channel in self.eeg_channel_names:  # lists of channel data
             data[channel] = []
 
-        try:  # attempt to read from board
-            raw_data = self.board.get_board_data()  # data measured in uV
+        # attempt to read from board
+        # data collected in uV
+        try:
+            raw_data = self.board.get_board_data()
         except Exception as e:
             return
 
@@ -227,22 +232,20 @@ class EEGStreamer(Streamer):
         for i, j in enumerate(self.eeg_channel_indexes):
             data[self.eeg_channel_names[i]] = list(raw_data[j])
 
-        data = msgpack.packb(data)  # pack dict object
         self.frames_sent += 1
 
-        resp = HTTPRequest()  # new response
-        resp.add_request("INGEST")
-        resp.add_header('frames-sent', self.frames_sent)
-        resp.add_content(data)
-        self.send(resp)
+        self.database.write_data(self.id, data)
 
-    def START(self, request):
+    def start(self):
         """
         HTTPRequest method START
         Start Streaming continually
         Extended from base class in pi_lib.py
         """
-        # configure data collection ports to avoid data chunking
+        if self.streaming.is_set():
+            return
+
+        # configure data collection port to avoid data chunking
         configure_port(self.serial_port)
 
         # start EEG session
@@ -258,24 +261,15 @@ class EEGStreamer(Streamer):
         if self.board.is_prepared():
             self.board.start_stream()  # start stream
         else:
-            self.throw("Failed to prepare streaming session in {}. Make sure the board is turned on.".format(self.name), trace=False)
+            self.throw("Failed to prepare streaming session in {}. Make sure the board is turned on.".format(self), trace=False)
             return
 
-        # First send some initial information
-        req = HTTPRequest()
-        req.add_request('INIT')
-        req.add_header('sample_rate', self.freq)
-        req.add_header('channels', ','.join(self.eeg_channel_names))
-        self.send(req, request.origin)
+        # First send some initial information to this stream's info channel
+        super().start()  # start main loop
 
-        super().START(request)  # start main loop
-
-    def STOP(self, request):
-        """
-        HTTPRequest method STOP
-        Extended from base class in pi_lib.py
-        """
-        super().STOP(request)  # extend
+    def stop(self):
+        """ Extended from base class in pi_lib.py """
+        super().stop()  # stop main loop
         try:
             self.board.stop_stream()
             self.board.release_session()
@@ -306,57 +300,51 @@ class ECGStreamer(Streamer):
         self.time_channel = BoardShim.get_timestamp_channel(self.board_id)    # index of timestamp channel
         self.freq = BoardShim.get_sampling_rate(self.board_id)  # sample frequency
 
+        self.info['sample_rate'] = self.freq
+        self.info['channels'] = ','.join(self.pulse_channel_names)
+
         # BoardShim.enable_dev_board_logger()
         BoardShim.disable_board_logger()  # disable logger
 
         params = BrainFlowInputParams()
-
         params.serial_port = self.serial_port  # serial port of dongle
         self.board = BoardShim(self.board_id, params)  # board object
 
-        self.frames_sent = 0    # number of frames sent
-
     def loop(self):
         """ Main execution loop """
-        time.sleep(0.2)  # wait a bit for the board to collect another chunk of data
+        time.sleep(0.25)  # wait a bit for the board to collect another chunk of data
+        data = {}
+        for channel in self.pulse_channel_names:  # lists of channel data
+            data[channel] = []
 
-        try:  # attempt to read from board
+        # attempt to read from board
+        # data collected in uV
+        try:
             raw_data = self.board.get_board_data()
         except Exception as e:
             return
 
         # convert from epoch time to relative time since session start
-        data = {'time': list(raw_data[self.time_channel] - self.start_time)}
-        for channel in self.ecg_channel_names:  # lists of channel data
-            data[channel] = []
+        data['time'] = list(raw_data[self.time_channel] - self.start_time)
 
-        # add ECG data
-        for i, j in enumerate(self.ecg_channel_indexes):
-            data[self.ecg_channel_names[i]] = list(raw_data[j])
-
-        # add Pulse data
         for i, j in enumerate(self.pulse_channel_indexes):
             data[self.pulse_channel_names[i]] = list(raw_data[j])
 
-        data = msgpack.packb(data)  # pack dict object
-        self.frames_sent += 1
+        self.database.write_data(self.id, data)
 
-        resp = HTTPRequest()  # new response
-        resp.add_request("INGEST")
-        resp.add_header('frames-sent', self.frames_sent)
-        resp.add_content(data)
-        self.send(resp)
-
-    def START(self, request):
+    def start(self):
         """
         HTTPRequest method START
         Start Streaming continually
         Extended from base class in pi_lib.py
         """
-        # configure data collection ports to avoid data chunking
+        if self.streaming.is_set():
+            return
+
+        # configure data collection port to avoid data chunking
         configure_port(self.serial_port)
 
-        # start ECG session
+        # start EEG session
         tries = 0
         while tries <= 5:
             tries += 1
@@ -367,28 +355,17 @@ class ECGStreamer(Streamer):
                 time.sleep(0.1)
 
         if self.board.is_prepared():
-            self.board.config_board('/2')  # Set board to Analog mode.
             self.board.start_stream()  # start stream
         else:
             self.throw("Failed to prepare streaming session in {}. Make sure the board is turned on.".format(self.name), trace=False)
             return
 
-        # First send some initial information
-        req = HTTPRequest()
-        req.add_request('INIT')
-        req.add_header('sample_rate', self.freq)
-        req.add_header('ecg_channels', ','.join(self.ecg_channel_names+self.pulse_channel_names))
-        req.add_header('pulse_channels', ','.join(self.pulse_channel_names))
-        self.send(req, request.origin)
+        # First send some initial information to this stream's info channel
+        super().start()  # start main loop
 
-        super().START(request)  # start main execution loop
-
-    def STOP(self, request):
-        """
-        HTTPRequest method STOP
-        Extended from base class in pi_lib.py
-        """
-        super().STOP(request)  # stop execution loop
+    def stop(self):
+        """ Extended from base class in pi_lib.py """
+        super().stop()  # stop main loop
         try:
             self.board.stop_stream()
             self.board.release_session()
