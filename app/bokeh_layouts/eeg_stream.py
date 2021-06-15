@@ -73,14 +73,14 @@ def create_layout(info):
     #  I may want to keep it somewhere as a reference for later.
 
     # get channel names
-    stream_channels = info['Raw EEG']['channels'].split(',')  # it's a comma separated string
+    stream_channels = info['Raw']['channels'].split(',')  # it's a comma separated string
 
     # viridis color palette for channel colors
     colors = viridis(len(stream_channels))
 
     # get stream IDs
-    filtered_id = info['Filtered EEG']['id']  # Filter Analyzer ID
-    fourier_id = info['Fourier EEG']['id']  # Fourier Analyzer ID
+    filtered_id = info['Filtered']['id']  # Filter Analyzer ID
+    fourier_id = info['Fourier']['id']  # Fourier Analyzer ID
 
     ##########################
     # create row of widgets that send data to the analyzer streams

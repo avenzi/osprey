@@ -6,8 +6,9 @@ pages = {
     'TestGroup 2': 'bokeh_plot.html',
     'SenseHat 1': 'bokeh_plot.html',
     'SenseHat 2': 'bokeh_plot.html',
-    'EEG 1': 'bokeh_plot.html',
-    'EEG 2': 'bokeh_plot.html',
+    'Synth EEG 1': 'bokeh_plot.html',
+    'Synth EEG 2': 'bokeh_plot.html',
+    'EEG 3': 'bokeh_plot.html',
     'Video 1': 'video.html',
     'Video 2': 'video.html'
 }
@@ -18,6 +19,7 @@ bokeh_layouts = {
     'TestGroup 2': test_stream.create_layout,
     'SenseHat 1': sense_stream.create_layout,
     'SenseHat 2': sense_stream.create_layout,
-    'EEG 1': eeg_stream.create_layout,
-    'EEG 2': eeg_stream.create_layout,
+    'Synth EEG 1': eeg_stream.create_layout,
+    'Synth EEG 2': eeg_stream.create_layout,
+    'EEG 3': eeg_stream.create_layout,
 }

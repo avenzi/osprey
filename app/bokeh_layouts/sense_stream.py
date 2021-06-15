@@ -5,7 +5,7 @@ from bokeh.layouts import layout
 
 def create_layout(info):
     source = AjaxDataSource(
-        data_url='/stream/update?id={}'.format(info['Sense Hat']['id']),
+        data_url='/stream/update?id={}'.format(info['Sense']['id']),
         method='GET',
         polling_interval=500,  # in milliseconds
         mode='append',  # append to existing data

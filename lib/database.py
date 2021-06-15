@@ -177,7 +177,7 @@ class Database:
             if last_read:  # last read spot exists
                 response = red.xread({'stream:'+stream: last_read})
             else:  # no last spot, start reading from latest, block for 1 sec
-                response = red.xread({'stream:'+stream: '$'}, None, 1000)
+                response = red.xread({'stream:'+stream: '$'}, block=1000)
 
         if not response:
             return None

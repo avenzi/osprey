@@ -39,20 +39,24 @@ class EEGAnalyzer(Analyzer):
         self.sample_rate = None
         self.channels = []
         self.widgets = WIDGET_CONFIG  # all widget parameters for fourier and filtering
-
-        # x/y positions for electrodes in head plots
         self.head_x, self.head_y = [], []
 
     def start(self):
         """ extends streamer start method before loop """
-        self.sample_rate = int(self.info['sample_rate'])
-        self.channels = self.info['channels'].split(',')  # its a comma separated string
+        try:
+            self.sample_rate = int(self.info['sample_rate'])
+            self.channels = self.info['channels'].split(',')  # its a comma separated string
 
-        with open('app/static/electrodes.json', 'r') as f:
-            all_names = json.loads(f.read())
-        for name in self.channels:  # get coordinates of electrodes by name
-            self.head_x.append(all_names[name][0])
-            self.head_y.append(all_names[name][1])
+            # x/y positions for electrodes in head plots
+
+            with open('app/static/electrodes.json', 'r') as f:
+                all_names = json.loads(f.read())
+            for name in self.channels:  # get coordinates of electrodes by name
+                self.head_x.append(all_names[name][0])
+                self.head_y.append(all_names[name][1])
+
+        except Exception as e:
+            self.throw("Failed to start {}")
 
         super().start()
 

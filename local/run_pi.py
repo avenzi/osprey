@@ -3,18 +3,18 @@ from lib.raspi.streamers import *
 
 # initialize list of streamer instances
 # Each must have a globally unique group name and a locally unique name within that group
-# name, group_name
+# group_name, name
 workers = [
-    TestStreamer('Random 1', 'TestGroup'),
-    TestStreamer('Random 2', 'TestGroup'),
-    TestStreamer('Random 1', 'TestGroup 2'),
-    SenseStreamer('Sense Hat', 'SenseHat 1'),
-    VideoStreamer('Video', 'Video 1'),
-    SynthEEGStreamer('Raw EEG', 'EEG 1')
+    TestStreamer('TestGroup', 'Random 1'),
+    TestStreamer('TestGroup', 'Random 2'),
+    TestStreamer('TestGroup 2', 'Random 1'),
+    SenseStreamer('SenseHat 1', 'Sense'),
+    VideoStreamer('Video 1', 'Video'),
+    SynthEEGStreamer('EEG 1', 'Raw')
 ]
 
 client = RaspiClient(
-    workers=workers, name='Raspi Client 1', debug=2,
+    workers=workers, name='Raspi Client 1', debug=1,
     server_ip='3.131.117.61', port=5000,
     db_port=5001, db_pass='thisisthepasswordtotheredisserver'
 )

@@ -32,7 +32,7 @@ def stream():
     # get stream page template
     file = server_stream_config.pages.get(group_name)
     if not file:
-        print("No stream page for: {}".format(file))
+        print("No stream page configured for: {}".format(group_name))
         return "", 404
 
     template_path = '/streams/{}'.format(file)
@@ -93,8 +93,9 @@ def plot_update():
         else:
             print('Bokeh request for data specified an unknown request format')
             return "", 404
-    except Database.Error:
-        return "", 404
+    except Database.Error as e:
+        print("Database Error: {}".format(e))
+        return "", 500
 
     if data:
         resp = Response(response=data, content_type='application/json')
