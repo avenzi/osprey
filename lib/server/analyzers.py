@@ -4,6 +4,7 @@ from time import sleep, time
 import json
 
 from lib.lib import Analyzer
+from lib.server.analysis_lib import MovingAverage
 from app.bokeh_layouts.eeg_stream import config as WIDGET_CONFIG
 
 
@@ -246,6 +247,62 @@ class EEGFourierStream(EEGAnalyzer):
                 headplot[band].append(val)  # append value to list of channels in this band
 
         return headplot
+
+
+class CytonAnalyzer(Analyzer):
+    """ Base class for the other two EEG analyzer streams"""
+    def __init__(self, *args):
+        super().__init__(*args)
+
+        # Initial information
+        self.sample_rate = None
+        self.pulse_channels = []
+        self.board_channels = []
+        self.window = 10  # time window in which to calculate
+        self.heart_rate = MovingAverage(self.window)  # heart rate moving average
+
+    def start(self):
+        """ extends streamer start method before loop """
+        try:
+            self.sample_rate = int(self.info['sample_rate'])
+            self.pulse_channels = self.info['pulse_channels'].split(',')  # its a comma separated string
+            self.board_channels = self.info['board_channels'].split(',')  # its a comma separated string
+        except Exception as e:
+            self.throw("Failed to start {}")
+
+        super().start()
+
+    def loop(self):
+        """ Maine execution loop """
+        samples = int(self.window*self.sample_rate)
+        raw = self.database.read_data(self.target_id, self.id, count=samples)
+        if not raw:
+            sleep(0.1)
+            return
+
+        pulse_data = raw[self.pulse_channels[0]]
+        heart_rate_data = self.calc_heart_rate(pulse_data)  # perform filtering
+        output = {'heart_rate': heart_rate_data, 'time': raw['time'][-1]}
+        self.database.write_data(self.id, output)
+        sleep(0.5)
+
+    def calc_heart_rate(self, data):
+        """ Calculates heart rate """
+        window = 10  # 10 second time window
+        samples = int(window*self.sample_rate)  # window of 10 seconds
+
+        window = min(samples, len(data)-1)  # if current data is less than time window
+        pulses = data[-window:]  # pulse data in time window
+
+        # get pulse peaks above pulse_threshold, and a minimum distance of a 10th of the sample rate apart.
+        # distance is used to regulate the space between peaks - right now this is to account for the plateaus
+        peaks, _ = signal.find_peaks(pulses, distance=self.sample_rate/4, prominence=400)
+        bpm = (len(peaks)/window)*self.sample_rate*60  # beats per minute in this window
+        heart_rate = self.heart_rate.add(bpm)  # add value to moving average and get result
+
+        #self.debug("Window: {}, peaks: {}".format(window, len(peaks)))
+        return heart_rate
+
 
 
 

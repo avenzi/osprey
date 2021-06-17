@@ -14,6 +14,9 @@ def configure_port(dev_path):
     This setting gets reset when the device is disconnected or the Pi is power cycled,
         so it needs to be run each time the client begins streaming
     """
+    # TODO: On one of the Raspberry Pis, the permissions on the dir that this symlink points to
+    #  default to 660, so it can't be accessed. Need to figure out how to automatically check for
+    #  this issue and change the permissions to something like 755 so it can be accessed.
     device = dev_path[dev_path.index('tty'):]
     filepath = "/sys/bus/usb-serial/devices/{}/latency_timer".format(device)
     if os.path.exists(filepath):

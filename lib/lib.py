@@ -485,7 +485,7 @@ class Streamer(WorkerNode):
                 self.debug("{} Connected to server socketIO".format(self))
                 return True
             except Exception as e:
-                self.debug("{} failed to connect to server socketIO: {}".format(self, e))
+                #self.debug("{} failed to connect to server socketIO: {}".format(self, e))
                 pass
             time.sleep(1)
 
@@ -535,7 +535,7 @@ class Streamer(WorkerNode):
             return
         self.streaming.clear()  # stop streaming, stopping the main execution while loop
         self.log("Stopped {}".format(self))
-        self.socket.emit('log', "Stopped Streamer {}".format(self.name), namespace='/streamers')
+        self.socket.emit('log', "Stopped Streamer {}".format(self), namespace='/streamers')
         self.update()
 
     def json(self, dic):

@@ -11,8 +11,9 @@ workers = [
     EEGFourierStream('Synth EEG 1', 'Fourier', 'Filtered'),
     EEGFilterStream('Synth EEG 2', 'Filtered', 'Raw'),
     EEGFourierStream('Synth EEG 2', 'Fourier', 'Filtered'),
-    EEGFilterStream('EEG 3', 'Filtered', 'Raw'),
-    EEGFourierStream('EEG 3', 'Fourier', 'Filtered')
+    EEGFilterStream('Cyton 1', 'Filtered', 'Raw'),
+    EEGFourierStream('Cyton 1', 'Fourier', 'Filtered'),
+    CytonAnalyzer('Cyton 2', 'Heart Rate', 'Raw')
 ]
 
 client = Client(
