@@ -18,5 +18,6 @@ data/*
 # Ignore .idea
 .idea
 
-# Ignore deploy script
-deploy.sh
+# Ignore deploy scripts
+deploy_server.sh
+deploy_pi.sh
