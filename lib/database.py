@@ -146,15 +146,13 @@ class Database:
             self.redis.xadd('stream:'+stream, {key: data[key] for key in data.keys()})
 
     @maintain_connection
-    def read_data(self, stream, reader, count=None, min_time=None, numerical=True, to_json=False, decode=True):
+    def read_data(self, stream, reader, count=None, numerical=True, to_json=False, decode=True):
         """
         Gets newest data for <reader> from data column <stream>.
         <stream> is some ID that identifies the stream in the database.
         <reader> is some ID that will keep track of it's own read head position.
         <count> is the number of data points to read (ignoring whether the point have already been read.
             - If None, read as many new points as possible.
-        <min_time> if <count> is not set, limits the initial time stamp to read from. Prevents reading too much data at once.
-            - If None, read as much as possible (guarantees that all data is read).
         <numerical>  Whether the data needs to be converted python float type
         <decode> Whether to decode the result into strings.
             If False, only values will remain as bytes. Keys will still be decoded.
