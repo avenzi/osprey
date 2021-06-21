@@ -146,13 +146,16 @@ class Database:
             self.redis.xadd('stream:'+stream, {key: data[key] for key in data.keys()})
 
     @maintain_connection
-    def read_data(self, stream, reader, count=None, numerical=True, to_json=False, decode=True):
+    def read_data(self, stream, reader, count=None, max_time=None, numerical=True, to_json=False, decode=True):
         """
         Gets newest data for <reader> from data column <stream>.
         <stream> is some ID that identifies the stream in the database.
         <reader> is some ID that will keep track of it's own read head position.
         <count> is the number of data points to read (ignoring whether the point have already been read.
             - If None, read as many new points as possible.
+            - If not None, ignores <max_time> an <reader>
+        <max_time> maximum time window (ms) to read. (If count is None).
+            - If None, read as much as possible (guarantees all data read)
         <numerical>  Whether the data needs to be converted python float type
         <decode> Whether to decode the result into strings.
             If False, only values will remain as bytes. Keys will still be decoded.
@@ -175,6 +178,9 @@ class Database:
         else:  # get data since last read
             last_read = bookmarks.get(stream)
             if last_read:  # last read spot exists
+                if max_time:  # max time window set
+                    limit = time()-max_time  # furthest back time stamp to read
+                    last_read = last_read if float(last_read.split('-')[0]) > limit else limit
                 response = red.xread({'stream:'+stream: last_read})
             else:  # no last spot, start reading from latest, block for 1 sec
                 response = red.xread({'stream:'+stream: '$'}, block=1000)

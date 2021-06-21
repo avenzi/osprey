@@ -16,10 +16,10 @@ config = {
     'spectrogram_range': (-3.0, 1.0),  # color scale range (log)
     'spectrogram_size': 30,
 
-    'pass_toggle': False,
+    'pass_toggle': True,
     'pass_type': 'bandpass',
     'pass_style': 'Butterworth',
-    'pass_range': (1, 120),
+    'pass_range': (1, 100),
     'pass_order': 3,
     'pass_ripple': (1, 50),
 
@@ -173,7 +173,8 @@ if (diff > 0 && diff < end-start) {
         toolbar_location=None,
         output_backend=BACKEND
     )
-    fourier.toolbar.active_drag = None  # disable drag
+    fourier.toolbar.active_drag = 'xpan'
+    fourier.toolbar.active_scroll = 'xwheel_zoom'
 
     for i in range(len(channels)):
         fourier.line(x='frequencies', y=channels[i], color=colors[i], source=fourier_source)
