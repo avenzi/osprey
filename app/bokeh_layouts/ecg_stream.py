@@ -16,10 +16,10 @@ config = {
     'spectrogram_range': (-3.0, 1.0),  # color scale range (log)
     'spectrogram_size': 30,
 
-    'pass_toggle': True,
+    'pass_toggle': False,
     'pass_type': 'bandpass',
     'pass_style': 'Butterworth',
-    'pass_range': (1, 60),
+    'pass_range': (1, 120),
     'pass_order': 3,
     'pass_ripple': (1, 50),
 
