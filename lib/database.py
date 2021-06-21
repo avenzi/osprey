@@ -136,6 +136,7 @@ class Database:
         Writes time series <data> to stream:<stream>.
         <data> must be a dictionary of lists, where keys are data column names.
         """
+        print("ATTEMPTING TO WRITE")
         if hasattr(type(list(data.values())[0]), '__iter__'):  # if an iterable sequence of data points
             pipe = self.redis.pipeline()  # pipeline queues a series of commands at once
             for i in range(len(list(data.values())[0])):  # get length of a random key (all the same)
