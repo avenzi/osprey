@@ -154,7 +154,7 @@ class Database:
         <count> is the number of data points to read (ignoring whether the point have already been read.
             - If None, read as many new points as possible.
             - If not None, ignores <max_time> an <reader>
-        <max_time> maximum time window (ms) to read. (If count is None).
+        <max_time> maximum time window (s) to read. (If count is None).
             - If None, read as much as possible (guarantees all data read)
         <numerical>  Whether the data needs to be converted python float type
         <decode> Whether to decode the result into strings.
@@ -179,7 +179,7 @@ class Database:
             last_read = bookmarks.get(stream)
             if last_read:  # last read spot exists
                 if max_time:  # max time window set
-                    limit = time()-max_time  # furthest back time stamp to read
+                    limit = 1000*(time()-max_time)  # furthest back time stamp to read
                     last_read = last_read if float(last_read.split('-')[0]) > limit else limit
                     print("LAST READ: ", last_read, limit)
                 response = red.xread({'stream:'+stream: last_read})
