@@ -181,6 +181,7 @@ class Database:
                 if max_time:  # max time window set
                     limit = time()-max_time  # furthest back time stamp to read
                     last_read = last_read if float(last_read.split('-')[0]) > limit else limit
+                    print("LAST READ: ", last_read, limit)
                 response = red.xread({'stream:'+stream: last_read})
             else:  # no last spot, start reading from latest, block for 1 sec
                 response = red.xread({'stream:'+stream: '$'}, block=1000)
