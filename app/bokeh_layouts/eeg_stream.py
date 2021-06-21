@@ -216,10 +216,9 @@ if (diff > 0 && diff < end-start) {
         title="EEG Fourier",
         x_axis_label='Frequency (Hz)', y_axis_label='Magnitude (log)', y_axis_type="log",
         plot_width=1200, plot_height=400,
-        toolbar_location=None,
+        tools='xpan,xwheel_zoom,reset', toolbar_location='above',
         output_backend=BACKEND
     )
-    fourier.toolbar.active_drag = None  # disable drag
 
     for i in range(len(stream_channels)):
         fourier.line(x='frequencies', y=stream_channels[i], color=colors[i], source=fourier_source)
