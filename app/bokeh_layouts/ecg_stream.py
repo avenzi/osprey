@@ -170,11 +170,9 @@ if (diff > 0 && diff < end-start) {
         title="ECG Fourier",
         x_axis_label='Frequency (Hz)', y_axis_label='Magnitude (log)', y_axis_type="log",
         plot_width=1200, plot_height=400,
-        toolbar_location=None,
+        tools='xpan,xwheel_zoom', toolbar_location=None,
         output_backend=BACKEND
     )
-    fourier.toolbar.active_drag = 'xpan'
-    fourier.toolbar.active_scroll = 'xwheel_zoom'
 
     for i in range(len(channels)):
         fourier.line(x='frequencies', y=channels[i], color=colors[i], source=fourier_source)
