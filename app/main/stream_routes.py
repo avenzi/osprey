@@ -87,7 +87,7 @@ def plot_update():
 
     try:
         if not request_format or request_format == 'series':
-            data = current_app.database.read_data(request_id, request_id, to_json=True, max_time=5000)
+            data = current_app.database.read_data(request_id, request_id, to_json=True, max_time=5)
         elif request_format == 'snapshot':
             data = current_app.database.read_snapshot(request_id, to_json=True)
         else:
