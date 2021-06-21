@@ -17,3 +17,6 @@ data/*
 
 # Ignore .idea
 .idea
+
+# Ignore deploy script
+deploy.sh

@@ -182,6 +182,72 @@ class VideoStreamer(Streamer):
             pass
 
 
+class SynthEEGStreamer(Streamer):
+    """
+    Synthetic EEG streamer class for testing
+    """
+    def __init__(self, *args):
+        super().__init__(*args)
+        from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds
+
+        self.board_id = BoardIds.SYNTHETIC_BOARD.value  # synthetic board (-1)
+
+        self.eeg_channel_indexes = BoardShim.get_eeg_channels(self.board_id)  # list of EEG channel indexes
+        self.eeg_channel_names = BoardShim.get_eeg_names(self.board_id)  # list of EEG channel names
+        self.time_channel = BoardShim.get_timestamp_channel(self.board_id)  # index of timestamp channel
+        self.freq = BoardShim.get_sampling_rate(self.board_id)  # sample frequency
+
+        # BoardShim.enable_dev_board_logger()
+        BoardShim.disable_board_logger()  # disable logger
+        params = BrainFlowInputParams()
+        self.board = BoardShim(self.board_id, params)  # board object
+
+        # add info to send to database
+        self.info['sample_rate'] = self.freq
+        self.info['channels'] = ','.join(self.eeg_channel_names)
+
+    def loop(self):
+        """ Main execution loop """
+        time.sleep(0.25)  # wait a bit for the board to collect another chunk of data
+        data = {}
+        for channel in self.eeg_channel_names:  # lists of channel data
+            data[channel] = []
+
+        # attempt to read from board
+        # data collected in uV
+        try:
+            raw_data = self.board.get_board_data()
+        except Exception as e:
+            return
+
+        # convert from epoch time to relative time since session start
+        data['time'] = list(raw_data[self.time_channel] - self.start_time)
+
+        for i, j in enumerate(self.eeg_channel_indexes):
+            data[self.eeg_channel_names[i]] = list(raw_data[j])
+
+        self.database.write_data(self.id, data)
+
+    def start(self):
+        """ Extended from base class in pi_lib.py """
+        # start EEG stream if not already
+        if not self.streaming.is_set():
+            self.board.prepare_session()
+            self.board.start_stream()
+
+        # First send some initial information to this stream's info channel
+        super().start()  # start main loop
+
+    def stop(self):
+        """ Extended from base class in pi_lib.py """
+        super().stop()  # stop main loop
+        try:
+            self.board.stop_stream()
+            self.board.release_session()
+        except:
+            pass
+
+
 class EEGStreamer(Streamer):
     """
     EEG Streamer class for an OpenBCI board (Cyton, Cyton+Daisy, Ganglion)
@@ -274,73 +340,7 @@ class EEGStreamer(Streamer):
             pass
 
 
-class SynthEEGStreamer(Streamer):
-    """
-    Synthetic EEG streamer class for testing
-    """
-    def __init__(self, *args):
-        super().__init__(*args)
-        from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds
-
-        self.board_id = BoardIds.SYNTHETIC_BOARD.value  # synthetic board (-1)
-
-        self.eeg_channel_indexes = BoardShim.get_eeg_channels(self.board_id)  # list of EEG channel indexes
-        self.eeg_channel_names = BoardShim.get_eeg_names(self.board_id)  # list of EEG channel names
-        self.time_channel = BoardShim.get_timestamp_channel(self.board_id)  # index of timestamp channel
-        self.freq = BoardShim.get_sampling_rate(self.board_id)  # sample frequency
-
-        # BoardShim.enable_dev_board_logger()
-        BoardShim.disable_board_logger()  # disable logger
-        params = BrainFlowInputParams()
-        self.board = BoardShim(self.board_id, params)  # board object
-
-        # add info to send to database
-        self.info['sample_rate'] = self.freq
-        self.info['channels'] = ','.join(self.eeg_channel_names)
-
-    def loop(self):
-        """ Main execution loop """
-        time.sleep(0.25)  # wait a bit for the board to collect another chunk of data
-        data = {}
-        for channel in self.eeg_channel_names:  # lists of channel data
-            data[channel] = []
-
-        # attempt to read from board
-        # data collected in uV
-        try:
-            raw_data = self.board.get_board_data()
-        except Exception as e:
-            return
-
-        # convert from epoch time to relative time since session start
-        data['time'] = list(raw_data[self.time_channel] - self.start_time)
-
-        for i, j in enumerate(self.eeg_channel_indexes):
-            data[self.eeg_channel_names[i]] = list(raw_data[j])
-
-        self.database.write_data(self.id, data)
-
-    def start(self):
-        """ Extended from base class in pi_lib.py """
-        # start EEG stream if not already
-        if not self.streaming.is_set():
-            self.board.prepare_session()
-            self.board.start_stream()
-
-        # First send some initial information to this stream's info channel
-        super().start()  # start main loop
-
-    def stop(self):
-        """ Extended from base class in pi_lib.py """
-        super().stop()  # stop main loop
-        try:
-            self.board.stop_stream()
-            self.board.release_session()
-        except:
-            pass
-
-
-class CytonStreamer(Streamer):
+class ECGStreamer(Streamer):
     """
     Streams data from an OpenBCI board equipped with a Pulse sensor (through the analog pins)
     """
@@ -353,8 +353,8 @@ class CytonStreamer(Streamer):
         self.serial_port = dev_port
 
         # Channels for main board output
-        self.board_channel_indexes = BoardShim.get_ecg_channels(self.board_id)
-        self.board_channel_names = [str(i) for i in range(len(self.board_channel_indexes))]  # list of ECG channel names
+        self.ecg_channel_indexes = BoardShim.get_ecg_channels(self.board_id)
+        self.ecg_channel_names = [str(i) for i in range(len(self.ecg_channel_indexes))]  # name ECG channels by number
 
         # Pulse sensor data sent through 3 AUX channels instead
         self.pulse_channel_indexes = BoardShim.get_analog_channels(self.board_id)
@@ -365,7 +365,7 @@ class CytonStreamer(Streamer):
 
         self.info['sample_rate'] = self.freq
         self.info['pulse_channels'] = ','.join(self.pulse_channel_names)
-        self.info['board_channels'] = ','.join(self.board_channel_names)
+        self.info['ecg_channels'] = ','.join(self.ecg_channel_names)
 
         # BoardShim.enable_dev_board_logger()
         BoardShim.disable_board_logger()  # disable logger
@@ -394,8 +394,8 @@ class CytonStreamer(Streamer):
         for i, j in enumerate(self.pulse_channel_indexes):
             data[self.pulse_channel_names[i]] = list(raw_data[j])
 
-        for i, j in enumerate(self.board_channel_indexes):
-            data[self.board_channel_names[i]] = list(raw_data[j])
+        for i, j in enumerate(self.ecg_channel_indexes):
+            data[self.ecg_channel_names[i]] = list(raw_data[j])
 
         self.database.write_data(self.id, data)
 

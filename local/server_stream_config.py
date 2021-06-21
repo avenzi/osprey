@@ -1,4 +1,4 @@
-from app.bokeh_layouts import test_stream, eeg_stream, sense_stream, cyton_pulse_stream
+from app.bokeh_layouts import test_stream, eeg_stream, sense_stream, ecg_stream
 
 # html stream pages associated with each group
 pages = {
@@ -23,5 +23,5 @@ bokeh_layouts = {
     'Synth EEG 1': eeg_stream.create_layout,
     'Synth EEG 2': eeg_stream.create_layout,
     'Cyton 1': eeg_stream.create_layout,
-    'Cyton 2': cyton_pulse_stream.create_layout
+    'Cyton 2': ecg_stream.create_layout
 }

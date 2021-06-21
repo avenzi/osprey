@@ -18,18 +18,18 @@ config = {
     'spectrogram_range': (-3.0, 1.0),  # color scale range (log)
     'spectrogram_size': 30,
 
-    'pass_toggle': False,
+    'pass_toggle': True,
     'pass_type': 'bandpass',
     'pass_style': 'Butterworth',
     'pass_range': (1, 60),
     'pass_order': 3,
     'pass_ripple': (1, 50),
 
-    'stop_toggle': False,
+    'stop_toggle': True,
     'stop_type': 'bandstop',
     'stop_style': 'Butterworth',
     'stop_range': (59, 60.5),
-    'stop_order': 2,
+    'stop_order': 5,
     'stop_ripple': (1, 50),
 
     'bands': {'Delta': (1, 4), 'Theta': (4, 8), 'Alpha': (8, 12), 'Beta': (12, 30), 'Gamma': (30, 100)}

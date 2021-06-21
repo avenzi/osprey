@@ -186,9 +186,9 @@ class PipeHandler(Base):
         try:
             return self.pipe.recv()
         except KeyboardInterrupt:
-            self.debug("Pipe interrupted: '{}'".format(self.name))
+            self.debug("Pipe interrupted: '{}'".format(self.name), 2)
         except EOFError:  # connection closed
-            self.debug("EOF: Pipe '{}' closed".format(self.name))
+            self.debug("EOF: Pipe '{}' closed".format(self.name), 2)
         except Exception as e:
             self.debug("Failed to read from pipe '{}': {}".format(self.name, e), 2)
 
@@ -288,7 +288,7 @@ class Client(Base):
         worker_pipe = PipeHandler(self, host_conn)
 
         # process for new worker
-        worker_process = Process(target=worker.run, args=(worker_pipe,), name=worker.name, daemon=True)
+        worker_process = Process(target=worker.run, args=(worker_pipe,), name=worker, daemon=True)
 
         # host knows worker name and process. Pipe is indexed by the worker ID
         self.pipes[worker.id] = PipeHandler(worker, worker_conn, worker_process)
@@ -395,7 +395,7 @@ class WorkerNode(Base):
     def cleanup(self):
         """ Shutdown all handlers associated with this connection and signal that it shut down """
         super().cleanup()
-        self.debug("Worker {} Closed.".format(self.name))
+        self.debug("Worker {} Closed.".format(self))
         self.pipe.send('SHUTDOWN')  # Signal to the server that this connection is shutting down
 
 
@@ -632,7 +632,7 @@ class Analyzer(Streamer):
             modified = True
 
         if modified:  # if any info has been updated from the target
-            self.debug("{} info updated.".format(self))
+            self.debug("{} info updated: {}".format(self, self.info))
             self.update()  # update database
 
             # signal other analyzers to update their own info

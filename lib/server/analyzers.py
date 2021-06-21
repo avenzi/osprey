@@ -5,7 +5,8 @@ import json
 
 from lib.lib import Analyzer
 from lib.server.analysis_lib import MovingAverage
-from app.bokeh_layouts.eeg_stream import config as WIDGET_CONFIG
+from app.bokeh_layouts.eeg_stream import config as EEG_WIDGET_CONFIG
+from app.bokeh_layouts.ecg_stream import config as ECG_WIDGET_CONFIG
 
 
 class TestAnalyzer(Analyzer):
@@ -31,61 +32,21 @@ class TestAnalyzer(Analyzer):
         self.database.write_data(self.id, data)
 
 
-class EEGAnalyzer(Analyzer):
+######
+# OpenBCI Analyzers
+
+class SignalAnalyzer(Analyzer):
     """ Base class for the other two EEG analyzer streams"""
     def __init__(self, *args):
         super().__init__(*args)
-
         # Initial information
         self.sample_rate = None
         self.channels = []
-        self.widgets = WIDGET_CONFIG  # all widget parameters for fourier and filtering
-        self.head_x, self.head_y = [], []
-
-    def start(self):
-        """ extends streamer start method before loop """
-        try:
-            self.sample_rate = int(self.info['sample_rate'])
-            self.channels = self.info['channels'].split(',')  # its a comma separated string
-
-            # x/y positions for electrodes in head plots
-
-            with open('app/static/electrodes.json', 'r') as f:
-                all_names = json.loads(f.read())
-            for name in self.channels:  # get coordinates of electrodes by name
-                self.head_x.append(all_names[name][0])
-                self.head_y.append(all_names[name][1])
-
-        except Exception as e:
-            self.throw("Failed to start {}")
-
-        super().start()
-
-    def json(self, dic):
-        """ Gets updated widget values from a socketIO json message """
-        # Content is a JSON string with a single key-value pair
-        key, value = list(dic.items())[0]
-
-        # prevent bandpass/bandstop range sliders from hitting the edges
-        if key in ['pass_range', 'stop_range']:
-            if value[1] >= self.sample_rate/2:
-                value[1] = (self.sample_rate/2 - 0.5)
-            if value[0] <= 0:
-                value[0] = 0.1
-
-        # filters needs to be updated
-        if 'pass' in key:
-            self.pass_update = True
-        elif 'stop' in key:
-            self.stop_update = True
-
-        # store the new updated value
-        self.widgets[key] = value
+        self.widgets = None
 
 
-class EEGFilterStream(EEGAnalyzer):
-    """ Analyzes the raw EEG data for filtering """
-
+class SignalFilter(SignalAnalyzer):
+    """ Base class for filtering time series biosignal data """
     def __init__(self, *args):
         super().__init__(*args)
         self.pass_sos = None     # current SOS. Created by create_filter_sos() in eeg_stream.py
@@ -168,9 +129,29 @@ class EEGFilterStream(EEGAnalyzer):
             return None
         return sos
 
+    def json(self, dic):
+        """ Gets updated widget values from a socketIO json message """
+        for key in dic.keys():
+            val = dic[key]
+            # prevent bandpass/bandstop range sliders from hitting the edges
+            if key in ['pass_range', 'stop_range']:
+                if val[1] >= self.sample_rate/2:
+                    val[1] = (self.sample_rate/2 - 0.5)
+                if val[0] <= 0:
+                    val[0] = 0.1
 
-class EEGFourierStream(EEGAnalyzer):
-    """ Analyzes the filtered data from EEGFilterStream """
+            # filters needs to be updated
+            if 'pass' in key:
+                self.pass_update = True
+            elif 'stop' in key:
+                self.stop_update = True
+
+            # store the new updated value
+            self.widgets[key] = val
+
+
+class SignalFourier(SignalAnalyzer):
+    """ Base class for performing FFTs on a set of signals """
     def loop(self):
         """ Maine execution loop """
         # samples needed to read for a given time window
@@ -181,16 +162,13 @@ class EEGFourierStream(EEGAnalyzer):
             return
 
         fourier_data = self.fourier(filtered_data)  # fourier analysis
-        headplot_data = self.headplot(fourier_data)  # headplot spectrogram from fourier
-
-        self.database.write_snapshot('fourier:' + self.id, fourier_data)
-        self.database.write_snapshot('headplot:' + self.id, headplot_data)
+        self.database.write_snapshot(self.id, fourier_data)
 
         # Slow down rate of performing fourier transforms.
         # They appear to be having a significant impact on CPU usage.
         # The process of writing the data to the database still takes longer, but
         # it looks like the FFT is the CPU intensive part, especially with high FFT time windows.
-        sleep(0.5)
+        sleep(1)
 
     def fourier(self, data):
         """ Calculates the FFT of a slice of data """
@@ -219,6 +197,97 @@ class EEGFourierStream(EEGAnalyzer):
 
         # spectrogram
         # self.spectrogram_buffer.write(spectro_dict)
+
+    def json(self, dic):
+        """ Gets updated widget values from a socketIO json message """
+        for key in dic.keys():
+            self.widgets[key] = dic[key]
+
+
+class EEGFilter(SignalFilter):
+    """ Analyzes the raw EEG data for filtering """
+
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.widgets = EEG_WIDGET_CONFIG  # all widget parameters for fourier and filtering
+
+    def start(self):
+        """ extends streamer start method before loop """
+        try:
+            self.sample_rate = int(self.info['sample_rate'])
+            self.channels = self.info['channels'].split(',')  # its a comma separated string
+
+        except Exception as e:
+            self.throw("Failed to start {}")
+
+        super().start()
+
+
+class ECGFilter(SignalFilter):
+    """ Analyzes the raw ECG data for filtering """
+
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.widgets = ECG_WIDGET_CONFIG  # all widget parameters for fourier and filtering
+
+    def start(self):
+        """ extends streamer start method before loop """
+        try:
+            self.sample_rate = int(self.info['sample_rate'])
+            self.channels = self.info['ecg_channels'].split(',')  # its a comma separated string
+
+        except Exception as e:
+            self.throw("Failed to start {}")
+
+        super().start()
+
+
+class EEGFourier(SignalFourier):
+    """ Analyzes the filtered data from EEGFilterStream """
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.widgets = EEG_WIDGET_CONFIG  # all widget parameters for fourier and filtering
+        self.head_x, self.head_y = [], []
+
+    def start(self):
+        """ extends streamer start method before loop """
+        try:
+            self.sample_rate = int(self.info['sample_rate'])
+            self.channels = self.info['channels'].split(',')  # its a comma separated string
+
+            # x/y positions for electrodes in head plots
+
+            with open('app/static/electrodes.json', 'r') as f:
+                all_names = json.loads(f.read())
+            for name in self.channels:  # get coordinates of electrodes by name
+                self.head_x.append(all_names[name][0])
+                self.head_y.append(all_names[name][1])
+
+        except Exception as e:
+            self.throw("Failed to start {}")
+
+        super().start()
+
+    def loop(self):
+        """ Maine execution loop (Overriding SignalFourier) """
+        # samples needed to read for a given time window
+        samples = int(self.widgets['fourier_window'] * self.sample_rate)
+        filtered_data = self.database.read_data(self.target_id, self.id, count=samples)
+        if not filtered_data:
+            sleep(0.1)
+            return
+
+        fourier_data = self.fourier(filtered_data)  # fourier analysis
+        headplot_data = self.headplot(fourier_data)  # headplot spectrogram from fourier
+
+        self.database.write_snapshot('fourier:' + self.id, fourier_data)
+        self.database.write_snapshot('headplot:' + self.id, headplot_data)
+
+        # Slow down rate of performing fourier transforms.
+        # They appear to be having a significant impact on CPU usage.
+        # The process of writing the data to the database still takes longer, but
+        # it looks like the FFT is the CPU intensive part, especially with high FFT time windows.
+        sleep(0.5)
 
     def headplot(self, fourier_data):
         """ Calculates headplot values, then dumps it to a new stream """
@@ -249,15 +318,33 @@ class EEGFourierStream(EEGAnalyzer):
         return headplot
 
 
-class CytonAnalyzer(Analyzer):
-    """ Base class for the other two EEG analyzer streams"""
+class ECGFourier(SignalFourier):
+    """ Analyzes the filtered data from ECGFilter """
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.widgets = ECG_WIDGET_CONFIG  # all widget parameters for fourier and filtering
+
+    def start(self):
+        """ extends streamer start method before loop """
+        try:
+            self.sample_rate = int(self.info['sample_rate'])
+            self.channels = self.info['ecg_channels'].split(',')  # its a comma separated string
+
+        except Exception as e:
+            self.throw("Failed to start {}")
+
+        super().start()
+
+
+class PulseAnalyzer(Analyzer):
+    """ Analyzes a signal for a heart beat """
     def __init__(self, *args):
         super().__init__(*args)
 
         # Initial information
         self.sample_rate = None
         self.pulse_channels = []
-        self.board_channels = []
+        self.ecg_channels = []
         self.window = 10  # time window in which to calculate
         self.heart_rate = MovingAverage(self.window)  # heart rate moving average
 
@@ -266,7 +353,7 @@ class CytonAnalyzer(Analyzer):
         try:
             self.sample_rate = int(self.info['sample_rate'])
             self.pulse_channels = self.info['pulse_channels'].split(',')  # its a comma separated string
-            self.board_channels = self.info['board_channels'].split(',')  # its a comma separated string
+            self.ecg_channels = self.info['ecg_channels'].split(',')  # its a comma separated string
         except Exception as e:
             self.throw("Failed to start {}")
 
