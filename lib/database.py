@@ -179,8 +179,10 @@ class Database:
             last_read = bookmarks.get(stream)
             if last_read:  # last read spot exists
                 if max_time:  # max time window set
-                    limit = 1000*(time()-max_time)  # furthest back time stamp to read
-                    last_read = last_read if float(last_read.split('-')[0]) > limit else limit
+                    # furthest back time stamp to read
+                    # put into same format as redis time stamp (integer milliseconds)
+                    limit = int(1000*(time()-max_time))
+                    last_read = last_read if int(last_read.split('-')[0]) > limit else limit
                     print("LAST READ: ", last_read, limit)
                 response = red.xread({'stream:'+stream: last_read})
             else:  # no last spot, start reading from latest, block for 1 sec
