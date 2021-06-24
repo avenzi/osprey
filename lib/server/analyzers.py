@@ -44,6 +44,16 @@ class SignalAnalyzer(Analyzer):
         self.channels = []
         self.widgets = None
 
+    def start(self):
+        """ extends streamer start method before loop """
+        try:
+            self.get_info()
+        except:
+            self.throw("{} Failed to start. Missing info.", trace=False)
+
+    def get_info(self):
+        pass
+
 
 class SignalFilter(SignalAnalyzer):
     """ Base class for filtering time series biosignal data """
@@ -211,16 +221,9 @@ class EEGFilter(SignalFilter):
         super().__init__(*args)
         self.widgets = EEG_WIDGET_CONFIG  # all widget parameters for fourier and filtering
 
-    def start(self):
-        """ extends streamer start method before loop """
-        try:
-            self.sample_rate = int(self.info['sample_rate'])
-            self.channels = self.info['channels'].split(',')  # its a comma separated string
-
-        except Exception as e:
-            self.throw("Failed to start {}")
-
-        super().start()
+    def get_info(self):
+        self.sample_rate = int(self.info['sample_rate'])
+        self.channels = self.info['channels'].split(',')  # its a comma separated string
 
 
 class ECGFilter(SignalFilter):
@@ -230,16 +233,9 @@ class ECGFilter(SignalFilter):
         super().__init__(*args)
         self.widgets = ECG_WIDGET_CONFIG  # all widget parameters for fourier and filtering
 
-    def start(self):
-        """ extends streamer start method before loop """
-        try:
-            self.sample_rate = int(self.info['sample_rate'])
-            self.channels = self.info['ecg_channels'].split(',')  # its a comma separated string
-
-        except Exception as e:
-            self.throw("Failed to start {}")
-
-        super().start()
+    def get_info(self):
+        self.sample_rate = int(self.info['sample_rate'])
+        self.channels = self.info['ecg_channels'].split(',')  # its a comma separated string
 
 
 class EEGFourier(SignalFourier):
@@ -249,24 +245,16 @@ class EEGFourier(SignalFourier):
         self.widgets = EEG_WIDGET_CONFIG  # all widget parameters for fourier and filtering
         self.head_x, self.head_y = [], []
 
-    def start(self):
-        """ extends streamer start method before loop """
-        try:
-            self.sample_rate = int(self.info['sample_rate'])
-            self.channels = self.info['channels'].split(',')  # its a comma separated string
+    def get_info(self):
+        self.sample_rate = int(self.info['sample_rate'])
+        self.channels = self.info['channels'].split(',')  # its a comma separated string
 
-            # x/y positions for electrodes in head plots
-
-            with open('app/static/electrodes.json', 'r') as f:
-                all_names = json.loads(f.read())
-            for name in self.channels:  # get coordinates of electrodes by name
-                self.head_x.append(all_names[name][0])
-                self.head_y.append(all_names[name][1])
-
-        except Exception as e:
-            self.throw("Failed to start {}")
-
-        super().start()
+        # x/y positions for electrodes in head plots
+        with open('app/static/electrodes.json', 'r') as f:
+            all_names = json.loads(f.read())
+        for name in self.channels:  # get coordinates of electrodes by name
+            self.head_x.append(all_names[name][0])
+            self.head_y.append(all_names[name][1])
 
     def loop(self):
         """ Maine execution loop (Overriding SignalFourier) """
@@ -324,16 +312,9 @@ class ECGFourier(SignalFourier):
         super().__init__(*args)
         self.widgets = ECG_WIDGET_CONFIG  # all widget parameters for fourier and filtering
 
-    def start(self):
-        """ extends streamer start method before loop """
-        try:
-            self.sample_rate = int(self.info['sample_rate'])
-            self.channels = self.info['ecg_channels'].split(',')  # its a comma separated string
-
-        except Exception as e:
-            self.throw("Failed to start {}")
-
-        super().start()
+    def get_info(self):
+        self.sample_rate = int(self.info['sample_rate'])
+        self.channels = self.info['ecg_channels'].split(',')  # its a comma separated string
 
 
 class PulseAnalyzer(Analyzer):
@@ -343,21 +324,13 @@ class PulseAnalyzer(Analyzer):
 
         # Initial information
         self.sample_rate = None
-        self.pulse_channels = []
-        self.ecg_channels = []
+        self.channels = []
         self.window = 10  # time window in which to calculate
         self.heart_rate = MovingAverage(self.window)  # heart rate moving average
 
-    def start(self):
-        """ extends streamer start method before loop """
-        try:
-            self.sample_rate = int(self.info['sample_rate'])
-            self.pulse_channels = self.info['pulse_channels'].split(',')  # its a comma separated string
-            self.ecg_channels = self.info['ecg_channels'].split(',')  # its a comma separated string
-        except Exception as e:
-            self.throw("Failed to start {}")
-
-        super().start()
+    def get_info(self):
+        self.sample_rate = int(self.info['sample_rate'])
+        self.channels = self.info['pulse_channels'].split(',')  # its a comma separated string
 
     def loop(self):
         """ Maine execution loop """
@@ -367,7 +340,7 @@ class PulseAnalyzer(Analyzer):
             sleep(0.1)
             return
 
-        pulse_data = raw[self.pulse_channels[0]]
+        pulse_data = raw[self.channels[0]]
         heart_rate_data = self.calc_heart_rate(pulse_data)  # perform filtering
         output = {'heart_rate': heart_rate_data, 'time': raw['time'][-1]}
         self.database.write_data(self.id, output)

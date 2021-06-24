@@ -59,11 +59,6 @@ class SenseStreamer(Streamer):
         """ Extended from base class in pi_lib.py """
         # enable compass, gyro, and accelerometer to calculate orientation
         self.sense.set_imu_config(True, True, True)
-        super().start()
-
-    def stop(self):
-        """ Extended from base class in pi_lib.py """
-        super().stop()
 
 
 class LogStreamer(Streamer):
@@ -147,9 +142,6 @@ class VideoStreamer(Streamer):
         Start Streaming continually
         Extended from base class in pi_lib.py
         """
-        if self.streaming.is_set():
-            return
-
         # for some reason if the PiCamera object is defined on a different thread, start_recording will hang.
         from picamera import PiCamera, PiVideoFrameType
         self.camera = PiCamera(resolution='300x300', framerate=20)
@@ -167,14 +159,12 @@ class VideoStreamer(Streamer):
             intra_period=self.info['framerate'], intra_refresh='both', inline_headers=True, sps_timing=True
         )
         time.sleep(2)  # let camera warm up for a sec. Does weird stuff otherwise.
-        super().start()  # Start main loop
 
     def stop(self):
         """
         HTTPRequest method STOP
         Extended from the base class in pi_lib.py
         """
-        super().stop()  # Stop main loop
         try:
             self.camera.stop_recording()
             self.camera.close()  # close camera resources
@@ -235,12 +225,8 @@ class SynthEEGStreamer(Streamer):
             self.board.prepare_session()
             self.board.start_stream()
 
-        # First send some initial information to this stream's info channel
-        super().start()  # start main loop
-
     def stop(self):
         """ Extended from base class in pi_lib.py """
-        super().stop()  # stop main loop
         try:
             self.board.stop_stream()
             self.board.release_session()
@@ -305,9 +291,6 @@ class EEGStreamer(Streamer):
         Start Streaming continually
         Extended from base class in pi_lib.py
         """
-        if self.streaming.is_set():
-            return
-
         # configure data collection port to avoid data chunking
         configure_port(self.serial_port)
 
@@ -327,12 +310,8 @@ class EEGStreamer(Streamer):
             self.throw("Failed to prepare streaming session in {}. Make sure the board is turned on.".format(self), trace=False)
             return
 
-        # First send some initial information to this stream's info channel
-        super().start()  # start main loop
-
     def stop(self):
         """ Extended from base class in pi_lib.py """
-        super().stop()  # stop main loop
         try:
             self.board.stop_stream()
             self.board.release_session()
@@ -428,12 +407,8 @@ class ECGStreamer(Streamer):
             self.throw("Failed to prepare streaming session in {}. Make sure the board is turned on.".format(self), trace=False)
             return
 
-        # First send some initial information to this stream's info channel
-        super().start()  # start main loop
-
     def stop(self):
         """ Extended from base class in pi_lib.py """
-        super().stop()  # stop main loop
         try:
             self.board.stop_stream()
             self.board.release_session()
