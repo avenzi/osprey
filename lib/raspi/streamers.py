@@ -220,7 +220,6 @@ class SynthEEGStreamer(Streamer):
         except Exception as e:
             return
 
-        t1 = time.time() - start
         # convert from epoch time to relative time since session start
         data['time'] = list(raw_data[self.time_channel] - self.start_time)
 
