@@ -213,8 +213,6 @@ class SynthEEGStreamer(Streamer):
         for channel in self.eeg_channel_names:  # lists of channel data
             data[channel] = []
 
-        start = time.time()
-
         # attempt to read from board
         # data collected in uV
         try:
@@ -229,11 +227,7 @@ class SynthEEGStreamer(Streamer):
         for i, j in enumerate(self.eeg_channel_indexes):
             data[self.eeg_channel_names[i]] = list(raw_data[j])
 
-        t2 = time.time() - start
-
         self.database.write_data(self.id, data)
-        t3 = time.time() - start
-        print("TIMES: ", t1, t2, t3)
 
     def start(self):
         """ Extended from base class in pi_lib.py """
