@@ -514,19 +514,24 @@ class Streamer(WorkerNode):
         # notify server of update
         self.socket.emit('update', self.id, namespace='/streamers')
 
-    def start(self):
+    def _start(self):
         """
         Should be extended in streamers.py
         Begins the stream
         """
         if self.streaming.is_set():  # already running
             return
+        self.start()  # call subclassed start method
         self.streaming.set()  # set streaming, which starts the main execution while loop
         self.log("Started {}".format(self))
         self.socket.emit('log', "Started {}".format(self), namespace='/streamers')
         self.update()
 
-    def stop(self):
+    def start(self):
+        """ overwritten in subclass """
+        pass
+
+    def _stop(self):
         """
         Should be extended in streamers.py
         Ends the streaming process
@@ -534,9 +539,14 @@ class Streamer(WorkerNode):
         if not self.streaming.is_set():  # already stopped
             return
         self.streaming.clear()  # stop streaming, stopping the main execution while loop
+        self.stop()  # call subclassed stop method
         self.log("Stopped {}".format(self))
         self.socket.emit('log', "Stopped Streamer {}".format(self), namespace='/streamers')
         self.update()
+
+    def stop(self):
+        """ overwritten in subclass """
+        pass
 
     def json(self, dic):
         """ To be called in response to the socketio receiving json (dict) data """
@@ -639,10 +649,10 @@ class Analyzer(Streamer):
             # incase any of them rely on this analyzer's info.
             self.socket.emit('init', self.id, namespace='/streamers')
 
-    def start(self):
+    def _start(self):
         """ Checks for target stream before running """
         if self.target_id:
-            super().start()
+            super()._start()
         else:
             self.log("{} not started - did not find target stream.".format(self))
 
@@ -672,11 +682,11 @@ class StreamerNamespace(Namespace):
 
     def on_start(self):
         """ start message from server """
-        self.streamer.start()
+        self.streamer._start()
 
     def on_stop(self):
         """ stop message from server """
-        self.streamer.stop()
+        self.streamer._stop()
 
     def on_json(self, dic):
         self.streamer.json(dic)
