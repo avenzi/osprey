@@ -522,7 +522,7 @@ class Streamer(WorkerNode):
         if self.streaming.is_set():  # already running
             return
         self.streaming.set()  # set streaming, which starts the main execution while loop
-        self.log("{} Started".format(self))
+        self.log("Started {}".format(self))
         self.socket.emit('log', "Started {}".format(self), namespace='/streamers')
         self.update()
 
