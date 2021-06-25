@@ -632,7 +632,11 @@ class Analyzer(Streamer):
             self.targets[group][name]['id'] = info['id']
             self.targets[group][name]['updated'] = float(info['updated'])
 
-            self.debug("{} targeting [{}:{}] ({})".format(self, group, name, info['id']))
+        # output notification that targets were found
+        for group_name, group in self.targets.items():
+            for stream_name, info in group.items():
+                if info.get('id'):
+                    self.debug("{} targeting [{}:{}]".format(self, group_name, stream_name))
 
     def _start(self):
         """ Checks for any target streams before running """
