@@ -358,6 +358,9 @@ class WorkerNode(Base):
         self.pipe = None  # Pipe object to the HostNode
         self.id = self.generate_uuid()
 
+    def __repr__(self):
+        return "[{}]".format(self.name)
+
     def run(self, pipe):
         """
         Main entry point.
@@ -366,7 +369,7 @@ class WorkerNode(Base):
         Should be run on it's own Process's Main Thread.
         """
         self.pipe = pipe
-        self.debug("Worker class '{}' started running.".format(self), 1)
+        self.debug("{} initialized".format(self), 2)
         Thread(target=self._run, name='RUN', daemon=True).start()
         Thread(target=self._run_pipe, name='PIPE', daemon=True).start()
         self.run_exit_trigger(block=True)  # Wait for exit status on new thread
@@ -592,7 +595,7 @@ class Analyzer(Streamer):
             group = self.group
         if not self.targets.get(group):
             self.targets[group] = {}
-        self.targets[group][name] = None  # this will be the stream's ID when it's found
+        self.targets[group][name] = {'id': None, 'updated': 0}
 
     def get_target(self, stream_id=None):
         """
