@@ -27,15 +27,6 @@ def configure_port(dev_path):
         return False
 
 
-class RaspiClient(Client):
-    def run(self):
-        """ Just extending to print out some info """
-        self.log("Name: {}".format(self.name))
-        self.log("Server IP: {}:{}".format(self.ip, self.port))
-        self.log("Database IP: {}:{}".format(self.ip, self.port))
-        super().run()
-
-
 class PicamOutput:
     """ Data Buffer class to collect data from a Picam. """
     def __init__(self):

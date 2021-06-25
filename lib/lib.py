@@ -2,6 +2,7 @@ from multiprocessing import Process, current_process, Pipe, Lock, Condition, Eve
 from threading import Thread, current_thread
 
 from datetime import datetime
+import functools
 from uuid import uuid4
 import json
 import traceback
@@ -403,10 +404,10 @@ class Streamer(WorkerNode):
     """
     Used to interface with a local or remote Redis database and server socketIO
     """
-    def __init__(self, group_name, name):
+    def __init__(self, name, group):
         super().__init__()
         self.name = name    # unique name within the group
-        self.group = group_name  # unique group name that this stream is a part of
+        self.group = group  # unique group name that this stream is a part of
 
         # config settings
         self.client = None  # name of client that is hosting this worker
@@ -565,15 +566,12 @@ class Analyzer(Streamer):
         and dump the result back into the database in a new stream.
     """
 
-    def __init__(self, group_name, name, target_name, target_group=None):
-        super().__init__(group_name, name)
-        if target_group:
-            self.target_group = target_group
-        else:
-            self.target_group = group_name
+    def __init__(self, name, group):
+        super().__init__(name, group)
 
-        self.target_name = target_name
-        self.target_id = None  # ID of target streamer. Set when the stream is found.
+        # index of group and names to map info of targeted streams (ID and update time)
+        # {group1: {name1:{id:id, updated:time}, name2:{id:id, updated:time}, ...}, group2: {}, ...}
+        self.targets = {}
 
         # event to control when the analyzer is waiting for the incoming stream
         self.looking = Event()
@@ -581,18 +579,20 @@ class Analyzer(Streamer):
         # add namespace unique to analyzers
         self.namespaces.append('/analyzers')
 
-        # list of keys in the info dict that are unique to this analyzer.
-        # anything not in this list will be overwritten by the stream it is reading from.
-        self.unique_keys = ['id', 'name', 'client', 'type', 'show', 'updated']
-
     def init(self):
         """ Extend init to look for the target stream """
         super().init()
         self.get_target()  # check for target stream
 
+    def target(self, name, group):
+        """ Add a streamer to target with this analyzer """
+        if not self.targets.get(group):
+            self.targets[group] = {}
+        self.targets[group][name] = None  # this will be the stream's ID when it's found
+
     def get_target(self, stream_id=None):
         """
-        Check if given stream is the target stream. If it is, copy it's info.
+        Check if given stream is one of the targeted streams. If it is, copy it's info.
         If no stream ID is given, look through all info dicts currently on the database.
         """
         if not stream_id:
@@ -606,55 +606,39 @@ class Analyzer(Streamer):
         else:  # stream ID given
             info_list = [self.database.read_info(stream_id)]
 
-        # The update time used in case multiple streams with the same group and name are found.
-        # The most recently updated one will be selected.
-        update_time = 0  # last update time of the most recent stream
-        target_info = {}  # target info
         for info in info_list:
-            # found the targeted stream
-            if info['group'] == self.target_group and info['name'] == self.target_name:
-                if float(info['updated']) > update_time:  # newer stream
-                    target_info = info
+            group = info['group']
+            name = info['name']
 
-        if target_info:  # target stream found
-            self.target_id = target_info['id']  # get ID of this stream
-            self.debug("{} targeting [{}:{}] ({})".format(self, self.target_group, self.target_name, self.target_id))
-            self.copy_info(target_info)
-
-    def copy_info(self, target_info=None):
-        """ Copy extra info from the target stream """
-        if not target_info:
-            try:
-                target_info = self.database.read_info(self.target_id)
-            except Database.Error as e:
-                self.throw("{} Failed to copy info from target {}".format(self.name, self.target_name))
-                return
-
-        modified = False  # if the info dict has been modified
-        for key in target_info.keys():
-            if key in self.unique_keys:  # stream-specific, don't copy it
+            if not self.targets.get(group):  # group not found
                 continue
-            if self.info.get(key) == target_info[key]:  # not modified
+            if not self.targets.get(name):  # name not found in group
                 continue
 
-            # key is not stream-specific and has changed since last copy
-            self.info[key] = target_info[key]
-            modified = True
+            # found stream not the first and not the most recently updated.
+            # This only happens if there is more than 1 stream with the same name and group,
+            #  which means it's an old version of the same stream.
+            if float(info['updated']) < self.targets[group][name].get('updated', 0):
+                continue
 
-        if modified:  # if any info has been updated from the target
-            self.debug("{} info updated: {}".format(self, self.info))
-            self.update()  # update database
+            # set ID of this target and update time
+            self.targets[group][name]['id'] = info['id']
+            self.targets[group][name]['updated'] = info['updated']
 
-            # signal other analyzers to update their own info
-            # incase any of them rely on this analyzer's info.
-            self.socket.emit('init', self.id, namespace='/streamers')
+            self.debug("{} targeting [{}:{}] ({})".format(self, group, name, info['id']))
 
     def _start(self):
-        """ Checks for target stream before running """
-        if self.target_id:
+        """ Checks for any target streams before running """
+        groups = self.targets.values()
+        streams = []
+        for group in groups:
+            for stream in group.values():
+                streams.append(stream.get('id'))
+
+        if any(streams):  # any of the target streams is present
             super()._start()
         else:
-            self.log("{} not started - did not find target stream.".format(self))
+            self.log("{} not started - did not find any target streams.".format(self))
 
 
 class Namespace(socketio.ClientNamespace):
@@ -690,3 +674,5 @@ class StreamerNamespace(Namespace):
 
     def on_json(self, dic):
         self.streamer.json(dic)
+
+

@@ -238,7 +238,7 @@ class EEGStreamer(Streamer):
     """
     EEG Streamer class for an OpenBCI board (Cyton, Cyton+Daisy, Ganglion)
     """
-    def __init__(self, dev_path, *args):
+    def __init__(self, *args, dev_path=None):
         """ Dev path is the device path of the dongle"""
         super().__init__(*args)
 
@@ -323,13 +323,13 @@ class ECGStreamer(Streamer):
     """
     Streams data from an OpenBCI board equipped with a Pulse sensor (through the analog pins)
     """
-    def __init__(self, dev_port, *args):
+    def __init__(self, *args, dev_path):
         super().__init__(*args)
 
         from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds
 
         self.board_id = BoardIds.CYTON_BOARD.value   # Cyton board ID (0)
-        self.serial_port = dev_port
+        self.serial_port = dev_path
 
         # Channels for main board output
         self.ecg_channel_indexes = BoardShim.get_ecg_channels(self.board_id)
