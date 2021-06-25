@@ -274,6 +274,8 @@ class Client(Base):
             worker.set_info(self)  # give worker some of the config params
             self.run_worker(worker)  # run on a parallel process
 
+        self.log("All workers initialized.")
+
         # block main thread until exit
         self.run_exit_trigger(block=True)
 
@@ -364,7 +366,7 @@ class WorkerNode(Base):
         Should be run on it's own Process's Main Thread.
         """
         self.pipe = pipe
-        self.debug("Worker '{}' started running.".format(self.name), 2)
+        self.debug("Worker '{}' started running.".format(self.name), 1)
         Thread(target=self._run, name='RUN', daemon=True).start()
         Thread(target=self._run_pipe, name='PIPE', daemon=True).start()
         self.run_exit_trigger(block=True)  # Wait for exit status on new thread
@@ -584,8 +586,10 @@ class Analyzer(Streamer):
         super().init()
         self.get_target()  # check for target stream
 
-    def target(self, name, group):
+    def target(self, name, group=None):
         """ Add a streamer to target with this analyzer """
+        if group is None:  # same as own group
+            group = self.group
         if not self.targets.get(group):
             self.targets[group] = {}
         self.targets[group][name] = None  # this will be the stream's ID when it's found
