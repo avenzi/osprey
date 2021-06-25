@@ -616,7 +616,7 @@ class Analyzer(Streamer):
         for info in info_list:
             group = info['group']
             name = info['name']
-            print(name, group)
+            print(name, group, self.targets)
 
             if not self.targets.get(group):  # group not found
                 continue
