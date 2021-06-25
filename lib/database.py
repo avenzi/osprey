@@ -1,5 +1,4 @@
-from time import time, sleep
-from datetime import datetime
+from time import time, sleep, strftime, localtime
 import functools
 import json
 import os
@@ -9,7 +8,7 @@ import redis
 
 def get_time():
     """ Return human readable time for file names """
-    return datetime.now().strftime("%-H:%-M:%-S:%f")
+    return strftime("%d/%m/%Y-%H:%M:%S", localtime())
 
 
 class DatabaseError(Exception):
