@@ -638,7 +638,6 @@ class Analyzer(Streamer):
         """ Checks for any target streams before running """
         groups = self.targets.values()
         streams = []
-        self.log(groups)
         for group in groups:
             for stream in group.values():
                 streams.append(stream.get('id'))
