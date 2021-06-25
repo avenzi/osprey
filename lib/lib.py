@@ -621,18 +621,16 @@ class Analyzer(Streamer):
                 continue
             if not self.targets[group].get(name):  # name not found in group
                 continue
-            print('Match!')
 
             # found stream not the first and not the most recently updated.
             # This only happens if there is more than 1 stream with the same name and group,
             #  which means it's an old version of the same stream.
             if float(info['updated']) < self.targets[group][name].get('updated', 0):
                 continue
-            print('New!')
 
             # set ID of this target and update time
             self.targets[group][name]['id'] = info['id']
-            self.targets[group][name]['updated'] = info['updated']
+            self.targets[group][name]['updated'] = float(info['updated'])
 
             self.debug("{} targeting [{}:{}] ({})".format(self, group, name, info['id']))
 
