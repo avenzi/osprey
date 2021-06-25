@@ -614,6 +614,7 @@ class Analyzer(Streamer):
             info_list = [self.database.read_info(stream_id)]
 
         for info in info_list:
+            print(info)
             group = info['group']
             name = info['name']
 
