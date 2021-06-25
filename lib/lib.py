@@ -614,20 +614,22 @@ class Analyzer(Streamer):
             info_list = [self.database.read_info(stream_id)]
 
         for info in info_list:
-            print(info)
             group = info['group']
             name = info['name']
+            print(name, group)
 
             if not self.targets.get(group):  # group not found
                 continue
             if not self.targets.get(name):  # name not found in group
                 continue
+            print('Match!')
 
             # found stream not the first and not the most recently updated.
             # This only happens if there is more than 1 stream with the same name and group,
             #  which means it's an old version of the same stream.
             if float(info['updated']) < self.targets[group][name].get('updated', 0):
                 continue
+            print('New!')
 
             # set ID of this target and update time
             self.targets[group][name]['id'] = info['id']
