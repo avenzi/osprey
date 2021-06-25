@@ -616,11 +616,10 @@ class Analyzer(Streamer):
         for info in info_list:
             group = info['group']
             name = info['name']
-            print(name, group, self.targets.get(group))
 
             if not self.targets.get(group):  # group not found
                 continue
-            if not self.targets.get(name):  # name not found in group
+            if not self.targets[group].get(name):  # name not found in group
                 continue
             print('Match!')
 
