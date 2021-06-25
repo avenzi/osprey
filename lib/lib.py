@@ -366,7 +366,7 @@ class WorkerNode(Base):
         Should be run on it's own Process's Main Thread.
         """
         self.pipe = pipe
-        self.debug("Worker '{}' started running.".format(self.name), 1)
+        self.debug("Worker class '{}' started running.".format(self), 1)
         Thread(target=self._run, name='RUN', daemon=True).start()
         Thread(target=self._run_pipe, name='PIPE', daemon=True).start()
         self.run_exit_trigger(block=True)  # Wait for exit status on new thread
@@ -635,6 +635,7 @@ class Analyzer(Streamer):
         """ Checks for any target streams before running """
         groups = self.targets.values()
         streams = []
+        self.log(groups)
         for group in groups:
             for stream in group.values():
                 streams.append(stream.get('id'))
