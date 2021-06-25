@@ -613,6 +613,7 @@ class Analyzer(Streamer):
         else:  # stream ID given
             info_list = [self.database.read_info(stream_id)]
 
+        info_updated = False  # flag for displaying debug info
         for info in info_list:
             group = info['group']
             name = info['name']
@@ -631,12 +632,14 @@ class Analyzer(Streamer):
             # set ID of this target and update time
             self.targets[group][name]['id'] = info['id']
             self.targets[group][name]['updated'] = float(info['updated'])
+            info_updated = True
 
         # output notification that targets were found
-        for group_name, group in self.targets.items():
-            for stream_name, info in group.items():
-                if info.get('id'):
-                    self.debug("{} targeting [{}:{}]".format(self, group_name, stream_name))
+        if info_updated:
+            for group_name, group in self.targets.items():
+                for stream_name, info in group.items():
+                    if info.get('id'):
+                        self.debug("{} targeting [{}:{}]".format(self, group_name, stream_name))
 
     def _start(self):
         """ Checks for any target streams before running """
