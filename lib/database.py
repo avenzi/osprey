@@ -8,7 +8,7 @@ import redis
 
 def get_time():
     """ Return human readable time for file names """
-    return strftime("%d/%m/%Y-%H:%M:%S", localtime())
+    return strftime("%d:%m:%Y-%H:%M:%S", localtime())
 
 
 class DatabaseError(Exception):
@@ -165,6 +165,9 @@ class Database:
         else:
             numerical = False
             red = self.bytes_redis
+
+        if stream is None or reader is None:
+            return
 
         bookmarks = self.bookmarks.get(reader)  # get reader-specific bookmarks
         if not bookmarks:  # this reader hasn't read before
