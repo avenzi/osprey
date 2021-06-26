@@ -13,32 +13,51 @@ class TestAnalyzer(Analyzer):
     def __init__(self, *args):
         super().__init__(*args)
 
+        # Get IDs for each data stream
+        self.random_11 = self.targets['Test Group 1']['Random 1']['id']
+        self.random_12 = self.targets['Test Group 1']['Random 2']['id']
+        self.random_21 = self.targets['Test Group 2']['Random 1']['id']
+        self.random_22 = self.targets['Test Group 2']['Random 2']['id']
+
     def loop(self):
         """ Maine execution loop """
         # get most recent data from raw data stream
-        data = self.database.read_data(self.target_id, self.id)
-        if not data:
-            sleep(0.1)
+        data_11 = self.database.read_data(self.random_11, self.id)
+        data_12 = self.database.read_data(self.random_12, self.id)
+        data_21 = self.database.read_data(self.random_21, self.id)
+        data_22 = self.database.read_data(self.random_22, self.id)
+
+        all_data = {}
+        if data_11: all_data['data_11'] = data_11
+        if data_12: all_data['data_12'] = data_12
+        if data_21: all_data['data_21'] = data_21
+        if data_22: all_data['data_22'] = data_22
+
+        if not all_data:  # got no data from any stream
+            sleep(0.5)
             return
 
-        # perform some operation on the data
-        for key in data.keys():
-            for i in range(len(data[key])):
-                if key == 'time':
-                    continue
-                data[key][i] *= 10
+        # perform some operation on the data.
+        # This averages the value of the 3 columns
+        output = {name: [] for name in all_data.keys()}
+        for name, data in all_data.items():
+            a = np.array(data['val_1'])
+            b = np.array(data['val_2'])
+            c = np.array(data['val_3'])
+            output[name] = np.average((a, b, c), axis=0)
 
         # output processed data to new stream
-        self.database.write_data(self.id, data)
+        self.database.write_data(self.id, output)
 
 
-######
-# OpenBCI Analyzers
+########################
+# OpenBCI Raw Data Analyzers
 
 class SignalAnalyzer(Analyzer):
     """ Base class for the other two EEG analyzer streams"""
     def __init__(self, *args):
         super().__init__(*args)
+
         # Initial information
         self.sample_rate = None
         self.channels = []
@@ -66,11 +85,13 @@ class SignalFilter(SignalAnalyzer):
         self.stop_sos_init = []
         self.stop_update = True
 
+        self.raw_id = None
+
     def loop(self):
         """ Maine execution loop """
-        data = self.database.read_data(self.target_id, self.id)
+        data = self.database.read_data(self.raw_id, self.id)
         if not data:
-            sleep(0.1)
+            sleep(0.5)
             return
         filtered_data = self.filter(data)  # perform filtering
         self.database.write_data(self.id, filtered_data)
@@ -162,11 +183,25 @@ class SignalFilter(SignalAnalyzer):
 
 class SignalFourier(SignalAnalyzer):
     """ Base class for performing FFTs on a set of signals """
+
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.pass_sos = None  # current SOS. Created by create_filter_sos() in eeg_stream.py
+        self.pass_sos_init = []  # list of SOS initial values
+        self.pass_update = True  # Flag to set when a new SOS is requestedm
+        self.stop_sos = None
+        self.stop_sos_init = []
+        self.stop_update = True
+
+        # Make sure that the derived SignalFilter targets streams in its own group with the names 'Raw' and 'Filtered'
+        self.raw_id = None
+        self.filtered_id = None
+
     def loop(self):
         """ Maine execution loop """
         # samples needed to read for a given time window
         samples = int(self.widgets['fourier_window'] * self.sample_rate)
-        filtered_data = self.database.read_data(self.target_id, self.id, count=samples)
+        filtered_data = self.database.read_data(self.filtered_id, self.id, count=samples)
         if not filtered_data:
             sleep(0.1)
             return
@@ -222,8 +257,11 @@ class EEGFilter(SignalFilter):
         self.widgets = EEG_WIDGET_CONFIG  # all widget parameters for fourier and filtering
 
     def get_info(self):
-        self.sample_rate = int(self.info['sample_rate'])
-        self.channels = self.info['channels'].split(',')  # its a comma separated string
+        # Make sure that the derived SignalFilter targets streams in its own group with the name 'Raw'.
+        # Get info from raw database
+        self.raw_id = self.targets[self.group]['Raw']['id']
+        self.sample_rate = self.database.read_info(self.raw_id)['sample_rate']
+        self.channels = self.database.read_info(self.raw_id)['channels'].split(',')  # its a comma separated string
 
 
 class ECGFilter(SignalFilter):
@@ -234,8 +272,11 @@ class ECGFilter(SignalFilter):
         self.widgets = ECG_WIDGET_CONFIG  # all widget parameters for fourier and filtering
 
     def get_info(self):
-        self.sample_rate = int(self.info['sample_rate'])
-        self.channels = self.info['ecg_channels'].split(',')  # its a comma separated string
+        # Make sure that the derived SignalFilter targets streams in its own group with the name 'Raw'.
+        # Get info from raw database
+        self.raw_id = self.targets[self.group]['Raw']['id']
+        self.sample_rate = self.database.read_info(self.raw_id)['sample_rate']
+        self.channels = self.database.read_info(self.raw_id)['ecg_channels'].split(',')  # its a comma separated string
 
 
 class EEGFourier(SignalFourier):
@@ -246,8 +287,10 @@ class EEGFourier(SignalFourier):
         self.head_x, self.head_y = [], []
 
     def get_info(self):
-        self.sample_rate = int(self.info['sample_rate'])
-        self.channels = self.info['channels'].split(',')  # its a comma separated string
+        self.raw_id = self.targets[self.group]['Raw']['id']
+        self.filtered_id = self.targets[self.group]['Filtered']['id']
+        self.sample_rate = self.database.read_info(self.raw_id)['sample_rate']
+        self.channels = self.database.read_info(self.raw_id)['channels'].split(',')  # its a comma separated string
 
         # x/y positions for electrodes in head plots
         with open('app/static/electrodes.json', 'r') as f:
@@ -260,7 +303,7 @@ class EEGFourier(SignalFourier):
         """ Maine execution loop (Overriding SignalFourier) """
         # samples needed to read for a given time window
         samples = int(self.widgets['fourier_window'] * self.sample_rate)
-        filtered_data = self.database.read_data(self.target_id, self.id, count=samples)
+        filtered_data = self.database.read_data(self.filtered_id, self.id, count=samples)
         if not filtered_data:
             sleep(0.1)
             return
@@ -313,8 +356,10 @@ class ECGFourier(SignalFourier):
         self.widgets = ECG_WIDGET_CONFIG  # all widget parameters for fourier and filtering
 
     def get_info(self):
-        self.sample_rate = int(self.info['sample_rate'])
-        self.channels = self.info['ecg_channels'].split(',')  # its a comma separated string
+        self.raw_id = self.targets[self.group]['Raw']['id']
+        self.filtered_id = self.targets[self.group]['Filtered']['id']
+        self.sample_rate = self.database.read_info(self.raw_id)['sample_rate']
+        self.channels = self.database.read_info(self.raw_id)['ecg_channels'].split(',')  # its a comma separated string
 
 
 class PulseAnalyzer(Analyzer):
@@ -323,19 +368,21 @@ class PulseAnalyzer(Analyzer):
         super().__init__(*args)
 
         # Initial information
+        self.raw_id = None
         self.sample_rate = None
         self.channels = []
         self.window = 10  # time window in which to calculate
         self.heart_rate = MovingAverage(self.window)  # heart rate moving average
 
     def get_info(self):
-        self.sample_rate = int(self.info['sample_rate'])
-        self.channels = self.info['pulse_channels'].split(',')  # its a comma separated string
+        self.raw_id = self.targets[self.group]['Raw']['id']
+        self.sample_rate = self.database.read_info(self.raw_id)['sample_rate']
+        self.channels = self.database.read_info(self.raw_id)['channels'].split(',')  # its a comma separated string
 
     def loop(self):
         """ Maine execution loop """
         samples = int(self.window*self.sample_rate)
-        raw = self.database.read_data(self.target_id, self.id, count=samples)
+        raw = self.database.read_data(self.raw_id, self.id, count=samples)
         if not raw:
             sleep(0.1)
             return
