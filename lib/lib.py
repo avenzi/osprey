@@ -504,9 +504,12 @@ class Streamer(WorkerNode):
         # get connection to server socketIO
         self.connect_socket()
 
+        print("BEFORE")
+
         # get connection to database
         self.database = Database(self.ip, self.db_port, self.db_pass)
         self.database.connect()
+        print('AFTER')
 
     def update(self):
         """ Send info to database and signal update to server """
