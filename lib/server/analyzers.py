@@ -33,7 +33,7 @@ class TestAnalyzer(Analyzer):
 
         # perform some operation on the data.
         # This averages the value of the 3 columns for each stream
-        # If that stream didn't get read from the database,
+        # need separate time columns so bokeh knows how much to plot for each since they are separate streams
         output = {name: [] for name in all_data.keys()}
         for name, data in all_data.items():
             if not data:  # no data gotten for this one
@@ -45,6 +45,7 @@ class TestAnalyzer(Analyzer):
             output['time_'+name] = data['time']
 
         # output processed data to new stream
+        print(output)
         self.database.write_data(self.id, output)
 
 
