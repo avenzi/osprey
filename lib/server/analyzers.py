@@ -21,20 +21,16 @@ class TestAnalyzer(Analyzer):
     def loop(self):
         """ Maine execution loop """
         # get most recent data from raw data stream
-        data_11, data_12, data_21, data_22 = {}, {}, {}, {}
-        try:
-            data_11 = self.database.read_data(self.random_11, self.id)
-            data_12 = self.database.read_data(self.random_12, self.id)
-            data_21 = self.database.read_data(self.random_21, self.id)
-            data_22 = self.database.read_data(self.random_22, self.id)
-        except DatabaseError:
-            pass
+        data_11 = self.database.read_data(self.random_11, self.id)
+        data_12 = self.database.read_data(self.random_12, self.id)
+        data_21 = self.database.read_data(self.random_21, self.id)
+        data_22 = self.database.read_data(self.random_22, self.id)
 
         all_data = {}
-        all_data['data_11'] = data_11
-        all_data['data_12'] = data_12
-        all_data['data_21'] = data_21
-        all_data['data_22'] = data_22
+        all_data['data_11'] = data_11 or {}
+        all_data['data_12'] = data_12 or {}
+        all_data['data_21'] = data_21 or {}
+        all_data['data_22'] = data_22 or {}
 
         if not any(all_data):  # got no data from any stream
             sleep(0.5)
@@ -69,7 +65,6 @@ class SignalAnalyzer(Analyzer):
     def start(self):
         """ extends streamer start method before loop """
         try:
-            print(self.targets[self.group]['Raw'])
             self.get_info()
         except:
             raise Exception("Missing info.".format(self))
