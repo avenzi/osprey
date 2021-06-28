@@ -200,35 +200,49 @@ class Database:
             self.bookmarks[reader][stream] = response[0][1][-1][0]
             data_list = response[0][1]
 
-        # get keys from data dict
-        keys = list(data_list[0][1].keys())
-        if decode:  # keys already decoded
-            output_keys = keys
-        else:  # don't leave keys encoded
-            output_keys = [key.decode('utf-8') for key in keys]
-
         # create final output dict
-        output = {key: [] for key in output_keys}
+        output = {}
 
         # loop through stream data
-        if numerical:
+        if numerical and decode:
+            for data in data_list:
+                d = data[1]  # data dict. data[0] is the timestamp ID
+                for key in d.keys():
+                    if output.get(key):
+                        output[key].append(float(d[key]))  # convert to float and append
+                    else:
+                        output[key] = [float(d[key])]
+
+        elif numerical and not decode:
+            for data in data_list:
+                d = data[1]  # data dict. data[0] is the timestamp ID
+                for key in d.keys():
+                    k = key.decode('utf-8')  # key won't be decoded, but it needs to be
+                    if output.get(key):
+                        output[k].append(float(d[key]))  # convert to float and append
+                    else:
+                        output[k] = [float(d[key])]
+
+        elif not numerical and decode:
             for data in data_list:
                 # data[0] is the timestamp ID
                 d = data[1]  # data dict
-                for i in range(len(keys)):
-                    try:
-                        output[output_keys[i]].append(float(d[keys[i]]))  # convert to float and append
-                    except Exception as e:
-                        print(output)
-                        print(d)
-                        print(data_list)
-                        raise e
-        else:
+                for key in d.keys():
+                    if output.get(key):
+                        output[key].append(d[key])  # append
+                    else:
+                        output[key] = [d[key]]
+
+        elif not numerical and not decode:
             for data in data_list:
                 # data[0] is the timestamp ID
                 d = data[1]  # data dict
-                for i in range(len(keys)):
-                    output[output_keys[i]].append(d[keys[i]])
+                for key in d.keys():
+                    k = key.decode('utf-8')  # key won't be decoded, but it needs to be
+                    if output.get(key):
+                        output[k].append(d[key])  # append
+                    else:
+                        output[k] = [d[key]]
 
         if to_json:
             return json.dumps(output)
