@@ -587,6 +587,7 @@ class Analyzer(Streamer):
     def init(self):
         """ Extend init to look for the target stream """
         super().init()
+        print("RUNNING INIT")
         self.get_target()  # check for target stream
 
     def target(self, name, group=None):
