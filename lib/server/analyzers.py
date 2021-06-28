@@ -36,11 +36,13 @@ class TestAnalyzer(Analyzer):
         # If that stream didn't get read from the database,
         output = {name: [] for name in all_data.keys()}
         for name, data in all_data.items():
-                a = np.array(data['val_1'])
-                b = np.array(data['val_2'])
-                c = np.array(data['val_3'])
-                output['data_'+name] = np.average((a, b, c), axis=0)
-                output['time_'+name] = data['time']
+            if not data:  # no data gotten for this one
+                continue
+            a = np.array(data['val_1'])
+            b = np.array(data['val_2'])
+            c = np.array(data['val_3'])
+            output['data_'+name] = np.average((a, b, c), axis=0)
+            output['time_'+name] = data['time']
 
         # output processed data to new stream
         self.database.write_data(self.id, output)
