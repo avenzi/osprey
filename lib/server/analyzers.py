@@ -40,7 +40,7 @@ class TestAnalyzer(Analyzer):
         # This averages the value of the 3 columns
         output = {name: [] for name in all_data.keys()}
         for name, data in all_data.items():
-            if not data.get('val_1'):  # no data returned by database
+            if not data:  # no data returned by database
                 output[name] = []
             else:
                 a = np.array(data['val_1'])
