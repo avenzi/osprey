@@ -400,7 +400,6 @@ class WorkerNode(Base):
 
     def cleanup(self):
         """ Shutdown all handlers associated with this connection and signal that it shut down """
-        super().cleanup()
         self.debug("Worker {} Closed.".format(self))
         self.pipe.send('SHUTDOWN')  # Signal to the server that this connection is shutting down
 
@@ -567,6 +566,10 @@ class Streamer(WorkerNode):
     def time(self):
         """ Get time passed since the stream started """
         return time.time() - self.start_time
+
+    def cleanup(self):
+        self.database.shutdown()
+        super().cleanup()
 
 
 class Analyzer(Streamer):
