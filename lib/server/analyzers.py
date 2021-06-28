@@ -21,32 +21,26 @@ class TestAnalyzer(Analyzer):
     def loop(self):
         """ Maine execution loop """
         # get most recent data from raw data stream
-        data_11 = self.database.read_data(self.random_11, self.id)
-        data_12 = self.database.read_data(self.random_12, self.id)
-        data_21 = self.database.read_data(self.random_21, self.id)
-        data_22 = self.database.read_data(self.random_22, self.id)
-
         all_data = {}
-        all_data['data_11'] = data_11
-        all_data['data_12'] = data_12
-        all_data['data_21'] = data_21
-        all_data['data_22'] = data_22
+        all_data['11'] = self.database.read_data(self.random_11, self.id)
+        all_data['12'] = self.database.read_data(self.random_12, self.id)
+        all_data['21'] = self.database.read_data(self.random_21, self.id)
+        all_data['22'] = self.database.read_data(self.random_22, self.id)
 
         if not any(all_data):  # got no data from any stream
             sleep(0.5)
             return
 
         # perform some operation on the data.
-        # This averages the value of the 3 columns
+        # This averages the value of the 3 columns for each stream
+        # If that stream didn't get read from the database,
         output = {name: [] for name in all_data.keys()}
         for name, data in all_data.items():
-            if not data:  # no data returned by database
-                output[name] = []
-            else:
                 a = np.array(data['val_1'])
                 b = np.array(data['val_2'])
                 c = np.array(data['val_3'])
-                output[name] = np.average((a, b, c), axis=0)
+                output['data_'+name] = np.average((a, b, c), axis=0)
+                output['time_'+name] = data['time']
 
         # output processed data to new stream
         self.database.write_data(self.id, output)

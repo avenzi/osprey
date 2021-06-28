@@ -46,10 +46,10 @@ def create_layout(info):
 
     data3 = figure(title='Average', x_axis_label='time', y_axis_label='Data', toolbar_location=None, plot_width=600, plot_height=300)
     data3.toolbar.active_drag = None
-    data3.line(x='time', y='data_11', legend_label='Data 11', color='blue', source=source3)
-    data3.line(x='time', y='data_12', legend_label='Data 12', color='green', source=source3)
-    data3.line(x='time', y='data_21', legend_label='Data 21', color='red', source=source3)
-    data3.line(x='time', y='data_22', legend_label='Data 22', color='yellow', source=source3)
+    data3.line(x='time_11', y='data_11', legend_label='Data 11', color='blue', source=source3)
+    data3.line(x='time_12', y='data_12', legend_label='Data 12', color='green', source=source3)
+    data3.line(x='time_21', y='data_21', legend_label='Data 21', color='red', source=source3)
+    data3.line(x='time_22', y='data_22', legend_label='Data 22', color='yellow', source=source3)
 
     # create layout
     return layout([[data1, data2], [data3]])  # format into layout object
