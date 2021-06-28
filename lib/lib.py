@@ -567,10 +567,6 @@ class Streamer(WorkerNode):
         """ Get time passed since the stream started """
         return time.time() - self.start_time
 
-    def cleanup(self):
-        self.database.shutdown()
-        super().cleanup()
-
 
 class Analyzer(Streamer):
     """
