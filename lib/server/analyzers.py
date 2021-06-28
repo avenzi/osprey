@@ -5,6 +5,7 @@ import json
 
 from lib.lib import Analyzer
 from lib.server.analysis_lib import MovingAverage
+from lib.database import DatabaseError
 from app.bokeh_layouts.eeg_stream import config as EEG_WIDGET_CONFIG
 from app.bokeh_layouts.ecg_stream import config as ECG_WIDGET_CONFIG
 
@@ -20,10 +21,14 @@ class TestAnalyzer(Analyzer):
     def loop(self):
         """ Maine execution loop """
         # get most recent data from raw data stream
-        data_11 = self.database.read_data(self.random_11, self.id)
-        data_12 = self.database.read_data(self.random_12, self.id)
-        data_21 = self.database.read_data(self.random_21, self.id)
-        data_22 = self.database.read_data(self.random_22, self.id)
+        data_11, data_12, data_21, data_22 = {}, {}, {}, {}
+        try:
+            data_11 = self.database.read_data(self.random_11, self.id)
+            data_12 = self.database.read_data(self.random_12, self.id)
+            data_21 = self.database.read_data(self.random_21, self.id)
+            data_22 = self.database.read_data(self.random_22, self.id)
+        except DatabaseError:
+            pass
 
         all_data = {}
         if data_11: all_data['data_11'] = data_11
@@ -260,7 +265,6 @@ class EEGFilter(SignalFilter):
         self.raw_id = self.targets[self.group]['Raw']['id']
         self.sample_rate = int(self.database.read_info(self.raw_id)['sample_rate'])
         self.channels = self.database.read_info(self.raw_id)['channels'].split(',')  # its a comma separated string
-        print('------------- GOT INFO', self.sample_rate, self.channels)
 
 
 class ECGFilter(SignalFilter):
@@ -274,7 +278,7 @@ class ECGFilter(SignalFilter):
         # Make sure that the derived SignalFilter targets streams in its own group with the name 'Raw'.
         # Get info from raw database
         self.raw_id = self.targets[self.group]['Raw']['id']
-        self.sample_rate = self.database.read_info(self.raw_id)['sample_rate']
+        self.sample_rate = int(self.database.read_info(self.raw_id)['sample_rate'])
         self.channels = self.database.read_info(self.raw_id)['ecg_channels'].split(',')  # its a comma separated string
 
 
@@ -288,7 +292,7 @@ class EEGFourier(SignalFourier):
     def get_info(self):
         self.raw_id = self.targets[self.group]['Raw']['id']
         self.filtered_id = self.targets[self.group]['Filtered']['id']
-        self.sample_rate = self.database.read_info(self.raw_id)['sample_rate']
+        self.sample_rate = int(self.database.read_info(self.raw_id)['sample_rate'])
         self.channels = self.database.read_info(self.raw_id)['channels'].split(',')  # its a comma separated string
 
         # x/y positions for electrodes in head plots
@@ -357,7 +361,7 @@ class ECGFourier(SignalFourier):
     def get_info(self):
         self.raw_id = self.targets[self.group]['Raw']['id']
         self.filtered_id = self.targets[self.group]['Filtered']['id']
-        self.sample_rate = self.database.read_info(self.raw_id)['sample_rate']
+        self.sample_rate = int(self.database.read_info(self.raw_id)['sample_rate'])
         self.channels = self.database.read_info(self.raw_id)['ecg_channels'].split(',')  # its a comma separated string
 
 
@@ -375,7 +379,7 @@ class PulseAnalyzer(Analyzer):
 
     def get_info(self):
         self.raw_id = self.targets[self.group]['Raw']['id']
-        self.sample_rate = self.database.read_info(self.raw_id)['sample_rate']
+        self.sample_rate = int(self.database.read_info(self.raw_id)['sample_rate'])
         self.channels = self.database.read_info(self.raw_id)['channels'].split(',')  # its a comma separated string
 
     def loop(self):
