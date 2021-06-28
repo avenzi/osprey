@@ -31,12 +31,12 @@ class TestAnalyzer(Analyzer):
             pass
 
         all_data = {}
-        if data_11: all_data['data_11'] = data_11
-        if data_12: all_data['data_12'] = data_12
-        if data_21: all_data['data_21'] = data_21
-        if data_22: all_data['data_22'] = data_22
+        all_data['data_11'] = data_11
+        all_data['data_12'] = data_12
+        all_data['data_21'] = data_21
+        all_data['data_22'] = data_22
 
-        if not all_data:  # got no data from any stream
+        if not any(all_data):  # got no data from any stream
             sleep(0.5)
             return
 
@@ -44,9 +44,9 @@ class TestAnalyzer(Analyzer):
         # This averages the value of the 3 columns
         output = {name: [] for name in all_data.keys()}
         for name, data in all_data.items():
-            a = np.array(data['val_1'])
-            b = np.array(data['val_2'])
-            c = np.array(data['val_3'])
+            a = np.array(data.get('val_1', []))
+            b = np.array(data.get('val_2', []))
+            c = np.array(data.get('val_3', []))
             output[name] = np.average((a, b, c), axis=0)
 
         # output processed data to new stream
@@ -72,7 +72,7 @@ class SignalAnalyzer(Analyzer):
             print(self.targets[self.group]['Raw'])
             self.get_info()
         except:
-            raise "Missing info.".format(self)
+            raise Exception("Missing info.".format(self))
 
     def get_info(self):
         pass
