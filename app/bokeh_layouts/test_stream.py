@@ -3,8 +3,8 @@ from bokeh.models import AjaxDataSource
 from bokeh.layouts import layout
 from bokeh.settings import settings
 
-settings.minified(False)
-settings.log_level('debug')
+settings.minified.set_value(False)
+settings.log_level.set_value('debug')
 
 
 def create_layout(info):
