@@ -218,10 +218,9 @@ class Database:
                 for i in range(len(keys)):
                     try:
                         output[output_keys[i]].append(float(d[keys[i]]))  # convert to float and append
-                    except:
+                    except Exception as e:
                         print(output)
-                        print(keys)
-                        print(output_keys)
+                        raise e
         else:
             for data in data_list:
                 # data[0] is the timestamp ID
