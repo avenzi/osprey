@@ -10,9 +10,7 @@ from app.bokeh_layouts.ecg_stream import config as ECG_WIDGET_CONFIG
 
 
 class TestAnalyzer(Analyzer):
-    def __init__(self, *args):
-        super().__init__(*args)
-
+    def start(self):
         # Get IDs for each data stream
         self.random_11 = self.targets['Test Group 1']['Random 1']['id']
         self.random_12 = self.targets['Test Group 1']['Random 2']['id']
