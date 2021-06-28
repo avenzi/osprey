@@ -220,9 +220,8 @@ class Database:
                         output[output_keys[i]].append(float(d[keys[i]]))  # convert to float and append
                     except Exception as e:
                         print(output)
-                        print(output_keys)
                         print(d)
-                        print(keys)
+                        print(data_list)
                         raise e
         else:
             for data in data_list:
