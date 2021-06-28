@@ -260,6 +260,7 @@ class EEGFilter(SignalFilter):
         self.raw_id = self.targets[self.group]['Raw']['id']
         self.sample_rate = self.database.read_info(self.raw_id)['sample_rate']
         self.channels = self.database.read_info(self.raw_id)['channels'].split(',')  # its a comma separated string
+        print('------------- GOT INFO', self.sample_rate, self.channels)
 
 
 class ECGFilter(SignalFilter):
