@@ -63,6 +63,7 @@ def plot_layout():
     create_layout = server_stream_config.bokeh_layouts.get(group_name)
     if not create_layout:
         err = "No layout function specified for group '{}'".format(group_name)
+        return err, 404
 
     try:
         layout = create_layout(info)  # bokeh layout object
