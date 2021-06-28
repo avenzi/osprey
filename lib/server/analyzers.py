@@ -69,8 +69,9 @@ class SignalAnalyzer(Analyzer):
     def start(self):
         """ extends streamer start method before loop """
         try:
+            print(self.targets[self.group]['Raw'])
             self.get_info()
-            print("INFO: ", self.sample_rate, self.channels)
+            print("INFO: ", self.sample_rate, self.channels, type(self.sample_rate))
         except:
             self.log("{} Failed to start. Missing info.".format(self))
 
@@ -262,10 +263,11 @@ class EEGFilter(SignalFilter):
 
     def get_info(self):
         # Make sure that the derived SignalFilter targets streams in its own group with the name 'Raw'.
-        # Get info from raw database
-        self.raw_id = self.targets[self.group]['Raw']['id']
-        self.sample_rate = int(self.database.read_info(self.raw_id)['sample_rate'])
-        self.channels = self.database.read_info(self.raw_id)['channels'].split(',')  # its a comma separated string
+        # Get info from database
+        raw = self.targets[self.group]['Raw']
+        self.raw_id = raw['id']
+        self.sample_rate = raw['sample_rate']
+        self.channels = raw['channels'].split(',')  # its a comma separated string
 
 
 class ECGFilter(SignalFilter):
@@ -278,9 +280,10 @@ class ECGFilter(SignalFilter):
     def get_info(self):
         # Make sure that the derived SignalFilter targets streams in its own group with the name 'Raw'.
         # Get info from raw database
-        self.raw_id = self.targets[self.group]['Raw']['id']
-        self.sample_rate = int(self.database.read_info(self.raw_id)['sample_rate'])
-        self.channels = self.database.read_info(self.raw_id)['ecg_channels'].split(',')  # its a comma separated string
+        raw = self.targets[self.group]['Raw']
+        self.raw_id = raw['id']
+        self.sample_rate = raw['sample_rate']
+        self.channels = raw['ecg_channels'].split(',')  # its a comma separated string
 
 
 class EEGFourier(SignalFourier):
@@ -291,10 +294,12 @@ class EEGFourier(SignalFourier):
         self.head_x, self.head_y = [], []
 
     def get_info(self):
-        self.raw_id = self.targets[self.group]['Raw']['id']
-        self.filtered_id = self.targets[self.group]['Filtered']['id']
-        self.sample_rate = int(self.database.read_info(self.raw_id)['sample_rate'])
-        self.channels = self.database.read_info(self.raw_id)['channels'].split(',')  # its a comma separated string
+        raw = self.targets[self.group]['Raw']
+        filtered = self.targets[self.group]['Filtered']
+        self.raw_id = raw['id']
+        self.filtered_id = filtered['id']
+        self.sample_rate = raw['sample_rate']
+        self.channels = raw['channels'].split(',')  # its a comma separated string
 
         # x/y positions for electrodes in head plots
         with open('app/static/electrodes.json', 'r') as f:
@@ -360,10 +365,12 @@ class ECGFourier(SignalFourier):
         self.widgets = ECG_WIDGET_CONFIG  # all widget parameters for fourier and filtering
 
     def get_info(self):
-        self.raw_id = self.targets[self.group]['Raw']['id']
-        self.filtered_id = self.targets[self.group]['Filtered']['id']
-        self.sample_rate = int(self.database.read_info(self.raw_id)['sample_rate'])
-        self.channels = self.database.read_info(self.raw_id)['ecg_channels'].split(',')  # its a comma separated string
+        raw = self.targets[self.group]['Raw']
+        filtered = self.targets[self.group]['Filtered']
+        self.raw_id = raw['id']
+        self.filtered_id = filtered['id']
+        self.sample_rate = raw['sample_rate']
+        self.channels = raw['ecg_channels'].split(',')  # its a comma separated string
 
 
 class PulseAnalyzer(Analyzer):
@@ -379,9 +386,10 @@ class PulseAnalyzer(Analyzer):
         self.heart_rate = MovingAverage(self.window)  # heart rate moving average
 
     def get_info(self):
-        self.raw_id = self.targets[self.group]['Raw']['id']
-        self.sample_rate = int(self.database.read_info(self.raw_id)['sample_rate'])
-        self.channels = self.database.read_info(self.raw_id)['channels'].split(',')  # its a comma separated string
+        raw = self.targets[self.group]['Raw']
+        self.raw_id = raw['id']
+        self.sample_rate = raw['sample_rate']
+        self.channels = raw['channels'].split(',')  # its a comma separated string
 
     def loop(self):
         """ Maine execution loop """

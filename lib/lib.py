@@ -629,9 +629,12 @@ class Analyzer(Streamer):
             if float(info['updated']) < self.targets[group][name].get('updated', 0):
                 continue
 
-            # set ID of this target and update time
-            self.targets[group][name]['id'] = info['id']
-            self.targets[group][name]['updated'] = float(info['updated'])
+            # copy info from database to appropriate dictionary
+            for key, val in info.items():
+                try:  # attempt to convert to float
+                    self.targets[group][name][key] = float(val)
+                except:
+                    self.targets[group][name][key] = val
             info_updated = True
 
         # output notification that targets were found
