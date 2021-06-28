@@ -613,6 +613,7 @@ class Analyzer(Streamer):
         else:  # stream ID given
             info_list = [self.database.read_info(stream_id)]
 
+        print("READING INFO")
         info_updated = False  # flag for displaying debug info
         for info in info_list:
             group = info['group']
@@ -629,6 +630,7 @@ class Analyzer(Streamer):
             if float(info['updated']) < self.targets[group][name].get('updated', 0):
                 continue
 
+            print("FOUND TARGET")
             # copy info from database to appropriate dictionary
             for key, val in info.items():
                 try:  # attempt to convert to float
