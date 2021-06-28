@@ -71,9 +71,8 @@ class SignalAnalyzer(Analyzer):
         try:
             print(self.targets[self.group]['Raw'])
             self.get_info()
-            print("INFO: ", self.sample_rate, self.channels, type(self.sample_rate))
         except:
-            self.log("{} Failed to start. Missing info.".format(self))
+            raise "Missing info.".format(self)
 
     def get_info(self):
         pass

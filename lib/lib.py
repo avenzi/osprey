@@ -504,12 +504,10 @@ class Streamer(WorkerNode):
         # get connection to server socketIO
         self.connect_socket()
 
-        print("BEFORE")
-
         # get connection to database
         self.database = Database(self.ip, self.db_port, self.db_pass)
         self.database.connect()
-        print('AFTER')
+        self.log("{} Connected to Database".format(self))
 
     def update(self):
         """ Send info to database and signal update to server """
@@ -530,7 +528,11 @@ class Streamer(WorkerNode):
         """
         if self.streaming.is_set():  # already running
             return
-        self.start()  # call subclassed start method
+        try:
+            self.start()  # call subclassed start method
+        except Exception as e:
+            self.log("Failed to start {} ({})".format(self, e))
+            return
         self.streaming.set()  # set streaming, which starts the main execution while loop
         self.log("Started {}".format(self))
         self.socket.emit('log', "Started {}".format(self), namespace='/streamers')
@@ -590,7 +592,6 @@ class Analyzer(Streamer):
     def init(self):
         """ Extend init to look for the target stream """
         super().init()
-        print("RUNNING INIT")
         self.get_target()  # check for target stream
 
     def target(self, name, group=None):
@@ -617,7 +618,6 @@ class Analyzer(Streamer):
         else:  # stream ID given
             info_list = [self.database.read_info(stream_id)]
 
-        print("READING INFO")
         info_updated = False  # flag for displaying debug info
         for info in info_list:
             group = info['group']
@@ -634,7 +634,6 @@ class Analyzer(Streamer):
             if float(info['updated']) < self.targets[group][name].get('updated', 0):
                 continue
 
-            print("FOUND TARGET")
             # copy info from database to appropriate dictionary
             for key, val in info.items():
                 try:  # attempt to convert to float
