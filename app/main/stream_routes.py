@@ -39,6 +39,7 @@ def stream():
 
     try:
         info = current_app.database.read_group(group_name)
+        print("----------------------", info)
         return render_template(template_path, info=info, title=group_name)
     except TemplateNotFound as e:
         return render_template('/error.html', error="Template Not Found: \"{}\"".format(template_path))
