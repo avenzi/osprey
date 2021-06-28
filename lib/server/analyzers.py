@@ -30,8 +30,6 @@ class TestAnalyzer(Analyzer):
         except DatabaseError:
             pass
 
-        print(bool(data_11), bool(data_12), bool(data_21), bool(data_22))
-
         all_data = {}
         if data_11: all_data['data_11'] = data_11
         if data_12: all_data['data_12'] = data_12
@@ -72,8 +70,9 @@ class SignalAnalyzer(Analyzer):
         """ extends streamer start method before loop """
         try:
             self.get_info()
+            print("INFO: ", self.sample_rate, self.channels)
         except:
-            self.log("{} Failed to start. Missing info.")
+            self.log("{} Failed to start. Missing info.".format(self))
 
     def get_info(self):
         pass

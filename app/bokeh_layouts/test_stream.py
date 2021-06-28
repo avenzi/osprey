@@ -1,6 +1,10 @@
 from bokeh.plotting import figure
 from bokeh.models import AjaxDataSource
 from bokeh.layouts import layout
+from bokeh.settings import settings
+
+settings.minified = False
+settings.log_level = 'debug'
 
 
 def create_layout(info):
