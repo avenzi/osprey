@@ -216,7 +216,12 @@ class Database:
                 # data[0] is the timestamp ID
                 d = data[1]  # data dict
                 for i in range(len(keys)):
-                    output[output_keys[i]].append(float(d[keys[i]]))  # convert to float and append
+                    try:
+                        output[output_keys[i]].append(float(d[keys[i]]))  # convert to float and append
+                    except:
+                        print(output)
+                        print(keys)
+                        print(output_keys)
         else:
             for data in data_list:
                 # data[0] is the timestamp ID
