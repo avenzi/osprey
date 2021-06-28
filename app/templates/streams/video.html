@@ -8,8 +8,8 @@
     <video controls autoplay muted id="stream" onplay="skip()"></video>
     <script>
         // original width and height sent from stream
-        var stream_width = {{info['Video']['width']}};
-        var stream_height = {{info['Video']['height']}};
+        var stream_width = {{info['Raw']['width']}};
+        var stream_height = {{info['Raw']['height']}};
         var ratio = stream_width/stream_height
         var height = 600; // desired height in browser
         var width = Math.round(ratio*height)  // width to maintain aspect ratio
@@ -26,7 +26,7 @@
 			node: 'stream',
 			mode: 'video',
 			flushingTime: 0,
-			fps: {{info['Video']['framerate']}},
+			fps: {{info['Raw']['framerate']}},
 			debug: false
 		});
 
@@ -36,7 +36,7 @@
 		    vid.currentTime = Math.floor(vid.duration);
 		}
 
-		var id = "{{info['Video']['id']}}";
+		var id = "{{info['Raw']['id']}}";
 
         // socketio namespace specifies ID of the stream
         var socket = io('/video_stream');
