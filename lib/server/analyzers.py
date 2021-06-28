@@ -27,7 +27,7 @@ class TestAnalyzer(Analyzer):
         all_data['21'] = self.database.read_data(self.random_21, self.id)
         all_data['22'] = self.database.read_data(self.random_22, self.id)
 
-        if not any(all_data):  # got no data from any stream
+        if not any(all_data.values()):  # got no data from any stream
             sleep(0.5)
             return
 
