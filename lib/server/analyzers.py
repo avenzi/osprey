@@ -30,6 +30,8 @@ class TestAnalyzer(Analyzer):
         except DatabaseError:
             pass
 
+        print(bool(data_11), bool(data_12), bool(data_21), bool(data_22))
+
         all_data = {}
         if data_11: all_data['data_11'] = data_11
         if data_12: all_data['data_12'] = data_12
@@ -71,7 +73,7 @@ class SignalAnalyzer(Analyzer):
         try:
             self.get_info()
         except:
-            self.throw("{} Failed to start. Missing info.", trace=False)
+            self.log("{} Failed to start. Missing info.")
 
     def get_info(self):
         pass
