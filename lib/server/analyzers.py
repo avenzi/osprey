@@ -258,7 +258,7 @@ class EEGFilter(SignalFilter):
         # Make sure that the derived SignalFilter targets streams in its own group with the name 'Raw'.
         # Get info from raw database
         self.raw_id = self.targets[self.group]['Raw']['id']
-        self.sample_rate = self.database.read_info(self.raw_id)['sample_rate']
+        self.sample_rate = int(self.database.read_info(self.raw_id)['sample_rate'])
         self.channels = self.database.read_info(self.raw_id)['channels'].split(',')  # its a comma separated string
         print('------------- GOT INFO', self.sample_rate, self.channels)
 
