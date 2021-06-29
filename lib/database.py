@@ -237,6 +237,7 @@ class Database:
             for data in data_list:
                 # data[0] is the timestamp ID
                 d = data[1]  # data dict
+                print(d)
                 for key in d.keys():
                     k = key.decode('utf-8')  # key won't be decoded, but it needs to be
                     if output.get(key):
