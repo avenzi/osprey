@@ -243,6 +243,7 @@ class Database:
                         output[k].append(d[key])  # append
                     else:
                         output[k] = [d[key]]
+            print(len(list(output.values())[0]))
 
         if to_json:
             return json.dumps(output)
