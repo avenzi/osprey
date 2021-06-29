@@ -203,7 +203,9 @@ class Database:
         # create final output dict
         output = {}
 
-        # loop through stream data
+        # loop through stream data and convert if necessart
+
+        # I hate this
         if numerical and decode:
             for data in data_list:
                 d = data[1]  # data dict. data[0] is the timestamp ID
@@ -237,7 +239,6 @@ class Database:
             for data in data_list:
                 # data[0] is the timestamp ID
                 d = data[1]  # data dict
-                print(len(d[b'frame']))
                 for key in d.keys():
                     k = key.decode('utf-8')  # key won't be decoded, but it needs to be
                     if output.get(k):
