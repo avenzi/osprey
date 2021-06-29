@@ -133,13 +133,25 @@ class Database:
     def write_data(self, stream, data):
         """
         Writes time series <data> to stream:<stream>.
-        <data> must be a dictionary of lists, where keys are data column names.
+        if <data> is a dictionary of items where keys are column names.
+        items must either all be iterable or all non-iterable.
         """
         if hasattr(type(list(data.values())[0]), '__iter__'):  # if an iterable sequence of data points
             pipe = self.redis.pipeline()  # pipeline queues a series of commands at once
-            for i in range(len(list(data.values())[0])):  # get length of a random key (all the same)
-                # get slice of each data point as dictionary
-                pipe.xadd('stream:'+stream, {key: data[key][i] for key in data.keys()})
+            max_length = 0  # get the size of the longest column
+            for val in data.values():
+                length = len(val)
+                if length > max_length:
+                    max_length = length
+
+            for i in range(max_length):
+                d = {}
+                for key, val in data.items():
+                    if len(val) <= i:
+                        continue
+                    d[key] = data[key][i]
+                pipe.xadd('stream:'+stream, d)
+
             pipe.execute()
         else:  # assume this is a single data point
             self.redis.xadd('stream:'+stream, {key: data[key] for key in data.keys()})
