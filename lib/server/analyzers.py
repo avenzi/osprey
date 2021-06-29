@@ -45,8 +45,9 @@ class TestAnalyzer(Analyzer):
             output['time_'+name] = data['time']
 
         # output processed data to new stream
+        print(output)
         self.database.write_data(self.id, output)
-        sleep(0.1)
+        sleep(1)
 
 
 ########################

@@ -64,7 +64,6 @@ def run_video_stream(database, ID):
             break
         frames = data_dict['frame']  # get list of unread frames
         data = b''.join(frames)  # concatenate all read frames
-        print(len(data))
         try:
             socketio.emit('data', data, namespace='/video_stream', room=ID)
         except Exception as e:
