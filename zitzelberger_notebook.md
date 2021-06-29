@@ -33,6 +33,16 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### June 28th, 2021:
+
+Today I'm just focusing on debugging the system I decided on yesterday. I had some trouble making each Analyzer able to access the ID of its targeted streams. As of yet I have not gotten rid of IDs just in case I need them in the future.
+
+I also started having a weird issue where the server takes an unusually long amount of time to connect to the redis database. It's always been near-instant, but today it takes a solid 5-15 seconds, and sometimes it just never does. I have no idea why. I think it was just a temporary network issue because it went away after a few hours. Still annoying though.
+
+I had some problems with the Test Data Analyzer, which is what I'm using to find bugs before I try to make changes to something like the EEG stream. I found out that my Database.read_data() method didn't cover the edge case where the data being read has columns of different sizes. Up until now, all the data being put into the database has had consistent lengths within each write operation. This ties into one of the most annoying things about redis, and that's the fact that data points are written and read individually each with their own data column name. This means that each data point is read in as a dictionary, and I have to manually collect these points into a dictionary of lists. When these lists don't have the same length, my algorithm breaks because I was checking the keys at the beginning of the loop to make it more efficient rather than checking every time I read in a data point. Now that the Test Analyzer has revealed that writing multiple streams to the same group creates this problem, I had to rewrite this code to slightly less efficient, which I am not happy about.
+
+Even after fixing that, I am still getting an error in the Bokeh plot. Evidently it doesn't like two completely separate data columns having different sizes. sigh.
+
 ##### June 25th, 2021:
 
 For the past few days I've been experimenting with InfluxDB to see whether I can feasibly replace Redis with it relatively quickly. InfluxDB is a database designed specifically for time-series data and IoT streaming, so I figured it would be perfect for the job. Redis isn't the best fit because it focuses primarily on being a fast key-value store rather than a real-time streaming centered data store. I was able to download InfluxDB onto the AWS instance and play around with its REPL interface to get a feel for it. I learned that Influx has its own unique query language called FLUX which can perform read operations similar to grouping and indexing methods used by SQL queries, but in an easier to read format designed for reading time-series data. This would be fantastic, except that I could not get data writes to go through with the provided python library. I'm not sure what the issue was as I couldn't really debug it - my read queries were just returning no data. If I spent enough time on this I might be able to get it working but I discussed it with Dr. Ghassemi and he suggested that I drop it for now. Redis is working fine for the time being and will server its purpose to get the data we need for the MSGC grant. Once we have more time to improve the project I may return to this.

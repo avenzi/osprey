@@ -218,7 +218,7 @@ class Database:
                 d = data[1]  # data dict. data[0] is the timestamp ID
                 for key in d.keys():
                     k = key.decode('utf-8')  # key won't be decoded, but it needs to be
-                    if output.get(key):
+                    if output.get(k):
                         output[k].append(float(d[key]))  # convert to float and append
                     else:
                         output[k] = [float(d[key])]
@@ -240,7 +240,7 @@ class Database:
                 print(len(d[b'frame']))
                 for key in d.keys():
                     k = key.decode('utf-8')  # key won't be decoded, but it needs to be
-                    if output.get(key):
+                    if output.get(k):
                         output[k].append(d[key])  # append
                     else:
                         output[k] = [d[key]]
