@@ -5,10 +5,6 @@ from bokeh.settings import settings
 
 
 def create_layout(info):
-
-    settings.minified = False
-    settings.log_level = 'debug'
-
     source1 = AjaxDataSource(
         data_url='/stream/update?id={}'.format(info['Random 1']['id']),
         method='GET',
