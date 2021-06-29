@@ -3,11 +3,12 @@ from bokeh.models import AjaxDataSource
 from bokeh.layouts import layout
 from bokeh.settings import settings
 
-settings.minified.set_value(False)
-settings.log_level.set_value('debug')
-
 
 def create_layout(info):
+
+    settings.minified = False
+    settings.log_level = 'debug'
+
     source1 = AjaxDataSource(
         data_url='/stream/update?id={}'.format(info['Random 1']['id']),
         method='GET',
