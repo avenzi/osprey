@@ -100,7 +100,7 @@ def plot_update():
 
     if data:
 
-        d = json.loads(data)
+        d = loads(data)
         mismatch = False
         lengths = set()
         for val in data.values():
