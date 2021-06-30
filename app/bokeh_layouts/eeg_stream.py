@@ -13,7 +13,7 @@ BACKEND = 'canvas'  # 'webgl' appears to be broken - makes page unresponsive.
 ELECTRODES_PATH = 'app/static/electrodes.json'
 
 # default values of all widgets and figure attributes
-config = {
+default_config = {
     'fourier_window': 2,
     'spectrogram_range': (-3.0, 1.0),  # color scale range (log)
     'spectrogram_size': 30,
@@ -75,12 +75,19 @@ def create_layout(info):
     # get channel names
     stream_channels = info['Raw']['channels'].split(',')  # it's a comma separated string
 
-    # viridis color palette for channel colors
-    colors = viridis(len(stream_channels))
-
     # get stream IDs
     filtered_id = info['Filtered']['id']  # Filter Analyzer ID
     fourier_id = info['Fourier']['id']  # Fourier Analyzer ID
+
+    # get config
+    config = info.get('widgets')
+    if config:  # config present, it's a JSON string.
+        config = json.loads(config)
+    else:  # no config present, use default
+        config = default_config
+
+    # viridis color palette for channel colors
+    colors = viridis(len(stream_channels))
 
     ##########################
     # create row of widgets that send data to the analyzer streams

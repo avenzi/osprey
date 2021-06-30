@@ -61,7 +61,7 @@ class SignalAnalyzer(Analyzer):
         # Initial information
         self.sample_rate = None
         self.channels = []
-        self.widgets = None
+        self.widgets = {}
 
     def start(self):
         """ extends streamer start method before loop """
@@ -180,6 +180,9 @@ class SignalFilter(SignalAnalyzer):
             # store the new updated value
             self.widgets[key] = val
 
+        # write widgets as JSON string to database under the key 'widgets'
+        self.database.write_info(self.id, {'widgets': json.dumps(self.widgets)})
+
 
 class SignalFourier(SignalAnalyzer):
     """ Base class for performing FFTs on a set of signals """
@@ -247,6 +250,9 @@ class SignalFourier(SignalAnalyzer):
         """ Gets updated widget values from a socketIO json message """
         for key in dic.keys():
             self.widgets[key] = dic[key]
+
+        # write widgets as JSON string to database under the key 'widgets'
+        self.database.write_info(self.id, {'widgets': json.dumps(self.widgets)})
 
 
 class EEGFilter(SignalFilter):
