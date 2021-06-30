@@ -4,7 +4,7 @@ from flask import (
 
 from jinja2.exceptions import TemplateNotFound
 from bokeh.embed import json_item
-from json import dumps
+from json import dumps, loads
 
 from app.main.auth_routes import login_required
 from local import server_stream_config
@@ -99,7 +99,7 @@ def plot_update():
         return "", 500
 
     if data:
-        print("{} : {}".format(request_id, [len(val) for val in data.values()]))
+        print("{} : {}".format(request_id, [len(val) for val in loads(data).values()]))
         resp = Response(response=data, content_type='application/json')
         resp.headers['Cache-Control'] = 'no-store'
         return resp
