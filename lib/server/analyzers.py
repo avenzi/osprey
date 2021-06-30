@@ -49,8 +49,8 @@ class TestAnalyzer(Analyzer):
         for name, data in all_data.items():
             if not data:  # no data gotten for this one
                 # pad output to match max size
-                output['data_' + name] = ["nan"]*max_length
-                output['time_' + name] = ["nan"]*max_length
+                #output['data_' + name] = ["nan"]*max_length
+                #output['time_' + name] = ["nan"]*max_length
                 continue
             a = np.array(data['val_1'])
             b = np.array(data['val_2'])
@@ -59,8 +59,8 @@ class TestAnalyzer(Analyzer):
             output['time_'+name] = data['time']
 
             # pad to match max size
-            output['data_'+name] += ["nan"]*(max_length-len(output['data_'+name]))
-            output['time_'+name] += ["nan"]*(max_length-len(output['time_'+name]))
+            #output['data_'+name] += ["nan"]*(max_length-len(output['data_'+name]))
+            #output['time_'+name] += ["nan"]*(max_length-len(output['time_'+name]))
 
         # output processed data to new stream
         self.database.write_data(self.id, output)
