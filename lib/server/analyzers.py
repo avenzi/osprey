@@ -31,18 +31,34 @@ class TestAnalyzer(Analyzer):
             sleep(0.5)
             return
 
+        # Bokeh doesn't like when data columns have different sizes.
+        # get biggest size of all data coming in to pad the smaller ones
+        max_length = 0
+        for data in all_data.values():
+            if data:
+                length = len(data)
+                if length > max_length:
+                    max_length = length
+
         # perform some operation on the data.
         # This averages the value of the 3 columns for each stream
         # need separate time columns so bokeh knows how much to plot for each since they are separate streams
         output = {}
         for name, data in all_data.items():
             if not data:  # no data gotten for this one
+                # pad output to match max size
+                output['data_' + name] = [np.nan]*max_length
+                output['time_' + name] = [np.nan]*max_length
                 continue
             a = np.array(data['val_1'])
             b = np.array(data['val_2'])
             c = np.array(data['val_3'])
             output['data_'+name] = np.average((a, b, c), axis=0)
             output['time_'+name] = data['time']
+
+            # pad to match max size
+            output['data_'+name] += [np.nan]*(max_length-len(output['data_'+name]))
+            output['time_'+name] += [np.nan]*(max_length-len(output['time_'+name]))
 
         # output processed data to new stream
         self.database.write_data(self.id, output)
