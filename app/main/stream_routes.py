@@ -101,9 +101,8 @@ def plot_update():
     if data:
 
         d = loads(data)
-        mismatch = False
         lengths = set()
-        for val in data.values():
+        for val in d.values():
             lengths.add(len(val))
         if len(lengths) > 1:
             print("{} : {}".format(request_id, {key:len(val) for key, val in d.items()}))
