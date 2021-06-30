@@ -88,6 +88,8 @@ def create_layout(info):
         config = default_config
         print('EEG DEFAULT CONFIG')
 
+    print(info)
+
     # viridis color palette for channel colors
     colors = viridis(len(stream_channels))
 
