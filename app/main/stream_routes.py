@@ -99,6 +99,7 @@ def plot_update():
         return "", 500
 
     if data:
+        print("{} : {}".format(request_id, [len(val) for val in data.values()]))
         resp = Response(response=data, content_type='application/json')
         resp.headers['Cache-Control'] = 'no-store'
         return resp
