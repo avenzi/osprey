@@ -21,11 +21,12 @@ class TestAnalyzer(Analyzer):
     def loop(self):
         """ Maine execution loop """
         # get most recent data from raw data stream
-        all_data = {}
-        all_data['11'] = self.database.read_data(self.random_11, self.id)
-        all_data['12'] = self.database.read_data(self.random_12, self.id)
-        all_data['21'] = self.database.read_data(self.random_21, self.id)
-        all_data['22'] = self.database.read_data(self.random_22, self.id)
+        all_data = {
+            '11': self.database.read_data(self.random_11, self.id),
+            '12': self.database.read_data(self.random_12, self.id),
+            '21': self.database.read_data(self.random_21, self.id),
+            '22': self.database.read_data(self.random_22, self.id)
+        }
 
         if not any(all_data.values()):  # got no data from any stream
             sleep(0.5)

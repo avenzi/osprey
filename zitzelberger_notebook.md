@@ -39,6 +39,10 @@ I finally solved the bokeh problem. Since have different data streams being plot
 
 I asked about this on the Bokeh Discourse site (https://discourse.bokeh.org/t/size-mismatch-in-ajaxdatasource-in-append-mode/8082), and they informed me that my workaround wasn't enough, and the ColumnDataSource object always assume columns of equal length *even* in situations where some pairs are independent of one another. They told me that the only solution to streaming completely independednt data streams to a single plot is to use seprately defined AjaxDataSources. So that's what I did. It adds a lot of overhead and 4 times the number of requests sent to the server, but it works. That's all I need for now, but this is yet another thing that I hope will go away when I write up the independent Bokeh server in the future.
 
+This also means that the modifications I made to Database.read_data() and Database.write_data() to handle data columns of unequal length aren't necessary, but I will leave them in just because they are technically now able to handle more general cases. Again, this will all get scrapped anyway when we move to a different database.
+
+
+
 ##### June 28th, 2021:
 
 Today I'm just focusing on debugging the system I decided on yesterday. I had some trouble making each Analyzer able to access the ID of its targeted streams. As of yet I have not gotten rid of IDs just in case I need them in the future.
