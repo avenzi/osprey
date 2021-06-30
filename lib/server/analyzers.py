@@ -53,7 +53,7 @@ class TestAnalyzer(Analyzer):
             a = np.array(data['val_1'])
             b = np.array(data['val_2'])
             c = np.array(data['val_3'])
-            output['data_'+name] = (np.average((a, b, c), axis=0))
+            output['data_'+name] = list(np.average((a, b, c), axis=0))
             output['time_'+name] = data['time']
 
             # pad to match max size
