@@ -83,8 +83,10 @@ def create_layout(info):
     config = info.get('widgets')
     if config:  # config present, it's a JSON string.
         config = json.loads(config)
+        print('SAVED CONFIG: {}'.format(config))
     else:  # no config present, use default
         config = default_config
+        print('DEFAULT CONFIG')
 
     # viridis color palette for channel colors
     colors = viridis(len(stream_channels))
