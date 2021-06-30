@@ -6,8 +6,8 @@ import json
 from lib.lib import Analyzer
 from lib.server.analysis_lib import MovingAverage
 from lib.database import DatabaseError
-from app.bokeh_layouts.eeg_stream import config as EEG_WIDGET_CONFIG
-from app.bokeh_layouts.ecg_stream import config as ECG_WIDGET_CONFIG
+from app.bokeh_layouts.eeg_stream import default_config as EEG_WIDGET_CONFIG
+from app.bokeh_layouts.ecg_stream import default_config as ECG_WIDGET_CONFIG
 
 
 class TestAnalyzer(Analyzer):

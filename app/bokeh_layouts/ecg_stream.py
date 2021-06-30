@@ -6,12 +6,14 @@ from bokeh.transform import log_cmap
 from bokeh.plotting import figure
 from bokeh.palettes import viridis, magma
 
+from json import loads
+
 from app.bokeh_layouts.eeg_stream import js_request
 
 BACKEND = 'canvas'  # 'webgl' appears to be broken - makes page unresponsive.
 
 # default values of all widgets and figure attributes
-config = {
+default_config = {
     'fourier_window': 2,
     'spectrogram_range': (-3.0, 1.0),  # color scale range (log)
     'spectrogram_size': 30,
@@ -46,12 +48,21 @@ def create_layout(info):
 
     channels = [pulse_channels[0]] + ecg_channels
 
-    # viridis color palette for channel colors
-    colors = viridis(len(channels))
+    # get config
+    config = info.get('widgets')
+    if config:  # config present, it's a JSON string.
+        config = loads(config)
+        print('ECG SAVED CONFIG: {}'.format(config))
+    else:  # no config present, use default
+        config = default_config
+        print('ECG DEFAULT CONFIG')
 
     # get stream IDs
     filtered_id = info['Filtered']['id']  # Filter Analyzer ID
     fourier_id = info['Fourier']['id']  # Fourier Analyzer ID
+
+    # viridis color palette for channel colors
+    colors = viridis(len(channels))
 
     ##########################
     # create row of widgets that send data to the analyzer streams

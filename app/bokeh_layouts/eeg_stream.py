@@ -6,7 +6,7 @@ from bokeh.transform import log_cmap
 from bokeh.plotting import figure
 from bokeh.palettes import viridis, magma
 
-import json
+from json import loads
 from scipy import signal
 
 BACKEND = 'canvas'  # 'webgl' appears to be broken - makes page unresponsive.
@@ -82,11 +82,11 @@ def create_layout(info):
     # get config
     config = info.get('widgets')
     if config:  # config present, it's a JSON string.
-        config = json.loads(config)
-        print('SAVED CONFIG: {}'.format(config))
+        config = loads(config)
+        print('EEG SAVED CONFIG: {}'.format(config))
     else:  # no config present, use default
         config = default_config
-        print('DEFAULT CONFIG')
+        print('EEG DEFAULT CONFIG')
 
     # viridis color palette for channel colors
     colors = viridis(len(stream_channels))
@@ -338,7 +338,7 @@ if (low < high) {
 
     # get 2D positions of all possible headset electrodes
     with open(ELECTRODES_PATH, 'r') as f:
-        all_names = json.loads(f.read())
+        all_names = loads(f.read())
 
     x, y = [], []
     for name in stream_channels:  # get coordinates of electrodes by name
