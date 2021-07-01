@@ -6,8 +6,10 @@ import json
 from lib.lib import Analyzer
 from lib.server.analysis_lib import MovingAverage
 from lib.database import DatabaseError
-from app.bokeh_layouts.eeg_stream import default_config as EEG_WIDGET_CONFIG
-from app.bokeh_layouts.ecg_stream import default_config as ECG_WIDGET_CONFIG
+from app.bokeh_layouts.eeg_stream import default_filter_widgets as EEG_FILTER_WIDGETS
+from app.bokeh_layouts.eeg_stream import default_filter_widgets as EEG_FOURIER_WIDGETS
+from app.bokeh_layouts.ecg_stream import default_filter_widgets as ECG_FILTER_WIDGETS
+from app.bokeh_layouts.ecg_stream import default_filter_widgets as ECG_FOURIER_WIDGETS
 
 
 class TestAnalyzer(Analyzer):
@@ -260,7 +262,7 @@ class EEGFilter(SignalFilter):
 
     def __init__(self, *args):
         super().__init__(*args)
-        self.widgets = EEG_WIDGET_CONFIG  # all widget parameters for fourier and filtering
+        self.widgets = EEG_FILTER_WIDGETS  # all widget parameters for fourier and filtering
 
     def get_info(self):
         # Make sure that the derived SignalFilter targets streams in its own group with the name 'Raw'.
@@ -276,7 +278,7 @@ class ECGFilter(SignalFilter):
 
     def __init__(self, *args):
         super().__init__(*args)
-        self.widgets = ECG_WIDGET_CONFIG  # all widget parameters for fourier and filtering
+        self.widgets = ECG_FILTER_WIDGETS  # all widget parameters for fourier and filtering
 
     def get_info(self):
         # Make sure that the derived SignalFilter targets streams in its own group with the name 'Raw'.
@@ -291,7 +293,7 @@ class EEGFourier(SignalFourier):
     """ Analyzes the filtered data from EEGFilterStream """
     def __init__(self, *args):
         super().__init__(*args)
-        self.widgets = EEG_WIDGET_CONFIG  # all widget parameters for fourier and filtering
+        self.widgets = EEG_FOURIER_WIDGETS  # all widget parameters for fourier and filtering
         self.head_x, self.head_y = [], []
 
     def get_info(self):
@@ -363,7 +365,7 @@ class ECGFourier(SignalFourier):
     """ Analyzes the filtered data from ECGFilter """
     def __init__(self, *args):
         super().__init__(*args)
-        self.widgets = ECG_WIDGET_CONFIG  # all widget parameters for fourier and filtering
+        self.widgets = ECG_FOURIER_WIDGETS  # all widget parameters for fourier and filtering
 
     def get_info(self):
         raw = self.targets[self.group]['Raw']
