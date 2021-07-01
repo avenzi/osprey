@@ -13,15 +13,11 @@ from app.bokeh_layouts.eeg_stream import js_request
 BACKEND = 'canvas'  # 'webgl' appears to be broken - makes page unresponsive.
 
 # default values of all widgets and figure attributes
-default_config = {
-    'fourier_window': 2,
-    'spectrogram_range': (-3.0, 1.0),  # color scale range (log)
-    'spectrogram_size': 30,
-
+default_filter_widgets = {
     'pass_toggle': True,
     'pass_type': 'bandpass',
     'pass_style': 'Butterworth',
-    'pass_range': (1, 100),
+    'pass_range': (1, 60),
     'pass_order': 3,
     'pass_ripple': (1, 50),
 
@@ -31,6 +27,14 @@ default_config = {
     'stop_range': (59, 60.5),
     'stop_order': 5,
     'stop_ripple': (1, 50),
+
+
+}
+
+default_fourier_widgets = {
+    'fourier_window': 2,
+    'spectrogram_range': (-3.0, 1.0),  # color scale range (log)
+    'spectrogram_size': 30,
 }
 
 
@@ -48,14 +52,19 @@ def create_layout(info):
 
     channels = [pulse_channels[0]] + ecg_channels
 
-    # get config
-    config = info.get('widgets')
-    if config:  # config present, it's a JSON string.
-        config = loads(config)
-        print('ECG SAVED CONFIG: {}'.format(config))
+    # get filter widget values
+    filter_widgets = info['Filtered'].get('widgets')
+    if filter_widgets:  # config present, it's a JSON string.
+        filter_widgets = loads(filter_widgets)
     else:  # no config present, use default
-        config = default_config
-        print('ECG DEFAULT CONFIG')
+        filter_widgets = default_filter_widgets
+
+    # get fourier widget values
+    fourier_widgets = info['Fourier'].get('widgets')
+    if fourier_widgets:  # config present, it's a JSON string.
+        fourier_widgets = loads(fourier_widgets)
+    else:  # no config present, use default
+        fourier_widgets = default_fourier_widgets
 
     # get stream IDs
     filtered_id = info['Filtered']['id']  # Filter Analyzer ID
@@ -67,35 +76,35 @@ def create_layout(info):
     ##########################
     # create row of widgets that send data to the analyzer streams
     # Fourier Window sliders
-    fourier_window = Spinner(title="FFT Window (s)", low=1, high=10, step=1, width=90, value=config['fourier_window'])
+    fourier_window = Spinner(title="FFT Window (s)", low=1, high=10, step=1, width=90, value=fourier_widgets['fourier_window'])
     fourier_window.js_on_change("value", CustomJS(code=js_request(fourier_id, 'fourier_window')))
 
     # Toggle buttons
-    pass_toggle = Toggle(label="Bandpass", button_type="success", width=100, margin=(24, 5, 0, 5), active=config['pass_toggle'])
+    pass_toggle = Toggle(label="Bandpass", button_type="success", width=100, margin=(24, 5, 0, 5), active=filter_widgets['pass_toggle'])
     pass_toggle.js_on_click(CustomJS(code=js_request(filtered_id, 'pass_toggle', 'active')))
 
-    stop_toggle = Toggle(label="Bandstop", button_type="success", width=100, margin=(24, 5, 0, 5), active=config['stop_toggle'])
+    stop_toggle = Toggle(label="Bandstop", button_type="success", width=100, margin=(24, 5, 0, 5), active=filter_widgets['stop_toggle'])
     stop_toggle.js_on_click(CustomJS(code=js_request(filtered_id, 'stop_toggle', 'active')))
 
     # Range sliders. "value_throttled" only takes the slider value once sliding has stopped
-    pass_range = RangeSlider(title="Range", start=0.1, end=100, step=0.1, value=config['pass_range'])
+    pass_range = RangeSlider(title="Range", start=0.1, end=100, step=0.1, value=filter_widgets['pass_range'])
     pass_range.js_on_change("value_throttled", CustomJS(code=js_request(filtered_id, 'pass_range')))
 
-    stop_range = RangeSlider(title="Range", start=40, end=70, step=0.5, value=config['stop_range'])
+    stop_range = RangeSlider(title="Range", start=40, end=70, step=0.5, value=filter_widgets['stop_range'])
     stop_range.js_on_change("value_throttled", CustomJS(code=js_request(filtered_id, 'stop_range')))
 
     # filter style selectors
-    pass_style = Select(title="Filters:", width=110, options=['Butterworth', 'Bessel', 'Chebyshev 1', 'Chebyshev 2', 'Elliptic'], value=config['pass_style'])
+    pass_style = Select(title="Filters:", width=110, options=['Butterworth', 'Bessel', 'Chebyshev 1', 'Chebyshev 2', 'Elliptic'], value=filter_widgets['pass_style'])
     pass_style.js_on_change("value", CustomJS(code=js_request(filtered_id, 'pass_style')))
 
-    stop_style = Select(title="Filters:", width=110, options=['Butterworth', 'Bessel', 'Chebyshev 1', 'Chebyshev 2', 'Elliptic'], value=config['stop_style'])
+    stop_style = Select(title="Filters:", width=110, options=['Butterworth', 'Bessel', 'Chebyshev 1', 'Chebyshev 2', 'Elliptic'], value=filter_widgets['stop_style'])
     stop_style.js_on_change("value", CustomJS(code=js_request(filtered_id, 'stop_style')))
 
     # Order spinners
-    pass_order = Spinner(title="Order", low=1, high=10, step=1, width=60, value=config['pass_order'])
+    pass_order = Spinner(title="Order", low=1, high=10, step=1, width=60, value=filter_widgets['pass_order'])
     pass_order.js_on_change("value", CustomJS(code=js_request(filtered_id, 'pass_order')))
 
-    stop_order = Spinner(title="Order", low=1, high=10, step=1, width=60, value=config['stop_order'])
+    stop_order = Spinner(title="Order", low=1, high=10, step=1, width=60, value=filter_widgets['stop_order'])
     stop_order.js_on_change("value", CustomJS(code=js_request(filtered_id, 'stop_order')))
 
     # Used to construct the Bokeh layout of widgets
