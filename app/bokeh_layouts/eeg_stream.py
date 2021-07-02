@@ -96,7 +96,7 @@ def create_layout(info):
         filter_widgets = default_filter_widgets
         print('EEG DEFAULT FILTER CONFIG')
 
-    print(info['Filter'].get('widgets'))
+    print(info['Filtered'].get('widgets'))
 
     # get fourier widget values
     fourier_widgets = info['Fourier'].get('widgets')
