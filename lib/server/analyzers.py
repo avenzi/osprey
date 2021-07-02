@@ -7,9 +7,9 @@ from lib.lib import Analyzer
 from lib.server.analysis_lib import MovingAverage
 from lib.database import DatabaseError
 from app.bokeh_layouts.eeg_stream import default_filter_widgets as EEG_FILTER_WIDGETS
-from app.bokeh_layouts.eeg_stream import default_filter_widgets as EEG_FOURIER_WIDGETS
+from app.bokeh_layouts.eeg_stream import default_fourier_widgets as EEG_FOURIER_WIDGETS
 from app.bokeh_layouts.ecg_stream import default_filter_widgets as ECG_FILTER_WIDGETS
-from app.bokeh_layouts.ecg_stream import default_filter_widgets as ECG_FOURIER_WIDGETS
+from app.bokeh_layouts.ecg_stream import default_fourier_widgets as ECG_FOURIER_WIDGETS
 
 
 class TestAnalyzer(Analyzer):
