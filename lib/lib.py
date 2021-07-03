@@ -669,7 +669,7 @@ class Namespace(socketio.ClientNamespace):
         self.streamer = streamer
 
     def on_connect(self):
-        self.emit('log', '{} connected to server'.format(self.streamer.name))
+        self.emit('log', '{} connected to server'.format(self.streamer))
 
     def on_disconnect(self):
         #self.streamer.log("{} disconnected from socketIO server".format(self.streamer.name))
