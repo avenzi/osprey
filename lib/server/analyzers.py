@@ -49,7 +49,7 @@ class TestAnalyzer(Analyzer):
 
             self.database.write_data(name+':'+self.id, output)
 
-        sleep(1)
+        sleep(0.5)
 
 
 ########################
