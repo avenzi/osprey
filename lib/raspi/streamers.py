@@ -279,8 +279,6 @@ class EEGStreamer(Streamer):
 
         # convert from epoch time to relative time since session start
         data['time'] = list(raw_data[self.time_channel] - self.start_time)
-        data['battery'] = list(raw_data[self.battery_channel])
-        print(data['battery'])
 
         for i, j in enumerate(self.eeg_channel_indexes):
             data[self.eeg_channel_names[i]] = list(raw_data[j])
