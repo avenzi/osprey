@@ -41,28 +41,28 @@ def create_analyzer_layout(info):
     source11 = AjaxDataSource(
         data_url='/stream/update?id=11:{}'.format(info['Random Analyzer']['id']),
         method='GET',
-        polling_interval=500,  # in milliseconds
+        polling_interval=1000,  # in milliseconds
         mode='append',  # append to existing data
         max_size=1000,  # Keep last 1000 data points
         if_modified=True)  # if_modified ignores responses sent with code 304 and not cached.
     source12 = AjaxDataSource(
         data_url='/stream/update?id=12:{}'.format(info['Random Analyzer']['id']),
         method='GET',
-        polling_interval=500,  # in milliseconds
+        polling_interval=1000,  # in milliseconds
         mode='append',  # append to existing data
         max_size=1000,  # Keep last 1000 data points
         if_modified=True)  # if_modified ignores responses sent with code 304 and not cached.
     source21 = AjaxDataSource(
         data_url='/stream/update?id=21:{}'.format(info['Random Analyzer']['id']),
         method='GET',
-        polling_interval=500,  # in milliseconds
+        polling_interval=1000,  # in milliseconds
         mode='append',  # append to existing data
         max_size=1000,  # Keep last 1000 data points
         if_modified=True)  # if_modified ignores responses sent with code 304 and not cached.
     source22 = AjaxDataSource(
         data_url='/stream/update?id=22:{}'.format(info['Random Analyzer']['id']),
         method='GET',
-        polling_interval=500,  # in milliseconds
+        polling_interval=1000,  # in milliseconds
         mode='append',  # append to existing data
         max_size=1000,  # Keep last 1000 data points
         if_modified=True)  # if_modified ignores responses sent with code 304 and not cached.

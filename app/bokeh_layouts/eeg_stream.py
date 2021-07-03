@@ -91,23 +91,15 @@ def create_layout(info):
     filter_widgets = info['Filtered'].get('widgets')
     if filter_widgets:  # config present, it's a JSON string.
         filter_widgets = loads(filter_widgets)
-        print('EEG SAVED FILTER CONFIG: {}'.format(filter_widgets))
     else:  # no config present, use default
         filter_widgets = default_filter_widgets
-        print('EEG DEFAULT FILTER CONFIG')
-
-    print(info['Filtered'].get('widgets'))
 
     # get fourier widget values
     fourier_widgets = info['Fourier'].get('widgets')
     if fourier_widgets:  # config present, it's a JSON string.
         fourier_widgets = loads(fourier_widgets)
-        print('EEG SAVED FILTER CONFIG: {}'.format(fourier_widgets))
     else:  # no config present, use default
         fourier_widgets = default_fourier_widgets
-        print('EEG DEFAULT FILTER CONFIG')
-
-    print(info['Fourier'].get('widgets'))
 
     # viridis color palette for channel colors
     colors = viridis(len(stream_channels))
