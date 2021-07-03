@@ -252,8 +252,8 @@ class EEGStreamer(Streamer):
         self.freq = BoardShim.get_sampling_rate(self.board_id)  # sample frequency
         self.serial_port = dev_path
 
-        # BoardShim.enable_dev_board_logger()
-        BoardShim.disable_board_logger()  # disable logger
+        BoardShim.enable_dev_board_logger()
+        #BoardShim.disable_board_logger()  # disable logger
 
         params = BrainFlowInputParams()
         params.serial_port = dev_path  # serial port of dongle
