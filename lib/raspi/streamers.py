@@ -252,6 +252,9 @@ class EEGStreamer(Streamer):
         self.freq = BoardShim.get_sampling_rate(self.board_id)  # sample frequency
         self.serial_port = dev_path
 
+        print(self.eeg_channel_indexes)
+        print(self.eeg_channel_names)
+
         # BoardShim.enable_dev_board_logger()
         BoardShim.disable_board_logger()  # disable logger
 
