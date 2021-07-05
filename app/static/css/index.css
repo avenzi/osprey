@@ -10,7 +10,7 @@ body { max-width: 960px; margin: 0 auto; background: white; }
 .container {
     display: grid;
     grid-template-columns: 2fr 1fr;
-    grid-template-rows: 5em 20em 10em;
+    grid-template-rows: 2em 20em 10em;
     gap: 10px 100px;
     grid-template-areas:
         "commands commands"
