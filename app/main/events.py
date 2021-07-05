@@ -119,10 +119,11 @@ def browser_refresh():
 def browser_live():
     """ Switches back to current live database file """
     log('Not yet implemented')
+    browser_refresh()
 
 
 @socketio.on('load', namespace='/browser')
-def browser_live(filename):
+def browser_load(filename):
     """ Loads the given database file for playback """
     browser_save()  # save current database
     dumps = current_app.database.store_path
@@ -134,18 +135,20 @@ def browser_live(filename):
 
 
 @socketio.on('rename', namespace='/browser')
-def browser_live(filename):
+def browser_rename(filename):
     """ Renames the selected file """
     # todo: add dialogue to enter new name
     log("Renaming not yet implemented")
+    browser_refresh()
 
 
 @socketio.on('delete', namespace='/browser')
-def browser_live(filename):
+def browser_delete(filename):
     """ Deletes the selected file """
     dumps = current_app.database.store_path
     system('rm {}/{}'.format(dumps, filename))
     log('Deleted file "{}"'.format(filename))
+    browser_refresh()
     # todo: Add confirmation dialogue
 
 
