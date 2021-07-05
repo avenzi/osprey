@@ -44,6 +44,7 @@
         socket.on('update_files', function(data) {
             // data is a list of file names
             console.log("getting data directory update");
+            selected_file = ""  // clear selected file
             $('.files ul').empty()
             data.forEach(function(filename) {
                 $('div.files ul').append(`<li>${filename}</li>`);
@@ -68,13 +69,11 @@
 
         // each command button emits an event to the server
         $('div.stream_commands button.command').on('click', function(event) {
-            log("EMIT GENERAL: " + event.target.value);
             socket.emit(event.target.value);
         });
 
         // each file option button emits an event to the server with the currently selected file name
         $('div.file_commands button.command').on('click', function(event) {
-            log("EMIT FILE: " + event.target.value);
             socket.emit(event.target.value, selected_file);
         });
 
