@@ -51,7 +51,7 @@
 
             // each file name will set the selected_file variable with its own filename
             $('div.files li').on('click', function(event) {
-                $("div.files.selected").removeClass('selected');  // unset selected form prev
+                $("div.files li.selected").removeClass('selected');  // unset selected form prev
                 $(event.target).addClass('selected')  // set selected
                 selected_file = $(event.target).text();  // set currently selected file
                 log("selected: "+selected_file);
