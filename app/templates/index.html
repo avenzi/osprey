@@ -68,26 +68,29 @@
 {% endblock %}
 
 {% block content %}
-<div id="commands">
-    <button class="command" value="initialize" title="Initialize the database">Init</button>
-    <button class="command" value="start"      title="Start all connected streams">Start</button>
-    <button class="command" value="stop"       title="Stop all connected streams">Stop</button>
-    <button class="command" value="save"       title="Stop streams and save database file">Save</button>
-    <button class="command" value="refresh"    title="Force refresh page">Refresh</button>
-    <button class="command" value="live"       title="Switch back to current live streams">Live</button>
-</div>
+<div class="container">
+    <div class="commands">
+        <button class="command" value="initialize" title="Initialize the database">Init</button>
+        <button class="command" value="start"      title="Start all connected streams">Start</button>
+        <button class="command" value="stop"       title="Stop all connected streams">Stop</button>
+        <button class="command" value="save"       title="Stop streams and save database file">Save</button>
+        <button class="command" value="refresh"    title="Force refresh page">Refresh</button>
+        <button class="command" value="live"       title="Switch back to current live streams">Live</button>
+    </div>
 
-<div id="streams">
-    <h2>Connected Streams</h2>
-    <ul></ul>
-</div>
+    <div class="streams">
+        <h3>Connected Streams</h3>
+        <ul></ul>
+    </div>
 
-<div id="files">
-    <h2>Stored Database Files</h2>
-    <ul></ul>
-</div>
+    <div class="files">
+        <h3>Stored Database Files</h3>
+        <ul></ul>
+    </div>
 
-<h2>Logs</h2>
-<div id="logs"></div>
+    <div class="logs">
+        <h3>Logs</h3>
+    </div>
+</div>
 
 {% endblock %}
