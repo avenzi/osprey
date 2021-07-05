@@ -18,7 +18,7 @@
     $(document).ready(function() {
         namespace = '/browser';  // namespace for talking with front-end server
         var socket = io(namespace);
-        var file = ""  // currently selected file
+        var selected_file = ""  // currently selected file
 
         socket.on('connect', function() {
             log("SocketIO connected to server");
@@ -68,12 +68,12 @@
             socket.emit(event.target.value, file);
         });
 
-        // each file link will set the file variable with its own filename
-        $('div.file_options li').on('click', function(event) {
+        // each file link will set the selected_file variable with its own filename
+        $('div.files li').on('click', function(event) {
             $("div.files[selected='true']").attr('selected', 'false');  // unset selected form prev
             event.target.attr('selected', 'true')  // set selected
-            file = event.target.text;  // set currently selected file
-            log("selected: "+file);
+            selected_file = event.target.text;  // set currently selected file
+            log("selected: "+selected_file);
         });
     });
 </script>
