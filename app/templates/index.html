@@ -46,7 +46,7 @@
             $('.files ul').empty()
             data.forEach(function(filename) {
                 console.log(filename);
-                $('.files ul').append(`<li><a href='/index?playback=${filename}'>filename</a></li>`);
+                $('.files ul').append(`<li><a href='/index?playback=${filename}'>${filename}</a></li>`);
             });
         });
 
@@ -74,7 +74,7 @@
         <button class="command" value="start"      title="Start all connected streams">Start</button>
         <button class="command" value="stop"       title="Stop all connected streams">Stop</button>
         <button class="command" value="save"       title="Stop streams and save database file">Save</button>
-        <button class="command" value="refresh"    title="Force refresh page">Refresh</button>
+        <button class="command" value="refresh"    title="Force refresh page items">Refresh</button>
         <button class="command" value="live"       title="Switch back to current live streams">Live</button>
     </div>
 
@@ -84,7 +84,12 @@
     </div>
 
     <div class="files">
-        <h3>Stored Database Files</h3>
+        <h3>Saved Database Files</h3>
+        <div class="file_options">
+            <button class="command" value="load" title="Load selected file for playback">Load</button>
+            <button class="command" value="rename" title="Rename selected file">Rename</button>
+            <button class="command" value="delete" title="Delete selected file">Delete</button>
+        </div>
         <ul></ul>
     </div>
 

@@ -18,10 +18,6 @@ from app.main import streams, socketio
 @streams.route('/', methods=['GET', 'POST'])
 @streams.route('/index', methods=('GET', 'POST'))
 def index():
-    playback = request.args.get('playpack')
-    if playback:  # file name specified to play back from
-        socketio.emit('stop', namespace='/streamers')  # stop streams
-
     return render_template('/index.html')
 
 
