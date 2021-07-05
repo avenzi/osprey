@@ -67,12 +67,14 @@
         });
 
         // each command button emits an event to the server
-        $('div.commands button.command').on('click', function(event) {
+        $('div.stream_commands button.command).on('click', function(event) {
+            log("EMIT GENERAL: " + event.target.value);
             socket.emit(event.target.value);
         });
 
         // each file option button emits an event to the server with the currently selected file name
-        $('div.file_options button.command').on('click', function(event) {
+        $('div.file_commands button.command').on('click', function(event) {
+            log("EMIT FILE: " + event.target.value);
             socket.emit(event.target.value, selected_file);
         });
 
@@ -82,23 +84,25 @@
 
 {% block content %}
 <div class="container">
-    <div class="commands">
+    <div class="commands stream_commands">
         <button class="command" value="initialize" title="Initialize the database">Init</button>
-        <button class="command" value="start"      title="Start all connected streams">Start</button>
-        <button class="command" value="stop"       title="Stop all connected streams">Stop</button>
         <button class="command" value="save"       title="Stop streams and save database file">Save</button>
         <button class="command" value="refresh"    title="Force refresh page items">Refresh</button>
         <button class="command" value="live"       title="Switch back to current live streams">Live</button>
     </div>
 
     <div class="streams">
-        <h3>Connected Streams</h3>
+        <h2>Connected Streams</h2>
+        <div class="commands stream_commands">
+            <button class="command" value="start"      title="Start all connected streams">Start</button>
+            <button class="command" value="stop"       title="Stop all connected streams">Stop</button>
+        </div>
         <ul></ul>
     </div>
 
     <div class="files">
-        <h3>Saved Database Files</h3>
-        <div class="file_options">
+        <h2>Saved Database Files</h2>
+        <div class="commands file_commands">
             <button class="command" value="load" title="Load selected file for playback">Load</button>
             <button class="command" value="rename" title="Rename selected file">Rename</button>
             <button class="command" value="delete" title="Delete selected file">Delete</button>
