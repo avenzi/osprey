@@ -19,7 +19,7 @@ input[type=submit] { align-self: start; min-width: 10em; }
 .container {
     display: grid;
     grid-template-columns: 2fr 1fr;
-    grid-template-rows: 1fr 10fr 10fr;
+    grid-template-rows: 5em 20em 10em;
     gap: 10px 100px;
     grid-template-areas:
         "commands commands"
@@ -29,7 +29,7 @@ input[type=submit] { align-self: start; min-width: 10em; }
 
 .commands {
     grid-area: commands;
-    padding-top: 5px;
+    padding-top: 1em;
 }
 .streams { grid-area: streams; }
 .files { grid-area: files; }
