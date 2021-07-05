@@ -67,7 +67,7 @@
         });
 
         // each command button emits an event to the server
-        $('div.stream_commands button.command).on('click', function(event) {
+        $('div.stream_commands button.command').on('click', function(event) {
             log("EMIT GENERAL: " + event.target.value);
             socket.emit(event.target.value);
         });
