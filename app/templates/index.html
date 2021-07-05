@@ -69,7 +69,7 @@
         });
 
         // each file link will set the file variable with its own filename
-        $('div.file_options a').on('click', function(event) {
+        $('div.file_options li').on('click', function(event) {
             $("div.files[selected='true']").attr('selected', 'false');  // unset selected form prev
             event.target.attr('selected', 'true')  // set selected
             file = event.target.text;  // set currently selected file
