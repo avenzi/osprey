@@ -54,7 +54,7 @@
                 $("div.files li.selected").removeClass('selected');  // unset selected form prev
                 $(event.target).addClass('selected')  // set selected
                 selected_file = $(event.target).text();  // set currently selected file
-                log("selected: "+selected_file);
+                log("selected file: "+selected_file);
             });
         });
 
@@ -73,7 +73,7 @@
 
         // each file option button emits an event to the server with the currently selected file name
         $('div.file_options button.command').on('click', function(event) {
-            socket.emit(event.target.value, file);
+            socket.emit(event.target.value, selected_file);
         });
 
     });

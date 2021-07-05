@@ -33,4 +33,7 @@ input[type=submit] { align-self: start; min-width: 10em; }
 }
 .streams { grid-area: streams; }
 .files { grid-area: files; }
+.files li.selected {
+    background-color: #dddddd;
+}
 .logs { grid-area: logs; }
