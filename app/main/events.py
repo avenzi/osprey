@@ -1,7 +1,7 @@
 from flask import request, current_app, g
 from time import sleep
 
-from os import listdir
+from os import listdir, system
 from os.path import isfile, join
 
 from app.main import socketio
@@ -28,6 +28,10 @@ def browser_disconnect():
     # print('Browser disconnected: {}'.format(request.sid))
     pass
 
+
+def log(msg):
+    """ Log a message in the browser """
+    socketio.emit('log', msg, namespace='/browser')
 
 ################################
 # Streamer messages
@@ -62,7 +66,7 @@ def streamer_update(stream_id):
 @socketio.on('log', namespace='/streamers')
 def streamer_log(resp):
     """ On receiving logs from streamers, forward to the browser log """
-    socketio.emit('log', resp, namespace='/browser')
+    log(resp)
 
 
 ######################################
@@ -73,16 +77,16 @@ def database_init():
     """ start database process """
     current_app.database.init()  # start database process
     sleep(0.1)  # give it sec to start up
-    socketio.emit('log', 'Started Redis server', namespace='/browser')  # log on browser
+    log('Started Redis server')  # log on browser
     socketio.emit('update', namespace='/streamers')  # request update from streamers
 
 
 @socketio.on('save', namespace='/browser')
-def database_shutdown():
+def browser_save():
     """ stop database process and dump data """
     socketio.emit('stop', namespace='/streamers')  # stop streams first
     current_app.database.shutdown()  # stop database process
-    socketio.emit('log', 'Shut down Database', namespace='/browser')
+    log('Shut down Database and saved to disk')
     sleep(0.1)
     browser_refresh()
 
@@ -93,7 +97,7 @@ def browser_start():
     if current_app.database.ping():  # make sure database connected
         socketio.emit('start', namespace='/streamers')  # send start command to streamers
     else:
-        socketio.emit('log', 'Cannot start streams - database not initialized', namespace='/browser')
+        log('Cannot start streams - database not initialized')
 
 
 @socketio.on('stop', namespace='/browser')
@@ -114,25 +118,35 @@ def browser_refresh():
 @socketio.on('live', namespace='/browser')
 def browser_live():
     """ Switches back to current live database file """
-    print("RECEIVED LIVE")
+    log('Not yet implemented')
 
 
 @socketio.on('load', namespace='/browser')
 def browser_live(filename):
     """ Loads the given database file for playback """
-    print("RECEIVED LOAD: {}".format(filename))
+    browser_save()  # save current database
+    dumps = current_app.database.store_path
+    database_file = current_app.database.file_path
+    system('rm {}'.format(database_file))  # remove current database file
+    system('cp {}/{} {}'.format(dumps, filename, database_file))  # copy old file to database file
+    log('Loaded "{}" to database'.format(filename))
+    browser_refresh()
 
 
 @socketio.on('rename', namespace='/browser')
 def browser_live(filename):
     """ Renames the selected file """
-    print("RECEIVED RENAME: {}".format(filename))
+    # todo: add dialogue to enter new name
+    log("Renaming not yet implemented")
 
 
 @socketio.on('delete', namespace='/browser')
 def browser_live(filename):
     """ Deletes the selected file """
-    print("RECEIVED DELETE: {}".format(filename))
+    dumps = current_app.database.store_path
+    system('rm {}/{}'.format(dumps, filename))
+    log('Deleted file "{}"'.format(filename))
+    # todo: Add confirmation dialogue
 
 
 def browser_update_pages():
