@@ -124,9 +124,9 @@ def browser_live(filename):
 
 
 @socketio.on('rename', namespace='/browser')
-def browser_live(data):
+def browser_live(filename):
     """ Renames the selected file """
-    print("RECEIVED RENAME: {}".format(data))
+    print("RECEIVED RENAME: {}".format(filename))
 
 
 @socketio.on('delete', namespace='/browser')
