@@ -16,10 +16,18 @@ body { max-width: 960px; margin: 0 auto; background: white; }
 input.danger { color: #cc2f2e; }
 input[type=submit] { align-self: start; min-width: 10em; }
 
-#streams {
-    float: left;
+.container {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: 1fr 10fr 5fr;
+  gap: 10px 100px;
+  grid-template-areas:
+    "commands commands"
+    "streams files"
+    "logs logs";
 }
 
-#files {
-    float: left;
-}
+.commands { grid-area: commands; }
+.streams { grid-area: streams; }
+.files { grid-area: files; }
+.logs { grid-area: logs; }
