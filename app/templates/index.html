@@ -17,7 +17,6 @@
 
     var file = ''
     function select_file(filename) {
-        // select a file from the list of files
         file = filename;
     }
 
@@ -42,7 +41,6 @@
             console.log("getting update");
             $('.streams ul').empty()
             data.forEach(function(info) {
-                // console.log(info);
                 $('.streams ul').append(`<li><a href='/stream?group=${info['name']}'>${info['name']}</a></li>`);
             });
         });
@@ -52,7 +50,6 @@
             console.log("getting data directory update");
             $('.files ul').empty()
             data.forEach(function(filename) {
-                console.log(filename);
                 $('.files ul').append(`<li><a onclick="select_file(${filename})" href="#"'>${filename}</a></li>`);
             });
         });
@@ -72,6 +69,7 @@
 
         // each file option button emits an event to the server with the currently selected file name
         $('div.file_options button.command').on('click', function(event) {
+            log("selected "+file);
             socket.emit(event.target.value, file);
         });
     });

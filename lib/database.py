@@ -8,7 +8,7 @@ import redis
 
 def get_time():
     """ Return human readable time for file names """
-    return strftime("%d:%m:%Y-%H:%M:%S", localtime())
+    return strftime("%m-%d-%Y_%H:%M:%S", localtime())
 
 
 class DatabaseError(Exception):
