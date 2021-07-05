@@ -13,15 +13,16 @@ from app import Database
 # import blueprint + socket
 from app.main import streams, socketio
 
-# import browser buttons
-from app.main.events import BUTTONS
-
 
 @login_required
 @streams.route('/', methods=['GET', 'POST'])
 @streams.route('/index', methods=('GET', 'POST'))
 def index():
-    return render_template('/index.html', buttons=BUTTONS)
+    playback = request.args.get('playpack')
+    if playback:  # file name specified to play back from
+        socketio.emit('stop', namespace='/streamers')  # stop streams
+
+    return render_template('/index.html')
 
 
 @login_required

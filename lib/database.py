@@ -53,6 +53,10 @@ class Database:
         self.port = port  # database port
         self.password = password  # database password
 
+        # file paths
+        self.file_path = 'data/dump.rdb'
+        self.store_path = 'data/redis_dumps'
+
         # Separate redis pools for reading decoded data or reading raw bytes data.
         # not sure how to give Redis instances to certain sessions.
         self.pool = redis.ConnectionPool(host=ip, port=port, password=password, decode_responses=True)
@@ -74,23 +78,42 @@ class Database:
         Obviously only used on the machine that is hosting the redis server
         """
         # move old file if it's there
-        os.system("redis-server config/redis.conf")
-        self.exit = False
+        try:
+            os.system("redis-server config/redis.conf")
+            self.exit = False
+        except Exception as e:
+            raise DatabaseError("Failed to initialize database: {}".format(e))
 
-    def shutdown(self):
+    def shutdown(self, filename=None):
         """ Shut down database process and save data """
         if not self.redis:
             return False
         try:
             self.redis.shutdown(save=True)
-            os.system("mv data/dump.rdb data/redis_dumps/{}.rdb".format(get_time()))
+
+            # if file name not given or already exists
+            if not filename or os.path.isfile(self.store_path+filename):
+                print("Filename not specified or already exists - using default timestamp.")
+                filename = get_time()
+
+            # move current dump file to storage directory with new name
+            os.system("mv {} {}/{}.rdb".format(self.file_path, self.store_path, filename))
             # TODO: Make a copy of the file, but don't remove the current one, then wipe the whole database.
             #  This might avoid problems with shutting it down entirely.
             self.disconnect()
             return True
+
         except Exception as e:
-            print("Failed to shutdown or save database: {}".format(e))
-            return False
+            raise DatabaseError("Failed to shutdown or save database: {}".format(e))
+
+    def load_file(self, filename):
+        """ Loads in the specified redis dump file and starts the redis server """
+        self.shutdown()  # shut down current database file if it exists
+        try:
+            os.system("mv {}/{} {}".format(self.store_path, filename, self.file_path))
+            self.init()
+        except Exception as e:
+            raise DatabaseError("Failed to load file to database: {}".format(e))
 
     def connect(self, timeout=None, delay=1):
         """

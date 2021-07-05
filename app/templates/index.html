@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Connected Streams{% endblock %}
+{% block title %}Control Center{% endblock %}
 {% block style %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
@@ -30,18 +30,38 @@
             log(msg);
         });
 
-        socket.on('update', function(data) {
+        socket.on('update_pages', function(data) {
             // data is a list of dictionaries with info on each stream
             console.log("getting update");
             $('#streams ul').empty()
             data.forEach(function(info) {
-                console.log(info);
+                // console.log(info);
                 $('#streams ul').append(`<li><a href='/stream?group=${info['name']}'>${info['name']}</a></li>`);
             });
         });
 
+        socket.on('update_files', function(data) {
+            // data is a list of file names
+            console.log("getting data directory update");
+            $('#files ul').empty()
+            data.forEach(function(filename) {
+                console.log(filename);
+                $('#files ul').append(`<li><a href='/index?playback=${filename}'>filename</a></li>`);
+            });
+        });
+
+
+        // each command button emits an event to the server
         $('button.command').on('click', function(event) {
             socket.emit(event.target.value);
+        });
+
+        socket.on('update_buttons', function(data) {
+            // data is a list of dictionaries with updated values of some buttons
+            console.log("getting button update");
+            data.forEach(function(info) {
+                console.log(info);
+            });
         });
     });
 </script>
@@ -49,14 +69,22 @@
 
 {% block content %}
 <div id="commands">
-  {% for button in buttons %}
-      <button class="command" value="{{ button['command'] }}" title="{{ button['tooltip'] }}">{{ button['label'] }}</button>
-  {% endfor %}
+    <button class="command" value="initialize" title="Initialize the database">Init</button>
+    <button class="command" value="start"      title="Start all connected streams">Start</button>
+    <button class="command" value="stop"       title="Stop all connected streams">Stop</button>
+    <button class="command" value="save"       title="Stop streams and save database file">Save</button>
+    <button class="command" value="refresh"    title="Force refresh page">Refresh</button>
+    <button class="command" value="live"       title="Switch back to current live streams">Live</button>
 </div>
 
-<h2>Connected Streams</h2>
 <div id="streams">
-  <ul></ul>
+    <h2>Connected Streams</h2>
+    <ul></ul>
+</div>
+
+<div id="files">
+    <h2>Stored Database Files</h2>
+    <ul></ul>
 </div>
 
 <h2>Logs</h2>

@@ -1,6 +1,9 @@
 from flask import request, current_app, g
 from time import sleep
 
+from os import listdir
+from os.path import isfile, join
+
 from app.main import socketio
 from app import Database
 
@@ -53,7 +56,7 @@ def streamer_init(stream_id):
 @socketio.on('update', namespace='/streamers')
 def streamer_update(stream_id):
     """ notified that the streamer's info has updated """
-    browser_refresh()
+    browser_update_pages()
 
 
 @socketio.on('log', namespace='/streamers')
@@ -63,16 +66,6 @@ def streamer_log(resp):
 
 
 ######################################
-# Browser buttons
-# label: button name display
-# command: socketIO message function to trigger
-# tooltip: button hover text
-BUTTONS = [{'label': 'Init',     'command': 'initialize', 'tooltip': 'Initialize the database'},
-           {'label': 'Shutdown', 'command': 'shutdown',   'tooltip': 'Stop streamers and shutdown database'},
-           {'label': 'Start',    'command': 'start',      'tooltip': 'Start all connected streamers'},
-           {'label': 'Stop',     'command': 'stop',       'tooltip': 'Stop all connected streamers'},
-           {'label': 'Refresh',  'command': 'refresh',    'tooltip': 'Refresh list of connected streams'}
-           ]
 
 # Handlers for browser buttons
 @socketio.on('initialize', namespace='/browser')
@@ -84,7 +77,7 @@ def database_init():
     socketio.emit('update', namespace='/streamers')  # request update from streamers
 
 
-@socketio.on('shutdown', namespace='/browser')
+@socketio.on('save', namespace='/browser')
 def database_shutdown():
     """ stop database process and dump data """
     socketio.emit('stop', namespace='/streamers')  # stop streams first
@@ -112,10 +105,39 @@ def browser_stop():
 
 @socketio.on('refresh', namespace='/browser')
 def browser_refresh():
-    """ refresh list of connected streams """
+    """ Refresh all data displayed in browser index """
+    browser_update_pages()
+    browser_update_files()
+    browser_update_buttons()
+
+
+@socketio.on('live', namespace='/browser')
+def browser_live():
+    """ Switches back to current live database file """
+    print("RECEIVED LIVE")
+
+
+def browser_update_pages():
+    """ Updates list of connected streams in browser """
     try:  # attempt to read list of group names
         groups = current_app.database.read_all_groups()
     except Database.Error:
         groups = []
-    socketio.emit('update', groups, namespace='/browser')
+    socketio.emit('update_pages', groups, namespace='/browser')
 
+
+def browser_update_files():
+    """ Updates list of database files in browser """
+    data_path = 'data'
+    try:  # attempt to get list of files in data directory
+        files = [file for file in listdir(data_path) if isfile(join(data_path, file))]
+    except Exception as e:
+        print(e)
+        files = []
+    socketio.emit('update_files', files, namespace='/browser')
+
+
+def browser_update_buttons():
+    """ Updates state of buttons in browser """
+    buttons = [{'test':'testvalue', 'test2':'testvalue2'}]
+    socketio.emit('update_buttons', buttons, namespace='/browser')
