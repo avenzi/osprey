@@ -11,7 +11,7 @@
 <script type="text/javascript" charset="utf-8">
     function log(msg) {
         console.log(msg)
-        $('.logs').prepend('> ' + msg + '<br>');  // append a message to the log
+        $('.logs > p').prepend('> ' + msg + '<br>');  // append a message to the log
     }
 
     $(document).ready(function() {
@@ -90,6 +90,7 @@
 
     <div class="logs">
         <h3>Logs</h3>
+        <p></p>
     </div>
 </div>
 
