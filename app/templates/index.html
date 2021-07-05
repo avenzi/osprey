@@ -10,8 +10,15 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script type="text/javascript" charset="utf-8">
     function log(msg) {
+        // logs a message to console and to the log div
         console.log(msg)
         $('.logs > p').prepend('> ' + msg + '<br>');  // append a message to the log
+    }
+
+    var file = ''
+    function select_file(filename) {
+        // select a file from the list of files
+        file = filename;
     }
 
     $(document).ready(function() {
@@ -46,14 +53,8 @@
             $('.files ul').empty()
             data.forEach(function(filename) {
                 console.log(filename);
-                $('.files ul').append(`<li><a href='/index?playback=${filename}'>${filename}</a></li>`);
+                $('.files ul').append(`<li><a onclick="select_file(${filename})" href="#"'>${filename}</a></li>`);
             });
-        });
-
-
-        // each command button emits an event to the server
-        $('button.command').on('click', function(event) {
-            socket.emit(event.target.value);
         });
 
         socket.on('update_buttons', function(data) {
@@ -62,6 +63,16 @@
             data.forEach(function(info) {
                 console.log(info);
             });
+        });
+
+        // each command button emits an event to the server
+        $('div.commands button.command').on('click', function(event) {
+            socket.emit(event.target.value);
+        });
+
+        // each file option button emits an event to the server with the currently selected file name
+        $('div.file_options button.command').on('click', function(event) {
+            socket.emit(event.target.value, file);
         });
     });
 </script>
