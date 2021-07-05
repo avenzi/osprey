@@ -15,14 +15,10 @@
         $('.logs > p').prepend('> ' + msg + '<br>');  // append a message to the log
     }
 
-    var file = ''
-    function select_file(filename) {
-        file = filename;
-    }
-
     $(document).ready(function() {
         namespace = '/browser';  // namespace for talking with front-end server
         var socket = io(namespace);
+        var file = ""  // currently selected file
 
         socket.on('connect', function() {
             log("SocketIO connected to server");
@@ -51,6 +47,7 @@
             $('.files ul').empty()
             data.forEach(function(filename) {
                 $('.files ul').append(`<li><a onclick="select_file(${filename})" href="#"'>${filename}</a></li>`);
+                $('.files a')
             });
         });
 
@@ -69,8 +66,15 @@
 
         // each file option button emits an event to the server with the currently selected file name
         $('div.file_options button.command').on('click', function(event) {
-            log("selected "+file);
             socket.emit(event.target.value, file);
+        });
+
+        // each file link will set the file variable with its own filename
+        $('div.file_options a').on('click', function(event) {
+            $("div.files[selected='true']").attr('selected', 'false');  // unset selected form prev
+            event.target.attr('selected', 'true')  // set selected
+            file = event.target.text;  // set currently selected file
+            log("selected: "+file);
         });
     });
 </script>
