@@ -53,7 +53,7 @@
             $('div.files li').on('click', function(event) {
                 $("div.files[selected='true']").attr('selected', 'false');  // unset selected form prev
                 $(event.target).attr('selected', 'true')  // set selected
-                selected_file = event.target.text;  // set currently selected file
+                selected_file = $(event.target).text;  // set currently selected file
                 log("selected: "+selected_file);
             });
         });
