@@ -117,6 +117,24 @@ def browser_live():
     print("RECEIVED LIVE")
 
 
+@socketio.on('load', namespace='/browser')
+def browser_live(filename):
+    """ Loads the given database file for playback """
+    print("RECEIVED LOAD: {}".format(filename))
+
+
+@socketio.on('rename', namespace='/browser')
+def browser_live(data):
+    """ Renames the selected file """
+    print("RECEIVED RENAME: {}".format(data))
+
+
+@socketio.on('delete', namespace='/browser')
+def browser_live(filename):
+    """ Deletes the selected file """
+    print("RECEIVED DELETE: {}".format(filename))
+
+
 def browser_update_pages():
     """ Updates list of connected streams in browser """
     try:  # attempt to read list of group names

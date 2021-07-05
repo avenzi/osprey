@@ -17,17 +17,20 @@ input.danger { color: #cc2f2e; }
 input[type=submit] { align-self: start; min-width: 10em; }
 
 .container {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  grid-template-rows: 1fr 10fr 5fr;
-  gap: 10px 100px;
-  grid-template-areas:
-    "commands commands"
-    "streams files"
-    "logs logs";
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    grid-template-rows: 1fr 10fr 10fr;
+    gap: 10px 100px;
+    grid-template-areas:
+        "commands commands"
+        "streams files"
+        "logs logs";
 }
 
-.commands { grid-area: commands; }
+.commands {
+    grid-area: commands;
+    padding-top: 5px;
+}
 .streams { grid-area: streams; }
 .files { grid-area: files; }
 .logs { grid-area: logs; }
