@@ -46,8 +46,7 @@
             console.log("getting data directory update");
             $('.files ul').empty()
             data.forEach(function(filename) {
-                $('.files ul').append(`<li><a onclick="select_file(${filename})" href="#"'>${filename}</a></li>`);
-                $('.files a')
+                $('.files ul').append(`<li>${filename}</li>`);
             });
         });
 
