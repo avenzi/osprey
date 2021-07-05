@@ -146,7 +146,7 @@ def browser_update_pages():
 
 def browser_update_files():
     """ Updates list of database files in browser """
-    data_path = 'data'
+    data_path = 'data/redis_dumps'
     try:  # attempt to get list of files in data directory
         files = [file for file in listdir(data_path) if isfile(join(data_path, file))]
     except Exception as e:
