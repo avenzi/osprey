@@ -66,8 +66,7 @@ $(document).ready(function() {
 
     var rename_dialog = $('.rename_dialog').dialog({
         autoOpen: false,
-        //height: 200,
-        width: 400,
+        //width: 400,
         modal: true,
         buttons: {
             "Ok": function() {
@@ -86,6 +85,7 @@ $(document).ready(function() {
     var delete_dialog = $('.confirm_dialog').dialog({
         autoOpen: false,
         modal: true,
+        'title': 'Delete saved database file?',
         buttons: {
             "Ok": function() {
                 socket.emit('delete', selected_file)
@@ -95,10 +95,6 @@ $(document).ready(function() {
                 $(this).dialog("close");
             }
         }
-    });
-
-    name_form = rename_dialog.find("form").on("submit", function(event) {
-        //event.preventDefault();
     });
 
     // each command button emits an event to the server
