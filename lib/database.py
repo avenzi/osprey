@@ -125,7 +125,7 @@ class Database:
 
     def rename_save(self, filename, newname):
         """ renames an old save file """
-        pass
+        print("OLD: {}, NEW: {}".format(filename, newname))
         # todo: implement this
 
     def delete_save(self, filename):
