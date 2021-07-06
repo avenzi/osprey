@@ -126,10 +126,7 @@ def browser_live():
 def browser_load(filename):
     """ Loads the given database file for playback """
     browser_save()  # save current database
-    dumps = current_app.database.store_path
-    database_file = current_app.database.file_path
-    system('rm {}'.format(database_file))  # remove current database file
-    system('cp {}/{} {}'.format(dumps, filename, database_file))  # copy old file to database file
+    current_app.database.load_file(filename)
     log('Loaded "{}" to database'.format(filename))
     browser_refresh()
 
@@ -145,8 +142,7 @@ def browser_rename(filename):
 @socketio.on('delete', namespace='/browser')
 def browser_delete(filename):
     """ Deletes the selected file """
-    dumps = current_app.database.store_path
-    system('rm {}/{}'.format(dumps, filename))
+    current_app.database.delete_save(filename)
     log('Deleted file "{}"'.format(filename))
     browser_refresh()
     # todo: Add confirmation dialogue
