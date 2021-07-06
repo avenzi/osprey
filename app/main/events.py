@@ -144,8 +144,7 @@ def browser_load(filename):
 def browser_rename(data):
     """ Renames the selected file """
     try:
-        print("OLD: {}, NEW: {}".format(data['filename'], data['newname']))
-        raise Exception("Renaming not implemented")
+        current_app.database.rename_save(data['filename'], data['newname'])
     except Exception as e:
         error(e)
     browser_refresh()
