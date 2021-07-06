@@ -36,7 +36,7 @@ def log(msg):
 
 def error(msg):
     """ Log an error message in the browser """
-    socketio.emit('error', msg, namespace='/browser')
+    socketio.emit('error', str(msg), namespace='/browser')
 
 ################################
 # Streamer messages
