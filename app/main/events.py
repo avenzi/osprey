@@ -1,5 +1,6 @@
 from flask import request, current_app, g
 from time import sleep
+from re import match
 
 from os import listdir, system
 from os.path import isfile, join
@@ -37,6 +38,13 @@ def log(msg):
 def error(msg):
     """ Log an error message in the browser """
     socketio.emit('error', str(msg), namespace='/browser')
+
+
+def check_filename(file):
+    """ validated syntax of file name """
+    if not match(r"^[0-9a-zA-Z_\-.]+$", file):
+        raise Exception("Invalid file name. May only contain digits, letters, underscore, hyphen, and period.")
+
 
 ################################
 # Streamer messages
@@ -144,8 +152,13 @@ def browser_load(filename):
 @socketio.on('rename', namespace='/browser')
 def browser_rename(data):
     """ Renames the selected file """
+    old = data['filename']
+    new = data['newname']
     try:
-        current_app.database.rename_save(data['filename'], data['newname'])
+        check_filename(old)
+        check_filename(new)
+        current_app.database.rename_save(old, new)
+        log('Renamed "{}" to "{}"'.format(old, new))
     except Exception as e:
         error(e)
     browser_refresh()
@@ -155,6 +168,7 @@ def browser_rename(data):
 def browser_delete(filename):
     """ Deletes the selected file """
     try:
+        check_filename(filename)
         current_app.database.delete_save(filename)
         log('Deleted file "{}"'.format(filename))
     except Exception as e:
