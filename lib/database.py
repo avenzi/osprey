@@ -129,7 +129,7 @@ class Database:
         """ renames an old save file """
         if not filename:
             raise Exception("Could not rename file - no file given to rename")
-        if path.isfile(self.store_path+'/'+filename):
+        if path.isfile(self.store_path+'/'+newname):
             raise Exception("Could not rename file - file already exists")
         if not newname:
             newname = get_time_filename()
