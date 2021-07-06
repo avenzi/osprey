@@ -67,7 +67,7 @@ $(document).ready(function() {
     var rename_dialog = $('.rename_dialog').dialog({
         autoOpen: false,
         //height: 200,
-        //width: 300,
+        width: 400,
         modal: true,
         buttons: {
             "Ok": function() {
@@ -79,7 +79,7 @@ $(document).ready(function() {
             }
         },
         close: function() {
-            $('#file_name').reset();
+            $('#file_name')[0].reset();
         }
     });
 
