@@ -6,9 +6,9 @@ from os import system, path
 import redis
 
 
-def get_time():
+def get_time_filename():
     """ Return human readable time for file names """
-    return strftime("%m-%d-%Y_%H:%M:%S", localtime())
+    return strftime("%m-%d-%Y_%H:%M:%S.rdb", localtime())
 
 
 class DatabaseError(Exception):
@@ -94,7 +94,7 @@ class Database:
             # if file name not given or already exists
             if not filename or path.isfile(self.store_path+filename):
                 print("Filename not specified or already exists - using default timestamp.")
-                filename = get_time()
+                filename = get_time_filename()
 
             # move current dump file to storage directory with new name
             system("mv {} {}/{}.rdb".format(self.file_path, self.store_path, filename))
@@ -108,6 +108,8 @@ class Database:
 
     def load_file(self, filename):
         """ Loads in the specified redis dump file and starts the redis server """
+        if not filename:
+            raise Exception("Could not load file - no file name given")
         self.shutdown()  # shut down current database file if it exists
 
         try:
@@ -125,6 +127,10 @@ class Database:
 
     def rename_save(self, filename, newname):
         """ renames an old save file """
+        if not filename:
+            raise Exception("Could not rename file - no file given to rename")
+        if not newname:
+            newname = get_time_filename()
         if not newname.endswith('.rdb'):
             newname += '.rdb'
         try:
