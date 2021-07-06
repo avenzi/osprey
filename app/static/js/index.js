@@ -79,7 +79,7 @@ $(document).ready(function() {
             }
         },
         close: function() {
-            $('#file_name')[0].reset();
+            $('.rename_dialog > form')[0].reset();
         }
     });
 

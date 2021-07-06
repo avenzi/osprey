@@ -134,6 +134,7 @@ def browser_load(filename):
     browser_save()  # save current database
     try:
         current_app.database.load_file(filename)
+        # todo: disable save button, enable
         log('Loaded "{}" to database'.format(filename))
     except Exception as e:
         error(e)
