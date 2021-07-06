@@ -33,8 +33,14 @@ def log(msg):
     """ Log a message in the browser """
     socketio.emit('log', msg, namespace='/browser')
 
+
+def error(msg):
+    """ Log an error message in the browser """
+    socketio.emit('error', msg, namespace='/browser')
+
 ################################
 # Streamer messages
+
 
 @socketio.on('connect', namespace='/streamers')
 def streamer_connect():
@@ -118,7 +124,7 @@ def browser_refresh():
 @socketio.on('live', namespace='/browser')
 def browser_live():
     """ Switches back to current live database file """
-    log('Not yet implemented')
+    error('Not yet implemented')
     browser_refresh()
 
 
@@ -126,26 +132,34 @@ def browser_live():
 def browser_load(filename):
     """ Loads the given database file for playback """
     browser_save()  # save current database
-    current_app.database.load_file(filename)
-    log('Loaded "{}" to database'.format(filename))
+    try:
+        current_app.database.load_file(filename)
+        log('Loaded "{}" to database'.format(filename))
+    except Exception as e:
+        error(e)
     browser_refresh()
 
 
 @socketio.on('rename', namespace='/browser')
-def browser_rename(filename):
+def browser_rename(filename, newname):
     """ Renames the selected file """
-    # todo: add dialogue to enter new name
-    log("Renaming not yet implemented")
+    try:
+        print("OLD: {}, NEW: {}".format(filename, newname))
+        raise Exception("Renaming not implemented")
+    except Exception as e:
+        error(e)
     browser_refresh()
 
 
 @socketio.on('delete', namespace='/browser')
 def browser_delete(filename):
     """ Deletes the selected file """
-    current_app.database.delete_save(filename)
-    log('Deleted file "{}"'.format(filename))
+    try:
+        current_app.database.delete_save(filename)
+        log('Deleted file "{}"'.format(filename))
+    except Exception as e:
+        error(e)
     browser_refresh()
-    # todo: Add confirmation dialogue
 
 
 def browser_update_pages():

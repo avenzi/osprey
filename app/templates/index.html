@@ -8,77 +8,7 @@
 {% block head %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script type="text/javascript" charset="utf-8">
-    function log(msg) {
-        // logs a message to console and to the log div
-        console.log(msg)
-        $('.logs > p').prepend('> ' + msg + '<br>');  // append a message to the log
-    }
-
-    $(document).ready(function() {
-        namespace = '/browser';  // namespace for talking with front-end server
-        var socket = io(namespace);
-        var selected_file = ""  // currently selected file
-
-        socket.on('connect', function() {
-            log("SocketIO connected to server");
-        });
-
-        socket.on('disconnect', function() {
-            log("SocketIO disconnected from server");
-        });
-
-        socket.on('log', function(msg) {
-            log(msg);
-        });
-
-        socket.on('update_pages', function(data) {
-            // data is a list of dictionaries with info on each stream
-            console.log("getting update");
-            $('.streams ul').empty()
-            data.forEach(function(info) {
-                $('.streams ul').append(`<li><a href='/stream?group=${info['name']}'>${info['name']}</a></li>`);
-            });
-        });
-
-        socket.on('update_files', function(data) {
-            // data is a list of file names
-            console.log("getting data directory update");
-            selected_file = ""  // clear selected file
-            $('.files ul').empty()
-            data.forEach(function(filename) {
-                $('div.files ul').append(`<li>${filename}</li>`);
-            });
-
-            // each file name will set the selected_file variable with its own filename
-            $('div.files li').on('click', function(event) {
-                $("div.files li.selected").removeClass('selected');  // unset selected form prev
-                $(event.target).addClass('selected')  // set selected
-                selected_file = $(event.target).text();  // set currently selected file
-                log("selected file: "+selected_file);
-            });
-        });
-
-        socket.on('update_buttons', function(data) {
-            // data is a list of dictionaries with updated values of some buttons
-            console.log("getting button update");
-            data.forEach(function(info) {
-                console.log(info);
-            });
-        });
-
-        // each command button emits an event to the server
-        $('div.stream_commands button.command').on('click', function(event) {
-            socket.emit(event.target.value);
-        });
-
-        // each file option button emits an event to the server with the currently selected file name
-        $('div.file_commands button.command').on('click', function(event) {
-            socket.emit(event.target.value, selected_file);
-        });
-
-    });
-</script>
+<script src="static/js/index.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -102,9 +32,9 @@
     <div class="files">
         <h2>Saved Database Files</h2>
         <div class="commands file_commands">
-            <button class="command" value="load" title="Load selected file for playback">Load</button>
-            <button class="command" value="rename" title="Rename selected file">Rename</button>
-            <button class="command" value="delete" title="Delete selected file">Delete</button>
+            <button class="command load" value="load" title="Load selected file for playback">Load</button>
+            <button class="command rename" value="rename" title="Rename selected file">Rename</button>
+            <button class="command delete" value="delete" title="Delete selected file">Delete</button>
         </div>
         <ul></ul>
     </div>
@@ -113,6 +43,25 @@
         <h3>Logs</h3>
         <p></p>
     </div>
+</div>
+
+<div class="name_dialog" title="Name the file">
+  <p>name dialog message</p>
+  <form>
+     <fieldset>
+        <label for="file_name">New Name</label>
+        <input type="text" name="name" id="file_name" value="default-name" class="text ui-widget-content ui-corner-all">
+        <input type="submit" style="position:absolute; top:-1000px">
+     </fieldset>
+  </form>
+</div>
+
+<div class="confirm_dialog" title="Confirm Dialog">
+  <p>confirmation message</p>
+</div>
+
+<div class="error_dialog" title="Error">
+  <p>Error message</p>
 </div>
 
 {% endblock %}
