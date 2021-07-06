@@ -33,6 +33,20 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### July 5th, 2021:
+
+After talking with Dr. Ghassemi today, we decided I needed to implement a feature which would allow the user to review all data collected. This requires a number of things:
+
+- ability to select old database files in the browser
+- ability to load old database files into the current database
+- ability to stream the current database file from the beginning at an increased speed
+  - this will require that a sample rate be assigned even to streams without one, like the sense hat stream. Otherwise the server will have no idea how fast to stream it back.
+  - not yet sure how to deal with widgets here. should they just be completely disabled?
+
+Today I tackled the first of those. I added a div in the browser that displays a list of all the redis dump files in the data/redis_dumps directory. I wrote javascript which allows the user to select a file from that list, and then execute a command which is sent to the server along with the selected file name. I started out not having any idea how to do this, but so far I have learned that jQuery is magical.
+
+I added 3 commands that are sent from the browser: Load, Rename, and Delete. The expected functionality is that Load will load in the selected database file, ready for playback. Rename should just create a popup with an input and rename the file to that name. Delete should delete the selected file. I have currently only fully implemented the Delete command, as it was relatively simple. Tomorrow I will begin working on the Load command. The Rename command will be tricky because it requires a popup with a submission form, and I do not yet know how to do that. I also would like to add a similar function to the Save button.
+
 ##### July 3rd, 2021:
 
 Today I'm working on getting the new EEG electrode cap streaming that Dr. Ghassemi sent over. I've done all the setup and things appeared to be working as intended, however occasionally the board stops transmitting and I can't figure out why. I've tried it on the OpenBCI GUI on my Windows 10 PC, but I see the same results. I've made a [post](https://openbci.com/forum/index.php?p=/discussion/3045/cyton-daisy-fails-to-start-session-other-cyton-daisy-streams-inconsistently#latest) on the OpenBCI forums to look for assistance. For a while I also thought that the first Cyton board stopped working, but it just turns out that I had the switch on the dongle on the wrong setting. Sigh.
