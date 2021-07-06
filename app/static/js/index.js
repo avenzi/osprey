@@ -76,7 +76,7 @@ $(document).ready(function() {
             }
         },
         close: function() {
-            name_form[0].reset();
+            //name_form[0].reset();
             //name.removeClass("ui-state-error");
         }
     });
@@ -110,7 +110,7 @@ $(document).ready(function() {
         }
     });
 
-    name_dialog.find("form").on("submit", function(event) {
+    name_form = name_dialog.find("form").on("submit", function(event) {
         event.preventDefault();
         console.log("PREVENTED DEFAULT");
     });
