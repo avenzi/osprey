@@ -66,7 +66,6 @@ $(document).ready(function() {
 
     var rename_dialog = $('.rename_dialog').dialog({
         autoOpen: false,
-        //width: 400,
         modal: true,
         buttons: {
             "Ok": function() {
