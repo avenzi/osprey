@@ -125,6 +125,8 @@ class Database:
 
     def rename_save(self, filename, newname):
         """ renames an old save file """
+        if not newname.endswith('.rdb'):
+            newname += '.rdb'
         try:
             system("mv {0}/{1} {0}/{2}".format(self.store_path, filename, newname))
         except Exception as e:
