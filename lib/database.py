@@ -1,7 +1,7 @@
 from time import time, sleep, strftime, localtime
 import functools
 import json
-import os
+from os import system, path
 
 import redis
 
@@ -54,8 +54,8 @@ class Database:
         self.password = password  # database password
 
         # file paths
-        self.file_path = 'data/dump.rdb'
-        self.store_path = 'data/redis_dumps'
+        self.file_path = 'data/dump.rdb'  # main database file to read from
+        self.store_path = 'data/redis_dumps'  # directory of old files
 
         # Separate redis pools for reading decoded data or reading raw bytes data.
         # not sure how to give Redis instances to certain sessions.
@@ -79,7 +79,7 @@ class Database:
         """
         # move old file if it's there
         try:
-            os.system("redis-server config/redis.conf")
+            system("redis-server config/redis.conf")
             self.exit = False
         except Exception as e:
             raise DatabaseError("Failed to initialize database: {}".format(e))
@@ -92,12 +92,12 @@ class Database:
             self.redis.shutdown(save=True)
 
             # if file name not given or already exists
-            if not filename or os.path.isfile(self.store_path+filename):
+            if not filename or path.isfile(self.store_path+filename):
                 print("Filename not specified or already exists - using default timestamp.")
                 filename = get_time()
 
             # move current dump file to storage directory with new name
-            os.system("mv {} {}/{}.rdb".format(self.file_path, self.store_path, filename))
+            system("mv {} {}/{}.rdb".format(self.file_path, self.store_path, filename))
             # TODO: Make a copy of the file, but don't remove the current one, then wipe the whole database.
             #  This might avoid problems with shutting it down entirely.
             self.disconnect()
@@ -109,11 +109,28 @@ class Database:
     def load_file(self, filename):
         """ Loads in the specified redis dump file and starts the redis server """
         self.shutdown()  # shut down current database file if it exists
+
         try:
-            os.system("mv {}/{} {}".format(self.store_path, filename, self.file_path))
+            # remove current data file if it exists.
+            # it shouldn't (because of shutdown()) but this is just in case.
+            system('rm {}'.format(self.file_path))
+        except:
+            pass
+
+        try:
+            system("cp {}/{} {}".format(self.store_path, filename, self.file_path))
             self.init()
         except Exception as e:
             raise DatabaseError("Failed to load file to database: {}".format(e))
+
+    def rename_save(self, filename, newname):
+        """ renames an old save file """
+        pass
+        # todo: implement this
+
+    def delete_save(self, filename):
+        """ Remove an old stored file """
+        system('rm {}/{}'.format(self.store_path, filename))
 
     def connect(self, timeout=None, delay=1):
         """
