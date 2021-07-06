@@ -61,13 +61,14 @@ $(document).ready(function() {
     });
 
 
-    var name_dialog = $('.name_dialog').dialog({
+    var rename_dialog = $('.rename_dialog').dialog({
         autoOpen: false,
-        height: 400,
-        width: 350,
+        //height: 200,
+        //width: 300,
         modal: true,
         buttons: {
             "Ok": function() {
+                socket.emit('rename', {filename: selected_file, newname:$('#file_name').val()})
                 console.log("SEND NAME OK: "+$('#file_name').val())
                 $(this).dialog("close");
             },
@@ -81,30 +82,18 @@ $(document).ready(function() {
         }
     });
 
-    var confirm_dialog = $('.confirm_dialog').dialog({
+    var delete_dialog = $('.confirm_dialog').dialog({
         autoOpen: false,
-        height: 400,
-        width: 350,
+        //height: 200,
+        //width: 350,
         modal: true,
         buttons: {
             "Ok": function() {
+                socket.emit('delete', selected_file)
                 console.log("SEND CONFIRM OK")
                 $(this).dialog("close");
             },
             "Cancel": function() {
-                $(this).dialog("close");
-            }
-        }
-    });
-
-    var error_dialog = $('.error_dialog').dialog({
-        autoOpen: false,
-        height: 400,
-        width: 350,
-        modal: true,
-        buttons: {
-            "Ok": function() {
-                console.log("ERROR OK")
                 $(this).dialog("close");
             }
         }

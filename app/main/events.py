@@ -141,10 +141,10 @@ def browser_load(filename):
 
 
 @socketio.on('rename', namespace='/browser')
-def browser_rename(filename, newname):
+def browser_rename(data):
     """ Renames the selected file """
     try:
-        print("OLD: {}, NEW: {}".format(filename, newname))
+        print("OLD: {}, NEW: {}".format(data['filename'], data['newname']))
         raise Exception("Renaming not implemented")
     except Exception as e:
         error(e)
