@@ -71,8 +71,7 @@ $(document).ready(function() {
         modal: true,
         buttons: {
             "Ok": function() {
-                socket.emit('rename', {filename: selected_file, newname:$('#file_name').val()})
-                console.log("SEND NAME OK: "+$('#file_name').val())
+                socket.emit('rename', {filename: selected_file, newname: $('#file_name').val()})
                 $(this).dialog("close");
             },
             "Cancel": function() {
@@ -80,19 +79,16 @@ $(document).ready(function() {
             }
         },
         close: function() {
-            //name_form[0].reset();
+            $('#file_name').reset();
         }
     });
 
     var delete_dialog = $('.confirm_dialog').dialog({
         autoOpen: false,
-        //height: 200,
-        //width: 350,
         modal: true,
         buttons: {
             "Ok": function() {
                 socket.emit('delete', selected_file)
-                console.log("SEND CONFIRM OK")
                 $(this).dialog("close");
             },
             "Cancel": function() {
@@ -102,8 +98,7 @@ $(document).ready(function() {
     });
 
     name_form = rename_dialog.find("form").on("submit", function(event) {
-        event.preventDefault();
-        console.log("PREVENTED DEFAULT");
+        //event.preventDefault();
     });
 
     // each command button emits an event to the server
