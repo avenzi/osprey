@@ -130,7 +130,10 @@ class Database:
 
     def delete_save(self, filename):
         """ Remove an old stored file """
-        system('rm {}/{}'.format(self.store_path, filename))
+        try:
+            system('rm {}/{}'.format(self.store_path, filename))
+        except Exception as e:
+            raise DatabaseError("Failed to delete file: {}".format(e))
 
     def connect(self, timeout=None, delay=1):
         """
