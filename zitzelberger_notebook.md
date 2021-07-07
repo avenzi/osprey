@@ -33,6 +33,16 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### July 6th, 2021:
+
+​	I decided to add the confirmation popups today first to make renaming files easier in the future. Turns out jQuery saves the day again with the IU package. This took me a while to figure out, but I now have a basic confirmation dialog for the delete command, and a dialog to rename files with basic file name validation. I started out with the usual form submission with HTTP requests, but it was sort of cumbersome so I instead switched to using the socketIO structure that was already present in the script. This was way easier and allowed me to quickly implement error messages on the server side, which now appear in bold red separately from the normal log messages, which is neat. These are used when invalid file names are given and such. I have the confirm_dialog div in index.html so it can be used for other actions that might need confirmation in the future, and theoretically it can be used multiple times for various dialogs, though I haven't tested it. Worst case I just made a new div for each dialog I want on that page.
+
+​	I also bullet point #2 from yesterday, which involves replacing the current database file (located at data/dump.rdb) with the specified database file chosen in the browser. The server then starts Redis, which automatically loads the contents of that file, displaying it as if it were the current live database. 
+
+​	The tricky part is figuring out how to read from the database from the beginning. I first tried implementing a second redis database instance that would stream data to the main database, mimicking the data streams that its built for. After writing that, I realized that I would be performing the exact same operations if I were just reading from that secondary database instead, so I scrapped it and started over. Now I am in the process of trying to rewrite the original database read operations to accommodate.
+
+​	The main issue I am having now is with synchronization. The streams coming into the server are not synchronized, and therefore have their own time axis associated with them. When reading through the data from each stream, I need to have a synchronized time scale in order to read them all at the same time. I am trying different methods to see what works.
+
 ##### July 5th, 2021:
 
 After talking with Dr. Ghassemi today, we decided I needed to implement a feature which would allow the user to review all data collected. This requires a number of things:
