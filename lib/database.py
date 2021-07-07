@@ -67,6 +67,7 @@ class Database:
         self.exit = False  # flag to determine when to stop running if looping
         self.live = True   # Whether in live mode
         self.playback_speed = 1  # speed multiplier in playback mode
+        self.updated = True  # whether the database has been written to since last save
 
         # For different threads to keep track of their own last read operation point.
         # First level keys are the ID of each separate reader. Values are second level dictionaries.
@@ -109,8 +110,9 @@ class Database:
             # move current dump file to storage directory with new name
             system("mv {} {}/{}.rdb".format(self.file_path, self.store_path, filename))
             # TODO: Make a copy of the file, but don't remove the current one, then wipe the whole database.
-            #  This might avoid problems with shutting it down entirely.
+            #  This might avoid problems with shutting it down entirely?
             self.disconnect()
+            self.updated = True
             return True
 
         except Exception as e:

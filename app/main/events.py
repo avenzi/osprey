@@ -98,6 +98,8 @@ def database_init():
 @socketio.on('save', namespace='/browser')
 def browser_save():
     """ stop database process and dump data """
+    # todo: check if database has already been saved.
+    #  implement a checker in database object.
     socketio.emit('stop', namespace='/streamers')  # stop streams first
     current_app.database.shutdown()  # stop database process
     log('Shut down Database and saved to disk')
@@ -132,15 +134,18 @@ def browser_refresh():
 @socketio.on('live', namespace='/browser')
 def browser_live():
     """ Switches back to current live database file """
-    error('Not yet implemented')
+    current_app.database.set_live(True)  # set database to live mode
+    log('Set database to Live mode')
+    # todo: disable live button, enable playback button
     browser_refresh()
 
 
 @socketio.on('playback', namespace='/browser')
 def browser_live():
     """ Switches to playback mode """
-    current_app.database.playback()  # set database on playback mode
-    error('Not yet implemented')
+    current_app.database.set_live(False)  # set database on playback mode
+    log('Set database to Playback mode')
+    # todo: disable playback button, enable live button
     browser_refresh()
 
 
