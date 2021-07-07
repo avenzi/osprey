@@ -65,11 +65,13 @@ class Database:
         self.bytes_redis = redis.Redis(connection_pool=self.bytes_pool)
 
         self.exit = False  # flag to determine when to stop running if looping
+        self.read_mode = 'live'  # live or playback
+        self.playback_speed = 1  # speed multiplier in playback mode
 
         # For different threads to keep track of their own last read operation point.
-        # Dictionary of dictionaries: First level key is ID of each separate reader.
-        # Each of those dictionaries has keys for each stream in the database, with values
-        # of the last stream ID read from it.
+        # First level keys are the ID of each separate reader. Values are second level dictionaries.
+        # Second level keys are the ID of each stream in the database. Values are third level dictionaries.
+        # Third level keys are "id" and "time", which are the last read database key and the time it was read.
         self.bookmarks = {}
 
     def init(self):
@@ -147,6 +149,15 @@ class Database:
         except Exception as e:
             raise DatabaseError("Failed to delete file: {}".format(e))
 
+    def set_mode(self, mode):
+        """ set to playback mode """
+        if mode == 'playback':
+            self.read_mode = mode
+        elif mode == 'live':
+            self.read_mode = mode
+        else:
+            raise DatabaseError("Unrecognized mode '{}'. Should be 'live' or 'playback'".format(mode))
+
     def connect(self, timeout=None, delay=1):
         """
         Attempt to connect to database
@@ -219,7 +230,7 @@ class Database:
         <reader> is some ID that will keep track of it's own read head position.
         <count> is the number of data points to read (ignoring whether the point have already been read.
             - If None, read as many new points as possible.
-            - If not None, ignores <max_time> an <reader>
+            - If not None, ignores <max_time> and <reader>
         <max_time> maximum time window (s) to read. (If count is None).
             - If None, read as much as possible (guarantees all data read)
         <numerical>  Whether the data needs to be converted python float type
@@ -242,17 +253,29 @@ class Database:
             self.bookmarks[reader] = bookmarks
 
         if count:  # get COUNT data regardless of last read
-            response = red.xrevrange('stream:'+stream, count=count)
+            if self.read_mode == 'live':
+                response = red.xrevrange('stream:'+stream, count=count)
+            elif self.read_mode == 'playback':
+                last_read = bookmarks.get(stream)
+                if last_read:  # last read spot exists, read count from then
+                    last_read_id = last_read['id']
+                    response = red.xrevrange('stream:'+stream, min=last_read_id, count=count)
+                else:
+                    if last_read:  # last read spot exists, read count from then
+                        last_read_id = last_read['id']
+                        response = red.xrevrange('stream:' + stream, min=last_read_id, count=count)
+
 
         else:  # get data since last read
             last_read = bookmarks.get(stream)
             if last_read:  # last read spot exists
+                last_read_id = last_read['id']
                 if max_time:  # max time window set
                     # furthest back time stamp to read
                     # put into same format as redis time stamp (integer milliseconds)
                     limit = int(1000*(time()-max_time))
-                    last_read = last_read if int(last_read.split('-')[0]) > limit else limit
-                response = red.xread({'stream:'+stream: last_read})
+                    last_read_id = last_read_id if int(last_read_id.split('-')[0]) > limit else limit
+                response = red.xread({'stream:'+stream: last_read_id})
             else:  # no last spot, start reading from latest, block for 1 sec
                 response = red.xread({'stream:'+stream: '$'}, block=1000)
 
@@ -261,10 +284,10 @@ class Database:
 
         # store the last ID of this stream and get list of data dicts
         if count:
-            self.bookmarks[reader][stream] = response[-1][0]
+            self.bookmarks[reader][stream]['id'] = response[-1][0]
             data_list = response
         else:
-            self.bookmarks[reader][stream] = response[0][1][-1][0]
+            self.bookmarks[reader][stream]['id'] = response[0][1][-1][0]
             data_list = response[0][1]
 
         # create final output dict
@@ -316,6 +339,12 @@ class Database:
         if to_json:
             return json.dumps(output)
         return output
+
+    def read_data_live(self, start):
+        """ Read most recent data since <start>, which is a Redis timestamp """
+
+    def read_data_range(self, start, stop):
+        """ Read data from range <start> to <stop>, where each are Redis timestamps """
 
     @maintain_connection
     def write_snapshot(self, stream, data):
