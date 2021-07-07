@@ -136,6 +136,14 @@ def browser_live():
     browser_refresh()
 
 
+@socketio.on('playback', namespace='/browser')
+def browser_live():
+    """ Switches to playback mode """
+    current_app.database.playback()  # set database on playback mode
+    error('Not yet implemented')
+    browser_refresh()
+
+
 @socketio.on('load', namespace='/browser')
 def browser_load(filename):
     """ Loads the given database file for playback """
