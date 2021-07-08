@@ -293,6 +293,9 @@ class Database:
         if not response:
             return None
 
+        if not self.bookmarks[reader].get(stream):
+            self.bookmarks[reader][stream] = {}
+
         # set last read time
         self.bookmarks[reader][stream]['time'] = time()
 
