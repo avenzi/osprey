@@ -101,6 +101,11 @@ class Database:
         Initialize database process.
         Obviously only used on the machine that is hosting the redis server
         """
+        try:  # dump current database file if it wasn't properly dumped on shutdown
+            self.dump()
+        except:
+            pass
+
         try:
             system("redis-server config/redis.conf")
             self.exit = False
@@ -140,9 +145,13 @@ class Database:
         Returns the full filename used (may not be the same as given)
         """
         if not path.isfile(self.file_path):
-            raise DatabaseError("Failed to dump database file - no current databse file exists")
+            raise DatabaseError("Failed to dump database file - no current database file exists")
 
-        self.redis.shutdown(save=True)
+        try:
+            self.redis.shutdown(save=True)
+        except:
+            pass
+
         # if file name not given or already exists
         if not filename or path.isfile(self.store_path + '/' + filename):
             print("Filename not specified or already exists - using default timestamp.")
