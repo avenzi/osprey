@@ -461,6 +461,7 @@ class Streamer(WorkerNode):
 
         while not self.exit:  # run until exit
             self.streaming.wait()  # block until streaming event is set
+
             try:
                 self.loop()  # call user-defined main execution
             except Exception as e:
