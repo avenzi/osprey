@@ -457,7 +457,7 @@ class Streamer(WorkerNode):
 
         # start loop immediately if database is ready
         if self.database.is_ready():
-            self.start()
+            self._start()
 
         while not self.exit:  # run until exit
             self.streaming.wait()  # block until streaming event is set
@@ -543,7 +543,10 @@ class Streamer(WorkerNode):
         self.update()
 
     def start(self):
-        """ overwritten in subclass """
+        """
+        overwritten in subclasses
+        Should only be called in _start(). Nowhere else.
+        """
         pass
 
     def _stop(self):
@@ -560,7 +563,10 @@ class Streamer(WorkerNode):
         self.update()
 
     def stop(self):
-        """ overwritten in subclass """
+        """
+        overwritten in subclass.
+        Should only be called in _stop(). Nowhere else.
+        """
         pass
 
     def json(self, dic):
