@@ -23,7 +23,7 @@ class TestStreamer(Streamer):
             self.val_1 += random()-0.5
             self.val_2 += random()-0.5
             self.val_3 += random()-0.5
-            data['time'].append(time())
+            data['time'].append(time()*1000)
             data['val_1'].append(self.val_1)
             data['val_2'].append(self.val_2)
             data['val_3'].append(self.val_3)
@@ -52,7 +52,7 @@ class SenseStreamer(Streamer):
             data['roll'].append(roll)
             data['pitch'].append(pitch)
             data['yaw'].append(yaw)
-            data['time'].append(time())
+            data['time'].append(time()*1000)
 
         self.database.write_data(self.id, data)
 
@@ -131,7 +131,7 @@ class VideoStreamer(Streamer):
         self.frames_sent += 1
 
         data = {
-            'time': time(),
+            'time': time()*1000,
             'frame': image
         }
 
@@ -212,7 +212,7 @@ class SynthEEGStreamer(Streamer):
             return
 
         # convert from epoch time to relative time since session start
-        data['time'] = list(raw_data[self.time_channel])
+        data['time'] = list(raw_data[self.time_channel]*1000)
 
         for i, j in enumerate(self.eeg_channel_indexes):
             data[self.eeg_channel_names[i]] = list(raw_data[j])
@@ -279,7 +279,7 @@ class EEGStreamer(Streamer):
             return
 
         # convert from epoch time to relative time since session start
-        data['time'] = list(raw_data[self.time_channel])
+        data['time'] = list(raw_data[self.time_channel]*1000)
 
         for i, j in enumerate(self.eeg_channel_indexes):
             data[self.eeg_channel_names[i]] = list(raw_data[j])
@@ -369,7 +369,7 @@ class ECGStreamer(Streamer):
             return
 
         # convert from epoch time to relative time since session start
-        data['time'] = list(raw_data[self.time_channel])
+        data['time'] = list(raw_data[self.time_channel]*1000)
 
         for i, j in enumerate(self.pulse_channel_indexes):
             data[self.pulse_channel_names[i]] = list(raw_data[j])
