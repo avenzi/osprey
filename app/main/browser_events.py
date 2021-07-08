@@ -18,14 +18,15 @@ def log(msg):
 def error(msg):
     """ Log an error message in the browser """
     socketio.emit('error', str(msg), namespace='/browser')
+    print("ERROR: {}".format(msg))
 
 
 def catch_errors(handler):
     """ Decorator to catch and send error messages to the browser """
     @wraps(handler)
-    def wrapped_handler(**kwargs):
+    def wrapped_handler(*args, **kwargs):
         try:
-            return handler(**kwargs)
+            return handler(*args, **kwargs)
         except Exception as e:
             error(e)
     return wrapped_handler
