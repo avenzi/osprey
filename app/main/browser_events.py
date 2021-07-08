@@ -102,6 +102,7 @@ def stop():
     filename = current_app.database.dump()  # dump database file
     log('Session Saved: {}'.format(filename))
     current_app.database.init()  # start new database
+    socketio.emit('update', namespace='/streamers')  # request info update from streamers
     sleep(0.1)
     refresh()
 
