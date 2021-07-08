@@ -8,7 +8,7 @@ from bokeh.palettes import viridis, magma
 
 from json import loads
 
-from bokeh_layouts.utils import js_request, time_formatter
+from app.bokeh_layouts.utils import js_request, time_formatter
 
 BACKEND = 'canvas'  # 'webgl' appears to be broken - makes page unresponsive.
 
