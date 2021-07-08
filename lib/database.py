@@ -28,8 +28,6 @@ def maintain_connection(method):
                 raise self.Error('Could not connect to database.')
 
         while not self.exit:
-            if not self.is_ready():
-                raise self.Error("Database not ready to receive data")
             try:  # attempt to perform database operation
                 return method(self, *args, **kwargs)
             except (redis.exceptions.ConnectionError, ConnectionResetError, ConnectionRefusedError)as e:
@@ -39,6 +37,18 @@ def maintain_connection(method):
                     raise self.Error('Database connection error: {}'.format(e))
             except Exception as e:
                 raise self.Error('Error in Database ({}). {}: {}'.format(method.__name__, e.__class__.__name__, e))
+    return wrapped
+
+
+def write_operation(method):
+    """
+    Method wrapper to throw an error if the database is not ready
+    Used for write operations for data
+    """
+    @functools.wraps(method)
+    def wrapped(self, *args, **kwargs):
+        if not self.is_ready():
+            raise self.Error("Database not ready to receive data")
     return wrapped
 
 
@@ -231,6 +241,7 @@ class Database:
             return True
 
     @maintain_connection
+    @write_operation
     def write_data(self, stream, data):
         """
         Writes time series <data> to stream:<stream>.
@@ -385,6 +396,7 @@ class Database:
         return output
 
     @maintain_connection
+    @write_operation
     def write_snapshot(self, stream, data):
         """
         Writes a snapshot of data <data> to stream:<stream>.
