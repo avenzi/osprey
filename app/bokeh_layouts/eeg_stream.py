@@ -8,7 +8,7 @@ from bokeh.palettes import viridis, magma
 
 from json import loads
 
-from app.bokeh_layouts.utils import js_request, time_formatter
+from app.bokeh_layouts.utils import js_request, time_format
 
 BACKEND = 'canvas'  # 'webgl' appears to be broken - makes page unresponsive.
 ELECTRODES_PATH = 'app/static/electrodes.json'
@@ -166,7 +166,7 @@ def create_layout(info):
         toolbar_location=None,
         output_backend=BACKEND
     )
-    eeg.xaxis.formatter = time_formatter
+    eeg.xaxis.formatter = time_format()
     eeg.toolbar.active_drag = None  # disable drag
 
     # y-axis range will autoscale to currently selected channel

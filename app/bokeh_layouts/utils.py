@@ -1,17 +1,25 @@
 from bokeh.models import DatetimeTickFormatter
 
-time_formatter = DatetimeTickFormatter(
-    years=["%Y"],
-    months=["%m/%d %Y"],
-    days=["%m/%d"],
-    hours=["%m/%d %H:%M"],
-    hourmin=["%H:%M"],
-    minutes=["%H:%M"],
-    minsec=["%H:%M"],
-    seconds=["%S"],
-    milliseconds=['%S.%3Ns'],
-    microseconds=['%S.%fs']
-)
+
+def time_format():
+    """
+    Generate a new DatetimeTickFormatter to view data at different scales.
+    Usage:
+        fig = bokeh.plotting.figure()
+        fig.xaxis.formatter = time_format()
+    """
+    return DatetimeTickFormatter(
+        years=["%Y"],
+        months=["%m/%d %Y"],
+        days=["%m/%d"],
+        hours=["%m/%d %H:%M"],
+        hourmin=["%H:%M"],
+        minutes=["%H:%M"],
+        minsec=["%H:%M"],
+        seconds=["%S"],
+        milliseconds=['%S.%3Ns'],
+        microseconds=['%S.%fs']
+    )
 
 
 def js_request(ID, key, attribute='value'):

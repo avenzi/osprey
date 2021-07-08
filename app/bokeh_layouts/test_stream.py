@@ -2,6 +2,8 @@ from bokeh.plotting import figure
 from bokeh.models import AjaxDataSource
 from bokeh.layouts import layout
 
+from app.bokeh_layouts.utils import time_format
+
 
 def create_stream_layout(info):
     source1 = AjaxDataSource(
@@ -21,12 +23,14 @@ def create_stream_layout(info):
         if_modified=True)  # if_modified ignores responses sent with code 304 and not cached.
 
     data1 = figure(title='Sample Data 1', x_axis_label='time', y_axis_label='Data', toolbar_location=None, plot_width=600, plot_height=300)
+    data1.xaxis.formatter = time_format()
     data1.toolbar.active_drag = None
     data1.line(x='time', y='val_1', legend_label='Val 1', color='blue', source=source1)
     data1.line(x='time', y='val_2', legend_label='Val 2', color='green', source=source1)
     data1.line(x='time', y='val_3', legend_label='Val 3', color='red', source=source1)
 
     data2 = figure(title='Sample Data 2', x_axis_label='time', y_axis_label='Data', toolbar_location=None, plot_width=600, plot_height=300)
+    data2.xaxis.formatter = time_format()
     data2.toolbar.active_drag = None
     data2.line(x='time', y='val_1', legend_label='Val 1', color='blue', source=source2)
     data2.line(x='time', y='val_2', legend_label='Val 2', color='green', source=source2)
@@ -68,6 +72,7 @@ def create_analyzer_layout(info):
         if_modified=True)  # if_modified ignores responses sent with code 304 and not cached.
 
     data = figure(title='Averages', x_axis_label='time', y_axis_label='Average Value', toolbar_location=None, plot_width=600, plot_height=300)
+    data.xaxis.formatter = time_format()
     data.toolbar.active_drag = None
     data.line(x='time_11', y='data_11', legend_label='Data 11', color='blue', source=source11)
     data.line(x='time_12', y='data_12', legend_label='Data 12', color='green', source=source12)

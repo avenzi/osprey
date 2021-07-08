@@ -8,7 +8,7 @@ from bokeh.palettes import viridis, magma
 
 from json import loads
 
-from app.bokeh_layouts.utils import js_request, time_formatter
+from app.bokeh_layouts.utils import js_request, time_format
 
 BACKEND = 'canvas'  # 'webgl' appears to be broken - makes page unresponsive.
 
@@ -192,7 +192,7 @@ if (diff > 0 && diff < end-start) {
         tools='xpan,xwheel_zoom,reset', toolbar_location='above',
         output_backend=BACKEND
     )
-    fourier.xaxis.formatter = time_formatter
+    fourier.xaxis.formatter = time_format()
 
     for i in range(len(channels)):
         fourier.line(x='frequencies', y=channels[i], color=colors[i], source=fourier_source)
