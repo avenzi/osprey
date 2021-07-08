@@ -430,7 +430,6 @@ class Streamer(WorkerNode):
 
         # flags and events
         self.streaming = Event()  # threading event flag set to activate stream
-        self.start_time = time.time()  # start time
 
     def __repr__(self):
         return "[{}:{}]".format(self.group, self.name)
@@ -562,10 +561,6 @@ class Streamer(WorkerNode):
         """ To be called in response to the socketio receiving json (dict) data """
         self.log("{} Received JSON: {}".format(self.name, dic))
         pass
-
-    def time(self):
-        """ Get time passed since the stream started """
-        return time.time() - self.start_time
 
 
 class Analyzer(Streamer):
