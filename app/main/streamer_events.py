@@ -14,14 +14,14 @@ Namespaces:
 @socketio.on('connect', namespace='/streamers')
 def connect():
     """ On disconnecting from a streamer """
-    print("A Streamer connected")
+    # print("A Streamer connected")
     pass
 
 
 @socketio.on('disconnect', namespace='/streamers')
 def disconnect():
     """ On disconnecting from a streamer """
-    print("A Streamer disconnected")
+    # print("A Streamer disconnected")
     pass
 
 

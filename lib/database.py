@@ -88,46 +88,29 @@ class Database:
         Initialize database process.
         Obviously only used on the machine that is hosting the redis server
         """
-        # move old file if it's there
         try:
             system("redis-server config/redis.conf")
             self.exit = False
+            sleep(0.5)  # give it a sec to start up
         except Exception as e:
             raise DatabaseError("Failed to initialize database: {}".format(e))
 
     def shutdown(self, filename=None):
         """ Shut down database process and save data """
-        if not self.redis:
-            return False
-        try:
-            self.redis.shutdown(save=True)
-
-            # if file name not given or already exists
-            if not filename or path.isfile(self.store_path+'/'+filename):
-                print("Filename not specified or already exists - using default timestamp.")
-                filename = get_time_filename()
-            if not filename.endswith('.rdb'):
-                filename += '.rdb'
-            # move current dump file to storage directory with new name
-            system("mv {} {}/{}".format(self.file_path, self.store_path, filename))
-            # TODO: Make a copy of the file, but don't remove the current one, then wipe the whole database.
-            #  This might avoid problems with shutting it down entirely?
-            self.disconnect()
-            self.updated = True
-            return True
-
-        except Exception as e:
-            raise DatabaseError("Failed to shutdown or save database: {}".format(e))
+        if not self.redis:  # already shutdown
+            return
+        self.dump(filename)
+        self.disconnect()
 
     def load_file(self, filename):
         """ Loads in the specified redis dump file and starts the redis server """
         if not filename:
             raise Exception("Could not load file - no file name given")
-        self.shutdown()  # shut down current database file if it exists
+        self.dump()  # dump current database file if it exists
 
         try:
             # remove current data file if it exists.
-            # it shouldn't (because of shutdown()) but this is just in case.
+            # it shouldn't (because of dump()) but this is just in case.
             system('rm {}'.format(self.file_path))
         except:
             pass
@@ -137,6 +120,28 @@ class Database:
             self.init()
         except Exception as e:
             raise DatabaseError("Failed to load file to database: {}".format(e))
+
+    def dump(self, filename=None):
+        """
+        Dump the current database file to the storage directory
+        Returns the full filename used (may not be the same as given)
+        """
+        if not path.isfile(self.file_path):
+            raise DatabaseError("Failed to dump database file - no current databse file exists")
+
+        self.redis.shutdown(save=True)
+        # if file name not given or already exists
+        if not filename or path.isfile(self.store_path + '/' + filename):
+            print("Filename not specified or already exists - using default timestamp.")
+            filename = get_time_filename()
+        if not filename.endswith('.rdb'):
+            filename += '.rdb'
+        # move current dump file to storage directory with new name
+        try:
+            system("mv {} {}/{}".format(self.file_path, self.store_path, filename))
+        except Exception as e:
+            raise DatabaseError("Failed to dump database file to '{}': {}".format(filename, e))
+        return filename
 
     def rename_save(self, filename, newname):
         """ renames an old save file """
@@ -203,6 +208,25 @@ class Database:
                 return True
         except:
             return False
+
+    def set_ready(self, val):
+        """ Set the ready status of the database """
+        try:
+            if val:
+                self.redis.set('READY', 1)
+            else:
+                self.redis.delete('READY')
+        except Exception as e:
+            raise DatabaseError("Failed to set database status to '{}'. {}".format(val, e))
+
+    def is_ready(self):
+        """ Checks to see if the database is ready to be streamt to"""
+        if not self.redis:
+            return False
+        if not self.ping():
+            return False
+        if self.redis.get('READY'):
+            return True
 
     @maintain_connection
     def write_data(self, stream, data):
