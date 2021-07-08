@@ -23,8 +23,7 @@ class TestStreamer(Streamer):
             self.val_1 += random()-0.5
             self.val_2 += random()-0.5
             self.val_3 += random()-0.5
-            t = np.array(time(), dtype='i8').view('datetime64[ms]').tolist()
-            data['time'].append(t)
+            data['time'].append(time())
             data['val_1'].append(self.val_1)
             data['val_2'].append(self.val_2)
             data['val_3'].append(self.val_3)

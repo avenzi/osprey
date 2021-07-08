@@ -1,5 +1,5 @@
 from bokeh.models import CustomJS, AjaxDataSource, DataRange1d
-from bokeh.models import Panel, Tabs, ColorBar, LogColorMapper, LogTicker, PrintfTickFormatter
+from bokeh.models import Panel, Tabs, ColorBar, LogColorMapper, LogTicker, PrintfTickFormatter, DatetimeTickFormatter
 from bokeh.models import Slider, RangeSlider, Select, Spinner, Toggle, RadioButtonGroup
 from bokeh.layouts import layout, Row, Column
 from bokeh.transform import log_cmap
@@ -7,7 +7,8 @@ from bokeh.plotting import figure
 from bokeh.palettes import viridis, magma
 
 from json import loads
-from scipy import signal
+
+from bokeh_layouts.utils import js_request, time_formatter
 
 BACKEND = 'canvas'  # 'webgl' appears to be broken - makes page unresponsive.
 ELECTRODES_PATH = 'app/static/electrodes.json'
@@ -42,28 +43,6 @@ default_fourier_widgets = {
               'Beta': (12, 30),
               'Gamma': (30, 100)}
 }
-
-
-def js_request(ID, key, attribute='value'):
-    """
-    Generates callback JS code to send an HTTPRequest.
-    <ID> is the ID to send this request to.
-    <key> is the key in the JSON string being sent to associate with this value
-    <attribute> is the attribute of the JS object to send.
-    'this.value' refers to the new value of the Bokeh object.
-        - In some cases (like buttons) Bokeh uses 'this.active'
-    """
-
-    code = """
-        var req = new XMLHttpRequest();
-        url = window.location.pathname;
-        req.open("POST", url+'/widgets'+'?id={ID}', true);
-        req.setRequestHeader('Content-Type', 'application/json');
-        var json = JSON.stringify({{{key}: this.{attribute}}});
-        req.send(json);
-        console.log('{key}: ' + this.{attribute});
-    """
-    return code.format(ID=ID, key=key, attribute=attribute)
 
 
 def create_layout(info):
@@ -187,6 +166,7 @@ def create_layout(info):
         toolbar_location=None,
         output_backend=BACKEND
     )
+    eeg.xaxis.formatter = time_formatter
     eeg.toolbar.active_drag = None  # disable drag
 
     # y-axis range will autoscale to currently selected channel
@@ -241,6 +221,7 @@ if (diff > 0 && diff < end-start) {
         tools='xpan,xwheel_zoom,reset', toolbar_location='above',
         output_backend=BACKEND
     )
+    fourier.xaxis.formatter = time_formatter
 
     for i in range(len(stream_channels)):
         fourier.line(x='frequencies', y=stream_channels[i], color=colors[i], source=fourier_source)
