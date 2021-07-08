@@ -16,7 +16,7 @@ def create_app():
     # initialize database connection
     app.database = Database('3.131.117.61', 5001, 'thisisthepasswordtotheredisserver')
     app.database.init()
-    app.datanase.set_ready(True)  # ready to receive data
+    app.database.set_ready(True)  # ready to receive data
 
     # add basic favicon
     @app.route('/favicon.ico')
