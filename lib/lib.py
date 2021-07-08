@@ -455,6 +455,10 @@ class Streamer(WorkerNode):
         self.update()  # send info to database
         self.socket.emit('init', self.id, namespace='/streamers')  # notify server
 
+        # start loop immediately if database is ready
+        if self.database.is_ready():
+            self.start()
+
         while not self.exit:  # run until exit
             self.streaming.wait()  # block until streaming event is set
             try:

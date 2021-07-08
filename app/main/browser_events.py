@@ -68,40 +68,19 @@ def update_buttons():
 @socketio.on('connect', namespace='/browser')
 def connect():
     """ On connecting to the browser """
-    print('Browser connected: {}'.format(request.sid))
+    # print('Browser connected: {}'.format(request.sid))
     refresh()  # send streams immediately on connecting
 
 
 @socketio.on('disconnect', namespace='/browser')
 def disconnect():
     """ On disconnecting from the browser """
-    print('Browser disconnected: {}'.format(request.sid))
+    # print('Browser disconnected: {}'.format(request.sid))
     pass
 
 
 ####################################
 # Handlers for browser buttons
-@socketio.on('initialize', namespace='/browser')
-@catch_errors
-def init():
-    """ start database process """
-    current_app.database.init()  # start database process
-    sleep(0.1)  # give it sec to start up
-    log('Started Redis server')  # log on browser
-    socketio.emit('update', namespace='/streamers')  # request update from streamers
-
-
-@socketio.on('save', namespace='/browser')
-@catch_errors
-def save():
-    """ stop database process and dump data """
-    # todo: check if database has already been saved.
-    #  implement a checker in database object.
-    socketio.emit('stop', namespace='/streamers')  # stop streams first
-    current_app.database.shutdown()  # stop database process
-    log('Shut down Database and saved to disk')
-    sleep(0.1)
-    refresh()
 
 
 @socketio.on('start', namespace='/browser')
@@ -109,17 +88,22 @@ def save():
 def start():
     """ start all streams """
     if current_app.database.ping():  # make sure database connected
+        current_app.database.set_ready(True)  # mark database as ready
         socketio.emit('start', namespace='/streamers')  # send start command to streamers
     else:
-        error('Cannot start streams - database not initialized')
+        error('Cannot start streams - database ping failed')
 
 
 @socketio.on('stop', namespace='/browser')
 @catch_errors
 def stop():
-    """ Stop streams """
-    # send stop command to streamers
-    socketio.emit('stop', namespace='/streamers')
+    """ Stop streams, dump database file to disk, start a clean database file """
+    socketio.emit('stop', namespace='/streamers')  # send stop command to streamers
+    filename = current_app.database.dump()  # dump database file
+    log('Session Saved: {}'.format(filename))
+    current_app.database.init()  # start new database
+    sleep(0.1)
+    refresh()
 
 
 @socketio.on('refresh', namespace='/browser')
