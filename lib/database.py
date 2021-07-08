@@ -154,7 +154,6 @@ class Database:
 
         # if file name not given or already exists
         if not filename or path.isfile(self.store_path + '/' + filename):
-            print("Filename not specified or already exists - using default timestamp.")
             filename = get_time_filename()
         if not filename.endswith('.rdb'):
             filename += '.rdb'
@@ -182,6 +181,8 @@ class Database:
 
     def delete_save(self, filename):
         """ Remove an old stored file """
+        if not filename:
+            return
         try:
             system('rm {}/{}'.format(self.store_path, filename))
         except Exception as e:

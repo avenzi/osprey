@@ -141,7 +141,7 @@ def playback():
 @catch_errors
 def load(filename):
     """ Loads the given database file for playback """
-    save()  # save current database
+    stop()  # save current database
     current_app.database.load_file(filename)
     # todo: disable save button, start/stop stream buttons
     log('Loaded "{}" to database'.format(filename))
@@ -165,7 +165,6 @@ def rename(data):
 @catch_errors
 def delete(filename):
     """ Deletes the selected file """
-    check_filename(filename)
     current_app.database.delete_save(filename)
     log('Deleted file "{}"'.format(filename))
     refresh()
