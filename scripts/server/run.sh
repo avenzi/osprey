@@ -26,7 +26,7 @@ sudo fuser -k 5002/tcp  # clear activity on port 5002
 python3 -m local.run_analysis &
 
 # start redis server
-redis-server config/redis.conf
+#redis-server config/redis.conf
 
 # call gunicorn with appropriate config file
 gunicorn -c config/gunicorn.conf.py "app:create_app()"
