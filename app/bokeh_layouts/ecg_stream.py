@@ -1,5 +1,5 @@
 from bokeh.models import CustomJS, AjaxDataSource, DataRange1d
-from bokeh.models import Panel, Tabs, ColorBar, LogColorMapper, LogTicker, PrintfTickFormatter
+from bokeh.models import Panel, Tabs, ColorBar, LogColorMapper, LogTicker, PrintfTickFormatter, DatetimeTickFormatter
 from bokeh.models import Slider, RangeSlider, Select, Spinner, Toggle, RadioButtonGroup
 from bokeh.layouts import layout, Row, Column
 from bokeh.transform import log_cmap
@@ -8,7 +8,7 @@ from bokeh.palettes import viridis, magma
 
 from json import loads
 
-from app.bokeh_layouts.eeg_stream import js_request
+from bokeh_layouts.utils import js_request, time_formatter
 
 BACKEND = 'canvas'  # 'webgl' appears to be broken - makes page unresponsive.
 
@@ -36,7 +36,6 @@ default_fourier_widgets = {
     'spectrogram_range': (-3.0, 1.0),  # color scale range (log)
     'spectrogram_size': 30,
 }
-
 
 def create_layout(info):
     """
@@ -139,6 +138,7 @@ def create_layout(info):
         toolbar_location=None,
         output_backend=BACKEND
     )
+    ecg.xaxis.formatter = time_formatter
     ecg.toolbar.active_drag = None  # disable drag
 
     # y-axis range will autoscale to currently selected channel
@@ -193,6 +193,7 @@ if (diff > 0 && diff < end-start) {
         tools='xpan,xwheel_zoom,reset', toolbar_location='above',
         output_backend=BACKEND
     )
+    fourier.xaxis.formatter = time_formatter
 
     for i in range(len(channels)):
         fourier.line(x='frequencies', y=channels[i], color=colors[i], source=fourier_source)
