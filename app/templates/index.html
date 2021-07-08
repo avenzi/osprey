@@ -17,8 +17,6 @@
 {% block content %}
 <div class="container">
     <div class="commands stream_commands">
-        <button class="command" value="initialize" title="Initialize the database">Init</button>
-        <button class="command" value="save"       title="Stop streams and save database file">Save</button>
         <button class="command" value="refresh"    title="Force refresh page items">Refresh</button>
         <button class="command" value="live"       title="Switch back to current live streams">Live</button>
         <button class="command" value="playback"   title="Switch to playback mode and view current database file from beginning at increased speed">Playback</button>
@@ -27,8 +25,8 @@
     <div class="streams">
         <h2>Connected Streams</h2>
         <div class="commands stream_commands">
-            <button class="command" value="start"      title="Start all connected streams">Start</button>
-            <button class="command" value="stop"       title="Stop all connected streams">Stop</button>
+            <button class="command" value="start"      title="Start streaming">Start</button>
+            <button class="command" value="stop"       title="Stop all streams and save the file to disk">Stop</button>
         </div>
         <ul></ul>
     </div>
