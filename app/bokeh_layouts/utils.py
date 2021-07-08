@@ -16,7 +16,7 @@ def time_format():
         hourmin=["%H:%M"],
         minutes=["%H:%M"],
         minsec=["%H:%M"],
-        seconds=["%S"],
+        seconds=["%Ss"],
         milliseconds=['%S.%3Ns'],
         microseconds=['%S.%fs']
     )

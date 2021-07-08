@@ -106,9 +106,10 @@ class Database:
             if not filename or path.isfile(self.store_path+'/'+filename):
                 print("Filename not specified or already exists - using default timestamp.")
                 filename = get_time_filename()
-
+            if not filename.endswith('.rdb'):
+                filename += '.rdb'
             # move current dump file to storage directory with new name
-            system("mv {} {}/{}.rdb".format(self.file_path, self.store_path, filename))
+            system("mv {} {}/{}".format(self.file_path, self.store_path, filename))
             # TODO: Make a copy of the file, but don't remove the current one, then wipe the whole database.
             #  This might avoid problems with shutting it down entirely?
             self.disconnect()
