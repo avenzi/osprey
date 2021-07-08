@@ -11,4 +11,4 @@ socketio = SocketIO()
 # these are imported below to avoid recursive imports when importing the above objects
 
 # import routes/events associated with these blueprints/socket
-from app.main import auth_routes, stream_routes, events, video_stream_events
+from app.main import auth_routes, stream_routes, streamer_events, browser_events, video_stream_events

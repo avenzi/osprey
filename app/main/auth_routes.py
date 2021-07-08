@@ -1,4 +1,4 @@
-import functools
+from functools import wraps
 from flask import (
     Blueprint, flash, g, current_app, redirect, render_template, request, session, url_for
 )
@@ -65,7 +65,7 @@ def logout():
 
 def login_required(view):
     """ Decorator to validate user login before accessing a route """
-    @functools.wraps(view)
+    @wraps(view)
     def wrapped_view(**kwargs):
         if session.get('username') is None:
             return redirect(url_for('auth.login'))
