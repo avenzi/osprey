@@ -1,8 +1,9 @@
 from lib.lib import Base, Streamer
 from lib.raspi.pi_lib import configure_port, PicamOutput
 
+import numpy as np
 from random import random
-import time
+from time import time, sleep
 
 
 class TestStreamer(Streamer):
@@ -22,11 +23,12 @@ class TestStreamer(Streamer):
             self.val_1 += random()-0.5
             self.val_2 += random()-0.5
             self.val_3 += random()-0.5
-            data['time'].append(self.time())
+            #t = np.array(time(), dtype='i8').view('datetime64[ms]').tolist()
+            data['time'].append(time())
             data['val_1'].append(self.val_1)
             data['val_2'].append(self.val_2)
             data['val_3'].append(self.val_3)
-            time.sleep(0.05)
+            sleep(0.05)
 
         self.database.write_data(self.id, data)
 
@@ -51,7 +53,7 @@ class SenseStreamer(Streamer):
             data['roll'].append(roll)
             data['pitch'].append(pitch)
             data['yaw'].append(yaw)
-            data['time'].append(self.time())
+            data['time'].append(time())
 
         self.database.write_data(self.id, data)
 
@@ -73,7 +75,7 @@ class LogStreamer(Streamer):
 
     def loop(self):
         """ Main execution loop """
-        time.sleep(10)  # send every 10 seconds
+        sleep(10)  # send every 10 seconds
         self.send_log()
 
     def START(self, request):
@@ -130,7 +132,7 @@ class VideoStreamer(Streamer):
         self.frames_sent += 1
 
         data = {
-            'time': self.time(),
+            'time': time(),
             'frame': image
         }
 
@@ -158,7 +160,7 @@ class VideoStreamer(Streamer):
             format='h264', quality=25, profile='constrained', level='4.2',
             intra_period=self.info['framerate'], intra_refresh='both', inline_headers=True, sps_timing=True
         )
-        time.sleep(2)  # let camera warm up for a sec. Does weird stuff otherwise.
+        sleep(2)  # let camera warm up for a sec. Does weird stuff otherwise.
 
     def stop(self):
         """
@@ -198,7 +200,7 @@ class SynthEEGStreamer(Streamer):
 
     def loop(self):
         """ Main execution loop """
-        time.sleep(0.25)  # wait a bit for the board to collect another chunk of data
+        sleep(0.25)  # wait a bit for the board to collect another chunk of data
         data = {}
         for channel in self.eeg_channel_names:  # lists of channel data
             data[channel] = []
@@ -211,7 +213,7 @@ class SynthEEGStreamer(Streamer):
             return
 
         # convert from epoch time to relative time since session start
-        data['time'] = list(raw_data[self.time_channel] - self.start_time)
+        data['time'] = list(raw_data[self.time_channel])
 
         for i, j in enumerate(self.eeg_channel_indexes):
             data[self.eeg_channel_names[i]] = list(raw_data[j])
@@ -265,7 +267,7 @@ class EEGStreamer(Streamer):
 
     def loop(self):
         """ Main execution loop """
-        time.sleep(0.25)  # wait a bit for the board to collect another chunk of data
+        sleep(0.25)  # wait a bit for the board to collect another chunk of data
         data = {}
         for channel in self.eeg_channel_names:  # lists of channel data
             data[channel] = []
@@ -278,7 +280,7 @@ class EEGStreamer(Streamer):
             return
 
         # convert from epoch time to relative time since session start
-        data['time'] = list(raw_data[self.time_channel] - self.start_time)
+        data['time'] = list(raw_data[self.time_channel])
 
         for i, j in enumerate(self.eeg_channel_indexes):
             data[self.eeg_channel_names[i]] = list(raw_data[j])
@@ -302,7 +304,7 @@ class EEGStreamer(Streamer):
                 self.board.prepare_session()
                 break
             except:
-                time.sleep(0.1)
+                sleep(0.1)
 
         if self.board.is_prepared():
             self.board.start_stream()  # start stream
@@ -355,7 +357,7 @@ class ECGStreamer(Streamer):
 
     def loop(self):
         """ Main execution loop """
-        time.sleep(0.25)  # wait a bit for the board to collect another chunk of data
+        sleep(0.25)  # wait a bit for the board to collect another chunk of data
         data = {}
         for channel in self.pulse_channel_names:  # lists of channel data
             data[channel] = []
@@ -368,7 +370,7 @@ class ECGStreamer(Streamer):
             return
 
         # convert from epoch time to relative time since session start
-        data['time'] = list(raw_data[self.time_channel] - self.start_time)
+        data['time'] = list(raw_data[self.time_channel])
 
         for i, j in enumerate(self.pulse_channel_indexes):
             data[self.pulse_channel_names[i]] = list(raw_data[j])
@@ -398,7 +400,7 @@ class ECGStreamer(Streamer):
                 self.board.prepare_session()
                 break
             except:
-                time.sleep(0.1)
+                sleep(0.1)
 
         if self.board.is_prepared():
             self.board.config_board('/2')  # Set board to Analog mode.
