@@ -49,6 +49,7 @@ def write_operation(method):
     def wrapped(self, *args, **kwargs):
         if not self.is_ready():
             raise self.Error("Database not ready to receive data")
+        method(self, *args, **kwargs)
     return wrapped
 
 
