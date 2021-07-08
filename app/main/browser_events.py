@@ -81,8 +81,8 @@ def disconnect():
 
 ####################################
 # Handlers for browser buttons
-@catch_errors
 @socketio.on('initialize', namespace='/browser')
+@catch_errors
 def init():
     """ start database process """
     current_app.database.init()  # start database process
@@ -91,8 +91,8 @@ def init():
     socketio.emit('update', namespace='/streamers')  # request update from streamers
 
 
-@catch_errors
 @socketio.on('save', namespace='/browser')
+@catch_errors
 def save():
     """ stop database process and dump data """
     # todo: check if database has already been saved.
@@ -104,8 +104,8 @@ def save():
     refresh()
 
 
-@catch_errors
 @socketio.on('start', namespace='/browser')
+@catch_errors
 def start():
     """ start all streams """
     if current_app.database.ping():  # make sure database connected
@@ -114,16 +114,16 @@ def start():
         error('Cannot start streams - database not initialized')
 
 
-@catch_errors
 @socketio.on('stop', namespace='/browser')
+@catch_errors
 def stop():
     """ Stop streams """
     # send stop command to streamers
     socketio.emit('stop', namespace='/streamers')
 
 
-@catch_errors
 @socketio.on('refresh', namespace='/browser')
+@catch_errors
 def refresh():
     """ Refresh all data displayed in browser index """
     update_pages()
@@ -131,8 +131,8 @@ def refresh():
     update_buttons()
 
 
-@catch_errors
 @socketio.on('live', namespace='/browser')
+@catch_errors
 def live():
     """ Switches back to current live database file """
     current_app.database.set_live(True)  # set database to live mode
@@ -141,8 +141,8 @@ def live():
     refresh()
 
 
-@catch_errors
 @socketio.on('playback', namespace='/browser')
+@catch_errors
 def playback():
     """ Switches to playback mode """
     current_app.database.set_live(False)  # set database on playback mode
@@ -151,8 +151,8 @@ def playback():
     refresh()
 
 
-@catch_errors
 @socketio.on('load', namespace='/browser')
+@catch_errors
 def load(filename):
     """ Loads the given database file for playback """
     save()  # save current database
@@ -162,8 +162,8 @@ def load(filename):
     refresh()
 
 
-@catch_errors
 @socketio.on('rename', namespace='/browser')
+@catch_errors
 def rename(data):
     """ Renames the selected file """
     old = data['filename']
@@ -175,8 +175,8 @@ def rename(data):
     refresh()
 
 
-@catch_errors
 @socketio.on('delete', namespace='/browser')
+@catch_errors
 def delete(filename):
     """ Deletes the selected file """
     check_filename(filename)
