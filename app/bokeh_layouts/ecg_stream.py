@@ -138,7 +138,6 @@ def create_layout(info):
         toolbar_location=None,
         output_backend=BACKEND
     )
-    ecg.xaxis.formatter = time_formatter
     ecg.toolbar.active_drag = None  # disable drag
 
     # y-axis range will autoscale to currently selected channel

@@ -221,7 +221,6 @@ if (diff > 0 && diff < end-start) {
         tools='xpan,xwheel_zoom,reset', toolbar_location='above',
         output_backend=BACKEND
     )
-    fourier.xaxis.formatter = time_formatter
 
     for i in range(len(stream_channels)):
         fourier.line(x='frequencies', y=stream_channels[i], color=colors[i], source=fourier_source)
