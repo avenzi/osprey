@@ -531,16 +531,13 @@ class Streamer(WorkerNode):
         if self.streaming.is_set():  # already running
             return
         try:
-            print("{} TRYING TO START".format(self))
             self.start()  # call subclassed start method
         except Exception as e:
             self.log("Failed to start {} ({})".format(self, e))
             return
-        print("{} STARTED SUCCESS".format(self))
         self.streaming.set()  # set streaming, which starts the main execution while loop
         self.log("Started {}".format(self))
         self.socket.emit('log', "Started {}".format(self), namespace='/streamers')
-        self.update()
 
     def start(self):
         """
