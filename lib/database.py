@@ -28,6 +28,8 @@ def maintain_connection(method):
                 raise self.Error('Could not connect to database.')
 
         while not self.exit:
+            if not self.database.is_ready():
+                raise self.Error("Database not ready to receive data")
             try:  # attempt to perform database operation
                 return method(self, *args, **kwargs)
             except (redis.exceptions.ConnectionError, ConnectionResetError, ConnectionRefusedError)as e:
