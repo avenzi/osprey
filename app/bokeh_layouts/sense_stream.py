@@ -2,7 +2,7 @@ from bokeh.plotting import figure
 from bokeh.models import AjaxDataSource
 from bokeh.layouts import layout
 
-from bokeh_layouts.utils import time_formatter
+from app.bokeh_layouts.utils import time_formatter
 
 
 def create_layout(info):
