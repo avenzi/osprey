@@ -63,6 +63,8 @@ $(document).ready(function() {
         });
     });
 
+    socket.on()
+
 
     var rename_dialog = $('.rename_dialog').dialog({
         autoOpen: false,

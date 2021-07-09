@@ -124,9 +124,12 @@ def refresh():
 @catch_errors
 def live():
     """ Switches back to current live database file """
+    current_app.database.dump(save=False)  # remove loaded file
+    current_app.database.init()  # init clean database
     current_app.database.set_live(True)  # set database to live mode
     log('Set database to Live mode')
     # todo: disable live button, enable playback button
+    socketio.emit('update_header', 'Connected Streams', namespace='/browser')
     refresh()
 
 
@@ -136,13 +139,15 @@ def load(filename):
     """ Loads the given database file for playback """
     stop()  # save current database
     current_app.database.load_file(filename)
-    current_app.database.set_live(False)  # set database on playback mode
-    current_app.database.set_ready(False)  # don't allow database writes during playback
-    log('Set database to Playback mode')
-    # todo: enable live button
-    refresh()
     log('Loaded "{}" to database'.format(filename))
 
+    current_app.database.set_live(False)  # set database on playback mode
+    current_app.database.set_ready(False)  # don't allow database writes during playback
+    # todo: enable live button
+    log('Set database to Playback mode')
+
+    # update page header with name of loaded file
+    socketio.emit('update_header', 'Playback: {}'.format(filename), namespace='/browser')
     refresh()
 
 

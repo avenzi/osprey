@@ -128,9 +128,9 @@ class Database:
         """ Loads in the specified redis dump file and starts the redis server """
         if not filename:
             raise Exception("Could not load file - no file name given")
-        self.dump()  # dump current database file if it exists
 
         try:
+            self.dump()
             # remove current data file if it exists.
             # it shouldn't (because of dump()) but this is just in case.
             system('rm {}'.format(self.file_path))
@@ -143,30 +143,33 @@ class Database:
         except Exception as e:
             raise DatabaseError("Failed to load file to database: {}".format(e))
 
-    def dump(self, filename=None):
+    def dump(self, filename=None, save=True):
         """
-        Dump the current database file to the storage directory
-        Returns the full filename used (may not be the same as given)
+        Dump the current database file
+        <save> whether to save the file in the storage directory,
+            and returns the full filename used (may not be the same as given)
         """
         if not path.isfile(self.file_path):
             raise DatabaseError("Failed to dump database file - no current database file exists")
 
-        try:
-            self.redis.shutdown(save=True)
-        except:
-            pass
+        if save:
+            # if file name not given or already exists
+            if not filename or path.isfile(self.store_path + '/' + filename):
+                filename = get_time_filename()
+            if not filename.endswith('.rdb'):
+                filename += '.rdb'
+            # move current dump file to storage directory with new name
+            try:
+                system("mv {} {}/{}".format(self.file_path, self.store_path, filename))
+            except Exception as e:
+                raise DatabaseError("Failed to dump database file to '{}': {}".format(filename, e))
+            return filename
 
-        # if file name not given or already exists
-        if not filename or path.isfile(self.store_path + '/' + filename):
-            filename = get_time_filename()
-        if not filename.endswith('.rdb'):
-            filename += '.rdb'
-        # move current dump file to storage directory with new name
-        try:
-            system("mv {} {}/{}".format(self.file_path, self.store_path, filename))
-        except Exception as e:
-            raise DatabaseError("Failed to dump database file to '{}': {}".format(filename, e))
-        return filename
+        else:  # don't save
+            try:
+                system("rm {}".format(self.file_path))
+            except Exception as e:
+                raise DatabaseError("Failed to delete current database file: {}".format(e))
 
     def rename_save(self, filename, newname):
         """ renames an old save file """

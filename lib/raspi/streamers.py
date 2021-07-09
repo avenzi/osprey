@@ -308,8 +308,7 @@ class EEGStreamer(Streamer):
         if self.board.is_prepared():
             self.board.start_stream()  # start stream
         else:
-            self.throw("Failed to prepare streaming session in {}. Make sure the board is turned on.".format(self), trace=False)
-            return
+            raise Exception("Failed to prepare streaming session in {}. Make sure the board is turned on.".format(self))
 
     def stop(self):
         """ Extended from base class in pi_lib.py """
@@ -405,8 +404,7 @@ class ECGStreamer(Streamer):
             self.board.config_board('/2')  # Set board to Analog mode.
             self.board.start_stream()  # start stream
         else:
-            self.throw("Failed to prepare streaming session in {}. Make sure the board is turned on.".format(self), trace=False)
-            return
+            raise Exception("Failed to prepare streaming session in {}. Make sure the board is turned on.".format(self))
 
     def stop(self):
         """ Extended from base class in pi_lib.py """
