@@ -246,6 +246,7 @@ class Database:
                 self.redis.set('READY', 1)
             else:
                 self.redis.delete('READY')
+                self.exit = True
         except Exception as e:
             raise DatabaseError("Failed to set database status to '{}'. {}".format(val, e))
 

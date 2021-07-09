@@ -141,8 +141,9 @@ def load(filename):
     current_app.database.load_file(filename)
     log('Loaded "{}" to database'.format(filename))
 
-    current_app.database.set_live(False)  # set database on playback mode
     current_app.database.set_ready(False)  # don't allow database writes during playback
+    current_app.database.set_live(False)  # set database on playback mode
+
     # todo: enable live button
     log('Set database to Playback mode')
 
