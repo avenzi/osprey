@@ -64,7 +64,7 @@ $(document).ready(function() {
     });
 
     socket.on('update_header', function(data) {
-        console.log("GOT HEADER: " +data);
+        // receive new header text to display for streams
         $('div.container > div.streams > h2').text(data);
     })
 
