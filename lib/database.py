@@ -113,6 +113,7 @@ class Database:
             system("redis-server config/redis.conf")
             self.exit = False
             sleep(0.5)  # give it a sec to start up
+            self.set_write(True)  # start database in write mode
         except Exception as e:
             raise DatabaseError("Failed to initialize database: {}".format(e))
 
