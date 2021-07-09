@@ -39,6 +39,8 @@ def maintain_connection(method):
                     continue
                 else:
                     raise self.Error('Database connection error: {}'.format(e))
+            except DatabaseReadOnly:
+                return
             except Exception as e:
                 raise self.Error('Error in Database ({}). {}: {}'.format(method.__name__, e.__class__.__name__, e))
     return wrapped
