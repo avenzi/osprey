@@ -13,13 +13,13 @@ function error(msg) {
 function update_button(name, props) {
     // props is an object that contains properties for the command button named <name>
     console.log(name, props.hidden, props.disabled, props.text)
-    if (props.hidden) {
+    if (props.hidden !== undefined) {
         $('button.command.'+name).prop('hidden', props.hidden);
     }
-    if (props.disabled) {
+    if (props.disabled !== undefined) {
         $('button.command.'+name).prop('disabled', props.disabled);
     }
-    if (props.text) {
+    if (props.text !== undefined) {
         $('button.command.'+name).prop('text', props.text);
     }
 }
