@@ -10,19 +10,17 @@ function error(msg) {
     $('.logs p').prepend(`> <span style="color:red;font-weight:bold;">${msg}</span><br>`);
 }
 
-function update_button(name, hidden=null, disabled=null, text=null) {
-    console.log(name, hidden, disabled, text)
-    if (hidden) {
-        console.log(hidden);
-        $('button.command.'+name).prop('hidden', hidden);
+function update_button(name, props) {
+    // props is an object that contains properties for the command button named <name>
+    console.log(name, props.hidden, props.disabled, props.text)
+    if (props.hidden) {
+        $('button.command.'+name).prop('hidden', props.hidden);
     }
-    if (disabled) {
-        console.log(hidden);
-        $('button.command.'+name).prop('disabled', disabled);
+    if (props.disabled) {
+        $('button.command.'+name).prop('disabled', props.disabled);
     }
-    if (text) {
-        console.log(hidden);
-        $('button.command.'+name).prop('text', text);
+    if (props.text) {
+        $('button.command.'+name).prop('text', props.text);
     }
 }
 
@@ -65,18 +63,19 @@ $(document).ready(function() {
         });
 
         // disable all file buttons
-        update_button('load', disabled=true);
-        update_button('rename', disabled=true);
-        update_button('delete', disabled=true);
+        update_button('load', {disabled: true});
+        update_button('rename', {disabled: true});
+        update_button('delete', {disabled: true});
+
 
         // each file name will set the selected_file variable with its own filename
         $('div.files li').on('click', function(event) {
             $("div.files li.selected").removeClass('selected');  // unset selected form prev
             $(event.target).addClass('selected')  // set selected
             selected_file = $(event.target).text();  // set currently selected file
-            update_button('load', disabled=false);
-            update_button('rename', disabled=false);
-            update_button('delete', disabled=false);
+            update_button('load', {disabled: false});
+            update_button('rename', {disabled: false});
+            update_button('delete', {disabled: false});
         });
     });
 
