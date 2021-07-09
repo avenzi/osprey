@@ -10,6 +10,10 @@ function error(msg) {
     $('.logs > p').prepend(`> <span style="color:red;font-weight:bold;">${msg}</span><br>`);
 }
 
+function update_button(name, hidden=null, disabled=null, text=null) {
+    console.log(name, hidden, disabled, text)
+}
+
 
 $(document).ready(function() {
     var namespace = '/browser';  // namespace for talking with server
@@ -48,19 +52,25 @@ $(document).ready(function() {
             $('div.files ul').append(`<li>${filename}</li>`);
         });
 
+        // disable all file buttons
+        update_button('load', disabled=true);
+        update_button('rename', disabled=true);
+        update_button('delete', disabled=true);
+
         // each file name will set the selected_file variable with its own filename
         $('div.files li').on('click', function(event) {
             $("div.files li.selected").removeClass('selected');  // unset selected form prev
             $(event.target).addClass('selected')  // set selected
             selected_file = $(event.target).text();  // set currently selected file
+            update_button('load', disabled=false);
+            update_button('rename', disabled=false);
+            update_button('delete', disabled=false);
         });
     });
 
-    socket.on('update_buttons', function(data) {
-        // data is a list of dictionaries with updated values of some buttons
-        data.forEach(function(info) {
-            console.log(info);
-        });
+    socket.on('update_button', function(data) {
+        // data is an object with attributes representing the state of a button
+        update_button(data.name, data.hidden, data.disabled, data.text);
     });
 
     socket.on('update_header', function(data) {
@@ -100,6 +110,7 @@ $(document).ready(function() {
             }
         }
     });
+
 
     // each command button emits an event to the server
     $('div.stream_commands button.command').on('click', function(event) {

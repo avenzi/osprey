@@ -59,10 +59,16 @@ def update_files():
     socketio.emit('update_files', files, namespace='/browser')
 
 
-def update_buttons():
-    """ Updates state of buttons in browser """
-    buttons = [{'test':'testvalue', 'test2':'testvalue2'}]
-    socketio.emit('update_buttons', buttons, namespace='/browser')
+def update_button(name, hidden=None, disabled=None, text=None):
+    """
+    Updates state of buttons in browser
+    <name>: class name of the button to be targetted
+    <hidden>: whether the button is hidden
+    <disabled>: whether the button is disabled
+    <text>: button text, if changed.
+    """
+    data = {'name':name, 'hidden':hidden, 'disabled':disabled, 'text':text}
+    socketio.emit('update_button', data, namespace='/browser')
 
 
 ##################################
@@ -91,8 +97,9 @@ def start():
     """ start all streams """
     if current_app.database.ping():  # make sure database connected
         if current_app.database.live:  # live mode
-            current_app.database.set_ready(True)  # mark database as ready
             socketio.emit('start', namespace='/streamers')  # send start command to streamers
+            update_button('start', disabled=True)
+            update_button('stop', disabled=False)
         else:  # playback mode
             print("PLAYBACK MODE START")
     else:
@@ -103,11 +110,18 @@ def start():
 @catch_errors
 def stop():
     """ Stop streams, dump database file to disk, start a clean database file """
+    if not current_app.database.live:  # if in playback mode
+        current_app.database.dump(save=False)  # dump database file
+        return
+
+    # live mode
     socketio.emit('stop', namespace='/streamers')  # send stop command to streamers
     filename = current_app.database.dump()  # dump database file
     log('Session Saved: {}'.format(filename))
     current_app.database.init()  # start new database
     socketio.emit('update', namespace='/streamers')  # request info update from streamers
+    update_button('start', disabled=False)
+    update_button('stop', disabled=True)
     sleep(0.1)
     refresh()
 
@@ -118,7 +132,18 @@ def refresh():
     """ Refresh all data displayed in browser index """
     update_pages()
     update_files()
-    update_buttons()
+
+
+@socketio.on('playback', namespace='/browser')
+@catch_errors
+def playback():
+    """ Switches back to playback mode for current database file """
+    current_app.database.set_live(False)  # set database to playback mode
+    log('Set database to Playback mode')
+    update_button('live', hidden=False, disabled=False)
+    update_button('playback', hidden=True)
+    socketio.emit('update_header', 'Playback', namespace='/browser')
+    refresh()
 
 
 @socketio.on('live', namespace='/browser')
@@ -129,7 +154,8 @@ def live():
     current_app.database.init()  # init clean database
     current_app.database.set_live(True)  # set database to live mode
     log('Set database to Live mode')
-    # todo: disable live button, enable playback button
+    update_button('live', hidden=True)
+    update_button('playback', hidden=False, disabled=False)
     socketio.emit('update_header', 'Connected Streams', namespace='/browser')
     refresh()
 
@@ -142,10 +168,12 @@ def load(filename):
     current_app.database.load_file(filename)
     log('Loaded "{}" to database'.format(filename))
 
-    current_app.database.set_ready(False)  # don't allow database writes during playback
+    # don't allow database writes during playback of a loaded file
+    current_app.database.set_write(False)
     current_app.database.set_live(False)  # set database on playback mode
 
-    # todo: enable live button
+    update_button('live', hidden=False, disabled=False, text='New Session')
+    update_button('playback', disabled=True)
     log('Set database to Playback mode')
 
     # update page header with name of loaded file
