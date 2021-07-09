@@ -40,6 +40,7 @@ def maintain_connection(method):
                 else:
                     raise self.Error('Database connection error: {}'.format(e))
             except DatabaseReadOnly:
+                print("READ ONLY")
                 return
             except Exception as e:
                 raise self.Error('Error in Database ({}). {}: {}'.format(method.__name__, e.__class__.__name__, e))
@@ -542,7 +543,6 @@ class Database:
     def read_all_groups(self):
         """ Gets a list of dictionaries containing name and ID info for all connected streams """
         info = []
-        print("GETTING ALL INFO")
         for key in self.redis.execute_command('keys group:*'):
             info.append(self.redis.hgetall(key))
         return info
