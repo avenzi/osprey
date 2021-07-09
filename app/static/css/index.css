@@ -24,8 +24,8 @@ body { max-width: 960px; margin: 0 auto; background: white; }
 .files li.selected {
     background-color: #dddddd;
 }
-.logs {grid-area: logs;}
 .logs p {
+    grid-area: logs;
     border: 1px solid #ccc;
     overflow: auto;
 }
