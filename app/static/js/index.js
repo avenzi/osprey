@@ -10,7 +10,7 @@ function error(msg) {
     $('.logs p').prepend(`> <span style="color:red;font-weight:bold;">${msg}</span><br>`);
 }
 
-function update_button(name, props) {
+function set_button(name, props) {
     // props is an object that contains properties for the command button named <name>
     console.log(name, props.hidden, props.disabled, props.text)
     if (props.hidden !== undefined) {
@@ -21,6 +21,16 @@ function update_button(name, props) {
     }
     if (props.text !== undefined) {
         $('button.command.'+name).prop('text', props.text);
+    }
+}
+
+function get_button(name) {
+    // returns false if hidden or disabled. Otherwise true.
+    var button = $('.button.command.'+name);
+    if (button.prop('hidden') or button.prop('disabled')) {
+        return false;
+    } else {
+        return true;
     }
 }
 
@@ -47,7 +57,7 @@ $(document).ready(function() {
     });
 
     socket.on('update_pages', function(data) {
-        // data is a list of dictionaries with info on each stream
+        // data is a list of objects with info on each stream
         $('.streams ul').empty()
         data.forEach(function(info) {
             $('.streams ul').append(`<li><a href='/stream?group=${info['name']}'>${info['name']}</a></li>`);
@@ -70,18 +80,22 @@ $(document).ready(function() {
 
         // each file name will set the selected_file variable with its own filename
         $('div.files li').on('click', function(event) {
-            $("div.files li.selected").removeClass('selected');  // unset selected form prev
+            $('div.files li.selected').removeClass('selected');  // unset selected form prev
             $(event.target).addClass('selected')  // set selected
             selected_file = $(event.target).text();  // set currently selected file
-            update_button('load', {disabled: false});
             update_button('rename', {disabled: false});
             update_button('delete', {disabled: false});
+            if (get_button('start')) {  // enable load if start hasn't been pressed
+                update_button('load', {disabled: false});
+            }
         });
     });
 
-    socket.on('update_button', function(data) {
-        // data is an object with attributes representing the state of a button
-        update_button(data.name, data);
+    socket.on('update_buttons', function(data) {
+        // data is a list of objects with info for each button
+        data.forEach(function(button) {
+            update_button(button.name, button)
+        });
     });
 
     socket.on('update_header', function(data) {
