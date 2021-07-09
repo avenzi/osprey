@@ -73,9 +73,9 @@ $(document).ready(function() {
         });
 
         // disable all file buttons
-        update_button('load', {disabled: true});
-        update_button('rename', {disabled: true});
-        update_button('delete', {disabled: true});
+        set_button('load', {disabled: true});
+        set_button('rename', {disabled: true});
+        set_button('delete', {disabled: true});
 
 
         // each file name will set the selected_file variable with its own filename
@@ -83,10 +83,10 @@ $(document).ready(function() {
             $('div.files li.selected').removeClass('selected');  // unset selected form prev
             $(event.target).addClass('selected')  // set selected
             selected_file = $(event.target).text();  // set currently selected file
-            update_button('rename', {disabled: false});
-            update_button('delete', {disabled: false});
+            set_button('rename', {disabled: false});
+            set_button('delete', {disabled: false});
             if (get_button('start')) {  // enable load if start hasn't been pressed
-                update_button('load', {disabled: false});
+                set_button('load', {disabled: false});
             }
         });
     });
