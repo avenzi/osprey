@@ -35,7 +35,7 @@ def streamer_init(stream_id):
 @socketio.on('update', namespace='/streamers')
 def streamer_update(stream_id):
     """ notified that the streamer's info has updated """
-    update_pages()
+    update_pages() 
 
 
 @socketio.on('log', namespace='/streamers')
