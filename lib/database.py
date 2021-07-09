@@ -132,10 +132,9 @@ class Database:
         <save> whether to save the file in the storage directory,
             and returns the full filename used (may not be the same as given)
         """
-        if not path.isfile(self.file_path):
-            raise DatabaseError("Failed to dump database file - no current database file exists")
-
         if save:
+            if not path.isfile(self.file_path):
+                raise DatabaseError("Failed to dump database file - no current database file exists")
             # if file name not given or already exists
             if not filename or path.isfile(self.store_path + '/' + filename):
                 filename = get_time_filename()

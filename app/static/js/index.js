@@ -44,6 +44,7 @@ $(document).ready(function() {
     var selected_file = ""  // currently selected file
 
     socket.on('connect', function() {
+        //socket.emit('refresh')  // get updated
         log("SocketIO connected to server");
     });
 
