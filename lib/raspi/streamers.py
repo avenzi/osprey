@@ -145,6 +145,7 @@ class VideoStreamer(Streamer):
         """
         # for some reason if the PiCamera object is defined on a different thread, start_recording will hang.
         from picamera import PiCamera, PiVideoFrameType
+        print("HERE")
         self.camera = PiCamera(resolution='300x300', framerate=20)
         self.camera.rotation = 180
         self.sps = PiVideoFrameType.sps_header
@@ -153,13 +154,16 @@ class VideoStreamer(Streamer):
         self.info['framerate'] = self.camera.framerate[0]
         self.info['width'] = self.camera.resolution.width
         self.info['height'] = self.camera.resolution.height
+        print("HERE 2")
 
         # start recording
         self.camera.start_recording(self.picam_buffer,
             format='h264', quality=25, profile='constrained', level='4.2',
             intra_period=self.info['framerate'], intra_refresh='both', inline_headers=True, sps_timing=True
         )
+        print("HERE 3")
         sleep(2)  # let camera warm up for a sec. Does weird stuff otherwise.
+
 
     def stop(self):
         """
