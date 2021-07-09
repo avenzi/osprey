@@ -25,7 +25,7 @@ function set_button(name, props) {
 
 function get_button(name) {
     // returns false if hidden or disabled. Otherwise true.
-    var button = $('.button.command.'+name);
+    var button = $('button.command.'+name);
     console.log("BUTTON:")
     console.log(button.prop('hidden'), button.prop('disabled'))
     if (button.prop('hidden') || button.prop('disabled')) {
