@@ -94,7 +94,7 @@ $(document).ready(function() {
     socket.on('update_buttons', function(data) {
         // data is a list of objects with info for each button
         data.forEach(function(button) {
-            update_button(button.name, button)
+            set_button(button.name, button)
         });
     });
 
