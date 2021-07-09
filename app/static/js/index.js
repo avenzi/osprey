@@ -17,6 +17,7 @@ function update_button(name, props) {
         $('button.command.'+name).prop('hidden', props.hidden);
     }
     if (props.disabled) {
+        console.log(props.disabled);
         $('button.command.'+name).prop('disabled', props.disabled);
     }
     if (props.text) {
