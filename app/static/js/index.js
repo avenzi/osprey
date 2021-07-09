@@ -63,7 +63,10 @@ $(document).ready(function() {
         });
     });
 
-    socket.on()
+    socket.on('update_header', function(data) {
+        console.log("GOT HEADER: " +data);
+        $('div.container > div.streams > h2').text(data);
+    })
 
 
     var rename_dialog = $('.rename_dialog').dialog({

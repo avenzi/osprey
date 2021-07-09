@@ -44,6 +44,7 @@ def update_pages():
         groups = current_app.database.read_all_groups()
     except Database.Error:
         groups = []
+    print("GROUPS: ", groups)
     socketio.emit('update_pages', groups, namespace='/browser')
 
 
