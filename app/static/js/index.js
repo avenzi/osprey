@@ -81,7 +81,7 @@ $(document).ready(function() {
 
     socket.on('update_button', function(data) {
         // data is an object with attributes representing the state of a button
-        update_button(data.name, data});
+        update_button(data.name, data);
     });
 
     socket.on('update_header', function(data) {
