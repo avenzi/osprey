@@ -33,6 +33,18 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### July 8th, 2021:
+
+​	So I got sidetracked and rewrote the my database read_data() method. I realized that the way I was calculating the max_time value was wrong, but that edge case just hadn't come up during streaming so I didn't notice. I have now tested it and it works correctly. This just allows the Flask app to put a limit on the maximum amount of data to read from the database, in case the browser disconnected for some time, and then later requested all the data it missed. Instead of requesting all that data from redis, it only requests up to a given number of seconds. 
+
+​	I also noticed that the way I was time stamping the data was not going to work. I have been time stamping relative to the start of each individual stream, which made the x axis of the plots readable. This was, of course, a cheap fix and I have now decided to do it properly. Time stamps are now in UNIX time, which should be consistent across all streams. In order to get human readable times displayed in the browser, I found the Bokeh has a really handy formatter object that will automatically convert time stamps using strftime() format options, which even changes at different time scales. I love it. I now have a custom DatetimeTickFormatter in the new utils.py file in app/bokeh_layouts that can be used by any create_layout method.
+
+​	I also cleaned up the main browser_events.py file. I think I'm procrastinating. I made a decorator to catch errors and send them to the browser, so it's not entirely useless.
+
+​	I tried to rewrite the way that the database and the Streamers interact to help implementing Playback mode, and everything broke. Like so many things. Things that aren't even related, like now the Picam object hangs when I try to instantiate it. I can't do any more tonight I'm going to try again tomorrow.
+
+
+
 ##### July 6th, 2021:
 
 ​	I decided to add the confirmation popups today first to make renaming files easier in the future. Turns out jQuery saves the day again with the IU package. This took me a while to figure out, but I now have a basic confirmation dialog for the delete command, and a dialog to rename files with basic file name validation. I started out with the usual form submission with HTTP requests, but it was sort of cumbersome so I instead switched to using the socketIO structure that was already present in the script. This was way easier and allowed me to quickly implement error messages on the server side, which now appear in bold red separately from the normal log messages, which is neat. These are used when invalid file names are given and such. I have the confirm_dialog div in index.html so it can be used for other actions that might need confirmation in the future, and theoretically it can be used multiple times for various dialogs, though I haven't tested it. Worst case I just made a new div for each dialog I want on that page.
