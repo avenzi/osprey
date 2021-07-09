@@ -110,6 +110,7 @@ def start():
             socketio.emit('start', namespace='/streamers')  # send start command to streamers
             set_button('start', disabled=True)
             set_button('stop', disabled=False)
+            update_buttons()
         else:  # playback mode
             print("PLAYBACK MODE START")
     else:
