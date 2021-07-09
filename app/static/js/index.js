@@ -12,7 +12,6 @@ function error(msg) {
 
 function set_button(name, props) {
     // props is an object that contains properties for the command button named <name>
-    console.log(name, props.hidden, props.disabled, props.text)
     if (props.hidden !== undefined) {
         $('button.command.'+name).prop('hidden', props.hidden);
     }
@@ -27,9 +26,13 @@ function set_button(name, props) {
 function get_button(name) {
     // returns false if hidden or disabled. Otherwise true.
     var button = $('.button.command.'+name);
+    console.log("BUTTON:")
+    console.log(button)
     if (button.prop('hidden') || button.prop('disabled')) {
+        console.log("FALSE")
         return false;
     } else {
+        console.log("TRUE")
         return true;
     }
 }
@@ -86,6 +89,7 @@ $(document).ready(function() {
             set_button('rename', {disabled: false});
             set_button('delete', {disabled: false});
             if (get_button('start')) {  // enable load if start hasn't been pressed
+                console.log("LOAD ENABLED")
                 set_button('load', {disabled: false});
             }
         });
