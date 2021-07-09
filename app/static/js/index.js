@@ -1,13 +1,13 @@
 function log(msg) {
     // logs a message to console and to the log div
     console.log(msg)
-    $('.logs > p').prepend(`> ${msg}<br>`);
+    $('.logs p').prepend(`> ${msg}<br>`);
 }
 
 function error(msg) {
     // logs an error message to console and to the log div
     console.log(msg)
-    $('.logs > p').prepend(`> <span style="color:red;font-weight:bold;">${msg}</span><br>`);
+    $('.logs p').prepend(`> <span style="color:red;font-weight:bold;">${msg}</span><br>`);
 }
 
 function update_button(name, hidden=null, disabled=null, text=null) {
