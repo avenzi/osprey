@@ -16,8 +16,8 @@ class DatabaseError(Exception):
     pass
 
 
-class DatabaseNotReady(DatabaseError):
-    """ Invoked when the database is not ready to receive data write operations """
+class DatabaseReadOnly(DatabaseError):
+    """ Invoked when the database is not ready to receive write operations """
 
 
 def maintain_connection(method):
@@ -51,8 +51,8 @@ def write_operation(method):
     """
     @functools.wraps(method)
     def wrapped(self, *args, **kwargs):
-        if not self.is_ready():
-            raise DatabaseNotReady
+        if not self.can_write():
+            raise DatabaseReadOnly
         method(self, *args, **kwargs)
     return wrapped
 
@@ -84,7 +84,6 @@ class Database:
         self.exit = False  # flag to determine when to stop running if looping
         self.live = True   # Whether in live mode
         self.playback_speed = 1  # speed multiplier in playback mode
-        self.updated = True  # whether the database has been written to since last save
 
         # For different threads to keep track of their own last read operation point.
         # First level keys are the ID of each separate reader. Values are second level dictionaries.
@@ -124,25 +123,6 @@ class Database:
         self.dump(filename)
         self.disconnect()
 
-    def load_file(self, filename):
-        """ Loads in the specified redis dump file and starts the redis server """
-        if not filename:
-            raise Exception("Could not load file - no file name given")
-
-        try:
-            self.dump()
-            # remove current data file if it exists.
-            # it shouldn't (because of dump()) but this is just in case.
-            system('rm {}'.format(self.file_path))
-        except:
-            pass
-
-        try:
-            system("cp {}/{} {}".format(self.store_path, filename, self.file_path))
-            self.init()
-        except Exception as e:
-            raise DatabaseError("Failed to load file to database: {}".format(e))
-
     def dump(self, filename=None, save=True):
         """
         Dump the current database file
@@ -161,6 +141,7 @@ class Database:
             # move current dump file to storage directory with new name
             try:
                 system("mv {} {}/{}".format(self.file_path, self.store_path, filename))
+                self.redis.flushdb()
             except Exception as e:
                 raise DatabaseError("Failed to dump database file to '{}': {}".format(filename, e))
             return filename
@@ -168,8 +149,28 @@ class Database:
         else:  # don't save
             try:
                 system("rm {}".format(self.file_path))
+                self.redis.flushdb()
             except Exception as e:
                 raise DatabaseError("Failed to delete current database file: {}".format(e))
+
+    def load_file(self, filename):
+        """ Loads in the specified redis dump file and starts the redis server """
+        if not filename:
+            raise Exception("Could not load file - no file name given")
+
+        try:
+            self.dump()
+            # remove current data file if it exists.
+            # it shouldn't (because of dump()) but this is just in case.
+            system('rm {}'.format(self.file_path))
+        except:
+            pass
+
+        try:
+            system("cp {}/{} {}".format(self.store_path, filename, self.file_path))
+            self.init()
+        except Exception as e:
+            raise DatabaseError("Failed to load file to database: {}".format(e))
 
     def rename_save(self, filename, newname):
         """ renames an old save file """
@@ -197,9 +198,7 @@ class Database:
 
     def set_live(self, val):
         """ change whether in live mode """
-        if not self.exit:  # still running
-            raise DatabaseError("Cannot change database mode while running")
-        self.live = val
+        self.live = bool(val)
         print("Set database live mode to: {}".format(val))
 
     def connect(self, timeout=None, delay=1):
@@ -239,24 +238,24 @@ class Database:
         except:
             return False
 
-    def set_ready(self, val):
-        """ Set the ready status of the database """
+    def set_write(self, val):
+        """ Set the writeable status of the database """
         try:
-            if val:
-                self.redis.set('READY', 1)
+            if bool(val):
+                self.redis.set('WRITE', 1)
             else:
-                self.redis.delete('READY')
+                self.redis.delete('WRITE')
                 self.exit = True
         except Exception as e:
-            raise DatabaseError("Failed to set database status to '{}'. {}".format(val, e))
+            raise DatabaseError("Failed to set database status to '{}'. {}".format(bool(val), e))
 
-    def is_ready(self):
-        """ Checks to see if the database is ready to be streamt to"""
+    def can_write(self):
+        """ Checks to see if the database is in write mode """
         if not self.redis:
             return False
         if not self.ping():
             return False
-        if self.redis.get('READY'):
+        if self.redis.get('WRITE'):  # In write mode (can read and write)
             return True
 
     @maintain_connection
@@ -480,6 +479,7 @@ class Database:
         return output
 
     @maintain_connection
+    @write_operation
     def write_info(self, key, data):
         """
         Writes <data> to info:<key>
@@ -509,6 +509,7 @@ class Database:
         return info
 
     @maintain_connection
+    @write_operation
     def write_group(self, key, data):
         """
         Writes <data> to group:<key>

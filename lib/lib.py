@@ -11,7 +11,7 @@ import os
 
 import socketio
 
-from lib.database import Database, DatabaseError, DatabaseNotReady
+from lib.database import Database, DatabaseError, DatabaseReadOnly
 
 
 class Base:
@@ -463,9 +463,9 @@ class Streamer(WorkerNode):
             self.streaming.wait()  # block until streaming event is set
             try:
                 self.loop()  # call user-defined main execution
-            except DatabaseNotReady as e:  # tried to write to database, but it wasn't ready
+            except DatabaseReadOnly as e:  # tried to write to database in read-only mode
                 self._stop()
-            except DatabaseError as e:  # error in any database operatiom
+            except DatabaseError as e:  # error in any database operation
                 self.debug(e)
                 self._stop()
             except Exception as e:
