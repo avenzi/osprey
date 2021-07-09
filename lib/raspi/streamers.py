@@ -147,8 +147,10 @@ class VideoStreamer(Streamer):
         from picamera import PiCamera, PiVideoFrameType
         print("HERE")
         self.camera = PiCamera(resolution='300x300', framerate=20)
+        print("HERE 1.1")
         self.camera.rotation = 180
         self.sps = PiVideoFrameType.sps_header
+        print("HERE 1.5")
 
         # info to send to database
         self.info['framerate'] = self.camera.framerate[0]
