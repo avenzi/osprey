@@ -17,7 +17,7 @@ def create_app():
     app.database = Database('3.131.117.61', 5001, 'thisisthepasswordtotheredisserver')
     app.database.init()
 
-    # define index buttons list
+    # define index page buttons list
     app.buttons = []
 
     # add basic favicon

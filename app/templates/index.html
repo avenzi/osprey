@@ -18,7 +18,7 @@
 <div class="container">
     <div class="commands stream_commands">
         <button class="command refresh"  value="refresh"  title="Force refresh page items">Refresh</button>
-        <button class="command live"     value="live"     title="Switch back to current live streams">Live</button>
+        <button class="command live"     value="live"     title="Switch back to current live streams" disabled>Live</button>
         <button class="command playback" value="playback" title="Switch to playback mode for the current stream">Playback</button>
     </div>
 
@@ -26,7 +26,7 @@
         <h2>Connected Streams</h2>
         <div class="commands stream_commands">
             <button class="command start" value="start" title="Start streaming">Start</button>
-            <button class="command stop"  value="stop"  title="Stop all streams and save the file to disk">Stop</button>
+            <button class="command stop"  value="stop"  title="Stop all streams and save the file to disk" disabled>Stop</button>
         </div>
         <ul></ul>
     </div>
@@ -34,9 +34,9 @@
     <div class="files">
         <h2>Saved Database Files</h2>
         <div class="commands file_commands">
-            <button class="command load"  value="load"    title="Load selected file for playback">Load</button>
-            <button class="command rename" value="rename" title="Rename selected file">Rename</button>
-            <button class="command delete" value="delete" title="Delete selected file">Delete</button>
+            <button class="command load"  value="load"    title="Load selected file for playback" disabled>Load</button>
+            <button class="command rename" value="rename" title="Rename selected file" disabled>Rename</button>
+            <button class="command delete" value="delete" title="Delete selected file" disabled>Delete</button>
         </div>
         <ul></ul>
     </div>

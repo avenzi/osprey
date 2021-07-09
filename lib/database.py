@@ -85,6 +85,7 @@ class Database:
 
         self.exit = False  # flag to determine when to stop running if looping
         self.live = True   # Whether in live mode
+        self.loaded = False  # Whether a read-only database file is loaded
         self.playback_speed = 1  # speed multiplier in playback mode
 
         # For different threads to keep track of their own last read operation point.
@@ -171,6 +172,7 @@ class Database:
         try:
             system("cp {}/{} {}".format(self.store_path, filename, self.file_path))
             self.init()
+            self.loaded = True
         except Exception as e:
             raise DatabaseError("Failed to load file to database: {}".format(e))
 
