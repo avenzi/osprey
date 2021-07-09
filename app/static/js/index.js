@@ -13,7 +13,7 @@ function error(msg) {
 function update_button(name, hidden=null, disabled=null, text=null) {
     console.log(name, hidden, disabled, text)
     if (hidden) {
-        $('button.command.'+name).prop('hideen', disabled);
+        $('button.command.'+name).prop('hidden', hidden);
     }
     if (disabled) {
         $('button.command.'+name).prop('disabled', disabled);
