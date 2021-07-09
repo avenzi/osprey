@@ -89,8 +89,11 @@ def disconnect():
 def start():
     """ start all streams """
     if current_app.database.ping():  # make sure database connected
-        current_app.database.set_ready(True)  # mark database as ready
-        socketio.emit('start', namespace='/streamers')  # send start command to streamers
+        if current_app.database.live:  # live mode
+            current_app.database.set_ready(True)  # mark database as ready
+            socketio.emit('start', namespace='/streamers')  # send start command to streamers
+        else:  # playback mode
+            print("PLAYBACK MODE START")
     else:
         error('Cannot start streams - database ping failed')
 
@@ -127,24 +130,19 @@ def live():
     refresh()
 
 
-@socketio.on('playback', namespace='/browser')
-@catch_errors
-def playback():
-    """ Switches to playback mode """
-    current_app.database.set_live(False)  # set database on playback mode
-    log('Set database to Playback mode')
-    # todo: disable playback button, enable live button
-    refresh()
-
-
 @socketio.on('load', namespace='/browser')
 @catch_errors
 def load(filename):
     """ Loads the given database file for playback """
     stop()  # save current database
     current_app.database.load_file(filename)
-    # todo: disable save button, start/stop stream buttons
+    current_app.database.set_live(False)  # set database on playback mode
+    current_app.database.set_ready(False)  # don't allow database writes during playback
+    log('Set database to Playback mode')
+    # todo: enable live button
+    refresh()
     log('Loaded "{}" to database'.format(filename))
+
     refresh()
 
 

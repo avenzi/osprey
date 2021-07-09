@@ -16,6 +16,10 @@ class DatabaseError(Exception):
     pass
 
 
+class DatabaseNotReady(DatabaseError):
+    """ Invoked when the database is not ready to receive data write operations """
+
+
 def maintain_connection(method):
     """
     Method wrapper to catch some disconnection issues
@@ -48,7 +52,7 @@ def write_operation(method):
     @functools.wraps(method)
     def wrapped(self, *args, **kwargs):
         if not self.is_ready():
-            raise self.Error("Database not ready to receive data")
+            raise DatabaseNotReady
         method(self, *args, **kwargs)
     return wrapped
 
