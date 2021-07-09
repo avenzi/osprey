@@ -33,6 +33,14 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### July 9th, 2021:
+
+​	I have not made much progress today. I am seriously considering rolling back the repository to a point before I started to restructure the database/streamer interaction, because a lot of functionality is broken and I'm not sure how to fix it. 
+
+​	One thing that I managed to accomplish instead was some interface management. I wrote methods that enable and disable various buttons in the browser. The Flask server can then control when each button is enabled at any given point in time, but I am finding it difficult to make sure that it is robust enough to be useful. I had a problem of these button settings being completely wiped if the browser was reloaded, which made me think I had to store them in the session variable. I tried this, but it didn't seem to completely solve the issue and I realized that it wouldn't even persist if someone were to navigate to the site from a different browser. So instead I've attached a simple list of button states to the Flask app itself, which is then sent to the browser during the refresh() socketio call along with the list of pages and files. This feels kind of weird to me but it was the only way I could think to do it. Of course normally I would use the database, but now the database might even be shut down when this happens so there is no guarantee that information will be available much less persistent across database instances. 
+
+​	One thing I am considering is the use of redis's multiple databases. It allows one to create separate instance of redis and read/write to them separately. My idea would be to keep one database reserved for Flask, one database for the current stream session, and then load old files into another one. I have no idea if this is the intent for that feature, but I could certainly give it a try if I eventually give up on my current approach. I think I will wait to consult with Dr. Ghassemi on Monday before making that decision. Until then I will continue to try and work out the bugs.
+
 ##### July 8th, 2021:
 
 ​	So I got sidetracked and rewrote the my database read_data() method. I realized that the way I was calculating the max_time value was wrong, but that edge case just hadn't come up during streaming so I didn't notice. I have now tested it and it works correctly. This just allows the Flask app to put a limit on the maximum amount of data to read from the database, in case the browser disconnected for some time, and then later requested all the data it missed. Instead of requesting all that data from redis, it only requests up to a given number of seconds. 

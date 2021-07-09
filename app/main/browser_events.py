@@ -81,7 +81,6 @@ def set_button(name, hidden=None, disabled=None, text=None):
 @socketio.on('connect', namespace='/browser')
 def connect():
     """ On connecting to the browser """
-    print('Browser connected: {}'.format(request.sid))
     refresh()  # send streams immediately on connecting
 
 
