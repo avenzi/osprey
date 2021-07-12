@@ -55,7 +55,7 @@ def run_video_stream(database, ID):
     while True:
         event.wait()  # stream only when even is set
         try:
-            data_dict = database.read_data(ID, ID, numerical=False, decode=False)
+            data_dict = database.read_data(ID, numerical=False, decode=False)
             if not data_dict:
                 socketio.sleep(0.1)
                 continue
