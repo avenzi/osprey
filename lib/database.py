@@ -157,7 +157,7 @@ class DatabaseController:
 
 class Database:
     """
-    Wrapper class to handle a connection to a database
+    Wrapper class to handle a single connection to a database
     May be created on its own - intended for use on remove device writing data
     """
     def __init__(self, ip, port, password):
@@ -176,10 +176,9 @@ class Database:
         self.live = False   # Whether in live mode
         self.playback_speed = 1  # speed multiplier in playback mode (live mode False)
 
-        # For different threads to keep track of their own last read operation point.
-        # First level keys are the ID of each separate reader. Values are second level dictionaries.
-        # Second level keys are the ID of each stream in the database. Values are third level dictionaries.
-        # Third level keys are "id" and "time", which are the last read database key and the real time it was read.
+        # Dictionary to track last read position in the database for each data column
+        # First level keys are the ID of each stream in the database. Values are Second level dictionaries.
+        # Second level keys are "id" and "time", which are the last read database key and the real time it was read.
         self.bookmarks = {}
 
     def time_to_redis(self, unix_time):
@@ -255,7 +254,7 @@ class Database:
             self.redis.xadd('stream:'+stream, {key: data[key] for key in data.keys()})
 
     @maintain_connection
-    def read_data(self, stream, reader, count=None, max_time=None, numerical=True, to_json=False, decode=True):
+    def read_data(self, stream, count=None, max_time=None, numerical=True, to_json=False, decode=True):
         """
         Gets newest data for <reader> from data column <stream>.
         <stream> is some ID that identifies the stream in the database.
@@ -276,19 +275,14 @@ class Database:
             numerical = False
             red = self.bytes_redis
 
-        if stream is None or reader is None:
+        if stream is None:
             return
-
-        bookmarks = self.bookmarks.get(reader)  # get reader-specific bookmarks
-        if not bookmarks:  # this reader hasn't read before
-            bookmarks = {}
-            self.bookmarks[reader] = bookmarks
 
         if count:  # get COUNT data regardless of last read
             response = red.xrevrange('stream:'+stream, count=count)
 
         else:
-            last_read = bookmarks.get(stream)
+            last_read = self.bookmarks.get(stream)
             if last_read:  # last read spot exists
                 last_read_id = last_read['id']
                 last_read_time = last_read['time']
@@ -311,24 +305,24 @@ class Database:
                     response = red.xread({'stream:'+stream: '$'}, block=1000)
                 else:  # return nothing and set info for next read
                     # set last read id to minimum, set last read time to now
-                    self.bookmarks[reader][stream] = {'id': self.time_to_redis(0), 'time': time()}
+                    self.bookmarks[stream] = {'id': self.time_to_redis(0), 'time': time()}
                     response = None
 
         if not response:
             return None
 
-        if not self.bookmarks[reader].get(stream):
-            self.bookmarks[reader][stream] = {}
+        if not self.bookmarks.get(stream):
+            self.bookmarks[stream] = {}
 
         # set last read time
-        self.bookmarks[reader][stream]['time'] = time()
+        self.bookmarks[stream]['time'] = time()
 
         # store the last ID of this stream and get list of data dicts
         if count:
-            self.bookmarks[reader][stream]['id'] = response[-1][0]
+            self.bookmarks[stream]['id'] = response[-1][0]
             data_list = response
         else:
-            self.bookmarks[reader][stream]['id'] = response[0][1][-1][0]
+            self.bookmarks[stream]['id'] = response[0][1][-1][0]
             data_list = response[0][1]
 
         # create final output dict
@@ -397,7 +391,7 @@ class Database:
         self.redis.xadd('stream:'+stream, new_data)
 
     @maintain_connection
-    def read_snapshot(self, stream, reader, to_json=False, decode=True):
+    def read_snapshot(self, stream, to_json=False, decode=True):
         """
         Gets latest snapshot for <reader> from data column <stream>.
         <stream> is some ID that identifies the stream in the database.
@@ -413,12 +407,7 @@ class Database:
             response = red.xrevrange('stream:'+stream, count=1)
 
         else:  # read snapshot at time since last read
-            bookmarks = self.bookmarks.get(reader)  # get reader-specific bookmarks
-            if not bookmarks:  # this reader hasn't read before
-                bookmarks = {}
-                self.bookmarks[reader] = bookmarks
-
-            last_read = bookmarks.get(stream)
+            last_read = self.bookmarks.get(stream)
             if last_read:  # last read spot exists
                 last_read_id = last_read['id']
                 last_read_time = last_read['time']
@@ -428,7 +417,7 @@ class Database:
                 response = red.xrevrange('stream:'+stream, max=max_read_id, count=1)
             else:  # no first read spot exists
                 response = red.xrange('stream:'+stream, count=1)  # get the first one
-                self.bookmarks[reader][stream] = {'id': self.time_to_redis(0), 'time': time()}
+                self.bookmarks[stream] = {'id': self.time_to_redis(0), 'time': time()}
 
         if not response:
             return None

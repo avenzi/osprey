@@ -24,10 +24,10 @@ class TestAnalyzer(Analyzer):
         """ Maine execution loop """
         # get most recent data from raw data stream
         all_data = {
-            '11': self.database.read_data(self.random_11, self.id),
-            '12': self.database.read_data(self.random_12, self.id),
-            '21': self.database.read_data(self.random_21, self.id),
-            '22': self.database.read_data(self.random_22, self.id)
+            '11': self.database.read_data(self.random_11),
+            '12': self.database.read_data(self.random_12),
+            '21': self.database.read_data(self.random_21),
+            '22': self.database.read_data(self.random_22)
         }
 
         if not any(all_data.values()):  # got no data from any stream
@@ -91,7 +91,7 @@ class SignalFilter(SignalAnalyzer):
 
     def loop(self):
         """ Maine execution loop """
-        data = self.database.read_data(self.raw_id, self.id)
+        data = self.database.read_data(self.raw_id)
         if not data:
             sleep(0.5)
             return
@@ -206,7 +206,7 @@ class SignalFourier(SignalAnalyzer):
         """ Maine execution loop """
         # samples needed to read for a given time window
         samples = int(self.widgets['fourier_window'] * self.sample_rate)
-        filtered_data = self.database.read_data(self.filtered_id, self.id, count=samples)
+        filtered_data = self.database.read_data(self.filtered_id, count=samples)
         if not filtered_data:
             sleep(0.1)
             return
@@ -315,7 +315,7 @@ class EEGFourier(SignalFourier):
         """ Maine execution loop (Overriding SignalFourier) """
         # samples needed to read for a given time window
         samples = int(self.widgets['fourier_window'] * self.sample_rate)
-        filtered_data = self.database.read_data(self.filtered_id, self.id, count=samples)
+        filtered_data = self.database.read_data(self.filtered_id, count=samples)
         if not filtered_data:
             sleep(0.1)
             return
@@ -397,7 +397,7 @@ class PulseAnalyzer(Analyzer):
     def loop(self):
         """ Maine execution loop """
         samples = int(self.window*self.sample_rate)
-        raw = self.database.read_data(self.raw_id, self.id, count=samples)
+        raw = self.database.read_data(self.raw_id, count=samples)
         if not raw:
             sleep(0.1)
             return
