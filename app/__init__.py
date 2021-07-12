@@ -15,7 +15,7 @@ def create_app():
     app = Flask(__name__)
 
     Session(app)  # initialize server side sessions
-    app.secret_key = 'thisisthesecretkeyfortheflaskserver'
+    app.config['SECRET_KEY'] = 'thisisthesecretkeyfortheflaskserver'
     app.config['SESSION_TYPE'] = 'redis'
     app.config['SESSION_REDIS'] = from_url('redis://localhost:6379')
 
