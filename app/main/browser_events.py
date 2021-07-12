@@ -111,7 +111,6 @@ def disconnect():
 def start():
     """ start all streams """
     if current_app.database.ping():  # make sure database connected
-        print(get_database())
         if current_app.database.live:  # live mode
             socketio.emit('start', namespace='/streamers')  # send start command to streamers
             set_button('start', disabled=True)
@@ -150,6 +149,7 @@ def refresh():
     update_pages()
     update_files()
     update_buttons()
+    get_database()
 
 
 @socketio.on('playback', namespace='/browser')

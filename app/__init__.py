@@ -3,6 +3,7 @@
 
 from flask import Flask, send_from_directory
 from flask_session import Session
+from redis import from_url
 import os
 import json
 
@@ -11,15 +12,15 @@ from lib.database import Database
 
 def create_app():
     """ Application factory to create the app and be passed to workers """
-    app = Flask(__name__, instance_relative_config=True)
-    app.secret_key = 'thisisthesecretkeyfortheflaskserver'
-    app.config['SESSION_TYPE'] = 'redis'
+    app = Flask(__name__)
 
     Session(app)  # initialize server side sessions
+    app.secret_key = 'thisisthesecretkeyfortheflaskserver'
+    app.config['SESSION_TYPE'] = 'redis'
+    app.config['SESSION_REDIS'] = from_url('redis://localhost:6379')
 
-    # initialize database connection
+    # initialize streaming database connection
     app.database = Database('3.131.117.61', 5001, 'thisisthepasswordtotheredisserver')
-    app.database.init()
 
     # add basic favicon
     @app.route('/favicon.ico')
