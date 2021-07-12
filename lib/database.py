@@ -97,32 +97,7 @@ class Database:
 
     def redis_to_time(self, redis_time):
         """ Convert redis time stand to unix time stamp in seconds """
-        return float(redis_time.split('-')[0])/1000
-
-    def init(self):
-        """
-        Initialize database process.
-        Obviously only used on the machine that is hosting the redis server
-        """
-        try:  # dump current database file if it wasn't properly dumped on shutdown
-            self.dump()
-        except:
-            pass
-
-        try:
-            system("redis-server config/redis.conf")
-            self.exit = False
-            sleep(0.5)  # give it a sec to start up
-            self.set_write(True)  # start database in write mode
-        except Exception as e:
-            raise DatabaseError("Failed to initialize database: {}".format(e))
-
-    def shutdown(self, filename=None):
-        """ Shut down database process and save data """
-        if not self.redis:  # already shutdown
-            return
-        self.dump(filename)
-        self.disconnect()
+        return float(redis_time.split('-')[0])/100
 
     def dump(self, filename=None, save=True):
         """
@@ -131,8 +106,9 @@ class Database:
             and returns the full filename used (may not be the same as given)
         """
         if save:
+            self.redis.save()  # save to file
             if not path.isfile(self.file_path):
-                raise DatabaseError("Failed to dump database file - no current database file exists")
+                raise DatabaseError("Failed to dump database file - no database file was found")
             # if file name not given or already exists
             if not filename or path.isfile(self.store_path + '/' + filename):
                 filename = get_time_filename()
@@ -140,7 +116,7 @@ class Database:
                 filename += '.rdb'
             # move current dump file to storage directory with new name
             try:
-                system("mv {} {}/{}".format(self.file_path, self.store_path, filename))
+                system("cp {} {}/{}".format(self.file_path, self.store_path, filename))
                 self.redis.flushdb()
             except Exception as e:
                 raise DatabaseError("Failed to dump database file to '{}': {}".format(filename, e))
@@ -148,30 +124,9 @@ class Database:
 
         else:  # don't save
             try:
-                system("rm {}".format(self.file_path))
                 self.redis.flushdb()
             except Exception as e:
-                raise DatabaseError("Failed to delete current database file: {}".format(e))
-
-    def load_file(self, filename):
-        """ Loads in the specified redis dump file and starts the redis server """
-        if not filename:
-            raise Exception("Could not load file - no file name given")
-
-        try:
-            self.dump()
-            # remove current data file if it exists.
-            # it shouldn't (because of dump()) but this is just in case.
-            system('rm {}'.format(self.file_path))
-        except:
-            pass
-
-        try:
-            system("cp {}/{} {}".format(self.store_path, filename, self.file_path))
-            self.init()
-            self.loaded = True
-        except Exception as e:
-            raise DatabaseError("Failed to load file to database: {}".format(e))
+                raise DatabaseError("Failed to flush database: {}".format(e))
 
     def rename_save(self, filename, newname):
         """ renames an old save file """
@@ -239,28 +194,7 @@ class Database:
         except:
             return False
 
-    def set_write(self, val):
-        """ Set the writeable status of the database """
-        try:
-            if bool(val):
-                self.redis.set('WRITE', 1)
-            else:
-                self.redis.delete('WRITE')
-                self.exit = True
-        except Exception as e:
-            raise DatabaseError("Failed to set database status to '{}'. {}".format(bool(val), e))
-
-    def can_write(self):
-        """ Checks to see if the database is in write mode """
-        if not self.redis:
-            return False
-        if not self.ping():
-            return False
-        if self.redis.get('WRITE'):  # In write mode (can read and write)
-            return True
-
     @maintain_connection
-    #@write_operation
     def write_data(self, stream, data):
         """
         Writes time series <data> to stream:<stream>.
@@ -415,7 +349,6 @@ class Database:
         return output
 
     @maintain_connection
-    #@write_operation
     def write_snapshot(self, stream, data):
         """
         Writes a snapshot of data <data> to stream:<stream>.
@@ -480,7 +413,6 @@ class Database:
         return output
 
     @maintain_connection
-    #@write_operation
     def write_info(self, key, data):
         """
         Writes <data> to info:<key>
@@ -510,7 +442,6 @@ class Database:
         return info
 
     @maintain_connection
-    #@write_operation
     def write_group(self, key, data):
         """
         Writes <data> to group:<key>
