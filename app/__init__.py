@@ -2,6 +2,7 @@
 #monkey_patch()
 
 from flask import Flask, send_from_directory
+from flas_session import Session
 import os
 import json
 
@@ -12,6 +13,8 @@ def create_app():
     """ Application factory to create the app and be passed to workers """
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_mapping(SECRET_KEY='thisisthesecretkeytotheflaskserver')
+
+    Session(app)  # initialize server side sessions
 
     # initialize database connection
     app.database = Database('3.131.117.61', 5001, 'thisisthepasswordtotheredisserver')
