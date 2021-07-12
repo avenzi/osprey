@@ -39,8 +39,6 @@ def maintain_connection(method):
                     continue
                 else:
                     raise self.Error('Database connection error: {}'.format(e))
-            except DatabaseReadOnly:
-                return
             except Exception as e:
                 raise self.Error('Error in Database ({}). {}: {}'.format(method.__name__, e.__class__.__name__, e))
     return wrapped
@@ -85,8 +83,7 @@ class Database:
 
         self.exit = False  # flag to determine when to stop running if looping
         self.live = True   # Whether in live mode
-        self.loaded = False  # Whether a read-only database file is loaded
-        self.playback_speed = 1  # speed multiplier in playback mode
+        self.playback_speed = 1  # speed multiplier in playback mode (live mode False)
 
         # For different threads to keep track of their own last read operation point.
         # First level keys are the ID of each separate reader. Values are second level dictionaries.
@@ -263,7 +260,7 @@ class Database:
             return True
 
     @maintain_connection
-    @write_operation
+    #@write_operation
     def write_data(self, stream, data):
         """
         Writes time series <data> to stream:<stream>.
@@ -418,7 +415,7 @@ class Database:
         return output
 
     @maintain_connection
-    @write_operation
+    #@write_operation
     def write_snapshot(self, stream, data):
         """
         Writes a snapshot of data <data> to stream:<stream>.
@@ -483,7 +480,7 @@ class Database:
         return output
 
     @maintain_connection
-    @write_operation
+    #@write_operation
     def write_info(self, key, data):
         """
         Writes <data> to info:<key>
@@ -513,7 +510,7 @@ class Database:
         return info
 
     @maintain_connection
-    @write_operation
+    #@write_operation
     def write_group(self, key, data):
         """
         Writes <data> to group:<key>

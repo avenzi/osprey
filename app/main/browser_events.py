@@ -32,6 +32,17 @@ def catch_errors(handler):
     return wrapped_handler
 
 
+def get_database():
+    """ Retrieves the Database object from the current session """
+    if not session.get('DATABASE'):
+        print("SESSION VAR NOT SET")
+        session['DATABASE'] = "VALUE"
+    else:
+        print("SESSION VAR SET")
+    print(session['DATABASE'])
+    return session['DATABASE']
+
+
 def check_filename(file):
     """ validated syntax of file name """
     if not match(r"^[0-9a-zA-Z_:\-.]+$", file):
@@ -100,6 +111,7 @@ def disconnect():
 def start():
     """ start all streams """
     if current_app.database.ping():  # make sure database connected
+        print(get_database())
         if current_app.database.live:  # live mode
             socketio.emit('start', namespace='/streamers')  # send start command to streamers
             set_button('start', disabled=True)
