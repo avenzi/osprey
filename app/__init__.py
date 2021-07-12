@@ -7,7 +7,7 @@ from redis import from_url
 import os
 import json
 
-from lib.database import Database
+from lib.database import DatabaseController
 
 
 def create_app():
@@ -17,10 +17,10 @@ def create_app():
     app.config['SECRET_KEY'] = 'thisisthesecretkeyfortheflaskserver'
     app.config['SESSION_TYPE'] = 'redis'
     app.config['SESSION_REDIS'] = from_url('redis://localhost:6379')
-    Session(app)  # initialize server side sessions
+    Session(app)  # initialize server side session
 
-    # initialize streaming database connection
-    app.database = Database('3.131.117.61', 5001, 'thisisthepasswordtotheredisserver')
+    # interface to database connections
+    app.database_controller = DatabaseController(live_path='data/live', saved_path='data/saved')
 
     # add basic favicon
     @app.route('/favicon.ico')
