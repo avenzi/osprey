@@ -14,10 +14,10 @@ def create_app():
     """ Application factory to create the app and be passed to workers """
     app = Flask(__name__)
 
-    Session(app)  # initialize server side sessions
     app.config['SECRET_KEY'] = 'thisisthesecretkeyfortheflaskserver'
     app.config['SESSION_TYPE'] = 'redis'
     app.config['SESSION_REDIS'] = from_url('redis://localhost:6379')
+    Session(app)  # initialize server side sessions
 
     # initialize streaming database connection
     app.database = Database('3.131.117.61', 5001, 'thisisthepasswordtotheredisserver')
