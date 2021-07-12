@@ -2,7 +2,7 @@
 #monkey_patch()
 
 from flask import Flask, send_from_directory
-from flas_session import Session
+from flask_session import Session
 import os
 import json
 
