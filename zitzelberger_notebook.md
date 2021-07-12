@@ -33,6 +33,16 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### July 12th, 2021:
+
+​	I talked to Dr. Ghassemi today, and he had a great suggestion for solving this organization issue that I've been having. The plan is that, when playing back an old file, the app will start up a new parallel redis instance that is only accessible on the local network of the server. That way I won't have any issues with Pi's connecting and setting the database in read-only mode like I was trying to earlier. Then all I have to do is tell the Flask app to create a new Database class object that points to that redis instance to read data from in playback mode.
+
+​	This structure, however, requires that I implement server-side sessions because the Flask app will need to maintain a connection to both databases and serve their contents according to which session requests it. Therefore I have install Flask-Sessions (which is server side, as opposed to the native sessions which is client side) and configured it to use redis as a session store. This seemed the most practical since I already have redis set up so it was simple to implement. Every time the program is run, now two redis instances are started - one for streaming and one for Flask-Sessions. My goal will be to make it so that each time a playback is requested, a new redis instance will be started to serve that data. Note that it was important to configure Flask-SocketIO as well to play nicely with Flask-Sessions because it is handled through websockets not HTTP. I got this from a great article by Miguel himself (https://blog.miguelgrinberg.com/post/flask-socketio-and-the-user-session).
+
+​	There is still one part I'm not yet sure about - where to store my Database objects. Flask-Session is using redis as a store, but Redis doesn't handle python objects - so where do I keep the Database classes that are associated with each session? Should I just keep a global dictionary? But wouldn't that defeat the purpose of having Redis as a session store in the first place? 
+
+​	After some thinking I've decided to write a new DatabaseController class that will keep track of all the various Database classes with an internal dictionary that indexes these Databases by the session ID given when they were created. I believe this way I can even allow multiple viewings of the same database file or live database file if I want. I'll probably be working on this for the next few days.
+
 ##### July 9th, 2021:
 
 ​	I have not made much progress today. I am seriously considering rolling back the repository to a point before I started to restructure the database/streamer interaction, because a lot of functionality is broken and I'm not sure how to fix it. 

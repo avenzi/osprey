@@ -61,7 +61,7 @@ def update_pages():
 
 def update_files():
     """ Updates list of database files in browser """
-    data_path = 'data/redis_dumps'
+    data_path = 'data/saved'
     try:  # attempt to get list of files in data directory
         files = [file for file in listdir(data_path) if isfile(join(data_path, file))]
     except Exception as e:
@@ -90,15 +90,24 @@ def set_button(name, hidden=None, disabled=None, text=None):
 ##################################
 
 @socketio.on('connect', namespace='/browser')
+@catch_errors
 def connect():
     """ On connecting to the browser """
-    refresh()  # send streams immediately on connecting
+    print("SID CONNECT: ", session.sid)
+    # create a database for this session for the live stream if one isn't found
+    if not current_app.database_controller.get(session.sid):
+        print("CREATING NEW DATABASE CONNECTION")
+        current_app.database_controller.new(
+            ip='3.131.117.61', port=5001, password='thisisthepasswordtotheredisserver',
+            live=True, file='data/dump.rdb', ID=session.sid
+        )
+    refresh()  # send all page info immediately on connecting
 
 
 @socketio.on('disconnect', namespace='/browser')
+@catch_errors
 def disconnect():
     """ On disconnecting from the browser """
-    # print('Browser disconnected: {}'.format(request.sid))
     pass
 
 
