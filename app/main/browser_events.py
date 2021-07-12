@@ -146,10 +146,10 @@ def stop():
 @catch_errors
 def refresh():
     """ Refresh all data displayed in browser index """
+    get_database()
     update_pages()
     update_files()
     update_buttons()
-    get_database()
 
 
 @socketio.on('playback', namespace='/browser')
