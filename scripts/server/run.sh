@@ -11,7 +11,7 @@ cd ../../
 #git pull
 
 # kill any remaining processed
-bash ./quit.sh
+bash scripts/server/quit.sh
 
 # activate virtual environment
 . venv/bin/activate
