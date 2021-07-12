@@ -12,7 +12,8 @@ from lib.database import Database
 def create_app():
     """ Application factory to create the app and be passed to workers """
     app = Flask(__name__, instance_relative_config=True)
-    app.config.from_mapping(SECRET_KEY='thisisthesecretkeytotheflaskserver')
+    app.secret_key = 'thisisthesecretkeyfortheflaskserver'
+    app.config['SESSION_TYPE'] = 'redis'
 
     Session(app)  # initialize server side sessions
 
