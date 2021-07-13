@@ -37,8 +37,8 @@ function get_button(name) {
     }
 }
 
-function get_session() {
-    var session = document.cookie
+function get_session(socket) {
+    var session = socket.request.headers.cookie;
     log("SESSION: "+session)
 }
 
