@@ -1,6 +1,4 @@
-from flask import (
-    flash, current_app, render_template, request, Response
-)
+from flask import flash, current_app, session, render_template, request, Response
 
 from jinja2.exceptions import TemplateNotFound
 from bokeh.embed import json_item
