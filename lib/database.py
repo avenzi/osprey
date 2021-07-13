@@ -35,10 +35,10 @@ def maintain_connection(method):
             try:  # attempt to perform database operation
                 return method(self, *args, **kwargs)
             except (redis.exceptions.ConnectionError, ConnectionResetError, ConnectionRefusedError)as e:
-                if self.connect():  # attempt to connect
+                if self.connect(timeout=2):  # attempt to connect
                     continue
                 else:
-                    raise self.Error('Database connection error: {}'.format(e))
+                    raise DatabaseError('Database connection timeout: {}'.format(e))
             except Exception as e:
                 raise DatabaseError('Error in Database ({}). {}: {}'.format(method.__name__, e.__class__.__name__, e))
     return wrapped
@@ -219,6 +219,8 @@ class Database:
         <timeout> Time until error returned. None never stops.
         <delay> Delay in seconds before repeating each time
         """
+        # todo: I'm honestly not even sure this loop is necessary.
+        #  I think redis already does connection checking, and this might just be uneccesary overhead.
         start = time()
         t = 0
         while not self.exit:  # until node exits
