@@ -44,13 +44,13 @@ $(document).ready(function() {
     var selected_file = ""  // currently selected file
     var session = ""  // current session ID
 
-    socket.on('connect', function() {
+    socket.on('connect', function(socket) {
         log("SocketIO connected to server");
         session = socket.request.headers.cookie;
         log("SESS: "+session)
     });
 
-    socket.on('disconnect', function(socket) {
+    socket.on('disconnect', function() {
         log("SocketIO disconnected from server");
     });
 
