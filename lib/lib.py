@@ -506,7 +506,7 @@ class Streamer(WorkerNode):
         self.connect_socket()
 
         # get connection to database
-        self.database = Database(self.ip, self.db_port, self.db_pass, live=True)
+        self.database = Database(self.ip, self.db_port, self.db_pass)
         self.database.connect()
         self.log("{} Connected to Database".format(self))
 
