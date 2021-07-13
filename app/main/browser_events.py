@@ -32,6 +32,20 @@ def catch_errors(handler):
     return wrapped_handler
 
 
+def set_button(name, hidden=None, disabled=None, text=None):
+    """
+    Updates state of a single button in browser
+    <name>: class name of the button to be targeted
+    <hidden>: whether the button is hidden
+    <disabled>: whether the button is disabled
+    <text>: button text, if changed.
+    """
+    data = {'name': name, 'hidden': hidden, 'disabled': disabled, 'text': text}
+    if not session['buttons']:
+        session['buttons'] = []
+    session['buttons'].append(data)
+
+
 def set_database(file=None):
     """
     Sets the current session database.
@@ -61,10 +75,8 @@ def set_database(file=None):
 def get_database():
     """ Retrieves the Database object from the current session """
     database = current_app.database_controller.get(session.sid)
-
-    # no database found for this session
     if not database:
-        database = set_database()  # set database to live connection
+        return
 
     # set Index Header for this session
     if database.live:  # live database
@@ -88,10 +100,17 @@ def check_filename(file):
 
 def update_pages():
     """ Updates list of connected streams in browser """
-    try:  # attempt to read list of group names
-        groups = get_database().read_all_groups()
-    except DatabaseError:
-        groups = []
+    print("SESSSSIONNNNNNNNNN: {}".format(session))
+    database = get_database()
+    print("DATABASE: {}".format(database))
+    if database:
+        try:  # attempt to read list of group names
+            groups = database.read_all_groups()
+        except DatabaseError:
+            groups = []
+    else:
+        error("Cannot get stream pages - No current database is set")
+        return
     print("GROUPS: ", type(groups))
     socketio.emit('update_pages', groups, namespace='/browser')
 
@@ -109,24 +128,12 @@ def update_files():
 
 def update_buttons():
     """ Sends all button data stored in session """
-    socketio.emit('update_buttons', current_app.buttons, namespace='/browser')
+    socketio.emit('update_buttons', session['buttons'], namespace='/browser')
 
 
 def update_text():
     """ Sends text data to the page to update """
     socketio.emit('update_header', session['index_header'], namespace='/browser')
-
-
-def set_button(name, hidden=None, disabled=None, text=None):
-    """
-    Updates state of a single button in browser
-    <name>: class name of the button to be targeted
-    <hidden>: whether the button is hidden
-    <disabled>: whether the button is disabled
-    <text>: button text, if changed.
-    """
-    data = {'name': name, 'hidden': hidden, 'disabled': disabled, 'text': text}
-    current_app.buttons.append(data)
 
 
 ##################################
@@ -136,7 +143,8 @@ def set_button(name, hidden=None, disabled=None, text=None):
 def connect():
     """ On connecting to the browser """
     print("SID CONNECT: ", session.sid)
-    get_database()  # get database for session
+    if not get_database():  # if no current session database
+        set_database()  # set to a live database connection
     refresh()  # send all page info immediately on connecting
 
 
