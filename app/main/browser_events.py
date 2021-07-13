@@ -70,6 +70,7 @@ def set_database(file=None):
         session['index_header'] = 'Playback: '+database.file
 
     print("SET DATABASE:", database)
+    print("HEADER:",session['index_header'])
 
     return database
 
@@ -87,6 +88,7 @@ def get_database():
         session['index_header'] = 'Playback: '+database.file
 
     print("RETRIEVED DATABASE FOR THIS SESSION:", database)
+    print("HEADER:",session['index_header'])
 
     return database
 
@@ -120,6 +122,7 @@ def update_pages():
 @catch_errors
 def update_files():
     """ Updates list of database files in browser """
+    print("REFRESHING FILES")
     data_path = 'data/saved'
     files = []
     for file in listdir(data_path):
@@ -140,7 +143,7 @@ def update_buttons():
 @catch_errors
 def update_text():
     """ Sends text data to the page to update """
-    print("HEADER: {}".format(session['index_header']))
+    print("REFRESHING HEADER: {}".format(session['index_header']))
     socketio.emit('update_header', session['index_header'], namespace='/browser')
 
 
