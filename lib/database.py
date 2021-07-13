@@ -557,11 +557,13 @@ class XServerDatabase(Database):
         return filename
 
 
-class ServerDatabase:
+class ServerDatabase(Database):
     def __init__(self, ip, port, password, file, save_path, live):
+        super().__init__(ip, port, password)
         self.live = live
         self.port = port
         self.file = file
+        self.save_path = save_path  # path to save directory
         print("NEW DATABASE. PORT:{}, LIVE:{}, FILE:{}".format(port, live, file))
 
     def save(self):
@@ -571,6 +573,21 @@ class ServerDatabase:
 
     def disconnect(self):
         print("DISCONNECTED: PORT:{}, LIVE:{}, FILE:{}".format(self.port, self.live, self.file))
+
+    def ping(self):
+        pass
+
+    def write_data(self, stream, data):
+        print("WRITE DATA")
+
+    def read_data(self, stream, count=None, max_time=None, numerical=True, to_json=False, decode=True):
+        print("READ DATA")
+
+    def write_snapshot(self, stream, data):
+        print("WRITE SNAPSHOT")
+
+    def read_snapshot(self, stream, to_json=False, decode=True):
+        print("READ SNAPSHOT")
 
 
 
