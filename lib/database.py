@@ -65,18 +65,21 @@ class DatabaseController:
         self.sessions = {}
 
         self.live_ip = '3.131.117.61'
+        self.live_port = 5001
         self.live_path = live_path  # directory of live database dump files
+        self.live_file = 'live.rdb'
+        self.live_pass = 'thisisthepasswordtotheredisserver'
 
         # index of ports used for playback files and how many Database object connected
         self.playback_ports = {port: {'file':None, 'count':0} for port in [7000, 7001, 7002]}
         self.playback_ip = '3.131.117.61'
         self.save_path = saved_path
 
-    def new_live(self, ip, port, password, file, ID):
+    def new_live(self, ID):
         """ Creates and returns a new live Database instance for the given ID key """
         if self.sessions.get(ID):  # Database already associated
             self.remove(ID)  # remove and disconnect
-        self.sessions[ID] = ServerDatabase(self.live_ip, port, password, file, self.save_path, live=True)
+        self.sessions[ID] = ServerDatabase(self.live_ip, self.live_port, self.live_pass, self.live_file, self.live_path, live=True)
         print("Created Live database")
 
     def new_playback(self, file, ID):
@@ -88,11 +91,15 @@ class DatabaseController:
                 port = p
             elif info['file'] == file:  # the port is already associated with the given file
                 port = p
+                print("FOUND A PORT ALREADY ASSOCIATED FOR PLAYBACK: {}".format(p))
                 break  # done
 
         else:  # no port was associated with this file already
             if port is None:  # no ports available
                 raise DatabaseError("Could not create new playback server - no ports available")
+            else:  # a port is available
+                print("START A NEW REDIS SERVER INSTANCE FOR PLAYBACK HERE. PORT: {}".format(port))
+                # todo: start up a new redis instance on this port
 
         self.playback_ports[port]['file'] = file  # set the file for this port if not already
         self.playback_ports[port]['count'] += 1  # increment count of Database classes connecting to this port
@@ -157,7 +164,7 @@ class DatabaseController:
 
 class Database:
     """
-    Wrapper class to handle a single connection to a database
+    Wrapper class to handle a single  connection to a database
     May be created on its own - intended for use on remove device writing data
     """
     def __init__(self, ip, port, password):
@@ -498,7 +505,7 @@ class Database:
         return info
 
 
-class ServerDatabase(Database):
+class XServerDatabase(Database):
     """
     Wrapper class to handle a connection to a database on the server where the database is hostred
     Shouldn't be created directly - created only by DatabaseController.new()
@@ -549,6 +556,21 @@ class ServerDatabase(Database):
 
         return filename
 
+
+class ServerDatabase:
+    def __init__(self, ip, port, password, file, save_path, live):
+        self.live = live
+        self.port = port
+        self.file = file
+        print("NEW DATABASE. PORT:{}, LIVE:{}, FILE:{}".format(port, live, file))
+
+    def save(self):
+        if not self.live:
+            raise DatabaseError("Did not save database file - not a live database")
+        print("Saved Database file: {}".format(self.file))
+
+    def disconnect(self):
+        print("DISCONNECTED: PORT:{}, LIVE:{}, FILE:{}".format(self.port, self.live, self.file))
 
 
 
