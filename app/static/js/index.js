@@ -37,6 +37,10 @@ function get_button(name) {
     }
 }
 
+function get_session() {
+    var session = document.cookie
+    log("SESSION: "+session)
+}
 
 $(document).ready(function() {
     var namespace = '/browser';  // namespace for talking with server
@@ -45,6 +49,7 @@ $(document).ready(function() {
 
     socket.on('connect', function() {
         log("SocketIO connected to server");
+        get_session();
     });
 
     socket.on('disconnect', function() {

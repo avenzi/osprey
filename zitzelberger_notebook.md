@@ -33,7 +33,15 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
-##### July 12th, 2021:
+##### July 13th, 2021:
+
+​	I started today by creating a "dummy" database class so I could test the server sessions first. While testing, I came across a bug with something I wrote awhile ago - the connection timeout that I implemented for the Redis connection. I wrote a timeout so that, in the event that the connection got disrupted, it would attempt to perform the database operation again. However apparently this has never been triggered until now, and only now have I realized that Redis-py already implements its own connection timeouts. I didn't know about this, so the default option was set, which is just to never timeout. I found this out because my redis connection was hanging indefinitely. I scrapped my entire connection timeout loop, and instead defined the socket_timeout and socket_connect_timeout parameters for the Redis.ConnectionPool objects. Now timeouts work just as expected.
+
+​	Also, as I was going through this old code, I found that I was trying to manually disconnect the Redis connections, which was causing some problems when keeping track of what connections were active and which were. I'm not sure why I did this because the Redis connection pools handle that already. Maybe this was before I switched to a connection pool? Not sure - but regardless I removed those pieces, so now I don't have to deal with it at all.
+
+​	I ran into another issue. When navigating to the index page in two separate browser windows, the server creates a new session as expected, but when I do anything on the page that should edit the session (e.g. clicking a button), that change is emitted to both browsers. I do not think the issue is with the sessions because both still access their own unique session variables - the problem is that the SocketIO emit messages are received by both windows. Now that I think about it, though, it's almost certainly because I'm using a single namespace identifier for the browser, when instead each session should get its own. I have a suspicion that I will need to use SocketIO rooms to solve this.
+
+##### July 12th, 2021: 
 
 ​	I talked to Dr. Ghassemi today, and he had a great suggestion for solving this organization issue that I've been having. The plan is that, when playing back an old file, the app will start up a new parallel redis instance that is only accessible on the local network of the server. That way I won't have any issues with Pi's connecting and setting the database in read-only mode like I was trying to earlier. Then all I have to do is tell the Flask app to create a new Database class object that points to that redis instance to read data from in playback mode.
 
