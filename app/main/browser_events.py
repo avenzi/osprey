@@ -208,15 +208,10 @@ def stop():
 @catch_errors
 def refresh():
     """ Refresh all data displayed in browser index """
-    print("REFRESHING")
     update_text()
-    print("REFRESHING 1")
     update_pages()
-    print("REFRESHING 2")
     update_files()
-    print("REFRESHING 3")
     update_buttons()
-    print("REFRESHING 4")
 
 
 @socketio.on('playback', namespace='/browser')
