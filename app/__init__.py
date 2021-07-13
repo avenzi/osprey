@@ -42,6 +42,7 @@ def create_app():
 
     from app.main import socketio
     socketio.init_app(app, async_mode='eventlet', manage_session=False)
+    # manage_sessions means that the socketIO and HTTP sessions will be the same
     return app
 
 
