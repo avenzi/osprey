@@ -1,8 +1,7 @@
-from flask import request, current_app, copy_current_request_context
+from flask import request, current_app, session, copy_current_request_context
 from flask_socketio import join_room, leave_room
 from app.main import socketio
 from threading import Thread, Event
-from app import Database
 
 # Maps to keep track of what socketIO connections are watching which video streams.
 video_streams = {}  # {stream_ID: Threading_Event}
@@ -23,7 +22,8 @@ def start_video_stream(ID):
         stream_counts[ID] = 0  # start count for this ID
 
         # run streaming thread
-        Thread(target=run_video_stream, args=(current_app.database, ID), name='VIDEO', daemon=False).start()
+        db = current_app.database_controller.get(session.sid)
+        Thread(target=run_video_stream, args=(db, ID), name='VIDEO', daemon=False).start()
         # TODO: Should I be using a gevent spawn here instead?
 
     # if stream already exists
@@ -71,4 +71,3 @@ def run_video_stream(database, ID):
             break
 
         #socketio.sleep(1)
-
