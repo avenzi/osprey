@@ -49,7 +49,7 @@ $(document).ready(function() {
 
     socket.on('connect', function() {
         log("SocketIO connected to server");
-        get_session();
+        get_session(socket);
     });
 
     socket.on('disconnect', function() {
