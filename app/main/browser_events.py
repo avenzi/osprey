@@ -140,6 +140,7 @@ def update_buttons():
 @catch_errors
 def update_text():
     """ Sends text data to the page to update """
+    print("HEADER: {}".format(session['index_header']))
     socketio.emit('update_header', session['index_header'], namespace='/browser')
 
 
@@ -206,6 +207,7 @@ def stop():
 @catch_errors
 def refresh():
     """ Refresh all data displayed in browser index """
+    print("REFRESHING")
     update_text()
     update_pages()
     update_files()
