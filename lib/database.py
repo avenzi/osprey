@@ -181,11 +181,18 @@ class Database:
         self.port = port  # database port
         self.password = password  # database password
 
-        self.socket_timeout = 2  # 2 second timeout for responses
+        # options for the redis.ConnectionPool
+        options = {
+            'host': ip,
+            'port': port,
+            'password': password,
+            'socket_timeout': 2,
+            'socket_connect_timeout': 5
+        }
 
         # Separate redis pools for reading decoded data or reading raw bytes data.
-        self.pool = redis.ConnectionPool(host=ip, port=port, password=password, decode_responses=True, socket_timeout=self.socket_timeout)
-        self.bytes_pool = redis.ConnectionPool(host=ip, port=port, password=password, decode_responses=False, socket_timeout=self.socket_timeout)
+        self.pool = redis.ConnectionPool(decode_responses=True, **options)
+        self.bytes_pool = redis.ConnectionPool(decode_responses=False, **options)
         self.redis = redis.Redis(connection_pool=self.pool)
         self.bytes_redis = redis.Redis(connection_pool=self.bytes_pool)
 
