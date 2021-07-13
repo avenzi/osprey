@@ -30,7 +30,7 @@ def stream():
     file = server_stream_config.pages.get(group_name)
     if not file:
         print("No stream page configured for: {}".format(group_name))
-        return "", 404
+        return redirect(url_for('index'))
 
     template_path = '/streams/{}'.format(file)
 
@@ -61,13 +61,13 @@ def plot_layout():
     create_layout = server_stream_config.bokeh_layouts.get(group_name)
     if not create_layout:
         error("No layout function specified for group '{}'".format(group_name))
-        return redirect(url_for('index'))
+        return "", 302
 
     try:
         layout = create_layout(info)  # bokeh layout object
     except Exception as e:
         error("Failed to create layout for group {}. {}: {}".format(group_name, e.__class__.__name__, e))
-        return redirect(url_for('index'))
+        return "", 302
 
     json_layout = dumps(json_item(layout))
 
