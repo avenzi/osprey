@@ -37,7 +37,6 @@ function get_button(name) {
     }
 }
 
-
 $(document).ready(function() {
     var namespace = '/browser';  // namespace for talking with server
     var socket = io(namespace);
@@ -46,9 +45,6 @@ $(document).ready(function() {
 
     socket.on('connect', function() {
         log("SocketIO connected to server");
-        log(socket.io.engine.id);
-        log(socket.id);
-        log(socket.json.id);
     });
 
     socket.on('disconnect', function() {

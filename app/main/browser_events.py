@@ -72,6 +72,7 @@ def stop():
 @catch_errors
 def refresh():
     """ Refresh all data displayed in browser index """
+    socketio.emit('log', "SOCKET ID: {}, NAMESPACE: {}".format(request.sid, request.namespace), namespace='/browser')
     update_text()
     update_pages()
     update_files()
