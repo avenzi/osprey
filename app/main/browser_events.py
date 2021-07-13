@@ -28,7 +28,7 @@ def catch_errors(handler):
         try:
             return handler(*args, **kwargs)
         except Exception as e:
-            error("Server error in {}:\n   {}: {}".format(handler.__name__, e.__class__.__name__, e))
+            error("[Server error in {}()]: {}: {}".format(handler.__name__, e.__class__.__name__, e))
     return wrapped_handler
 
 
@@ -130,6 +130,8 @@ def update_files():
 
 def update_buttons():
     """ Sends all button data stored in session """
+    if not session['buttons']:
+        session['buttons'] = []
     socketio.emit('update_buttons', session['buttons'], namespace='/browser')
 
 
