@@ -32,15 +32,52 @@ def catch_errors(handler):
     return wrapped_handler
 
 
+def set_database(file=None):
+    """
+    Sets the current session database.
+    If no file is given, sets it to a live database connection.
+    If a file is given, sets it to a playback database connection to that file.
+    """
+    sid = session.sid  # current session ID
+    ctrl = current_app.database_controller
+
+    ctrl.remove(sid)  # remove current database
+    if file:
+        ctrl.new_playback(file=file, ID=session.sid)
+    else:
+        ctrl.new_live(ID=session.sid)
+
+    database = ctrl.get(session.sid)
+
+    # set Index Header for this session
+    if database.live:  # live database
+        session['index_header'] = 'Connected Live Streams'
+    else:  # playback database
+        session['index_header'] = 'Playback: '+database.file
+
+    return database
+
+
 def get_database():
     """ Retrieves the Database object from the current session """
-    if not session.get('DATABASE'):
-        print("SESSION VAR NOT SET")
-        session['DATABASE'] = "VALUE"
-    else:
-        print("SESSION VAR SET")
-    print(session['DATABASE'])
-    return session['DATABASE']
+    database = current_app.database_controller.get(session.sid)
+
+    # no database found for this session
+    if not database:
+        database = set_database()  # set database to live connection
+
+    # set Index Header for this session
+    if database.live:  # live database
+        session['index_header'] = 'Connected Live Streams'
+    else:  # playback database
+        session['index_header'] = 'Playback: '+database.file
+
+    return database
+
+
+def remove_database():
+    """ Removes current database in seesion"""
+    current_app.database_controller.remove(session.sid)
 
 
 def check_filename(file):
@@ -75,6 +112,11 @@ def update_buttons():
     socketio.emit('update_buttons', current_app.buttons, namespace='/browser')
 
 
+def update_text():
+    """ Sends text data to the page to update """
+    socketio.emit('update_header', session['index_header'], namespace='/browser')
+
+
 def set_button(name, hidden=None, disabled=None, text=None):
     """
     Updates state of a single button in browser
@@ -94,13 +136,7 @@ def set_button(name, hidden=None, disabled=None, text=None):
 def connect():
     """ On connecting to the browser """
     print("SID CONNECT: ", session.sid)
-    # create a database for this session for the live stream if one isn't found
-    if not current_app.database_controller.get(session.sid):
-        print("CREATING NEW DATABASE CONNECTION")
-        current_app.database_controller.new(
-            ip='3.131.117.61', port=5001, password='thisisthepasswordtotheredisserver',
-            live=True, file='data/dump.rdb', ID=session.sid
-        )
+    get_database()  # get database for session
     refresh()  # send all page info immediately on connecting
 
 
@@ -155,7 +191,7 @@ def stop():
 @catch_errors
 def refresh():
     """ Refresh all data displayed in browser index """
-    get_database()
+    update_text()
     update_pages()
     update_files()
     update_buttons()
@@ -165,25 +201,20 @@ def refresh():
 @catch_errors
 def playback():
     """ Switches back to playback mode for current database file """
-    current_app.database.set_live(False)  # set database to playback mode
-    log('Set database to Playback mode')
-    set_button('live', hidden=False, disabled=False)
-    set_button('playback', hidden=True)
-    socketio.emit('update_header', 'Playback', namespace='/browser')
-    refresh()
+    error("Playback button not implementec")
+    #set_button('live', hidden=False, disabled=False)
+    #set_button('playback', hidden=True)
+    #refresh()
 
 
 @socketio.on('live', namespace='/browser')
 @catch_errors
 def live():
-    """ Switches back to current live database file """
-    current_app.database.dump(save=False)  # remove loaded file
-    current_app.database.init()  # init clean database
-    current_app.database.set_live(True)  # set database to live mode
-    log('Set database to Live mode')
+    """ Switches back to current live database  """
+    log('Switching to live database')
     set_button('live', hidden=True)
-    set_button('playback', hidden=False, disabled=False)
-    socketio.emit('update_header', 'Connected Streams', namespace='/browser')
+    #set_button('playback', hidden=False, disabled=False)
+    set_database()  # set database to live
     refresh()
 
 
@@ -191,19 +222,10 @@ def live():
 @catch_errors
 def load(filename):
     """ Loads the given database file for playback """
-    current_app.database.load_file(filename)
-    log('Loaded "{}" to database'.format(filename))
-
-    # don't allow database writes during playback of a loaded file
-    current_app.database.set_write(False)
-    current_app.database.set_live(False)  # set database on playback mode
-
+    set_database(filename)  # set a playback database for the given file
     set_button('live', hidden=False, disabled=False, text='New Session')
-    set_button('playback', disabled=True)
-    log('Set database to Playback mode')
-
-    # update page header with name of loaded file
-    socketio.emit('update_header', 'Playback: {}'.format(filename), namespace='/browser')
+    #set_button('playback', disabled=True)
+    log('Loaded "{}" to database'.format(filename))
     refresh()
 
 
@@ -215,7 +237,7 @@ def rename(data):
     new = data['newname']
     check_filename(old)
     check_filename(new)
-    current_app.database.rename_save(old, new)
+    current_app.database_controller.rename_save(old, new)
     log('Renamed "{}" to "{}"'.format(old, new))
     refresh()
 
@@ -224,6 +246,6 @@ def rename(data):
 @catch_errors
 def delete(filename):
     """ Deletes the selected file """
-    current_app.database.delete_save(filename)
+    current_app.database_controller.delete_save(filename)
     log('Deleted file "{}"'.format(filename))
     refresh()
