@@ -198,10 +198,10 @@ class Database:
         self.socket_timeout = 2  # 2 second timeout for responses
 
         # Separate redis pools for reading decoded data or reading raw bytes data.
-        self.pool = redis.ConnectionPool(host=ip, port=port, password=password, decode_responses=True)
-        self.bytes_pool = redis.ConnectionPool(host=ip, port=port, password=password, decode_responses=False)
-        self.redis = redis.Redis(connection_pool=self.pool, socket_timeout=self.socket_timeout)
-        self.bytes_redis = redis.Redis(connection_pool=self.bytes_pool, socket_timeout=self.socket_timeout)
+        self.pool = redis.ConnectionPool(host=ip, port=port, password=password, decode_responses=True, socket_timeout=self.socket_timeout)
+        self.bytes_pool = redis.ConnectionPool(host=ip, port=port, password=password, decode_responses=False, socket_timeout=self.socket_timeout)
+        self.redis = redis.Redis(connection_pool=self.pool)
+        self.bytes_redis = redis.Redis(connection_pool=self.bytes_pool)
 
         self.exit = False  # flag to determine when to stop running if looping
         self.live = False   # Whether in live mode
@@ -531,6 +531,7 @@ class Database:
     def read_all_groups(self):
         """ Gets a list of dictionaries containing name and ID info for all connected streams """
         info = []
+        print("READING GROUPS>...")
         for key in self.redis.execute_command('keys group:*'):
             info.append(self.redis.hgetall(key))
         return info
