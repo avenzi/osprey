@@ -40,29 +40,31 @@ function get_button(name) {
 
 $(document).ready(function() {
     var namespace = '/browser';  // namespace for talking with server
-    var socketio = io(namespace);
+    var socket = io(namespace);
     var selected_file = ""  // currently selected file
     var session = ""  // current session ID
 
-    socketio.on('connect', function(socket) {
+    socket.on('connect', function() {
         log("SocketIO connected to server");
-        session = socket.request.headers.cookie;
-        log("SESS: "+session)
+        log(this.socket.sessionid);
+        log(socket.io.engine.id);
+        log(socket.id);
+        log(socket.json.id);
     });
 
-    socketio.on('disconnect', function() {
+    socket.on('disconnect', function() {
         log("SocketIO disconnected from server");
     });
 
-    socketio.on('log', function(msg) {
+    socket.on('log', function(msg) {
         log(msg);
     });
 
-    socketio.on('error', function(msg) {
+    socket.on('error', function(msg) {
         error(msg)
     });
 
-    socketio.on('update_pages', function(data) {
+    socket.on('update_pages', function(data) {
         // data is a list of objects with info on each stream
         $('.streams ul').empty()
         data.forEach(function(info) {
@@ -70,7 +72,7 @@ $(document).ready(function() {
         });
     });
 
-    socketio.on('update_files', function(data) {
+    socket.on('update_files', function(data) {
         // data is a list of file names
         selected_file = ""  // clear selected file
         $('.files ul').empty()
@@ -98,14 +100,14 @@ $(document).ready(function() {
         });
     });
 
-    socketio.on('update_buttons', function(data) {
+    socket.on('update_buttons', function(data) {
         // data is a list of objects with info for each button
         data.forEach(function(button) {
             set_button(button.name, button)
         });
     });
 
-    socketio.on('update_header', function(data) {
+    socket.on('update_header', function(data) {
         // receive new header text to display for streams
         $('div.container > div.streams > h2').text(data);
     })
@@ -116,7 +118,7 @@ $(document).ready(function() {
         modal: true,
         buttons: {
             "Ok": function() {
-                socketio.emit('rename', {filename: selected_file, newname: $('#file_name').val()})
+                socket.emit('rename', {filename: selected_file, newname: $('#file_name').val()})
                 $(this).dialog("close");
             },
             "Cancel": function() {
@@ -134,7 +136,7 @@ $(document).ready(function() {
         'title': 'Delete saved database file?',
         buttons: {
             "Ok": function() {
-                socketio.emit('delete', selected_file)
+                socket.emit('delete', selected_file)
                 $(this).dialog("close");
             },
             "Cancel": function() {
@@ -146,11 +148,11 @@ $(document).ready(function() {
 
     // each command button emits an event to the server
     $('div.stream_commands button.command').on('click', function(event) {
-        socketio.emit(event.target.value);
+        socket.emit(event.target.value);
     });
 
     $('div.file_commands button.load').on('click', function(event) {
-        socketio.emit(event.target.value, selected_file);
+        socket.emit(event.target.value, selected_file);
     });
 
     $('div.file_commands button.rename').on("click", function() {
