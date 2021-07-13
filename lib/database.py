@@ -111,7 +111,10 @@ class DatabaseController:
             self.remove(ID)  # remove and disconnect
 
         # empty password
-        self.sessions[ID] = ServerDatabase(self.playback_ip, port, '', file, self.save_path, live=False)
+        self.sessions[ID] = ServerDatabase(
+            ip=self.playback_ip, port=port, password='',
+            file=file, live=True, live_path=self.live_path, save_path=self.save_path
+        )
 
         count = self.playback_ports[port]['count']
         print("Created new Playback database (#{}) on port: {}".format(count, port))
@@ -511,10 +514,11 @@ class ServerDatabase(Database):
     Wrapper class to handle a connection to a database on the server where the database is hostred
     Shouldn't be created directly - created only by DatabaseController.new()
     """
-    def __init__(self, ip, port, password, file, save_path, live):
+    def __init__(self, ip, port, password, file, live, live_path, save_path):
         super().__init__(ip, port, password)
         self.live = live
         self.file = file  # main database file to read from
+        self.live_path = live_path  # path to live directory
         self.save_path = save_path  # path to save directory
         print("NEW DATABASE:", self)
 
@@ -534,17 +538,17 @@ class ServerDatabase(Database):
                 raise DatabaseError("Did not save database file - could not connect to Redis Server")
 
         self.redis.save()  # save database to current dump file
-        if not path.isfile(self.file):
+        if not path.isfile(self.live_path+'/'+self.file):
             raise DatabaseError("Failed to save database file - no database file was found")
 
         # if file name not given or already exists
-        if not filename or path.isfile(self.save_path + '/' + filename):
+        if not filename or path.isfile(self.save_path+'/'+filename):
             filename = get_time_filename()
         if not filename.endswith('.rdb'):
             filename += '.rdb'
 
         try:  # move current dump file to 'saved' directory with new name
-            system("cp {} {}/{}".format(self.file, self.save_path, filename))
+            system("cp {}/{} {}/{}".format(self.live_path, self.file, self.save_path, filename))
         except Exception as e:
             raise DatabaseError("Failed to save database file to '{}': {}".format(filename, e))
 
