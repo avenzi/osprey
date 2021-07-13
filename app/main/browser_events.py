@@ -28,7 +28,7 @@ def catch_errors(handler):
         try:
             return handler(*args, **kwargs)
         except Exception as e:
-            error(e)
+            error("Error: {}: {}".format(e.__class__.__name__, e))
     return wrapped_handler
 
 
@@ -120,11 +120,11 @@ def update_pages():
 def update_files():
     """ Updates list of database files in browser """
     data_path = 'data/saved'
-    try:  # attempt to get list of files in data directory
-        files = [file for file in listdir(data_path) if isfile(join(data_path, file))]
-    except Exception as e:
-        print(e)
-        files = []
+    files = []
+    for file in listdir(data_path):
+        # if a valid file and doesn't start with a period (hidden files)
+        if isfile(join(data_path, file)) and not file.startswith('.'):
+            files.append(file)
     socketio.emit('update_files', files, namespace='/browser')
 
 
