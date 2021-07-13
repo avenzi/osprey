@@ -105,6 +105,7 @@ def check_filename(file):
 def update_pages():
     """ Updates list of connected streams in browser """
     database = get_database()
+    print("SESS: ", session.sid)
     if database:
         try:  # attempt to read list of group names
             groups = database.read_all_groups()
