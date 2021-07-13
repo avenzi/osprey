@@ -564,7 +564,10 @@ class ServerDatabase(Database):
         self.port = port
         self.file = file
         self.save_path = save_path  # path to save directory
-        print("NEW DATABASE. PORT:{}, LIVE:{}, FILE:{}".format(port, live, file))
+        print("NEW DATABASE:", self)
+
+    def __repr__(self):
+        return "PORT: {}, LIVE: {}, FILE: {}".format(self.port, self.live, self.file)
 
     def save(self):
         if not self.live:
