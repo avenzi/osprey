@@ -1,15 +1,17 @@
-from flask import flash, current_app, session, render_template, request, Response
+from flask import current_app, session, render_template, request, Response, redirect, url_for
 
 from jinja2.exceptions import TemplateNotFound
 from bokeh.embed import json_item
 from json import dumps, loads
 
-from app.main.auth_routes import login_required
 from lib.database import DatabaseError
 from local import server_stream_config
 
 # import blueprint + socket
 from app.main import streams, socketio
+
+from app.main.utils import log, error, get_database
+from app.main.auth_routes import login_required
 
 
 @login_required
@@ -33,7 +35,8 @@ def stream():
     template_path = '/streams/{}'.format(file)
 
     try:
-        info = current_app.database.read_group(group_name)
+        database = get_database()
+        info = database.read_group(group_name)
         return render_template(template_path, info=info, title=group_name)
     except TemplateNotFound as e:
         return render_template('/error.html', error="Template Not Found: \"{}\"".format(template_path))
@@ -49,7 +52,7 @@ def plot_layout():
 
     try:
         # get info dict of all streams in this group
-        info = current_app.database.read_group(group_name)
+        info = get_database().read_group(group_name)
     except DatabaseError as e:
         print('Database Error occurred when trying to read stream info: {}'.format(e))
         return
@@ -57,16 +60,14 @@ def plot_layout():
     # get bokeh layout function associated with this group
     create_layout = server_stream_config.bokeh_layouts.get(group_name)
     if not create_layout:
-        err = "No layout function specified for group '{}'".format(group_name)
-        return err, 404
+        error("No layout function specified for group '{}'".format(group_name))
+        return redirect(url_for('index'), code=302)
 
     try:
         layout = create_layout(info)  # bokeh layout object
     except Exception as e:
-        err = "Failed to create layout for group {}. {}: {}".format(group_name, e.__class__.__name__, e)
-        flash(err)
-        print(err)
-        return err, 404
+        error("Failed to create layout for group {}. {}: {}".format(group_name, e.__class__.__name__, e))
+        return redirect(url_for('index'), code=302)
 
     json_layout = dumps(json_item(layout))
 
@@ -82,15 +83,16 @@ def plot_update():
     request_format = request.args.get('format')
 
     try:
+        database = get_database()
         if not request_format or request_format == 'series':
-            data = current_app.database.read_data(request_id, to_json=True, max_time=5)
+            data = database.read_data(request_id, to_json=True, max_time=5)
         elif request_format == 'snapshot':
-            data = current_app.database.read_snapshot(request_id, to_json=True)
+            data = database.read_snapshot(request_id, to_json=True)
         else:
-            print('Bokeh request for data specified an unknown request format')
-            return "", 404
+            error('Bokeh request for data specified an unknown request format')
+            return "", 500
     except DatabaseError as e:
-        print("Database Error: {}".format(e))
+        error("Database Error: {}".format(e))
         return "", 500
 
     if data:
