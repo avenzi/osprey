@@ -28,7 +28,7 @@ def catch_errors(handler):
         try:
             return handler(*args, **kwargs)
         except Exception as e:
-            error("[Server error in {}()]: {}: {}".format(handler.__name__, e.__class__.__name__, e))
+            error("Server error in {}(): {}: {}".format(handler.__name__, e.__class__.__name__, e))
     return wrapped_handler
 
 
@@ -104,25 +104,23 @@ def check_filename(file):
 
 def update_pages():
     """ Updates list of connected streams in browser """
-    print("UPDATING PAGES")
     database = get_database()
     if database:
         try:  # attempt to read list of group names
-            groups = database.read_all_groups(timeout=2)
-        except DatabaseError:
+            groups = database.read_all_groups()
+        except DatabaseError as e:
+            error("Error retrieving streams from database: {}".format(e))
             groups = []
     else:
         error("Cannot get stream pages - No current database is set")
         return
     print("GROUPS: ", type(groups))
     socketio.emit('update_pages', groups, namespace='/browser')
-    print("FINISHED UPDATING PAGES")
 
 
 @catch_errors
 def update_files():
     """ Updates list of database files in browser """
-    print("REFRESHING FILES")
     data_path = 'data/saved'
     files = []
     for file in listdir(data_path):

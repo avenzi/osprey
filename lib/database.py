@@ -22,7 +22,7 @@ def catch_connection_errors(method):
     Turns errors into a single DatabaseError to be caught elsewhere.
     """
     @functools.wraps(method)
-    def wrapped(self, *args, timeout=None, **kwargs):
+    def wrapped(self, *args, **kwargs):
         try:  # attempt to perform database operation
             return method(self, *args, **kwargs)
         except (redis.exceptions.ConnectionError, ConnectionResetError, ConnectionRefusedError) as e:
@@ -169,7 +169,7 @@ class Database:
             'port': port,
             'password': password,
             'socket_timeout': 2,
-            'socket_connect_timeout': 5
+            'socket_connect_timeout': 3
         }
 
         # Separate redis pools for reading decoded data or reading raw bytes data.
