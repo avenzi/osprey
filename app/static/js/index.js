@@ -46,7 +46,6 @@ $(document).ready(function() {
 
     socket.on('connect', function() {
         log("SocketIO connected to server");
-        log(this.socket.sessionid);
         log(socket.io.engine.id);
         log(socket.id);
         log(socket.json.id);
