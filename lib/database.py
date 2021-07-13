@@ -469,6 +469,7 @@ class Database:
     @catch_connection_errors
     def read_all_groups(self):
         """ Gets a list of dictionaries containing name and ID info for all connected streams """
+        info = []
         for key in self.redis.execute_command('keys group:*'):
             info.append(self.redis.hgetall(key))
         return info
