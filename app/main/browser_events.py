@@ -2,6 +2,7 @@ from flask import request, current_app, session
 from time import sleep
 from re import match
 from functools import wraps
+from traceback import print_exc
 
 from os import listdir, system
 from os.path import isfile, join
@@ -18,7 +19,6 @@ def log(msg):
 def error(msg):
     """ Log an error message in the browser """
     socketio.emit('error', str(msg), namespace='/browser')
-    print("ERROR: {}".format(msg))
 
 
 def catch_errors(handler):
@@ -29,6 +29,7 @@ def catch_errors(handler):
             return handler(*args, **kwargs)
         except Exception as e:
             error("Server error in {}(): {}: {}".format(handler.__name__, e.__class__.__name__, e))
+            print_exc()  # print stack trace
     return wrapped_handler
 
 
