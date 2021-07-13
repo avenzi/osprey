@@ -92,7 +92,7 @@ def get_database():
 
 
 def remove_database():
-    """ Removes current database in seesion"""
+    """ Removes current database in session """
     current_app.database_controller.remove(session.sid)
 
 
@@ -114,7 +114,9 @@ def update_pages():
     else:
         error("Cannot get stream pages - No current database is set")
         return
-    print("GROUPS: ", type(groups))
+    if groups is None:
+        error("Tried to retrieve list of pages, got None")
+        return
     socketio.emit('update_pages', groups, namespace='/browser')
 
 
@@ -141,7 +143,6 @@ def update_buttons():
 @catch_errors
 def update_text():
     """ Sends text data to the page to update """
-    print("REFRESHING HEADER: {}".format(session['index_header']))
     socketio.emit('update_header', session['index_header'], namespace='/browser')
 
 
