@@ -89,7 +89,7 @@ def check_filename(file):
 def update_pages():
     """ Updates list of connected streams in browser """
     try:  # attempt to read list of group names
-        groups = current_app.database.read_all_groups()
+        groups = get_database().read_all_groups()
     except DatabaseError:
         groups = []
     print("GROUPS: ", type(groups))
@@ -155,8 +155,8 @@ def disconnect():
 @catch_errors
 def start():
     """ start all streams """
-    if current_app.database.ping():  # make sure database connected
-        if current_app.database.live:  # live mode
+    if get_database().ping():  # make sure database connected
+        if get_database().live:  # live mode
             socketio.emit('start', namespace='/streamers')  # send start command to streamers
             set_button('start', disabled=True)
             set_button('stop', disabled=False)
@@ -171,15 +171,12 @@ def start():
 @catch_errors
 def stop():
     """ Stop streams, dump database file to disk, start a clean database file """
-    if not current_app.database.live:  # if in playback mode
-        current_app.database.dump(save=False)  # dump database file
-        return
-
-    # live mode
     socketio.emit('stop', namespace='/streamers')  # send stop command to streamers
-    filename = current_app.database.dump()  # dump database file
+
+    database = get_database()
+    filename = database.save()  # save database file (if live) and wipe contents
     log('Session Saved: {}'.format(filename))
-    current_app.database.init()  # start new database
+
     socketio.emit('update', namespace='/streamers')  # request info update from streamers
     set_button('start', disabled=False)
     set_button('stop', disabled=True)
