@@ -33,11 +33,15 @@ def maintain_connection(method):
             if not self.connect(timeout=timeout):  # attempt to connect
                 raise DatabaseError('Could not connect to database.')
 
+        print("REDIS EXISTS, TRY METHOD")
         while not self.exit:
             try:  # attempt to perform database operation
+                print("TRYING METHOD")
                 return method(self, *args, **kwargs)
             except (redis.exceptions.ConnectionError, ConnectionResetError, ConnectionRefusedError)as e:
+                print("EXCEPTION ENCOUNTERED: {}: {}".format(e.__class__.__name__, e))
                 if self.connect(timeout=timeout):  # attempt to connect
+                    print("RECONNECTION SUCCESSFUL")
                     continue
                 else:
                     raise DatabaseError('Database connection timeout: {}'.format(e))
