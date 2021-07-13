@@ -117,6 +117,7 @@ def update_pages():
     socketio.emit('update_pages', groups, namespace='/browser')
 
 
+@catch_errors
 def update_files():
     """ Updates list of database files in browser """
     data_path = 'data/saved'
@@ -128,6 +129,7 @@ def update_files():
     socketio.emit('update_files', files, namespace='/browser')
 
 
+@catch_errors
 def update_buttons():
     """ Sends all button data stored in session """
     if not session.get('buttons'):
@@ -135,6 +137,7 @@ def update_buttons():
     socketio.emit('update_buttons', session['buttons'], namespace='/browser')
 
 
+@catch_errors
 def update_text():
     """ Sends text data to the page to update """
     socketio.emit('update_header', session['index_header'], namespace='/browser')
