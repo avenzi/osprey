@@ -13,7 +13,8 @@ logs/*
 *.log
 
 # Ignore data
-data/*
+data/live/*
+data/saved/*
 
 # Ignore .idea
 .idea
