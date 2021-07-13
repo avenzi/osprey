@@ -224,6 +224,7 @@ class Database:
         self.exit = True
         self.redis = None
         self.bytes_redis = None
+        print("DISCONNECTED:", self)
 
     def ping(self):
         """ Ping database to ensure connecting is functioning """
@@ -505,7 +506,7 @@ class Database:
         return info
 
 
-class XServerDatabase(Database):
+class ServerDatabase(Database):
     """
     Wrapper class to handle a connection to a database on the server where the database is hostred
     Shouldn't be created directly - created only by DatabaseController.new()
@@ -515,6 +516,10 @@ class XServerDatabase(Database):
         self.live = live
         self.file = file  # main database file to read from
         self.save_path = save_path  # path to save directory
+        print("NEW DATABASE:", self)
+
+    def __repr__(self):
+        return "PORT: {}, LIVE: {}, FILE: {}".format(self.port, self.live, self.file)
 
     def save(self, filename=None, shutdown=False):
         """
@@ -555,46 +560,6 @@ class XServerDatabase(Database):
                 raise DatabaseError("Failed to shut down database: {}".format(e))
 
         return filename
-
-
-class ServerDatabase(Database):
-    def __init__(self, ip, port, password, file, save_path, live):
-        super().__init__(ip, port, password)
-        self.live = live
-        self.port = port
-        self.file = file
-        self.save_path = save_path  # path to save directory
-        print("NEW DATABASE:", self)
-
-    def __repr__(self):
-        return "PORT: {}, LIVE: {}, FILE: {}".format(self.port, self.live, self.file)
-
-    def save(self):
-        if not self.live:
-            raise DatabaseError("Did not save database file - not a live database")
-        print("Saved Database file: {}".format(self.file))
-
-    def disconnect(self):
-        print("DISCONNECTED:", self)
-
-    def ping(self):
-        return True
-
-    def write_data(self, stream, data):
-        print("WRITE DATA")
-
-    def read_data(self, stream, count=None, max_time=None, numerical=True, to_json=False, decode=True):
-        print("READ DATA")
-
-    def write_snapshot(self, stream, data):
-        print("WRITE SNAPSHOT")
-
-    def read_snapshot(self, stream, to_json=False, decode=True):
-        print("READ SNAPSHOT")
-
-
-
-
 
 
 
