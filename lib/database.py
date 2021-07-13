@@ -25,10 +25,10 @@ def catch_connection_errors(method):
     def wrapped(self, *args, **kwargs):
         try:  # attempt to perform database operation
             return method(self, *args, **kwargs)
-        except (redis.exceptions.ConnectionError, ConnectionResetError, ConnectionRefusedError) as e:
-            raise DatabaseError("Database connection error: {}".format(e))
+        except (redis.exceptions.ConnectionError, ConnectionResetError, ConnectionRefusedError, TimeoutError) as e:
+            raise DatabaseError("Database {}: {}".format(e.__class__.__name__, e))
         except Exception as e:  # other type of error
-            raise DatabaseError('Error in Database ({}). {}: {}'.format(method.__name__, e.__class__.__name__, e))
+            raise DatabaseError('Uncaught Error in Database ({}). {}: {}'.format(method.__name__, e.__class__.__name__, e))
     return wrapped
 
 
