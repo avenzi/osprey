@@ -28,7 +28,7 @@ def catch_errors(handler):
         try:
             return handler(*args, **kwargs)
         except Exception as e:
-            error("Error: {}: {}".format(e.__class__.__name__, e))
+            error("Server error in {}:\n   {}: {}".format(handler.__name__, e.__class__.__name__, e))
     return wrapped_handler
 
 
