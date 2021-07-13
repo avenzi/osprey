@@ -40,29 +40,29 @@ function get_button(name) {
 
 $(document).ready(function() {
     var namespace = '/browser';  // namespace for talking with server
-    var socket = io(namespace);
+    var io = io(namespace);
     var selected_file = ""  // currently selected file
     var session = ""  // current session ID
 
-    socket.on('connect', function(socket) {
+    io.on('connect', function(socket) {
         log("SocketIO connected to server");
         session = socket.request.headers.cookie;
         log("SESS: "+session)
     });
 
-    socket.on('disconnect', function() {
+    io.on('disconnect', function() {
         log("SocketIO disconnected from server");
     });
 
-    socket.on('log', function(msg) {
+    io.on('log', function(msg) {
         log(msg);
     });
 
-    socket.on('error', function(msg) {
+    io.on('error', function(msg) {
         error(msg)
     });
 
-    socket.on('update_pages', function(data) {
+    io.on('update_pages', function(data) {
         // data is a list of objects with info on each stream
         $('.streams ul').empty()
         data.forEach(function(info) {
@@ -70,7 +70,7 @@ $(document).ready(function() {
         });
     });
 
-    socket.on('update_files', function(data) {
+    io.on('update_files', function(data) {
         // data is a list of file names
         selected_file = ""  // clear selected file
         $('.files ul').empty()
@@ -98,14 +98,14 @@ $(document).ready(function() {
         });
     });
 
-    socket.on('update_buttons', function(data) {
+    io.on('update_buttons', function(data) {
         // data is a list of objects with info for each button
         data.forEach(function(button) {
             set_button(button.name, button)
         });
     });
 
-    socket.on('update_header', function(data) {
+    io.on('update_header', function(data) {
         // receive new header text to display for streams
         $('div.container > div.streams > h2').text(data);
     })
@@ -116,7 +116,7 @@ $(document).ready(function() {
         modal: true,
         buttons: {
             "Ok": function() {
-                socket.emit('rename', {filename: selected_file, newname: $('#file_name').val()})
+                io.emit('rename', {filename: selected_file, newname: $('#file_name').val()})
                 $(this).dialog("close");
             },
             "Cancel": function() {
@@ -134,7 +134,7 @@ $(document).ready(function() {
         'title': 'Delete saved database file?',
         buttons: {
             "Ok": function() {
-                socket.emit('delete', selected_file)
+                io.emit('delete', selected_file)
                 $(this).dialog("close");
             },
             "Cancel": function() {
@@ -146,11 +146,11 @@ $(document).ready(function() {
 
     // each command button emits an event to the server
     $('div.stream_commands button.command').on('click', function(event) {
-        socket.emit(event.target.value);
+        io.emit(event.target.value);
     });
 
     $('div.file_commands button.load').on('click', function(event) {
-        socket.emit(event.target.value, selected_file);
+        io.emit(event.target.value, selected_file);
     });
 
     $('div.file_commands button.rename').on("click", function() {
