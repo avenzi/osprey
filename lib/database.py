@@ -11,10 +11,6 @@ class DatabaseError(Exception):
     pass
 
 
-class DatabaseReadOnly(DatabaseError):
-    """ Invoked when the database is not ready to receive write operations """
-
-
 def get_time_filename():
     """ Return human readable time for file names """
     return strftime("%Y-%m-%d_%H:%M:%S.rdb", localtime())
@@ -33,19 +29,6 @@ def catch_connection_errors(method):
             raise DatabaseError("Database connection error: {}".format(e))
         except Exception as e:  # other type of error
             raise DatabaseError('Error in Database ({}). {}: {}'.format(method.__name__, e.__class__.__name__, e))
-    return wrapped
-
-
-def write_operation(method):
-    """
-    Method wrapper to throw an error if the database is not ready
-    Used for write operations for data
-    """
-    @functools.wraps(method)
-    def wrapped(self, *args, **kwargs):
-        if not self.can_write():
-            raise DatabaseReadOnly
-        method(self, *args, **kwargs)
     return wrapped
 
 
@@ -124,7 +107,6 @@ class DatabaseController:
         """ Disconnect a Database class and remove it from the dictionary """
         if self.sessions.get(ID):
             db = self.sessions[ID]
-            db.disconnect()  # disconnect
 
             # live database
             if db.live:
