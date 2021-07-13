@@ -79,7 +79,6 @@ class DatabaseController:
         """ Creates and returns a new live Database instance for the given ID key """
         if self.sessions.get(ID):  # Database already associated
             self.remove(ID)  # remove and disconnect
-        self.sessions[ID] = ServerDatabase(self.live_ip, self.live_port, self.live_pass, self.live_file, self.live_path, live=True)
         self.sessions[ID] = ServerDatabase(
             ip=self.live_ip, port=self.live_port, password=self.live_pass,
             live=True, file=self.live_file, live_path=self.live_path, save_path=self.save_path
