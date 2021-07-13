@@ -70,7 +70,6 @@ def set_database(file=None):
         session['index_header'] = 'Playback: '+database.file
 
     print("SET DATABASE:", database)
-    print("HEADER:",session['index_header'])
 
     return database
 
@@ -88,7 +87,6 @@ def get_database():
         session['index_header'] = 'Playback: '+database.file
 
     print("RETRIEVED DATABASE FOR THIS SESSION:", database)
-    print("HEADER:",session['index_header'])
 
     return database
 
@@ -106,6 +104,7 @@ def check_filename(file):
 
 def update_pages():
     """ Updates list of connected streams in browser """
+    print("UPDATING PAGES")
     database = get_database()
     if database:
         try:  # attempt to read list of group names
@@ -117,6 +116,7 @@ def update_pages():
         return
     print("GROUPS: ", type(groups))
     socketio.emit('update_pages', groups, namespace='/browser')
+    print("FINISHED UPDATING PAGES")
 
 
 @catch_errors
@@ -212,9 +212,13 @@ def refresh():
     """ Refresh all data displayed in browser index """
     print("REFRESHING")
     update_text()
+    print("REFRESHING 1")
     update_pages()
+    print("REFRESHING 2")
     update_files()
+    print("REFRESHING 3")
     update_buttons()
+    print("REFRESHING 4")
 
 
 @socketio.on('playback', namespace='/browser')
