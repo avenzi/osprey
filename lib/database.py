@@ -80,6 +80,10 @@ class DatabaseController:
         if self.sessions.get(ID):  # Database already associated
             self.remove(ID)  # remove and disconnect
         self.sessions[ID] = ServerDatabase(self.live_ip, self.live_port, self.live_pass, self.live_file, self.live_path, live=True)
+        self.sessions[ID] = ServerDatabase(
+            ip=self.live_ip, port=self.live_port, password=self.live_pass,
+            live=True, file=self.live_file, live_path=self.live_path, save_path=self.save_path
+        )
         print("Created Live database")
 
     def new_playback(self, file, ID):
@@ -113,7 +117,7 @@ class DatabaseController:
         # empty password
         self.sessions[ID] = ServerDatabase(
             ip=self.playback_ip, port=port, password='',
-            file=file, live=True, live_path=self.live_path, save_path=self.save_path
+            file=file, live=False, live_path=self.live_path, save_path=self.save_path
         )
 
         count = self.playback_ports[port]['count']
