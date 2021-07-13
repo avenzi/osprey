@@ -26,16 +26,16 @@ def maintain_connection(method):
     Also throws custom error that can be caught in an outer scope
     """
     @functools.wraps(method)
-    def wrapped(self, *args, **kwargs):
+    def wrapped(self, *args, timeout=None, **kwargs):
         if not self.redis:
-            if not self.connect():  # attempt to connect
+            if not self.connect(timeout=timeout):  # attempt to connect
                 raise DatabaseError('Could not connect to database.')
 
         while not self.exit:
             try:  # attempt to perform database operation
                 return method(self, *args, **kwargs)
             except (redis.exceptions.ConnectionError, ConnectionResetError, ConnectionRefusedError)as e:
-                if self.connect(timeout=2):  # attempt to connect
+                if self.connect(timeout=timeout):  # attempt to connect
                     continue
                 else:
                     raise DatabaseError('Database connection timeout: {}'.format(e))

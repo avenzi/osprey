@@ -108,7 +108,7 @@ def update_pages():
     database = get_database()
     if database:
         try:  # attempt to read list of group names
-            groups = database.read_all_groups()
+            groups = database.read_all_groups(timeout=2)
         except DatabaseError:
             groups = []
     else:
