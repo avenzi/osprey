@@ -7,8 +7,8 @@ from bokeh.embed import json_item
 from json import dumps, loads
 
 from app.main.auth_routes import login_required
+from lib.database import DatabaseError
 from local import server_stream_config
-from app import Database
 
 # import blueprint + socket
 from app.main import streams, socketio
@@ -39,7 +39,7 @@ def stream():
         return render_template(template_path, info=info, title=group_name)
     except TemplateNotFound as e:
         return render_template('/error.html', error="Template Not Found: \"{}\"".format(template_path))
-    except Database.Error as e:
+    except DatabaseError as e:
         print("Could not read from database for template '{}'.".format(template_path))
 
 
@@ -52,7 +52,7 @@ def plot_layout():
     try:
         # get info dict of all streams in this group
         info = current_app.database.read_group(group_name)
-    except Database.Error as e:
+    except DatabaseError as e:
         print('Database Error occurred when trying to read stream info: {}'.format(e))
         return
 
@@ -91,7 +91,7 @@ def plot_update():
         else:
             print('Bokeh request for data specified an unknown request format')
             return "", 404
-    except Database.Error as e:
+    except DatabaseError as e:
         print("Database Error: {}".format(e))
         return "", 500
 
