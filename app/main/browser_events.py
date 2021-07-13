@@ -69,6 +69,8 @@ def set_database(file=None):
     else:  # playback database
         session['index_header'] = 'Playback: '+database.file
 
+    print("SET DATABASE:", database)
+
     return database
 
 
@@ -83,6 +85,8 @@ def get_database():
         session['index_header'] = 'Connected Live Streams'
     else:  # playback database
         session['index_header'] = 'Playback: '+database.file
+
+    print("RETRIEVED DATABASE FOR THIS SESSION:", database)
 
     return database
 
@@ -140,7 +144,7 @@ def update_text():
 @catch_errors
 def connect():
     """ On connecting to the browser """
-    print("SID CONNECT: ", session.sid)
+    print("SESSION CONNECT")
     if not get_database():  # if no current session database
         set_database()  # set to a live database connection
     refresh()  # send all page info immediately on connecting
