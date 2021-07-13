@@ -134,7 +134,15 @@ class DatabaseController:
             db = self.sessions[ID]
             db.disconnect()  # disconnect
 
+            # live database
+            if db.live:
+                print("DISCONNECTED LIVE")
+                return
+
+            # playback database
             info = self.playback_ports[db.port]
+            if not info:
+                return
             if info['file'] and info['count'] > 1:  # still some left
                 self.playback_ports[db.port]['count'] -= 1  # decrement
 
