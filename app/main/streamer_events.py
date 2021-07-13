@@ -1,5 +1,4 @@
 from app.main import socketio
-from app import Database
 
 from app.main.browser_events import log, update_pages
 

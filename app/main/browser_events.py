@@ -7,7 +7,7 @@ from os import listdir, system
 from os.path import isfile, join
 
 from app.main import socketio
-from app import Database
+from lib.database import DatabaseError
 
 
 def log(msg):
@@ -90,7 +90,7 @@ def update_pages():
     """ Updates list of connected streams in browser """
     try:  # attempt to read list of group names
         groups = current_app.database.read_all_groups()
-    except Database.Error:
+    except DatabaseError:
         groups = []
     print("GROUPS: ", type(groups))
     socketio.emit('update_pages', groups, namespace='/browser')
