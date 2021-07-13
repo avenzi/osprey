@@ -27,6 +27,7 @@ def maintain_connection(method):
     """
     @functools.wraps(method)
     def wrapped(self, *args, timeout=None, **kwargs):
+        print("IN DATABASE CONNECTION WRAPPER. TIMEOUT: {}".format(timeout))
         if not self.redis:
             if not self.connect(timeout=timeout):  # attempt to connect
                 raise DatabaseError('Could not connect to database.')
