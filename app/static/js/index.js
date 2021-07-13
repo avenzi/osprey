@@ -47,10 +47,10 @@ $(document).ready(function() {
     var socket = io(namespace);
     var selected_file = ""  // currently selected file
 
-    socket.on('connect', function() {
+    socket.on('connect', function(s) {
         log("SocketIO connected to server");
-        log(this)
-        get_session(this);
+        log(s)
+        get_session(s);
     });
 
     socket.on('disconnect', function() {
