@@ -105,7 +105,6 @@ def check_filename(file):
 def update_pages():
     """ Updates list of connected streams in browser """
     database = get_database()
-    print("SESS: ", session.sid)
     if database:
         try:  # attempt to read list of group names
             groups = database.read_all_groups()
@@ -193,7 +192,10 @@ def stop():
     socketio.emit('update', namespace='/streamers')  # request info update from streamers
     set_button('start', disabled=False)
     set_button('stop', disabled=True)
-    sleep(0.1)
+    sleep(0.1)  # hopefully give time for database to get updates from streamers
+    # todo: if we want to have confirmation of an update, we must check the info:updated column in redis
+    #  we can't sent a message through socketIO because they will be received in a different session with no way
+    #  to know what session to send that info to.
     refresh()
 
 

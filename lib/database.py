@@ -89,7 +89,8 @@ class DatabaseController:
         """ Creates and returns a new playback Database instance for the given ID key """
         # iterate through index of ports
         port = None
-        for p, info in self.playback_ports.keys():
+        print("PLAYBACK PORTS: ", self.playback_ports)
+        for p, info in self.playback_ports.items():
             if not info['file']:  # this port is available
                 port = p
             elif info['file'] == file:  # the port is already associated with the given file
@@ -104,6 +105,7 @@ class DatabaseController:
                 print("START A NEW REDIS SERVER INSTANCE FOR PLAYBACK HERE. PORT: {}".format(port))
                 # todo: start up a new redis instance on this port
 
+        print("ASSOCIATING FILE AND INCREMENTING COUNTER")
         self.playback_ports[port]['file'] = file  # set the file for this port if not already
         self.playback_ports[port]['count'] += 1  # increment count of Database classes connecting to this port
 
@@ -142,6 +144,7 @@ class DatabaseController:
                 self.playback_ports[db.port]['file'] = None  # un-associate file from port
 
             del self.sessions[ID]  # remove from dict
+            print('PLAYBCK PORTS:', self.playback_ports)
 
     def rename_save(self, filename, newname):
         """ renames an old save file """
