@@ -29,7 +29,7 @@ def maintain_connection(method):
     def wrapped(self, *args, **kwargs):
         if not self.redis:
             if not self.connect():  # attempt to connect
-                raise self.Error('Could not connect to database.')
+                raise DatabaseError('Could not connect to database.')
 
         while not self.exit:
             try:  # attempt to perform database operation
@@ -40,7 +40,7 @@ def maintain_connection(method):
                 else:
                     raise self.Error('Database connection error: {}'.format(e))
             except Exception as e:
-                raise self.Error('Error in Database ({}). {}: {}'.format(method.__name__, e.__class__.__name__, e))
+                raise DatabaseError('Error in Database ({}). {}: {}'.format(method.__name__, e.__class__.__name__, e))
     return wrapped
 
 
