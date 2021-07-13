@@ -46,14 +46,12 @@ $(document).ready(function() {
 
     socket.on('connect', function() {
         log("SocketIO connected to server");
-        log(this)
-        get_session(this);
+        session = socket.request.headers.cookie;
+        log("SESS: "+session)
     });
 
     socket.on('disconnect', function(socket) {
         log("SocketIO disconnected from server");
-        session = socket.request.headers.cookie;
-        log("SESS: "+session)
     });
 
     socket.on('log', function(msg) {
