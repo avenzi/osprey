@@ -25,8 +25,8 @@ def catch_connection_errors(method):
     def wrapped(self, *args, **kwargs):
         try:  # attempt to perform database operation
             return method(self, *args, **kwargs)
-        except (redis.exceptions.ConnectionError, ConnectionResetError, ConnectionRefusedError, TimeoutError) as e:
-            raise DatabaseError("Database {}: {}".format(e.__class__.__name__, e))
+        except (ConnectionResetError, ConnectionRefusedError, TimeoutError, redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
+            raise DatabaseError("{}: {}".format(e.__class__.__name__, e))
         except Exception as e:  # other type of error
             raise DatabaseError('Uncaught Error in Database ({}). {}: {}'.format(method.__name__, e.__class__.__name__, e))
     return wrapped
@@ -469,8 +469,6 @@ class Database:
     @catch_connection_errors
     def read_all_groups(self):
         """ Gets a list of dictionaries containing name and ID info for all connected streams """
-        info = []
-        print("READING GROUPS>...")
         for key in self.redis.execute_command('keys group:*'):
             info.append(self.redis.hgetall(key))
         return info
