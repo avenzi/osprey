@@ -575,10 +575,10 @@ class ServerDatabase(Database):
         print("Saved Database file: {}".format(self.file))
 
     def disconnect(self):
-        print("DISCONNECTED: PORT:{}, LIVE:{}, FILE:{}".format(self.port, self.live, self.file))
+        print("DISCONNECTED:", self)
 
     def ping(self):
-        pass
+        return True
 
     def write_data(self, stream, data):
         print("WRITE DATA")
