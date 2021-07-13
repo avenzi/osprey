@@ -27,7 +27,9 @@ def maintain_connection(method):
     """
     @functools.wraps(method)
     def wrapped(self, *args, timeout=None, **kwargs):
+        print("IN CONNECTION WRAPPER")
         if not self.redis:
+            print("NO REDIS, ATTEMPT TO CONNECT")
             if not self.connect(timeout=timeout):  # attempt to connect
                 raise DatabaseError('Could not connect to database.')
 
@@ -223,13 +225,16 @@ class Database:
         #  I think redis already does connection checking, and this might just be uneccesary overhead.
         start = time()
         t = 0
+        print("IN CONNECT")
         while not self.exit:  # until node exits
             try:
+                print("TRYING TO CONNECT")
                 self.redis = redis.Redis(connection_pool=self.pool)
                 self.bytes_redis = redis.Redis(connection_pool=self.bytes_pool)
                 self.redis.ping()
                 self.bytes_redis.ping()
             except Exception as e:
+                print("EXCEPTION WHEN TRYING TO CONNECT")
                 if timeout is None or time()-start < timeout:
                     t += 1
                     sleep(delay)
