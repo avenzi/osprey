@@ -41,7 +41,7 @@ def set_button(name, hidden=None, disabled=None, text=None):
     <text>: button text, if changed.
     """
     data = {'name': name, 'hidden': hidden, 'disabled': disabled, 'text': text}
-    if not session['buttons']:
+    if not session.get('buttons'):
         session['buttons'] = []
     session['buttons'].append(data)
 
@@ -130,7 +130,7 @@ def update_files():
 
 def update_buttons():
     """ Sends all button data stored in session """
-    if not session['buttons']:
+    if not session.get('buttons'):
         session['buttons'] = []
     socketio.emit('update_buttons', session['buttons'], namespace='/browser')
 
