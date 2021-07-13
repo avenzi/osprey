@@ -1,4 +1,4 @@
-from flask import current_app, session, render_template, request, Response, redirect, url_for
+from flask import current_app, session, render_template, request, Response, redirect, url_for, flash
 
 from jinja2.exceptions import TemplateNotFound
 from bokeh.embed import json_item
@@ -60,13 +60,17 @@ def plot_layout():
     # get bokeh layout function associated with this group
     create_layout = server_stream_config.bokeh_layouts.get(group_name)
     if not create_layout:
-        error("No layout function specified for group '{}'".format(group_name))
+        err = "No layout function specified for group '{}'".format(group_name)
+        error(err)
+        flash(err)
         return "", 302
 
     try:
         layout = create_layout(info)  # bokeh layout object
     except Exception as e:
-        error("Failed to create layout for group {}. {}: {}".format(group_name, e.__class__.__name__, e))
+        err = "Failed to create layout for group {}. {}: {}".format(group_name, e.__class__.__name__, e)
+        error(err)
+        flash(err)
         return "", 302
 
     json_layout = dumps(json_item(layout))
