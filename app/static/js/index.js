@@ -37,8 +37,8 @@ function get_button(name) {
     }
 }
 
-function get_session(socket) {
-    var session = socket.request.headers.cookie;
+function get_session(sock) {
+    var session = sock.request.headers.cookie;
     log("SESSION: "+session)
 }
 
@@ -49,7 +49,8 @@ $(document).ready(function() {
 
     socket.on('connect', function() {
         log("SocketIO connected to server");
-        get_session(socket);
+        log(this)
+        get_session(this);
     });
 
     socket.on('disconnect', function() {
