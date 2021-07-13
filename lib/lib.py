@@ -11,7 +11,7 @@ import os
 
 import socketio
 
-from lib.database import Database, DatabaseError, DatabaseReadOnly
+from lib.database import Database, DatabaseError
 
 
 class Base:
