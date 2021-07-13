@@ -37,24 +37,23 @@ function get_button(name) {
     }
 }
 
-function get_session(sock) {
-    var session = sock.request.headers.cookie;
-    log("SESSION: "+session)
-}
 
 $(document).ready(function() {
     var namespace = '/browser';  // namespace for talking with server
     var socket = io(namespace);
     var selected_file = ""  // currently selected file
+    var session = ""  // current session ID
 
-    socket.on('connect', function(s) {
+    socket.on('connect', function() {
         log("SocketIO connected to server");
-        log(s)
-        get_session(s);
+        log(this)
+        get_session(this);
     });
 
-    socket.on('disconnect', function() {
+    socket.on('disconnect', function(socket) {
         log("SocketIO disconnected from server");
+        session = socket.request.headers.cookie;
+        log("SESS: "+session)
     });
 
     socket.on('log', function(msg) {
