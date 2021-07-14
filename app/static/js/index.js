@@ -12,9 +12,6 @@ function error(msg) {
 
 function set_button(name, props) {
     // props is an object that contains properties for the command button named <name>
-    console.log('in set button')
-    console.log(name)
-    console.log(props)
     if (props.hidden !== undefined) {
         $('button.command.'+name).prop('hidden', props.hidden);
     }
@@ -97,7 +94,10 @@ $(document).ready(function() {
 
     socket.on('update_buttons', function(buttons) {
         // data is an object. Each member is a button name with values as the buttons properties
+        console.log(buttons);
         for ([name, properties] in buttons) {
+            console.log(name);
+            console.log(properties);
             set_button(name, properties);
         };
     });
