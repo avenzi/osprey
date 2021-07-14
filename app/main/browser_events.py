@@ -41,7 +41,6 @@ def start():
             socketio.emit('start', namespace='/streamers')  # send start command to streamers
             set_button('start', disabled=True)
             set_button('stop', disabled=False)
-            session['testing'] = True
             update_buttons()
         else:  # playback mode
             print("PLAYBACK MODE START")
@@ -54,7 +53,6 @@ def start():
 def stop():
     """ Stop streams, dump database file to disk, start a clean database file """
     socketio.emit('stop', namespace='/streamers')  # send stop command to streamers
-    session['testing'] = True
 
     database = get_database()
     filename = database.save()  # save database file (if live) and wipe contents
