@@ -30,7 +30,6 @@ def catch_errors(handler):
             return handler(*args, **kwargs)
         except Exception as e:
             error("Server error in {}(): {}: {}".format(handler.__name__, e.__class__.__name__, e))
-            print_exc()  # print stack trace
     return wrapped_handler
 
 
@@ -45,6 +44,7 @@ def set_button(name, hidden=None, disabled=None, text=None):
     if not session.get('buttons'):
         session['buttons'] = {}
     session['buttons'][name] = {'hidden': hidden, 'disabled': disabled, 'text': text}
+    print("set button: {} to: {}".format(name, {'hidden': hidden, 'disabled': disabled, 'text': text}))
 
 
 def set_database(file=None):
