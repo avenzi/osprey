@@ -125,6 +125,7 @@ def set_button(name, hidden=None, disabled=None, text=None):
     <disabled>: whether the button is disabled
     <text>: button text, if changed.
     """
+    session['testing'] = True
     if not session.get('buttons'):
         session['buttons'] = {}
     session['buttons'][name] = {'hidden': hidden, 'disabled': disabled, 'text': text}
