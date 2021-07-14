@@ -43,6 +43,7 @@ def start():
             set_button('stop', disabled=False)
             session['testing'] = ['start']
             update_buttons()
+            print('start', session['testing'])
         else:  # playback mode
             print("PLAYBACK MODE START")
     else:
@@ -69,7 +70,7 @@ def stop():
     #  to know what session to send that info to.
     refresh()
 
-    print('stop sess', session['testing'])
+    print('stop', session['testing'])
 
 
 @socketio.on('refresh', namespace='/browser')
@@ -87,7 +88,7 @@ def refresh():
 def playback():
     """ Switches back to playback mode for current database file """
     error("Playback button not implemented")
-    print('playback sess', session['testing'])
+    print('playback', session['testing'])
     #set_button('live', hidden=False, disabled=False)
     #set_button('playback', hidden=True)
     #refresh()
