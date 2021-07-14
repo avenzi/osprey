@@ -130,6 +130,7 @@ def update_buttons():
     """ Sends all button data stored in session """
     if not session.get('buttons'):
         session['buttons'] = []
+    print('BUTTONS: ', session['buttons'])
     socketio.emit('update_buttons', session['buttons'], namespace='/browser', room=request.sid)
 
 
