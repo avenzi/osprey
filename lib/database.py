@@ -46,7 +46,7 @@ class DatabaseController:
         self.live_pass = 'thisisthepasswordtotheredisserver'
 
         # index of ports used for playback files and how many Database object connected
-        self.playback_ports = {port: {'file':None, 'count':0} for port in [7000, 7001, 7002]}
+        self.playback_ports = {port: {'file': None, 'count': 0} for port in [7000, 7001, 7002]}
         self.playback_ip = '127.0.0.1'
         self.save_path = saved_path
 
@@ -154,7 +154,7 @@ class DatabaseController:
     def start_server(self, file, port):
         """ Start a new local Redis server instance initialized from <file> on port <port> """
         system("redis-server --bind 127.0.0.1 --daemonize yes --dir {} --dbfilename {} --port {}".format(self.save_path, file, port))
-        sleep(2)  # give it a sec to start
+
 
 class Database:
     """
@@ -172,7 +172,7 @@ class Database:
             'port': port,
             'password': password,
             'socket_timeout': 2,
-            'socket_connect_timeout': 3
+            'socket_connect_timeout': 5
         }
 
         # Separate redis pools for reading decoded data or reading raw bytes data.
