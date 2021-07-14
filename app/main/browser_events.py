@@ -85,6 +85,7 @@ def playback():
     error("Playback button not implemented")
     print('playback', session['buttons'])
     print(session['testing'])
+    session['testing'] += 1
     #set_button('live', hidden=False, disabled=False)
     #set_button('playback', hidden=True)
     #refresh()
