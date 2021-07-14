@@ -82,7 +82,6 @@ def refresh():
 def playback():
     """ Switches back to playback mode for current database file """
     error("Playback button not implemented")
-    print('playback', session['buttons'])
     #set_button('live', hidden=False, disabled=False)
     #set_button('playback', hidden=True)
     #refresh()
