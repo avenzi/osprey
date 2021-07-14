@@ -65,7 +65,6 @@ def set_database(file=None):
 def get_database():
     """ Retrieves the Database object from the current session """
     database = current_app.database_controller.get(session.sid)
-    print("RETRIEVED DATABASE FOR THIS SESSION:", database)
     return database
 
 

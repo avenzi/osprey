@@ -11,6 +11,13 @@ class DatabaseError(Exception):
     pass
 
 
+class DatabaseLoading(DatabaseError):
+    """
+    Invoked when the database is currently loading a file into memory.
+    Essentially just used with a redis.exceptions.BusyLoadingError.
+    """
+
+
 def get_time_filename():
     """ Return human readable time for file names """
     return strftime("%Y-%m-%d_%H:%M:%S.rdb", localtime())
@@ -25,6 +32,8 @@ def catch_connection_errors(method):
     def wrapped(self, *args, **kwargs):
         try:  # attempt to perform database operation
             return method(self, *args, **kwargs)
+        except redis.exceptions.BusyLoadingError as e:
+            raise DatabaseLoading("Redis is loading the database into memory. Try again later.")
         except (ConnectionResetError, ConnectionRefusedError, TimeoutError, redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
             raise DatabaseError("{}: {}".format(e.__class__.__name__, e))
         except Exception as e:  # other type of error
@@ -198,13 +207,16 @@ class Database:
         """ Convert redis time stand to unix time stamp in seconds """
         return float(redis_time.split('-')[0])/100
 
-    def ping(self):
+    def ping(self, catch_error=True):
         """ Ping database to ensure connecting is functioning """
-        try:
-            if self.redis.ping():
-                return True
-        except:
-            return False
+        if catch_error:
+            try:
+                if self.redis.ping():
+                    return True
+            except:
+                return False
+        else:
+            self.redis.ping()
 
     @catch_connection_errors
     def write_data(self, stream, data):
@@ -540,6 +552,10 @@ class ServerDatabase(Database):
                 self.redis.shutdown(save=False)
             except Exception as e:
                 raise DatabaseError("Failed to shutdown database on port: {}. {}: {}".format(self.port, e.__class__.__name__, e))
+
+    def kill(self):
+        """ manually kills the redis process by stopping activity on the port it's using """
+        system("sudo fuser -k {}/tcp".format(self.port))
 
 
 
