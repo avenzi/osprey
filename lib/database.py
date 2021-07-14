@@ -153,11 +153,7 @@ class DatabaseController:
 
     def start_server(self, file, port):
         """ Start a new local Redis server instance initialized from <file> on port <port> """
-        try:
-            system("redis-server -bind 127.0.0.1 -dir {} -dbfilename {} -port {}".format(self.save_path, file, port))
-            print("STARTED NEW REDIS INSTANCE ON PORT: {}".format(port))
-        except Exception as e:
-            raise DatabaseError("Failed to initialize new Redis server instance: {}: {}".format(e.__class__.__name__, e))
+        system("redis-server --bind 127.0.0.1 --dir {} --dbfilename {} --port {}".format(self.save_path, file, port))
 
 
 class Database:
