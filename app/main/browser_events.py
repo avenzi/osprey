@@ -18,7 +18,6 @@ def connect():
     if not get_database():  # if no current session database
         set_database()  # set to a live database connection
     refresh()  # send all page info immediately on connecting
-    session['testing'] = 0
 
 
 @socketio.on('disconnect', namespace='/browser')
@@ -84,8 +83,6 @@ def playback():
     """ Switches back to playback mode for current database file """
     error("Playback button not implemented")
     print('playback', session['buttons'])
-    print(session['testing'])
-    session['testing'] += 1
     #set_button('live', hidden=False, disabled=False)
     #set_button('playback', hidden=True)
     #refresh()
