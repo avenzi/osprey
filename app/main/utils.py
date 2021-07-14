@@ -30,21 +30,8 @@ def catch_errors(handler):
             return handler(*args, **kwargs)
         except Exception as e:
             error("Server error in {}(): {}: {}".format(handler.__name__, e.__class__.__name__, e))
+            print_exc()
     return wrapped_handler
-
-
-def set_button(name, hidden=None, disabled=None, text=None):
-    """
-    Updates the state of a single button in the current session
-    <name>: class name of the button to be targeted
-    <hidden>: whether the button is hidden
-    <disabled>: whether the button is disabled
-    <text>: button text, if changed.
-    """
-    if not session.get('buttons'):
-        session['buttons'] = {}
-    session['buttons'][name] = {'hidden': hidden, 'disabled': disabled, 'text': text}
-    print("set button: {} to: {}".format(name, {'hidden': hidden, 'disabled': disabled, 'text': text}))
 
 
 def set_database(file=None):
@@ -125,6 +112,26 @@ def update_files():
 
 
 @catch_errors
+def update_text():
+    """ Sends text data to the page to update """
+    socketio.emit('update_header', session['index_header'], namespace='/browser', room=request.sid)
+
+
+def set_button(name, hidden=None, disabled=None, text=None):
+    """
+    Updates the state of a single button in the current session
+    <name>: class name of the button to be targeted
+    <hidden>: whether the button is hidden
+    <disabled>: whether the button is disabled
+    <text>: button text, if changed.
+    """
+    if not session.get('buttons'):
+        session['buttons'] = {}
+    session['buttons'][name] = {'hidden': hidden, 'disabled': disabled, 'text': text}
+    print("set button: {} to: {}".format(name, {'hidden': hidden, 'disabled': disabled, 'text': text}))
+
+
+@catch_errors
 def update_buttons():
     """ Sends all button data stored in session """
     if not session.get('buttons'):
@@ -132,8 +139,3 @@ def update_buttons():
     print('BUTTONS: ', session['buttons'])
     socketio.emit('update_buttons', session['buttons'], namespace='/browser', room=request.sid)
 
-
-@catch_errors
-def update_text():
-    """ Sends text data to the page to update """
-    socketio.emit('update_header', session['index_header'], namespace='/browser', room=request.sid)

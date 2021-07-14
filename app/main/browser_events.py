@@ -15,7 +15,8 @@ from app.main.utils import (
 @catch_errors
 def connect():
     """ On connecting to the browser """
-    print("SESSION CONNECT")
+    print("SESSION CONNECT: {}".format(session.sid))
+    print(session['buttons'])
     if not get_database():  # if no current session database
         set_database()  # set to a live database connection
     refresh()  # send all page info immediately on connecting
