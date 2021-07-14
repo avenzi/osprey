@@ -95,11 +95,11 @@ $(document).ready(function() {
         });
     });
 
-    socket.on('update_buttons', function(data) {
-        // data is a list of objects with info for each button
-        data.forEach(function(button) {
-            set_button(button.name, button)
-        });
+    socket.on('update_buttons', function(buttons) {
+        // data is an object. Each member is a button name with values as the buttons properties
+        for ([name, porperties] of buttons) {
+            set_button(name, properties);
+        };
     });
 
     socket.on('update_header', function(data) {
