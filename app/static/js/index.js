@@ -97,8 +97,8 @@ $(document).ready(function() {
         console.log(data);
         for (button in data) {
             console.log(button);
-            console.log(data.button);
-            set_button(button, data.button);
+            console.log(data[button]);
+            set_button(button, data[button]);
         };
     });
 
