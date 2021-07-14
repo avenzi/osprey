@@ -13,6 +13,8 @@ function error(msg) {
 function set_button(name, props) {
     // props is an object that contains properties for the command button named <name>
     console.log('in set button')
+    console.log(name)
+    console.log(props)
     if (props.hidden !== undefined) {
         $('button.command.'+name).prop('hidden', props.hidden);
     }
@@ -82,7 +84,6 @@ $(document).ready(function() {
         set_button('rename', {disabled: true});
         set_button('delete', {disabled: true});
 
-
         // each file name will set the selected_file variable with its own filename
         $('div.files li').on('click', function(event) {
             $('div.files li.selected').removeClass('selected');  // unset selected form prev
@@ -90,10 +91,7 @@ $(document).ready(function() {
             selected_file = $(event.target).text();  // set currently selected file
             set_button('rename', {disabled: false});
             set_button('delete', {disabled: false});
-            if (get_button('start')) {  // enable load if start hasn't been pressed
-                console.log("LOAD ENABLED")
-                set_button('load', {disabled: false});
-            }
+            set_button('load', {disabled: false});
         });
     });
 
