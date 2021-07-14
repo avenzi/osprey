@@ -1,6 +1,8 @@
 from flask import current_app, session, request
 from time import sleep
 
+from lib.database import DatabaseError, DatabaseLoading
+
 from app.main import socketio
 
 from app.main.utils import (
@@ -102,9 +104,36 @@ def load(filename):
     """ Loads the given database file for playback """
     log('Loading file...')
     set_database(filename)  # set a playback database for the given file
-    set_button('live', hidden=False, disabled=False, text='New Live Session')
+
+    n = 0
+    while True:
+        sleep(1)
+        n += 1
+        try:  # check if available
+            get_database().ping(catch_error=False)
+            break
+        except DatabaseLoading as e:  # still loading
+            error("Still loading file... ({})".format(n))
+            sleep(5)
+        except DatabaseError as e:  # lost connection (might have been aborted)
+            error("Failed to load database: {}".format(e.__class__.__name__, e))
+            return
+
+    set_button('live', hidden=False, disabled=False, text='Back to live session')
     log('Loaded "{}" for playback'.format(filename))
     refresh()
+
+
+@socketio.on('abort', namespace='/browser')
+@catch_errors
+def abort():
+    """ Aborts loading a database file """
+    get_database().kill()  # force kill currently loaded database
+    if get_database().live:
+        error("Force killing live database - some data may be lost")
+    else:
+        error("Force killing playback database - returning to live")
+        live()  # switch back to live
 
 
 @socketio.on('rename', namespace='/browser')
