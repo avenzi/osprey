@@ -32,7 +32,7 @@ def catch_connection_errors(method):
     def wrapped(self, *args, **kwargs):
         try:  # attempt to perform database operation
             return method(self, *args, **kwargs)
-        except redis.exceptions.BusyLoadingError as e:
+        except redis.exceptions.BusyLoadingError:
             raise DatabaseLoading("Redis is loading the database into memory. Try again later.")
         except (ConnectionResetError, ConnectionRefusedError, TimeoutError, redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
             raise DatabaseError("{}: {}".format(e.__class__.__name__, e))
@@ -67,7 +67,6 @@ class DatabaseController:
             ip=self.live_ip, port=self.live_port, password=self.live_pass,
             live=True, file=self.live_file, live_path=self.live_path, save_path=self.save_path
         )
-        print("Created Live database connection")
 
     def new_playback(self, file, ID):
         """ Creates and returns a new playback Database instance for the given ID key """

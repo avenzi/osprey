@@ -131,8 +131,9 @@ def abort():
     get_database().kill()  # force kill currently loaded database
     if get_database().live:
         error("Force killing live database - some data may be lost")
+        refresh()
     else:
-        error("Force killing playback database - returning to live")
+        error("Force killing playback database")
         live()  # switch back to live
 
 
