@@ -41,9 +41,8 @@ def start():
             socketio.emit('start', namespace='/streamers')  # send start command to streamers
             set_button('start', disabled=True)
             set_button('stop', disabled=False)
-            #session['testing'] = ['start']
+            session['testing'] = ['start']
             update_buttons()
-            #print('start', session['testing'])
         else:  # playback mode
             print("PLAYBACK MODE START")
     else:
@@ -55,7 +54,7 @@ def start():
 def stop():
     """ Stop streams, dump database file to disk, start a clean database file """
     socketio.emit('stop', namespace='/streamers')  # send stop command to streamers
-    #session['testing'] = ['stop']
+    session['testing'] = ['stop']
 
     database = get_database()
     filename = database.save()  # save database file (if live) and wipe contents
@@ -69,8 +68,6 @@ def stop():
     #  we can't sent a message through socketIO because they will be received in a different session with no way
     #  to know what session to send that info to.
     refresh()
-
-    #print('stop', session['testing'])
 
 
 @socketio.on('refresh', namespace='/browser')
@@ -88,7 +85,7 @@ def refresh():
 def playback():
     """ Switches back to playback mode for current database file """
     error("Playback button not implemented")
-    #print('playback', session['testing'])
+    print('playback', session['testing'])
     #set_button('live', hidden=False, disabled=False)
     #set_button('playback', hidden=True)
     #refresh()
