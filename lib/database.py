@@ -47,7 +47,7 @@ class DatabaseController:
 
         # index of ports used for playback files and how many Database object connected
         self.playback_ports = {port: {'file':None, 'count':0} for port in [7000, 7001, 7002]}
-        self.playback_ip = '3.131.117.61'
+        self.playback_ip = '127.0.0.1'
         self.save_path = saved_path
 
     def new_live(self, ID):
