@@ -129,7 +129,6 @@ def set_button(name, hidden=None, disabled=None, text=None):
         session['buttons'] = {}
     session['buttons'][name] = {'hidden': hidden, 'disabled': disabled, 'text': text}
     session.modified = True
-    print("set button: {} to: {}".format(name, {'hidden': hidden, 'disabled': disabled, 'text': text}))
 
 
 @catch_errors
@@ -137,6 +136,5 @@ def update_buttons():
     """ Sends all button data stored in session """
     if not session.get('buttons'):
         session['buttons'] = {}
-    print('BUTTONS: ', session['buttons'])
     socketio.emit('update_buttons', session['buttons'], namespace='/browser', room=request.sid)
 
