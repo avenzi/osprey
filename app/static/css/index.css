@@ -27,14 +27,14 @@ body { max-width: 960px; margin: 0 auto; background: white; }
 }
 .files div.list {
     border: 1px solid #ccc;
-    height: 19em;
+    height: 15em;
     overflow: auto;
 }
 
 .logs {grid-area: logs;}
 .logs div {
     border: 1px solid #ccc;
-    height: 9em;
+    height: 8em;
     overflow: auto;
 }
 
