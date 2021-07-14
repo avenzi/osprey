@@ -65,9 +65,7 @@ def stop():
     #  we can't sent a message through socketIO because they will be received in a different session with no way
     #  to know what session to send that info to.
     refresh()
-    print("AFTER STOP REFRESH: ", session['buttons'])
-    sleep(1)
-    print("AFTER STOP 2 REFRESH: ", session['buttons'])
+    print('stop sid: ', request.sid)
 
 
 @socketio.on('refresh', namespace='/browser')
@@ -85,7 +83,7 @@ def refresh():
 def playback():
     """ Switches back to playback mode for current database file """
     error("Playback button not implementec")
-    print(session['buttons'])
+    print('playback sid: ', request.sid)
     #set_button('live', hidden=False, disabled=False)
     #set_button('playback', hidden=True)
     #refresh()
