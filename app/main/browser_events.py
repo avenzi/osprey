@@ -15,8 +15,6 @@ from app.main.utils import (
 @catch_errors
 def connect():
     """ On connecting to the browser """
-    print("SESSION CONNECT: {}".format(session.sid))
-    print(session['buttons'])
     if not get_database():  # if no current session database
         set_database()  # set to a live database connection
     refresh()  # send all page info immediately on connecting
@@ -73,10 +71,12 @@ def stop():
 @catch_errors
 def refresh():
     """ Refresh all data displayed in browser index """
+    print("BEFORE: {}".format(session['buttons']))
     update_text()
     update_pages()
     update_files()
     update_buttons()
+    print("AFTERL {}".format(session['buttons']))
 
 
 @socketio.on('playback', namespace='/browser')
