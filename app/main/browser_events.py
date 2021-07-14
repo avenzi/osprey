@@ -54,7 +54,7 @@ def start():
 def stop():
     """ Stop streams, dump database file to disk, start a clean database file """
     socketio.emit('stop', namespace='/streamers')  # send stop command to streamers
-    session['testing'] = False
+    session['testing'] = True
 
     database = get_database()
     filename = database.save()  # save database file (if live) and wipe contents
