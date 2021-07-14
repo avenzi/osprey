@@ -130,6 +130,7 @@ def update_buttons():
     if not session.get('buttons'):
         session['buttons'] = {}
     print('BUTTONS: ', session['buttons'])
+    session['buttons'] = {}
     socketio.emit('update_buttons', session['buttons'], namespace='/browser', room=request.sid)
 
 
