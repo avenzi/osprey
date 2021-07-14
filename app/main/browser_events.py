@@ -52,6 +52,7 @@ def start():
 def stop():
     """ Stop streams, dump database file to disk, start a clean database file """
     socketio.emit('stop', namespace='/streamers')  # send stop command to streamers
+    session['testing'] = 'stop'
 
     database = get_database()
     filename = database.save()  # save database file (if live) and wipe contents
@@ -65,7 +66,8 @@ def stop():
     #  we can't sent a message through socketIO because they will be received in a different session with no way
     #  to know what session to send that info to.
     refresh()
-    print('stop sid: ', request.sid)
+
+    print('stop sess', session['testing'])
 
 
 @socketio.on('refresh', namespace='/browser')
@@ -82,8 +84,8 @@ def refresh():
 @catch_errors
 def playback():
     """ Switches back to playback mode for current database file """
-    error("Playback button not implementec")
-    print('playback sid: ', request.sid)
+    error("Playback button not implemented")
+    print('playback sess', session['testing']
     #set_button('live', hidden=False, disabled=False)
     #set_button('playback', hidden=True)
     #refresh()
