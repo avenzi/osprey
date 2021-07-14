@@ -1,4 +1,4 @@
-from flask import request, current_app, session
+from flask import current_app, session, request
 from time import sleep
 
 from app.main import socketio
@@ -72,7 +72,6 @@ def stop():
 @catch_errors
 def refresh():
     """ Refresh all data displayed in browser index """
-    socketio.emit('log', "SOCKET ID: {}, NAMESPACE: {}".format(request.sid, request.namespace), namespace='/browser', room=request.sid)
     update_text()
     update_pages()
     update_files()

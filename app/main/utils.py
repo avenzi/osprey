@@ -1,4 +1,4 @@
-from flask import request, current_app, session
+from flask import current_app, session, request
 
 from re import match
 from functools import wraps
@@ -13,12 +13,12 @@ from lib.database import DatabaseError
 
 def log(msg):
     """ Log a message in the browser """
-    socketio.emit('log', msg, namespace='/browser')
+    socketio.emit('log', msg, namespace='/browser', room=request.sid)
 
 
 def error(msg):
     """ Log an error message in the browser """
-    socketio.emit('error', str(msg), namespace='/browser')
+    socketio.emit('error', str(msg), namespace='/browser', room=request.sid)
     print("ERROR: {}".format(str(msg)))
 
 
@@ -110,7 +110,7 @@ def update_pages():
     if groups is None:
         error("Tried to retrieve list of pages, got None")
         return
-    socketio.emit('update_pages', groups, namespace='/browser')
+    socketio.emit('update_pages', groups, namespace='/browser', room=request.sid)
 
 
 @catch_errors
@@ -122,7 +122,7 @@ def update_files():
         # if a valid file and doesn't start with a period (hidden files)
         if isfile(join(data_path, file)) and not file.startswith('.'):
             files.append(file)
-    socketio.emit('update_files', files, namespace='/browser')
+    socketio.emit('update_files', files, namespace='/browser', room=request.sid)
 
 
 @catch_errors
@@ -130,10 +130,10 @@ def update_buttons():
     """ Sends all button data stored in session """
     if not session.get('buttons'):
         session['buttons'] = []
-    socketio.emit('update_buttons', session['buttons'], namespace='/browser')
+    socketio.emit('update_buttons', session['buttons'], namespace='/browser', room=request.sid)
 
 
 @catch_errors
 def update_text():
     """ Sends text data to the page to update """
-    socketio.emit('update_header', session['index_header'], namespace='/browser')
+    socketio.emit('update_header', session['index_header'], namespace='/browser', room=request.sid)
