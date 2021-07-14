@@ -153,7 +153,7 @@ class DatabaseController:
 
     def start_server(self, file, port):
         """ Start a new local Redis server instance initialized from <file> on port <port> """
-        system("redis-server --bind 127.0.0.1 --dir {} --dbfilename {} --port {}".format(self.save_path, file, port))
+        system("redis-server --bind 127.0.0.1 --daemonize yes --dir {} --dbfilename {} --port {}".format(self.save_path, file, port))
 
 
 class Database:
