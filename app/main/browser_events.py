@@ -71,12 +71,10 @@ def stop():
 @catch_errors
 def refresh():
     """ Refresh all data displayed in browser index """
-    print("BEFORE: {}".format(session['buttons']))
     update_text()
     update_pages()
     update_files()
     update_buttons()
-    print("AFTERL {}".format(session['buttons']))
 
 
 @socketio.on('playback', namespace='/browser')
@@ -84,6 +82,7 @@ def refresh():
 def playback():
     """ Switches back to playback mode for current database file """
     error("Playback button not implementec")
+    print(session['buttons'])
     #set_button('live', hidden=False, disabled=False)
     #set_button('playback', hidden=True)
     #refresh()
