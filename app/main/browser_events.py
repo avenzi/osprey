@@ -41,6 +41,7 @@ def start():
             socketio.emit('start', namespace='/streamers')  # send start command to streamers
             set_button('start', disabled=True)
             set_button('stop', disabled=False)
+            session['testing'] = ['start']
             update_buttons()
         else:  # playback mode
             print("PLAYBACK MODE START")
