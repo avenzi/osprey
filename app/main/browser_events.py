@@ -65,6 +65,9 @@ def stop():
     #  we can't sent a message through socketIO because they will be received in a different session with no way
     #  to know what session to send that info to.
     refresh()
+    print("AFTER STOP REFRESH: ", session['buttons'])
+    sleep(1)
+    print("AFTER STOP 2 REFRESH: ", session['buttons'])
 
 
 @socketio.on('refresh', namespace='/browser')
