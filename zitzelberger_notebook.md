@@ -33,6 +33,12 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### July 14th, 2021:
+
+​	I've encountered a very strange problem - the updates to the session variable are only persisting in some circumstances. I noticed this when my start and stop buttons were not staying in the same state after refreshing the page. The start and stop buttons should retain their state as long as the session is active, but they don't and I can't figure out what the problem is. They change state immediately when pressed, which means that the session is at least maintained for the duration of the request, but as soon as that is over the session reverts to a previous state. The weirdest thing is that if I add a dummy session variable (like session['testing'] = True) to the start/stop socket handlers, this behavior disappears and the session persists as expected. However if I add the same dummy value to the session earlier, like in the socket connect handler, that doesn't work. The only time the behavior seems to go away is when I initialize an unused dummy session variable.
+
+​	Ok so I did some searching, and apparently Flask-Sesison uses a CallbackDict to track changes to the session variable, which means that modifying a value in-place (like I was doing with the dictionary of button values) does not trigger an update. The dummy variable was being set, which did trigger an update. The official way to do this is to manually set session.modified=True. This is stupid.
+
 ##### July 13th, 2021:
 
 ​	I started today by creating a "dummy" database class so I could test the server sessions first. While testing, I came across a bug with something I wrote awhile ago - the connection timeout that I implemented for the Redis connection. I wrote a timeout so that, in the event that the connection got disrupted, it would attempt to perform the database operation again. However apparently this has never been triggered until now, and only now have I realized that Redis-py already implements its own connection timeouts. I didn't know about this, so the default option was set, which is just to never timeout. I found this out because my redis connection was hanging indefinitely. I scrapped my entire connection timeout loop, and instead defined the socket_timeout and socket_connect_timeout parameters for the Redis.ConnectionPool objects. Now timeouts work just as expected.

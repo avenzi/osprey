@@ -76,8 +76,7 @@ class DatabaseController:
             if port is None:  # no ports available
                 raise DatabaseError("Could not create new playback server - no ports available")
             else:  # a port is available
-                print("START A NEW REDIS SERVER INSTANCE FOR PLAYBACK HERE. PORT: {}".format(port))
-                # todo: start up a new redis instance on this port
+                self.start_server(file=file, port=port)
 
         self.playback_ports[port]['file'] = file  # set the file for this port if not already
         self.playback_ports[port]['count'] += 1  # increment count of Database classes connecting to this port
@@ -107,7 +106,6 @@ class DatabaseController:
 
             # live database
             if db.live:
-                print("DISCONNECTED LIVE")
                 return
 
             # playback database
@@ -119,10 +117,11 @@ class DatabaseController:
 
             # if a no more databases using this port
             elif info['file'] and info['count'] <= 1:
+                db.shutdown()  # shut down this redis server
                 self.playback_ports[db.port]['count'] = 0
                 self.playback_ports[db.port]['file'] = None  # un-associate file from port
 
-            del self.sessions[ID]  # remove from dict
+            del self.sessions[ID]  # remove from session index
 
     def rename_save(self, filename, newname):
         """ renames an old save file """
@@ -151,6 +150,14 @@ class DatabaseController:
             system('rm {}/{}'.format(self.save_path, filename))
         except Exception as e:
             raise DatabaseError("Failed to delete file: {}".format(e))
+
+    def start_server(self, file, port):
+        """ Start a new local Redis server instance initialized from <file> on port <port> """
+        try:
+            system("redis-server -bind 127.0.0.1 -dir {} -dbfilename {} -port {}".format(self.save_path, file, port))
+            print("STARTED NEW REDIS INSTANCE ON PORT: {}".format(port))
+        except Exception as e:
+            raise DatabaseError("Failed to initialize new Redis server instance: {}: {}".format(e.__class__.__name__, e))
 
 
 class Database:
@@ -499,9 +506,6 @@ class ServerDatabase(Database):
         """
         if not self.live:
             raise DatabaseError("Did not save database file - not a live database")
-        if not self.redis:
-            if not self.connect(timeout=5):
-                raise DatabaseError("Did not save database file - could not connect to Redis Server")
 
         self.redis.save()  # save database to current dump file
         if not path.isfile(self.live_path+'/'+self.file):
@@ -530,6 +534,16 @@ class ServerDatabase(Database):
                 raise DatabaseError("Failed to shut down database: {}".format(e))
 
         return filename
+
+    def shutdown(self):
+        """ Shutdown the redis server instance """
+        if self.live:  # if live database
+            self.save(shutdown=True)  # save first
+        else:  # shutdown playback database without saving
+            try:
+                self.redis.shutdown(save=False)
+            except Exception as e:
+                raise DatabaseError("Failed to shutdown database on port: {}. {}: {}".format(self.port, e.__class__.__name__, e))
 
 
 
