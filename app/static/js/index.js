@@ -92,13 +92,13 @@ $(document).ready(function() {
         });
     });
 
-    socket.on('update_buttons', function(buttons) {
+    socket.on('update_buttons', function(data) {
         // data is an object. Each member is a button name with values as the buttons properties
-        console.log(buttons);
-        for ([name, properties] in buttons) {
-            console.log(name);
-            console.log(properties);
-            set_button(name, properties);
+        console.log(data);
+        for (button in data) {
+            console.log(button);
+            console.log(data.button);
+            set_button(button, data.button);
         };
     });
 
