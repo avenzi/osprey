@@ -37,12 +37,16 @@ def start():
     """ start all streams """
     if get_database().ping():  # make sure database connected
         if get_database().live:  # live mode
+            log("Seding Start command to streamers")
             socketio.emit('start', namespace='/streamers')  # send start command to streamers
-            set_button('start', disabled=True)
-            set_button('stop', disabled=False)
-            update_buttons()
         else:  # playback mode
-            print("PLAYBACK MODE START")
+            log("Started playback")
+            # todo: right now the datababase just keeps track of time so it 'starts' automatically.
+            #  also can't be stopped. implement that.
+
+        set_button('start', disabled=True)
+        set_button('stop', disabled=False)
+        update_buttons()
     else:
         error('Cannot start streams - database ping failed')
 
@@ -51,17 +55,22 @@ def start():
 @catch_errors
 def stop():
     """ Stop streams, dump database file to disk, start a clean database file """
-    socketio.emit('stop', namespace='/streamers')  # send stop command to streamers
+    if get_database().live:
+        socketio.emit('stop', namespace='/streamers')  # send stop command to streamers
 
-    database = get_database()
-    filename = database.save()  # save database file (if live) and wipe contents
-    log('Session Saved: {}'.format(filename))
+        database = get_database()
+        filename = database.save()  # save database file (if live) and wipe contents
+        log('Session Saved: {}'.format(filename))
 
-    socketio.emit('update', namespace='/streamers')  # request info update from streamers
+        socketio.emit('update', namespace='/streamers')  # request info update from streamers
+
+    else:  # playback
+        log('Paused Playback')
+
     set_button('start', disabled=False)
     set_button('stop', disabled=True)
     sleep(0.1)  # hopefully give time for database to get updates from streamers
-    # todo: if we want to have confirmation of an update, we must check the info:updated column in redis
+    # todo: if we want to have confirmation of an update, we must check the info:updated column in redis and check the timestamp
     #  we can't sent a message through socketIO because they will be received in a different session with no way
     #  to know what session to send that info to.
     refresh()
@@ -77,23 +86,12 @@ def refresh():
     update_buttons()
 
 
-@socketio.on('playback', namespace='/browser')
-@catch_errors
-def playback():
-    """ Switches back to playback mode for current database file """
-    error("Playback button not implemented")
-    #set_button('live', hidden=False, disabled=False)
-    #set_button('playback', hidden=True)
-    #refresh()
-
-
 @socketio.on('live', namespace='/browser')
 @catch_errors
 def live():
     """ Switches back to current live database  """
     log('Switching to live database')
     set_button('live', hidden=True)
-    #set_button('playback', hidden=False, disabled=False)
     set_database()  # set database to live
     refresh()
 
@@ -102,10 +100,10 @@ def live():
 @catch_errors
 def load(filename):
     """ Loads the given database file for playback """
+    log('Loading file...')
     set_database(filename)  # set a playback database for the given file
-    set_button('live', hidden=False, disabled=False, text='New Session')
-    #set_button('playback', disabled=True)
-    log('Loaded "{}" to database'.format(filename))
+    set_button('live', hidden=False, disabled=False, text='New Live Session')
+    log('Loaded "{}" for playback'.format(filename))
     refresh()
 
 
