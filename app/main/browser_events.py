@@ -18,7 +18,7 @@ def connect():
     if not get_database():  # if no current session database
         set_database()  # set to a live database connection
     refresh()  # send all page info immediately on connecting
-    session['testing'] = 'connected'
+    session['testing'] = 0
 
 
 @socketio.on('disconnect', namespace='/browser')
