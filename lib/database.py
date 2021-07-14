@@ -137,7 +137,9 @@ class DatabaseController:
         if not newname.endswith('.rdb'):
             newname += '.rdb'
         if path.isfile(self.save_path + '/' + newname):
-            raise Exception("Could not rename file - file already exists")
+            raise Exception("Could not rename file - new file name already exists")
+        if not path.isfile(self.save_path + '/' + filename):
+            raise Exception("Could not rename file - file does not exist")
         try:
             system("mv {0}/{1} {0}/{2}".format(self.save_path, filename, newname))
         except Exception as e:
@@ -147,6 +149,8 @@ class DatabaseController:
         """ Remove an old stored file """
         if not filename:
             return
+        if not path.isfile(self.save_path+'/'+filename):
+            raise Exception("Could not delete file - file does not exist")
         try:
             system('rm {}/{}'.format(self.save_path, filename))
         except Exception as e:
