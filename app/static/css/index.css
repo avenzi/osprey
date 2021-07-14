@@ -20,14 +20,21 @@ body { max-width: 960px; margin: 0 auto; background: white; }
 
 .commands {grid-area: commands;}
 .streams {grid-area: streams;}
+
 .files {grid-area: files;}
 .files li.selected {
     background-color: #dddddd;
 }
+.files div.list {
+    border: 1px solid #ccc;
+    height: 19em;
+    overflow: auto;
+}
+
 .logs {grid-area: logs;}
 .logs div {
     border: 1px solid #ccc;
-    height: 10em;
+    height: 9em;
     overflow: auto;
 }
 
