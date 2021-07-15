@@ -356,9 +356,11 @@ class Database:
                     response = red.xread({'stream:'+stream: '$'}, block=1000)
                 else:  # return nothing and set info for next read
                     # set last read id to minimum, set last read time to now
+                    first_data_point = red.xrange('stream:'+stream, count=1)
+                    print("First: {}".format(first_data_point))
+                    print("First: {}".format(first_data_point[0][1]))
                     self.bookmarks[stream] = {'id': self.time_to_redis(0), 'time': self.time()}
                     response = None
-                    print("[4] [{}] Response is: {}".format(stream, response))
 
         if not response:
             return None
@@ -455,7 +457,7 @@ class Database:
         else:
             red = self.bytes_redis
 
-        if self.live:  # read most recent snapshot regardless of reader
+        if self.live:  # read most recent snapshot
             response = red.xrevrange('stream:'+stream, count=1)
 
         else:  # read snapshot at time since last read
