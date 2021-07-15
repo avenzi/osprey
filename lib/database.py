@@ -213,11 +213,11 @@ class Database:
         if self.live:
             return time()
         else:
-            if self.stop_time:  # playback is currently paused
-                return self.stop_time
-            else:  # not paused
+            if self.playback_active:  # playback is active
                 diff = time()-self.start_time  # time since started
                 return self.stop_time + diff  # time difference after last stopped
+            else:  # playback is paused
+                return self.stop_time  # only return the time at which it was paused
 
     def time_to_redis(self, unix_time):
         """ Convert unix time in seconds to a redis timestamp, which is a string of an int in milliseconds """
@@ -248,7 +248,6 @@ class Database:
         else:
             self.playback_active = True
             self.start_time = time()  # mark playback start time
-            self.stop_time = None  # clear stop time
 
     def stop(self):
         """
@@ -260,7 +259,6 @@ class Database:
         else:
             self.playback_active = False
             self.stop_time = time()  # mark playback pause time
-            self.start_time = None  # clear start time
 
     def is_streaming(self):
         """
