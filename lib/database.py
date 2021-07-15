@@ -318,7 +318,7 @@ class Database:
             red = self.bytes_redis
 
         if stream is None:
-            print("Stream was none")
+            print("[{}] Stream was none".format(stream))
             return
 
         if count:  # get COUNT data regardless of last read
@@ -352,7 +352,7 @@ class Database:
                     response = None
 
         if not response:
-            print("Response was None")
+            print("[{}] Response was None".format(stream))
             return None
 
         if not self.bookmarks.get(stream):
@@ -418,7 +418,7 @@ class Database:
         if to_json:
             return json.dumps(output)
         if not output:
-            print("output was : ", output)
+            print("[{}] output was : ".format(stream), output)
         return output
 
     @catch_connection_errors
