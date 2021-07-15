@@ -40,13 +40,11 @@ def start():
     database = get_database()
     if database.ping():  # make sure database connected
         if database.live:  # live mode
-            log("Seding Start command to streamers")
+            log("Sending Start command to streamers")
             socketio.emit('start', namespace='/streamers')  # send start command to streamers
         else:  # playback mode
             log("Started playback")
-            database.start()
-        set_button('start', disabled=True)
-        set_button('stop', disabled=False)
+        database.start()
         update_buttons()
     else:
         error('Cannot start streams - database ping failed')
@@ -59,18 +57,14 @@ def stop():
     database = get_database()
     if database.live:
         socketio.emit('stop', namespace='/streamers')  # send stop command to streamers
-
         filename = database.save()  # save database file (if live) and wipe contents
         log('Session Saved: {}'.format(filename))
-
         socketio.emit('update', namespace='/streamers')  # request info update from streamers
 
     else:  # playback
         log('Paused Playback')
-        database.stop()
 
-    set_button('start', disabled=False)
-    set_button('stop', disabled=True)
+    database.stop()
     sleep(0.1)  # hopefully give time for database to get updates from streamers
     # todo: if we want to have confirmation of an update, we must check the info:updated column in redis and check the timestamp
     #  we can't sent a message through socketIO because they will be received in a different session with no way

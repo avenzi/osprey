@@ -238,16 +238,35 @@ class Database:
             self.redis.ping()
 
     def start(self):
-        """ Starts playback if in playback mode """
-        if not self.live:
-            self.start_time = time()
-            self.stop_time = None
+        """
+        Live mode: Sets "STREAMING" key in database.
+        Playback mode: Starts playback.
+        """
+        if self.live:
+            self.redis.set('STREAMING', 1)  # set RUNNING key
+        else:
+            self.start_time = time()  # mark playback start time
+            self.stop_time = None  # clear stop time
 
     def stop(self):
-        """ Pauses playback if in playback mode """
-        if not self.live:
-            self.stop_time = time()
-            self.start_time = None
+        """
+        Live mode:  removes "RUNNING" key in database.
+        Playback mode: Pauses playback.
+        """
+        if self.live:
+            self.redis.delete('STREAMING')  # unset RUNNING key
+        else:
+            self.stop_time = time()  # mark playback pause time
+            self.start_time = None  # clear start time
+
+    def is_streaming(self):
+        """ Check database for "STREAMING" key """
+        try:
+            if self.redis.get('STREAMING'):
+                return True
+        except:
+            return False
+        return False
 
     @catch_connection_errors
     def write_data(self, stream, data):
