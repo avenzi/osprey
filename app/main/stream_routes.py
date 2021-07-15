@@ -92,6 +92,8 @@ def plot_update():
 
     try:
         database = get_database()
+        if not database:
+            return "Database now found for this session", 500
         if not request_format or request_format == 'series':
             data = database.read_data(request_id, to_json=True, max_time=5)
         elif request_format == 'snapshot':
