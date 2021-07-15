@@ -338,7 +338,10 @@ class Database:
                 if self.live:  # read from last ID to now
                     response = red.xread({'stream:' + stream: last_read_id})
                     #print("[1] [{}] Response is: {}".format(stream, response))
-                    print("[1] [{}] Response is: {}. last_read: {}, time_since: {}, last_read_id: {}".format(stream, response, last_read, time_since, last_read_id))
+                    res = str(response)
+                    if len(res) > 50:
+                        res = res[0:50]
+                    print("[1] [{}] Response is: {}. last_read: {}, time_since: {}, last_read_id: {}".format(stream, res, last_read, time_since, last_read_id))
                 else:  # read from last ID to ID given by time_since
                     new_id = self.redis_to_time(last_read_id) + time_since
                     max_read_id = self.time_to_redis(new_id)
