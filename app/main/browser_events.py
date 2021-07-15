@@ -55,6 +55,7 @@ def start():
 def stop():
     """ Stop streams, dump database file to disk, start a clean database file """
     database = get_database()
+    database.stop()
     if database.live:
         socketio.emit('stop', namespace='/streamers')  # send stop command to streamers
         filename = database.save()  # save database file (if live) and wipe contents
@@ -64,7 +65,6 @@ def stop():
     else:  # playback
         log('Paused Playback')
 
-    database.stop()
     sleep(0.1)  # hopefully give time for database to get updates from streamers
     # todo: if we want to have confirmation of an update, we must check the info:updated column in redis and check the timestamp
     #  we can't sent a message through socketIO because they will be received in a different session with no way
