@@ -355,11 +355,9 @@ class Database:
                 if self.live:  # start reading from latest, block for 1 sec
                     response = red.xread({'stream:'+stream: '$'}, block=1000)
                 else:  # return nothing and set info for next read
-                    # set last read id to minimum, set last read time to now
-                    first_data_point = red.xrange('stream:'+stream, count=1)
-                    print("First: {}".format(first_data_point))
-                    print("First: {}".format(first_data_point[0][1]))
-                    self.bookmarks[stream] = {'id': self.time_to_redis(0), 'time': self.time()}
+                    # set last read id to the first time stamp available, set last read time to now
+                    first_time_stamp = red.xrange('stream:'+stream, count=1)[0][0]
+                    self.bookmarks[stream] = {'id': first_time_stamp, 'time': self.time()}
                     response = None
 
         if not response:
