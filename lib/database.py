@@ -196,6 +196,7 @@ class Database:
 
         # for playback mode
         self.playback_speed = 1  # speed multiplier in playback mode (live mode False)
+        self.playback_active = False  # whether this connection is actively playing back
         self.start_time = None
         self.stop_time = None
 
@@ -245,6 +246,7 @@ class Database:
         if self.live:
             self.redis.set('STREAMING', 1)  # set RUNNING key
         else:
+            self.playback_active = True
             self.start_time = time()  # mark playback start time
             self.stop_time = None  # clear stop time
 
@@ -256,17 +258,24 @@ class Database:
         if self.live:
             self.redis.delete('STREAMING')  # unset RUNNING key
         else:
+            self.playback_active = False
             self.stop_time = time()  # mark playback pause time
             self.start_time = None  # clear start time
 
     def is_streaming(self):
-        """ Check database for "STREAMING" key """
-        try:
-            if self.redis.get('STREAMING'):
-                return True
-        except:
+        """
+        Live mode: Check database for "STREAMING" key.
+        Playback mode: Check self.playback_active property.
+        """
+        if self.live:
+            try:
+                if self.redis.get('STREAMING'):
+                    return True
+            except:
+                return False
             return False
-        return False
+        else:
+            return self.playback_active
 
     @catch_connection_errors
     def write_data(self, stream, data):
