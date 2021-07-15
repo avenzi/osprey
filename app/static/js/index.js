@@ -16,10 +16,10 @@ function set_button(name, props) {
         $('button.command.'+name).prop('hidden', props.hidden);
     }
     if (props.disabled !== undefined) {
-        console.log(`Chaning disabled of ${name} to ${props.disabled}`)
         $('button.command.'+name).prop('disabled', props.disabled);
     }
     if (props.text !== undefined) {
+        console.log(`Got "${props.text}" for ${name}.`);
         $('button.command.'+name).prop('text', props.text);
     }
 }
