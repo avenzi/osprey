@@ -32,7 +32,7 @@ def catch_connection_errors(method):
     def wrapped(self, *args, **kwargs):
         try:  # attempt to perform database operation
             return method(self, *args, **kwargs)
-        except redis.exceptions.BusyLoadingError as e:
+        except redis.exceptions.BusyLoadingError:
             raise DatabaseLoading("Redis is loading the database into memory. Try again later.")
         except (ConnectionResetError, ConnectionRefusedError, TimeoutError, redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
             raise DatabaseError("{}: {}".format(e.__class__.__name__, e))
@@ -67,7 +67,6 @@ class DatabaseController:
             ip=self.live_ip, port=self.live_port, password=self.live_pass,
             live=True, file=self.live_file, live_path=self.live_path, save_path=self.save_path
         )
-        print("Created Live database connection")
 
     def new_playback(self, file, ID):
         """ Creates and returns a new playback Database instance for the given ID key """
@@ -192,12 +191,30 @@ class Database:
 
         self.exit = False  # flag to determine when to stop running if looping
         self.live = False   # Whether in live mode
+
+        # for playback mode
         self.playback_speed = 1  # speed multiplier in playback mode (live mode False)
+        self.start_time = None
+        self.stop_time = None
 
         # Dictionary to track last read position in the database for each data column
         # First level keys are the ID of each stream in the database. Values are Second level dictionaries.
         # Second level keys are "id" and "time", which are the last read database key and the real time it was read.
         self.bookmarks = {}
+
+    def time(self):
+        """
+        Live mode: Get current time.
+        Playback mode: Get current playback time (affected by starting and stopping the playback).
+        """
+        if self.live:
+            return time()
+        else:
+            if self.stop_time:  # playback is currently paused
+                return self.stop_time
+            else:  # not paused
+                diff = time()-self.start_time()  # time since started
+                return self.stop_time + diff  # time difference after last stopped
 
     def time_to_redis(self, unix_time):
         """ Convert unix time in seconds to a redis timestamp, which is a string of an int in milliseconds """
@@ -217,6 +234,18 @@ class Database:
                 return False
         else:
             self.redis.ping()
+
+    def start(self):
+        """ Starts playback if in playback mode """
+        if not self.live:
+            self.start_time = time()
+            self.stop_time = None
+
+    def stop(self):
+        """ Pauses playback if in playback mode """
+        if not self.live:
+            self.stop_time = time()
+            self.start_time = None
 
     @catch_connection_errors
     def write_data(self, stream, data):
@@ -278,7 +307,7 @@ class Database:
             if last_read:  # last read spot exists
                 last_read_id = last_read['id']
                 last_read_time = last_read['time']
-                time_since = time()-last_read_time  # time since last read
+                time_since = self.time()-last_read_time  # time since last read
                 if max_time and time_since > max_time:
                     # if time since last read is greater than set maximum,
                     # increment last read ID by the difference
@@ -297,7 +326,7 @@ class Database:
                     response = red.xread({'stream:'+stream: '$'}, block=1000)
                 else:  # return nothing and set info for next read
                     # set last read id to minimum, set last read time to now
-                    self.bookmarks[stream] = {'id': self.time_to_redis(0), 'time': time()}
+                    self.bookmarks[stream] = {'id': self.time_to_redis(0), 'time': self.time()}
                     response = None
 
         if not response:
@@ -307,7 +336,7 @@ class Database:
             self.bookmarks[stream] = {}
 
         # set last read time
-        self.bookmarks[stream]['time'] = time()
+        self.bookmarks[stream]['time'] = self.time()
 
         # store the last ID of this stream and get list of data dicts
         if count:
@@ -403,13 +432,13 @@ class Database:
             if last_read:  # last read spot exists
                 last_read_id = last_read['id']
                 last_read_time = last_read['time']
-                time_since = time()-last_read_time  # time since last read
+                time_since = self.time()-last_read_time  # time since last read
                 new_id = self.redis_to_time(last_read_id) + time_since
                 max_read_id = self.time_to_redis(new_id)
                 response = red.xrevrange('stream:'+stream, max=max_read_id, count=1)
             else:  # no first read spot exists
                 response = red.xrange('stream:'+stream, count=1)  # get the first one
-                self.bookmarks[stream] = {'id': self.time_to_redis(0), 'time': time()}
+                self.bookmarks[stream] = {'id': self.time_to_redis(0), 'time': self.time()}
 
         if not response:
             return None

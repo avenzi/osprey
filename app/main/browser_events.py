@@ -37,15 +37,14 @@ def disconnect():
 @catch_errors
 def start():
     """ start all streams """
-    if get_database().ping():  # make sure database connected
-        if get_database().live:  # live mode
+    database = get_database()
+    if database.ping():  # make sure database connected
+        if database.live:  # live mode
             log("Seding Start command to streamers")
             socketio.emit('start', namespace='/streamers')  # send start command to streamers
         else:  # playback mode
             log("Started playback")
-            # todo: right now the datababase just keeps track of time so it 'starts' automatically.
-            #  also can't be stopped. implement that.
-
+            database.start()
         set_button('start', disabled=True)
         set_button('stop', disabled=False)
         update_buttons()
@@ -57,10 +56,10 @@ def start():
 @catch_errors
 def stop():
     """ Stop streams, dump database file to disk, start a clean database file """
-    if get_database().live:
+    database = get_database()
+    if database.live:
         socketio.emit('stop', namespace='/streamers')  # send stop command to streamers
 
-        database = get_database()
         filename = database.save()  # save database file (if live) and wipe contents
         log('Session Saved: {}'.format(filename))
 
@@ -68,6 +67,7 @@ def stop():
 
     else:  # playback
         log('Paused Playback')
+        database.stop()
 
     set_button('start', disabled=False)
     set_button('stop', disabled=True)
@@ -94,6 +94,8 @@ def live():
     """ Switches back to current live database  """
     log('Switching to live database')
     set_button('live', hidden=True)
+    set_button('start', text='Start Streaming')
+    set_button('stop', text='Stop all streams and save the file to disk')
     set_database()  # set database to live
     refresh()
 
@@ -120,6 +122,8 @@ def load(filename):
             return
 
     set_button('live', hidden=False, disabled=False, text='Back to live session')
+    set_button('start', text='Start playback')
+    set_button('stop', text='Stop playback')
     log('Loaded "{}" for playback'.format(filename))
     refresh()
 
@@ -131,8 +135,9 @@ def abort():
     get_database().kill()  # force kill currently loaded database
     if get_database().live:
         error("Force killing live database - some data may be lost")
+        refresh()
     else:
-        error("Force killing playback database - returning to live")
+        error("Force killing playback database")
         live()  # switch back to live
 
 
