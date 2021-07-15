@@ -22,8 +22,6 @@ class TestAnalyzer(Analyzer):
 
     def loop(self):
         """ Maine execution loop """
-        sleep(5)
-        return
         # get most recent data from raw data stream
         all_data = {
             '11': self.database.read_data(self.random_11),
