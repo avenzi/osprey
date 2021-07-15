@@ -192,7 +192,7 @@ class Database:
         self.bytes_redis = redis.Redis(connection_pool=self.bytes_pool)
 
         self.exit = False  # flag to determine when to stop running if looping
-        self.live = False   # Whether in live mode
+        self.live = True   # Whether in live mode
 
         # for playback mode
         self.playback_speed = 1  # speed multiplier in playback mode (live mode False)
