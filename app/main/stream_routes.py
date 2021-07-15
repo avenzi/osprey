@@ -70,14 +70,14 @@ def plot_layout():
     if not create_layout:
         err = "No layout function specified for group '{}'".format(group_name)
         flash(err)
-        return "", 302
+        return err, 404
 
     try:
         layout = create_layout(info)  # bokeh layout object
     except Exception as e:
         err = "Failed to create layout for group {}. {}: {}".format(group_name, e.__class__.__name__, e)
         flash(err)
-        return "", 302
+        return err, 500
 
     json_layout = dumps(json_item(layout))
 
@@ -101,11 +101,12 @@ def plot_update():
         elif request_format == 'snapshot':
             data = database.read_snapshot(request_id, to_json=True)
         else:
-            print('Bokeh request for data specified an unknown request format')
-            return "", 500
+            err = 'Bokeh request for data specified an unknown request format: {}'.format(err)
+            print(err)
+            return err, 500
     except DatabaseError as e:
         print("Database Error: {}".format(e))
-        return "", 500
+        return str(e), 500
 
     if data:
         resp = Response(response=data, content_type='application/json')
