@@ -19,8 +19,7 @@ function set_button(name, props) {
         $('button.command.'+name).prop('disabled', props.disabled);
     }
     if (props.text !== undefined) {
-        console.log(`Got "${props.text}" for ${name}.`);
-        $('button.command.'+name).prop('text', props.text);
+        $('button.command.'+name).prop('title', props.text);
     }
 }
 
