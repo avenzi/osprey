@@ -10,8 +10,13 @@ from local import server_stream_config
 # import blueprint + socket
 from app.main import streams, socketio
 
-from app.main.utils import log, error, get_database
+from app.main.utils import get_database
 from app.main.auth_routes import login_required
+
+# todo: how to emit socketIO messages in a Flask route? The socketIO messages need to know what
+#  room to emit to, which will be the room with the SID of the socket. However the Flask routes
+#  do not know what socket was active on the page that sent it. Maybe sent the corresponding socket SID
+#  in a custom header with every request??
 
 
 @login_required
@@ -37,7 +42,6 @@ def stream():
     try:
         database = get_database()
         if not database:  # no database found for this session
-            error("Database not found??")
             print("Database not found for session: {}".format(session.sid))
             return
         info = database.read_group(group_name)
@@ -65,7 +69,6 @@ def plot_layout():
     create_layout = server_stream_config.bokeh_layouts.get(group_name)
     if not create_layout:
         err = "No layout function specified for group '{}'".format(group_name)
-        error(err)
         flash(err)
         return "", 302
 
@@ -73,7 +76,6 @@ def plot_layout():
         layout = create_layout(info)  # bokeh layout object
     except Exception as e:
         err = "Failed to create layout for group {}. {}: {}".format(group_name, e.__class__.__name__, e)
-        error(err)
         flash(err)
         return "", 302
 
@@ -99,10 +101,10 @@ def plot_update():
         elif request_format == 'snapshot':
             data = database.read_snapshot(request_id, to_json=True)
         else:
-            error('Bokeh request for data specified an unknown request format')
+            print('Bokeh request for data specified an unknown request format')
             return "", 500
     except DatabaseError as e:
-        error("Database Error: {}".format(e))
+        print("Database Error: {}".format(e))
         return "", 500
 
     if data:

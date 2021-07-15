@@ -216,7 +216,7 @@ class Database:
             if self.stop_time:  # playback is currently paused
                 return self.stop_time
             else:  # not paused
-                diff = time()-self.start_time()  # time since started
+                diff = time()-self.start_time  # time since started
                 return self.stop_time + diff  # time difference after last stopped
 
     def time_to_redis(self, unix_time):
