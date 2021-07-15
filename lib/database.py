@@ -2,6 +2,7 @@ from time import time, sleep, strftime, localtime
 import functools
 import json
 from os import system, path
+from traceback import print_exc
 
 import redis
 
@@ -37,6 +38,7 @@ def catch_connection_errors(method):
         except (ConnectionResetError, ConnectionRefusedError, TimeoutError, redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
             raise DatabaseError("{}: {}".format(e.__class__.__name__, e))
         except Exception as e:  # other type of error
+            print_exc()
             raise DatabaseError('Uncaught Error in Database ({}). {}: {}'.format(method.__name__, e.__class__.__name__, e))
     return wrapped
 
