@@ -11,9 +11,15 @@ from app.main import socketio
 from lib.database import DatabaseError
 
 
-def log(msg):
-    """ Log a message in the browser """
-    socketio.emit('log', msg, namespace='/browser', room=request.sid)
+def log(msg, everywhere=False):
+    """
+    Log a message in the browser.
+    If everywhere is True, broadcast to ALL browsers, even in different sessions.
+    """
+    if everywhere:
+        socketio.emit('log', msg, namespace='/browser')
+    else:
+        socketio.emit('log', msg, namespace='/browser', room=request.sid)
 
 
 def error(msg):
