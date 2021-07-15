@@ -197,8 +197,8 @@ class Database:
         # for playback mode
         self.playback_speed = 1  # speed multiplier in playback mode (live mode False)
         self.playback_active = False  # whether this connection is actively playing back
-        self.start_time = None
-        self.stop_time = None
+        self.start_time = time()  # time playback was last started
+        self.stop_time = time()   # time playback was last paused
 
         # Dictionary to track last read position in the database for each data column
         # First level keys are the ID of each stream in the database. Values are Second level dictionaries.
