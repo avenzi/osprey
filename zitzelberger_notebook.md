@@ -33,6 +33,10 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### July 15th, 2021:
+
+​	I first needed to implement a way to keep track of the current playback time when a database connection is in playback mode. I did this by defining start_time and stop_time variables, and using a custom time() method to only return the time as if the start() and stop() methods stopped time. This means that my read_data() method can just use self.time() for both live mode and playback mode.
+
 ##### July 14th, 2021:
 
 ​	I've encountered a very strange problem - the updates to the session variable are only persisting in some circumstances. I noticed this when my start and stop buttons were not staying in the same state after refreshing the page. The start and stop buttons should retain their state as long as the session is active, but they don't and I can't figure out what the problem is. They change state immediately when pressed, which means that the session is at least maintained for the duration of the request, but as soon as that is over the session reverts to a previous state. The weirdest thing is that if I add a dummy session variable (like session['testing'] = True) to the start/stop socket handlers, this behavior disappears and the session persists as expected. However if I add the same dummy value to the session earlier, like in the socket connect handler, that doesn't work. The only time the behavior seems to go away is when I initialize an unused dummy session variable.

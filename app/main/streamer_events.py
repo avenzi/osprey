@@ -39,5 +39,5 @@ def streamer_update(stream_id):
 
 @socketio.on('log', namespace='/streamers')
 def streamer_log(resp):
-    """ On receiving logs from streamers, forward to the browser log """
-    log(resp)
+    """ On receiving logs from streamers, forward to all browser logs """
+    log(resp, everywhere=True)
