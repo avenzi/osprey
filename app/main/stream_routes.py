@@ -36,6 +36,10 @@ def stream():
 
     try:
         database = get_database()
+        if not database:  # no database found for this session
+            error("Database not found??")
+            print("Database not found for session: {}".format(request.sid))
+            return
         info = database.read_group(group_name)
         return render_template(template_path, info=info, title=group_name)
     except TemplateNotFound as e:
