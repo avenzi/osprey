@@ -369,13 +369,21 @@ class Database:
         # set last read time
         self.bookmarks[stream]['time'] = self.time()
 
-        # store the last ID of this stream and get list of data dicts
-        if count:
-            self.bookmarks[stream]['id'] = response[-1][0]
-            data_list = response
+        # store the last timestamp ID in this response
+
+        # If count is given or in playback mode,
+        #  XRANGE is used, which gives a list of dictionaries
+        if count or not self.live:
+            self.bookmarks[stream]['id'] = response[-1][0]  # store last timestamp
+            data_list = response  # get list of data dicts
+
+        # If count isn't given and in live mode,
+        #  XREAD is used, which gives a list of tuples.
+        # But since we read from only one stream,
+        #  the actual data is in response[0][1].
         else:
-            self.bookmarks[stream]['id'] = response[0][1][-1][0]
-            data_list = response[0][1]
+            self.bookmarks[stream]['id'] = response[0][1][-1][0]  # store last timestamp
+            data_list = response[0][1]  # get list of data dicts
 
         # create final output dict
         output = {}
