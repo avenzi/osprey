@@ -311,7 +311,7 @@ class Database:
                     max_read_id = self.time_to_redis(new_id)
                     response = red.xrange('stream:'+stream, min=last_read_id, max=max_read_id)
                     m = "FULLR" if response else "EMPTY"
-                    print("[2] [{}] {}. last_read: {}, time_since: {}, last_read_id: {}, max: {}".format(stream, m, last_read, time_since, last_read_id, max_read_id))
+                    #print("[2] [{}] {}. last_read: {}, time_since: {}, last_read_id: {}, max: {}".format(stream, m, last_read, time_since, last_read_id, max_read_id))
 
             else:  # no last read spot
                 if self.live:  # start reading from latest, block for 1 sec

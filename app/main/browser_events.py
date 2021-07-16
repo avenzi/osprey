@@ -176,6 +176,7 @@ def stream_time(group):
 
     display = ""
     for stream in streams.values():
+        print("STREAM: ", stream)
         elapsed = database.get_elapsed_time(stream['id'])  # time elapsed to far in seconds
         display += "{}: {}".format(stream['name'], str(timedelta(seconds=elapsed)))
 
