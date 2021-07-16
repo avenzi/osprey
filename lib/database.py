@@ -550,7 +550,7 @@ class Database:
         print("GROUP: ", group)
         for key, ID in group.items():
             # get all streams from this ID with an extra prefix
-            extra_ids = self.redis.keys("stream:*:{}".format(ID))
+            extra_ids = self.redis.keys("stream:*{}".format(ID))
             print("EXTRA: ", extra_ids)
             for extra in extra_ids:
                 i = extra.find(":")+1  # first colon
