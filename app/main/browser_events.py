@@ -1,4 +1,5 @@
 from flask import current_app, session, request
+from datetime import timedelta
 from time import sleep
 
 from lib.database import DatabaseError, DatabaseLoading
@@ -155,3 +156,25 @@ def delete(filename):
     current_app.database_controller.delete_save(filename)
     log('Deleted file "{}"'.format(filename))
     refresh()
+
+
+@socketio.on('stream_time', namespace='/browser')
+@catch_errors
+def stream_time(stream_id):
+    """ Get the current time information to display for the given stream """
+    database = get_database()
+    if not database:
+        data = {}
+
+    # time elapsed to far
+    elapsed = database.get_elapsed_time(stream_id)
+    elapsed_str = str(timedelta(seconds=elapsed))
+
+    if database.live:  # send elapsed time
+        data = {'elapsed': elapsed_str}
+    else:  # send elapsed time and total time
+        total = database.get_total_time(stream_id)
+        total_str = str(timedelta(seconds=total))
+        data = {'elapsed': elapsed_str, 'total': total_str}
+
+    socketio.emit('stream_time', data, namespace='/browser', room=request.sid)
