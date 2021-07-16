@@ -160,24 +160,27 @@ def delete(filename):
 
 @socketio.on('stream_time', namespace='/browser')
 @catch_errors
-def stream_time(stream_id):
+def stream_time(group):
     """ Get the current time information to display for the given stream """
     database = get_database()
     if not database:
         data = {}
 
-    if not stream_id:
-        raise Exception("Stream time was requested, but no stream ID was given")
+    if not group:
+        raise Exception("Stream time was requested, but no group ID was given")
 
-    # time elapsed to far
-    elapsed = database.get_elapsed_time(stream_id)
-    elapsed_str = str(timedelta(seconds=elapsed))
+    # all streams in this group
+    streams = database.read_group(group)
+    if not streams:
+        return
 
-    if database.live:  # send elapsed time
-        data = {'elapsed': elapsed_str}
-    else:  # send elapsed time and total time
-        total = database.get_total_time(stream_id)
-        total_str = str(timedelta(seconds=total))
-        data = {'elapsed': elapsed_str, 'total': total_str}
+    display = ""
+    for ID, stream in streams:
+        elapsed = database.get_elapsed_time(ID)  # time elapsed to far in seconds
+        display += "{}: {}".format(stream['name'], str(timedelta(seconds=elapsed)))
 
-    socketio.emit('stream_time', data, namespace='/browser', room=request.sid)
+        if not database.live:  # add total time of stream
+            total = database.get_total_time(ID)
+            display += " / {}".format(str(timedelta(seconds=total)))
+
+    socketio.emit('stream_time', display, namespace='/browser', room=request.sid)

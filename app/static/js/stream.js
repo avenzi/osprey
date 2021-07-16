@@ -91,19 +91,6 @@ $(document).ready(function() {
     }, 1000);
 
     socket.on('stream_time', function(data) {
-        // data is an object with time info
-        elapsed = data.elapsed;
-        total = data.total
-
-        if (total !== undefined) {  // given a total time
-            display = `${elapsed} / ${total}`;
-        } else if (elapsed !== undefined) {  // only elapsed time given
-            display = elapsed;
-        } else {  // no info given
-            display = "[Time info unavailable]";
-        }
-
-        $("div.stream_time").html(display);
-
+        $("div.stream_time").html(data);
     });
 });
