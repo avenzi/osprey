@@ -446,6 +446,17 @@ class Database:
         if not response:
             return None
 
+        # only store bookmarks if in playback mode
+        if not self.live:
+            if not self.bookmarks.get(stream):
+                self.bookmarks[stream] = {}
+
+            # set last read time
+            self.bookmarks[stream]['time'] = self.time()
+
+            # store the last timestamp ID in this response
+            self.bookmarks[stream]['id'] = response[-1][0]  # store last timestamp
+
         data = response[0][1]  # data dict
         keys = data.keys()  # get keys from data dict
         output = {key: [] for key in keys}
@@ -547,11 +558,9 @@ class Database:
         #  stream:prefix:full_stream_id
         data = {}  # name: ID
         group = self.redis.hgetall('group:'+group)  # name:ID
-        print("GROUP: ", group)
         for key, ID in group.items():
             # get all streams from this ID with an extra prefix
             extra_ids = self.redis.keys("stream:*{}".format(ID))
-            print("EXTRA: ", extra_ids)
             for extra in extra_ids:
                 i = extra.find(":")+1  # first colon
                 j = extra[i:].find(":")  # second colon
@@ -560,9 +569,8 @@ class Database:
                 else:
                     name = key+':'+extra[i:i+j]
                 data[name] = extra[i:]
-
-        print("DATA: ", data)
         return data
+
 
 class ServerDatabase(Database):
     """
