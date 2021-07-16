@@ -63,6 +63,7 @@ $(document).ready(function() {
     var namespace = '/browser';  // namespace for talking with server
     var socket = io(namespace);
     var id = get_id()  // group ID for this page
+    console.log("ID: "+id)
 
     socket.on('connect', function() {
         log("SocketIO connected to server");

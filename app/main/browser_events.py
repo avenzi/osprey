@@ -166,6 +166,9 @@ def stream_time(stream_id):
     if not database:
         data = {}
 
+    if not stream_id:
+        raise Exception("Stream time was requested, but no stream ID was given")
+
     # time elapsed to far
     elapsed = database.get_elapsed_time(stream_id)
     elapsed_str = str(timedelta(seconds=elapsed))
