@@ -500,7 +500,10 @@ class Database:
     def read_group(self, name, stream=None):
         """
         Gets an info dict from stream with name <stream> in group_name <name>
-        if <name> not specified, gives list of all dicts in that group
+        if <name> not specified, gives list of all dicts in that group.
+            - Note that this only returns one dict for each 'info:' data column,
+                so any extra 'stream:' columns with the same but a different prefix
+                do not add another dict.
         """
         if stream is not None:  # stream name specified
             stream_id = self.redis.hget('group:'+name, stream)  # get stream ID from group dict
@@ -523,6 +526,43 @@ class Database:
             info.append(self.redis.hgetall(key))
         return info
 
+    @catch_connection_errors
+    def read_streams(self, group):
+        """
+        Return a dictionary of all streams in a group
+        This returns all 'stream:' columns in a group,
+            including duplicated with different prefixes.
+        """
+        # todo: because I need a way to consistently find streams with prefixes,
+        #       the method for creating them should be standardized and unchangeable.
+        #  The best way to do this would be to hide their structure from the user.
+        #  Right now, the user could technically write data to any stream name with
+        #       any structure in the loop method of an Analyzer or streamer.
+        #  To fix this, there should be a given method to "name" a stream, but under the hood
+        #       always add the stream ID to it.
+        #  The trouble then is how to retrieve that full ID in the create_layout() method.
+        #  I think that whole thing should be redone - maybe as a class method that must be inherited?
+        #  .
+        #  For the purposes of this method, the structure is assumed to be:
+        #  stream:prefix:full_stream_id
+        data = {}  # name: ID
+        group = self.redis.hgetall('group:'+group)  # name:ID
+        print("GROUP: ", group)
+        for key, ID in group.items():
+            # get all streams from this ID with an extra prefix
+            extra_ids = self.redis.keys("stream:*:{}".format(ID))
+            print("EXTRA: ", extra_ids)
+            for extra in extra_ids:
+                i = extra.find(":")+1  # first colon
+                j = extra[i:].find(":")  # second colon
+                if j == -1:  # no second colon (thus no prefix)
+                    name = key
+                else:
+                    name = key+':'+extra[i:i+j]
+                data[name] = extra[i:]
+
+        print("DATA: ", data)
+        return data
 
 class ServerDatabase(Database):
     """

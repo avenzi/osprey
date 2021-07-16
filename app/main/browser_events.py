@@ -171,17 +171,17 @@ def stream_time(group):
         raise Exception("Stream time was requested, but no group ID was given")
 
     # all streams in this group
-    streams = database.read_group(group)
+    streams = database.read_streams(group)
     if not streams:
         return
 
     display = ""
-    for stream in streams.values():
-        elapsed = database.get_elapsed_time(stream['id'])  # time elapsed to far in seconds
-        display += "{}: {}".format(stream['name'], str(timedelta(seconds=int(elapsed))))
+    for name, ID in streams.items():
+        elapsed = database.get_elapsed_time(ID)  # time elapsed to far in seconds
+        display += "{}: {}".format(name, str(timedelta(seconds=int(elapsed))))
 
         if not database.live:  # add total time of stream
-            total = database.get_total_time(stream['id'])
+            total = database.get_total_time(ID)
             display += " / {}".format(str(timedelta(seconds=int(total))))
         display += '<br>'
 
