@@ -659,7 +659,10 @@ class ServerDatabase(Database):
     def get_elapsed_time(self, stream):
         """ Gets the current length of time that a database has been playing for """
         first_data_point = self.redis.xrange('stream:'+stream, count=1)
-        start_time = self.redis_to_time(first_data_point[0][0])
+        if first_data_point:
+            start_time = self.redis_to_time(first_data_point[0][0])
+        else:
+            return 0
 
         if self.bookmarks.get(stream):
             current_time = self.redis_to_time(self.bookmarks[stream]['id'])
