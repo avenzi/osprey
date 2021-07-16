@@ -663,7 +663,10 @@ class ServerDatabase(Database):
         #print("HERE 2: ", first_data_point)
         start_time = self.redis_to_time(first_data_point[0][0])
 
-        current_time = self.redis_to_time(self.bookmarks[stream]['id'])
+        if self.bookmarks.get(stream):
+            current_time = self.redis_to_time(self.bookmarks[stream]['id'])
+        else:
+            current_time = start_time  # if no bookmark for this stream yet, it's at the beginning
         return current_time - start_time
 
 
