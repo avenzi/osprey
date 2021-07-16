@@ -43,13 +43,14 @@ def stream():
         database = get_database()
         if not database:  # no database found for this session
             print("Database not found for session: {}".format(session.sid))
-            return
+            return redirect(url_for('index'))
         info = database.read_group(group_name)
         return render_template(template_path, info=info, title=group_name)
     except TemplateNotFound as e:
         return render_template('/error.html', error="Template Not Found: \"{}\"".format(template_path))
     except DatabaseError as e:
         print("Could not read from database for template '{}'.".format(template_path))
+        return redirect(url_for('index'))
 
 
 @login_required

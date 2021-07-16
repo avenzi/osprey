@@ -164,7 +164,8 @@ def stream_time(group):
     """ Get the current time information to display for the given stream """
     database = get_database()
     if not database:
-        data = {}
+        print("Database not found")
+        return ""
 
     if not group:
         raise Exception("Stream time was requested, but no group ID was given")
@@ -182,5 +183,6 @@ def stream_time(group):
         if not database.live:  # add total time of stream
             total = database.get_total_time(stream['id'])
             display += " / {}".format(str(timedelta(seconds=int(total))))
+        display += '<br>'
 
     socketio.emit('stream_time', display, namespace='/browser', room=request.sid)

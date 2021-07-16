@@ -656,6 +656,7 @@ class ServerDatabase(Database):
             return diff
         else:
             print("NO TOTAL: ".format(first_data_point, last_data_point))
+            print("ID: ", stream)
             return 0
 
     @catch_connection_errors
