@@ -36,7 +36,7 @@ def catch_errors(handler):
             return handler(*args, **kwargs)
         except Exception as e:
             error("Server error in {}(): {}: {}".format(handler.__name__, e.__class__.__name__, e))
-            print_exc()
+            #print_exc()
     return wrapped_handler
 
 
@@ -144,9 +144,11 @@ def update_buttons():
 
     # if live database, check "STREAMING" key to set start/stop buttons
     if get_database().is_streaming():
+        print("IS STREAMING")
         set_button('start', disabled=True, text='Already streaming')
         set_button('stop', disabled=False, text='Stop streams and save file to disk')
     else:
+        print("NOT STREAMING")
         set_button('start', disabled=False, text='Start streams')
         set_button('stop', disabled=True, text='Streams are stopped')
 

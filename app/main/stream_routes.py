@@ -102,7 +102,7 @@ def plot_update():
         elif request_format == 'snapshot':
             data = database.read_snapshot(request_id, to_json=True)
         else:
-            err = 'Bokeh request for data specified an unknown request format: {}'.format(err)
+            err = 'Bokeh request for data specified an unknown request format: {}'.format(request_format)
             print(err)
             return err, 500
     except DatabaseError as e:
