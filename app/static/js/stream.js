@@ -10,17 +10,24 @@ function error(msg) {
     $('.logs p').prepend(`> <span style="color:red;font-weight:bold;">${msg}</span><br>`);
 }
 
+function get_id() {
+    // Gets the group ID of the current page
+    params = new URLSearchParams(document.location.search);
+    return params.get('id')
+}
+
 function get_plot() {
+    // todo: Use SocketIO instead just for consistency's sake?
     var req = new XMLHttpRequest();
     req.onreadystatechange = function() {
         if (req.readyState == 4 && req.status == 200)
             embed_plot(req.responseText);  // once data is received, embed the plot
     }
     url = window.location.pathname
-    queries = window.location.search
-    req.open("GET", url+'/plot_layout'+queries, true);
+    query = '?id=' + get_id()
+    req.open("GET", url+'/plot_layout'+query, true);
     req.send(null);   // send GET request for plot JSON
-    console.log('sent request: '+url+'/plot'+queries)
+    console.log('sent request: '+url+'/plot_layout'+query)
 }
 
 function embed_plot(text) {
@@ -55,6 +62,7 @@ function attempt_load(attempts) {
 $(document).ready(function() {
     var namespace = '/browser';  // namespace for talking with server
     var socket = io(namespace);
+    var id = get_id()  // group ID for this page
 
     socket.on('connect', function() {
         log("SocketIO connected to server");
@@ -78,7 +86,7 @@ $(document).ready(function() {
 
     // request time update every second
     setInterval(function() {
-        socket.emit('stream_time');
+        socket.emit('stream_time', id);
     }, 1000);
 
     socket.on('stream_time', function(data) {
