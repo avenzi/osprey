@@ -175,12 +175,12 @@ def stream_time(group):
         return
 
     display = ""
-    for ID, stream in streams.items():
-        elapsed = database.get_elapsed_time(ID)  # time elapsed to far in seconds
+    for stream in streams.values():
+        elapsed = database.get_elapsed_time(stream['id'])  # time elapsed to far in seconds
         display += "{}: {}".format(stream['name'], str(timedelta(seconds=elapsed)))
 
         if not database.live:  # add total time of stream
-            total = database.get_total_time(ID)
+            total = database.get_total_time(stream['id'])
             display += " / {}".format(str(timedelta(seconds=total)))
 
     socketio.emit('stream_time', display, namespace='/browser', room=request.sid)
