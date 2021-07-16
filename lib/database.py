@@ -643,6 +643,7 @@ class ServerDatabase(Database):
             else:  # playback is paused
                 return self.last_stop_time  # only return the time at which it was paused
 
+    @catch_connection_errors
     def get_total_time(self, stream):
         """ Gets the total length in time of a given stream """
         assert not self.live, "Cannot get total time of a live stream, only elapsed time."
@@ -654,13 +655,12 @@ class ServerDatabase(Database):
             diff = start_time - end_time
             return diff
 
+    @catch_connection_errors
     def get_elapsed_time(self, stream):
         """ Gets the current length of time that a database has been playing for """
         first_data_point = self.redis.xrange('stream:'+stream, count=1)
-        assert first_data_point, "Could not read first data point from database for stream '{}'".format(stream)
         start_time = self.redis_to_time(first_data_point[0][0])
 
-        assert self.bookmarks.get(stream) and self.bookmarks[stream]['id'], "Unable to get last read data point for stream '{}'".format(stream)
         current_time = self.redis_to_time(self.bookmarks[stream]['id'])
         return current_time - start_time
 
