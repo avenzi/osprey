@@ -649,6 +649,7 @@ class ServerDatabase(Database):
         assert not self.live, "Cannot get total time of a live stream, only elapsed time."
         first_data_point = self.redis.xrange('stream:'+stream, count=1)
         last_data_point = self.redis.xrevrange('stream:'+stream, count=1)
+        print("HERE: ", first_data_point, last_data_point)
         if first_data_point and last_data_point:
             start_time = self.redis_to_time(first_data_point[0][0])
             end_time = self.redis_to_time(last_data_point[0][0])
@@ -659,6 +660,7 @@ class ServerDatabase(Database):
     def get_elapsed_time(self, stream):
         """ Gets the current length of time that a database has been playing for """
         first_data_point = self.redis.xrange('stream:'+stream, count=1)
+        print("HERE 2: ", first_data_point)
         start_time = self.redis_to_time(first_data_point[0][0])
 
         current_time = self.redis_to_time(self.bookmarks[stream]['id'])
