@@ -33,6 +33,13 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### July 16th, 2021:
+
+​	I've written the necessary methods to retrieve time information from the database - one to get the currently elapsed time of a stream (both in live mode and playback mode), and one to get the total time in a playback stream. 
+​	In the process of adding this to bokeh_plot.html, I also refactored it a bit - I moved the Bokeh javascript to a separate stream.js file, and added SocketIO and jQuery compatability. I noticed that I was still using an XMLRequest to retrieve the Bokeh plot, so that's something I'll probably change in the future. It works fine for now so I didn't touch it - I'd change it just for the sake of consistency.
+
+​	When testing the get_elapsed_time() method, I kept getting a strange error when trying to parts data form my read_group() method. It turned out to be a problem parsing data from redis that I have just inadvertently overlooked when using it in the past. Some time ago I added a 'name' key to the "group:" data columns to identify the group name. However, stream names and their corresponding IDs are also in the same data column. When using read_group(), it actually returns that 'name' key and an empty dictionary as if it were a stream and corresponding info. This didn't cause any problems before because the index page just ignored the empty dictionary. It is now fixed - read_group() just ignores any keys it finds that doesn't have a corresponding "info:" data column.
+
 ##### July 15th, 2021:
 
 ​	I first needed to implement a way to keep track of the current playback time when a database connection is in playback mode. I did this by defining start_time and stop_time variables, and using a custom time() method to only return the time as if the start() and stop() methods stopped time. This means that my read_data() method can just use self.time() for both live mode and playback mode.
@@ -44,8 +51,6 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ​	After debugging the playback feature, I finally got it to work for the first time - I was able to play back data from a loaded database. There were a few problems I noticed though: First, the Test Group data column wasn't updating live. Each time I opened that page it would display a new chunk of data, but it wouldn't update live. I'm not sure why because other data streams were updating, including the Random Analyzer stream. I also noticed that when going back and forth between streams, there appeared to be a roughly 2-second time jump each time I switched from one to the other. Again this is really weird because each stream's last read data point shouldn't be affected by another.
 ​	I also found myself wishing I had a way to tell how long a stream is and where the playback currently is. I want to implement this next along with debugging the above problems. The tricky part about this is that a playback can be paused, so it isn't enough to just have the browser keep track of time - the browser would also have to know exactly which data point it currently has, and update in real time. Technically the browser does have this information, but I don't easily have access to it because the data polling and plotting is all handled by Bokeh. The best thing I can think of is to make a button that, when pressed, asks the server where it is in the playback. Of course this would not update live unless I made it automatically do this every second. Getting the total time of a stream should be simple, though - I just have to query the first and last data points and subtract their timestamps.
-
-
 
 ##### July 14th, 2021:
 
