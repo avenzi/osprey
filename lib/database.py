@@ -558,8 +558,6 @@ class ServerDatabase(Database):
         Live mode: Sets "STREAMING" key in database.
         Playback mode: Starts playback.
         """
-        if not self.first_start_time:
-            self.first_start_time = time()  # mark first start time if not already
         if self.live:
             self.redis.set('STREAMING', 1)  # set RUNNING key
         else:
