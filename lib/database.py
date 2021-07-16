@@ -654,6 +654,9 @@ class ServerDatabase(Database):
             end_time = self.redis_to_time(last_data_point[0][0])
             diff = end_time - start_time
             return diff
+        else:
+            print("NO TOTAL: ".format(first_data_point, last_data_point))
+            return 0
 
     @catch_connection_errors
     def get_elapsed_time(self, stream):
