@@ -41,7 +41,6 @@ $(document).ready(function() {
     var namespace = '/browser';  // namespace for talking with server
     var socket = io(namespace);
     var selected_file = ""  // currently selected file
-    var session = ""  // current session ID
 
     socket.on('connect', function() {
         log("SocketIO connected to server");

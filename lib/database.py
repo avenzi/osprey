@@ -194,12 +194,6 @@ class Database:
         self.exit = False  # flag to determine when to stop running if looping
         self.live = True   # Whether in live mode
 
-        # for playback mode
-        self.playback_speed = 1  # speed multiplier in playback mode (live mode False)
-        self.playback_active = False  # whether this connection is actively playing back
-        self.start_time = time()  # time playback was last started
-        self.stop_time = time()   # time playback was last paused
-
         # Dictionary to track last read position in the database for each data column
         # First level keys are the ID of each stream in the database. Values are Second level dictionaries.
         # Second level keys are "id" and "time", which are the last read database key and the real time it was read.
@@ -207,17 +201,10 @@ class Database:
 
     def time(self):
         """
-        Live mode: Get current time.
-        Playback mode: Get current playback time (affected by starting and stopping the playback).
+        Returns current time.
+        overwritten by ServerDatabase to implement in playback mode
         """
-        if self.live:
-            return time()
-        else:
-            if self.playback_active:  # playback is active
-                diff = time()-self.start_time  # time since started
-                return self.stop_time + diff  # time difference after last stopped
-            else:  # playback is paused
-                return self.stop_time  # only return the time at which it was paused
+        return time()
 
     def time_to_redis(self, unix_time):
         """ Convert unix time in seconds to a redis timestamp, which is a string of an int in milliseconds """
@@ -238,42 +225,17 @@ class Database:
         else:
             self.redis.ping()
 
-    def start(self):
-        """
-        Live mode: Sets "STREAMING" key in database.
-        Playback mode: Starts playback.
-        """
-        if self.live:
-            self.redis.set('STREAMING', 1)  # set RUNNING key
-        else:
-            self.playback_active = True
-            self.start_time = time()  # mark playback start time
-
-    def stop(self):
-        """
-        Live mode:  removes "RUNNING" key in database.
-        Playback mode: Pauses playback.
-        """
-        if self.live:
-            self.redis.delete('STREAMING')  # unset RUNNING key
-        else:
-            self.playback_active = False
-            self.stop_time = time()  # mark playback pause time
-
     def is_streaming(self):
         """
-        Live mode: Check database for "STREAMING" key.
-        Playback mode: Check self.playback_active property.
+        Checks whether database's "STREAMING" key is set.
+        Overwritten in ServerDatabase to implement this for plyaback mode.
         """
-        if self.live:
-            try:
-                if self.redis.get('STREAMING'):
-                    return True
-            except:
-                return False
+        try:
+            if self.redis.get('STREAMING'):
+                return True
+        except:
             return False
-        else:
-            return self.playback_active
+        return False
 
     @catch_connection_errors
     def write_data(self, stream, data):
@@ -356,8 +318,10 @@ class Database:
                     response = red.xread({'stream:'+stream: '$'}, block=1000)
                 else:  # return nothing and set info for next read
                     # set last read id to the first time stamp available, set last read time to now
-                    first_time_stamp = red.xrange('stream:'+stream, count=1)[0][0]
-                    self.bookmarks[stream] = {'id': first_time_stamp, 'time': self.time()}
+                    first_data_point = red.xrange('stream:'+stream, count=1)
+                    if first_data_point:
+                        first_time_stamp = first_data_point[0][0]
+                        self.bookmarks[stream] = {'id': first_time_stamp, 'time': self.time()}
                     response = None
 
         if not response:
@@ -569,10 +533,49 @@ class ServerDatabase(Database):
         self.file = file  # main database file to read from
         self.live_path = live_path  # path to live directory
         self.save_path = save_path  # path to save directory
-        print("NEW DATABASE:", self)
+
+        # for playback mode
+        self.playback_speed = 1  # speed multiplier in playback mode (live mode False)
+        self.playback_active = False  # whether this connection is actively playing back
+        self.last_start_time = time()  # time playback was last started
+        self.last_stop_time = time()   # time playback was last paused
 
     def __repr__(self):
         return "PORT: {}, LIVE: {}, FILE: {}".format(self.port, self.live, self.file)
+
+    def is_streaming(self):
+        """
+        Live mode: Check database for "STREAMING" key.
+        Playback mode: Check self.playback_active property.
+        """
+        if self.live:
+            super().is_streaming()
+        else:
+            return self.playback_active
+
+    def start(self):
+        """
+        Live mode: Sets "STREAMING" key in database.
+        Playback mode: Starts playback.
+        """
+        if not self.first_start_time:
+            self.first_start_time = time()  # mark first start time if not already
+        if self.live:
+            self.redis.set('STREAMING', 1)  # set RUNNING key
+        else:
+            self.last_start_time = time()  # mark last playback start time
+            self.playback_active = True
+
+    def stop(self):
+        """
+        Live mode:  removes "RUNNING" key in database.
+        Playback mode: Pauses playback.
+        """
+        if self.live:
+            self.redis.delete('STREAMING')  # unset RUNNING key
+        else:
+            self.last_stop_time = time()  # mark playback pause time
+            self.playback_active = False
 
     def save(self, filename=None, shutdown=False):
         """
@@ -625,6 +628,42 @@ class ServerDatabase(Database):
     def kill(self):
         """ manually kills the redis process by stopping activity on the port it's using """
         system("sudo fuser -k {}/tcp".format(self.port))
+
+    def time(self):
+        """
+        Live mode: Get current time.
+        Playback mode: Get current playback time (affected by starting and stopping the playback).
+        """
+        if self.live:
+            super().time()
+        else:
+            if self.playback_active:  # playback is active
+                diff = time()-self.last_start_time  # time since started
+                return self.last_stop_time + diff  # time difference after last stopped
+            else:  # playback is paused
+                return self.last_stop_time  # only return the time at which it was paused
+
+    def get_total_time(self, stream):
+        """ Gets the total length in time of a given stream """
+        assert not self.live, "Cannot get total time of a live stream, only elapsed time."
+        first_data_point = self.redis.xrange('stream:'+stream, count=1)
+        last_data_point = self.redis.xrevrange('stream:'+stream, count=1)
+        if first_data_point and last_data_point:
+            start_time = self.redis_to_time(first_data_point[0][0])
+            end_time = self.redis_to_time(last_data_point[0][0])
+            diff = start_time - end_time
+            return diff
+
+    def get_elapsed_time(self, stream):
+        """ Gets the current length of time that a database has been playing for """
+        first_data_point = self.redis.xrange('stream:'+stream, count=1)
+        assert first_data_point, "Could not read first data point from database for stream '{}'".format(stream)
+        start_time = self.redis_to_time(first_data_point[0][0])
+
+        assert self.bookmarks.get(stream) and self.bookmarks[stream]['id'], "Unable to get last read data point for stream '{}'".format(stream)
+        current_time = self.redis_to_time(self.bookmarks[stream]['id'])
+        return current_time - start_time
+
 
 
 
