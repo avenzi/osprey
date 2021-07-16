@@ -13,7 +13,7 @@ function error(msg) {
 function get_id() {
     // Gets the group ID of the current page
     params = new URLSearchParams(document.location.search);
-    return params.get('id')
+    return params.get('group')
 }
 
 function get_plot() {
@@ -24,7 +24,7 @@ function get_plot() {
             embed_plot(req.responseText);  // once data is received, embed the plot
     }
     url = window.location.pathname
-    query = '?id=' + get_id()
+    query = '?group=' + get_id()
     req.open("GET", url+'/plot_layout'+query, true);
     req.send(null);   // send GET request for plot JSON
     console.log('sent request: '+url+'/plot_layout'+query)
