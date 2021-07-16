@@ -232,12 +232,9 @@ class Database:
         """
         try:
             if self.redis.get('STREAMING'):
-                print("FOUND STREAMING")
                 return True
         except:
-            print("ERROR GETTING STREAMING KEY")
             return False
-        print("NO ERROR, NOT STREAMING")
         return False
 
     @catch_connection_errors
@@ -602,7 +599,7 @@ class ServerDatabase(Database):
         Playback mode: Check self.playback_active property.
         """
         if self.live:
-            super().is_streaming()
+            return super().is_streaming()
         else:
             return self.playback_active
 
