@@ -509,7 +509,9 @@ class Database:
         else:  # no stream name specified - get whole group
             data = {}  # name: {stream info dict}
             group = self.redis.hgetall('group:'+name)  # name:ID
+            print("GET GROUP: ", group)
             for key in group.keys():  # for each stream name
+                print("KEY: ", key, "INFO: ", group[key])
                 data[key] = self.read_info(group[key])
             return data
 
