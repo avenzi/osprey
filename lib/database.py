@@ -683,7 +683,7 @@ class ServerDatabase(Database):
         Playback mode: Get current playback time (affected by starting and stopping the playback).
         """
         if self.live:
-            super().time()
+            return super().time()
         else:
             if self.playback_active:  # playback is active
                 diff = time()-self.last_start_time  # time since started
