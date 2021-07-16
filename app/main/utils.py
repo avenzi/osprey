@@ -144,11 +144,9 @@ def update_buttons():
 
     # if live database, check "STREAMING" key to set start/stop buttons
     if get_database().is_streaming():
-        print("IS STREAMING")
         set_button('start', disabled=True, text='Already streaming')
         set_button('stop', disabled=False, text='Stop streams and save file to disk')
     else:
-        print("NOT STREAMING")
         set_button('start', disabled=False, text='Start streams')
         set_button('stop', disabled=True, text='Streams are stopped')
 
