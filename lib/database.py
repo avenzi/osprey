@@ -344,6 +344,7 @@ class Database:
             if last_read:  # last read spot exists
                 last_read_id = last_read['id']
                 last_read_time = last_read['time']
+                temptime = self.time()
                 time_since = self.time()-last_read_time  # time since last read
                 if max_time and time_since > max_time:
                     # if time since last read is greater than set maximum,
@@ -358,7 +359,7 @@ class Database:
                     max_read_id = self.time_to_redis(new_id)
                     response = red.xrange('stream:'+stream, min=last_read_id, max=max_read_id)
                     m = "FULLR" if response else "EMPTY"
-                    print("\n------ [{}] {}. last_read_time: {}, time_since: {}, \n--------- last_read_id: {}, max_id: {}".format(stream, m, last_read_time, time_since, last_read_id, max_read_id))
+                    print("\n------ [{}] {}. last_read_time: {}, now_time: {}, \n-----------time_since: {}, last_read_id: {}, max_id: {}".format(stream, m, last_read_time, temptime, time_since, last_read_id, max_read_id))
 
             else:  # no last read spot
                 if self.live:  # start reading from latest, block for 1 sec
