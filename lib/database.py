@@ -344,6 +344,7 @@ class Database:
             if last_read:  # last read spot exists
                 last_read_id = last_read['id']
                 last_read_time = last_read['time']
+                temptime = self.time()
                 time_since = self.time()-last_read_time  # time since last read
                 if max_time and time_since > max_time:
                     # if time since last read is greater than set maximum,
