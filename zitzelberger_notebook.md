@@ -33,6 +33,14 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### July 17th, 2021:
+
+​	The first bug that I fixed was the last one I mentioned yesterday - where stopping the playback would jump the stream ahead by some number of seconds. I figured out that the problem was that while self.last_start_time is an absolute time, self.last_stop_time is relative (it's relative to the "time" with respect to the stream, which is currently paused and not moving forward). The mistake was that when the stop button was pressed, I was moving self.last_stop_time up to the current absolute time(), which is wrong since it must be relative to the current time *relative to the stream time*. To fix this, instead of setting self.last_stop_time to time() in the database stop() method, it is instead set to self.time(), which returns a relative time in playback mode. Also, I changed the variable names to reflect this distinction. self.last_start_time is now self.real_start_time, and self.last_stop_time is now self.relative_stop_time.
+
+
+
+
+
 ##### July 16th, 2021:
 
 ​	I've written the necessary methods to retrieve time information from the database - one to get the currently elapsed time of a stream (both in live mode and playback mode), and one to get the total time in a playback stream. 

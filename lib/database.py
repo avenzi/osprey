@@ -344,7 +344,6 @@ class Database:
             if last_read:  # last read spot exists
                 last_read_id = last_read['id']
                 last_read_time = last_read['time']
-                temptime = self.time()
                 time_since = self.time()-last_read_time  # time since last read
                 if max_time and time_since > max_time:
                     # if time since last read is greater than set maximum,
@@ -396,6 +395,7 @@ class Database:
         #  the actual data is in response[0][1].
         else:
             self.bookmarks[stream]['id'] = response[0][1][-1][0]  # store last timestamp
+            print("RESP", response[0][1][-1][0])
             data_list = response[0][1]  # get list of data dicts
 
         # create final output dict
