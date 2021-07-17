@@ -358,7 +358,7 @@ class Database:
                     max_read_id = self.time_to_redis(new_id)
                     response = red.xrange('stream:'+stream, min=last_read_id, max=max_read_id)
                     m = "FULLR" if response else "EMPTY"
-                    #print("[2] [{}] {}. last_read: {}, time_since: {}, last_read_id: {}, max: {}".format(stream, m, last_read, time_since, last_read_id, max_read_id))
+                    print("\n------ [{}] {}. last_read_time: {}, time_since: {}, \n--------- last_read_id: {}, max_id: {}".format(stream, m, last_read_time, time_since, last_read_id, max_read_id))
 
             else:  # no last read spot
                 if self.live:  # start reading from latest, block for 1 sec
@@ -489,7 +489,7 @@ class Database:
                 response = red.xrevrange('stream:'+stream, max=max_read_id, count=1)
             else:  # no first read spot exists
                 response = red.xrange('stream:'+stream, count=1)  # get the first one
-                self.bookmarks[stream] = {'id': self.time_to_redis(0), 'time': self.time()}
+                self.bookmarks[stream] = {'id': self.time_to_redis(0), 'time': self.last_start_time}
 
         if not response:
             return None
