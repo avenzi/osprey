@@ -357,7 +357,9 @@ class Database:
                 else:  # read from last ID to ID given by time_since
                     new_id = self.redis_to_time(last_read_id) + time_since
                     max_read_id = self.time_to_redis(new_id)
-                    response = red.xrange('stream:'+stream, min=last_read_id, max=max_read_id)
+
+                    # Redis uses the prefix "(" to represent an exclusive interval for XRANGE
+                    response = red.xrange('stream:'+stream, min='('+last_read_id, max=max_read_id)
                     m = "FULLR" if response else "EMPTY"
                     print("\n------ [{}] {}. last_read_time: {}, now_time: {}, \n-----------time_since: {}, last_read_id: {}, max_id: {}".format(stream, m, last_read_time, temptime, time_since, last_read_id, max_read_id))
 
@@ -370,7 +372,7 @@ class Database:
                     first_data_point = red.xrange('stream:'+stream, count=1)
                     if first_data_point:
                         first_time_stamp = first_data_point[0][0]
-                        self.bookmarks[stream] = {'id': first_time_stamp, 'time': self.real_start_time}
+                        self.bookmarks[stream] = {'id': first_time_stamp, 'time': self.time()}
                     response = None
 
         if not response:
@@ -491,7 +493,7 @@ class Database:
                 response = red.xrevrange('stream:'+stream, max=max_read_id, count=1)
             else:  # no first read spot exists
                 response = red.xrange('stream:'+stream, count=1)  # get the first one
-                self.bookmarks[stream] = {'id': self.time_to_redis(0), 'time': self.real_start_time}
+                self.bookmarks[stream] = {'id': self.time_to_redis(0), 'time': self.time()}
 
         if not response:
             return None
