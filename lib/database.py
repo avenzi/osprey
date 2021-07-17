@@ -388,7 +388,7 @@ class Database:
         #  XRANGE is used, which gives a list of dictionaries
         if count or not self.live:
             self.bookmarks[stream]['id'] = response[-1][0]  # store last timestamp
-            print("RESP", response[-1][0])
+            print("RESP", response)
             data_list = response  # get list of data dicts
 
         # If count isn't given and in live mode,
