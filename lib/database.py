@@ -201,9 +201,9 @@ class Database:
 
         # for playback mode
         self.playback_speed = 1  # speed multiplier in playback mode (live mode False)
-        self.playback_active = False  # whether this connection is actively playing back
-        self.last_start_time = time()  # time playback was last started
-        self.last_stop_time = time()   # time playback was last paused
+        self.playback_active = False       # whether this connection is actively playing back
+        self.real_start_time = time()      # absolute time playback was last started
+        self.relative_stop_time = time()   # time (relative to playback) that playback was last paused
 
     def time(self):
         """
@@ -214,10 +214,10 @@ class Database:
             return time()
         else:
             if self.playback_active:  # playback is active
-                diff = time()-self.last_start_time  # time since started
-                return self.last_stop_time + diff  # time difference after last stopped
+                diff = time()-self.real_start_time  # time since started
+                return self.relative_stop_time + diff  # time difference after last stopped
             else:  # playback is paused
-                return self.last_stop_time  # only return the time at which it was paused
+                return self.relative_stop_time  # only return the time at which it was paused
 
     def time_to_redis(self, unix_time):
         """ Convert unix time in seconds to a redis timestamp, which is a string of an int in milliseconds """
@@ -370,7 +370,7 @@ class Database:
                     first_data_point = red.xrange('stream:'+stream, count=1)
                     if first_data_point:
                         first_time_stamp = first_data_point[0][0]
-                        self.bookmarks[stream] = {'id': first_time_stamp, 'time': self.last_start_time}
+                        self.bookmarks[stream] = {'id': first_time_stamp, 'time': self.real_start_time}
                     response = None
 
         if not response:
@@ -490,7 +490,7 @@ class Database:
                 response = red.xrevrange('stream:'+stream, max=max_read_id, count=1)
             else:  # no first read spot exists
                 response = red.xrange('stream:'+stream, count=1)  # get the first one
-                self.bookmarks[stream] = {'id': self.time_to_redis(0), 'time': self.last_start_time}
+                self.bookmarks[stream] = {'id': self.time_to_redis(0), 'time': self.real_start_time}
 
         if not response:
             return None
@@ -644,7 +644,7 @@ class ServerDatabase(Database):
         if self.live:
             self.redis.set('STREAMING', 1)  # set RUNNING key
         else:
-            self.last_start_time = time()  # mark last playback start time
+            self.real_start_time = time()  # mark last playback start time
             self.playback_active = True
 
     def stop(self):
@@ -655,7 +655,7 @@ class ServerDatabase(Database):
         if self.live:
             self.redis.delete('STREAMING')  # unset RUNNING key
         else:
-            self.last_stop_time = time()  # mark playback pause time
+            self.relative_stop_time = self.time()  # mark playback pause time relative to playback
             self.playback_active = False
 
     def save(self, filename=None, shutdown=False):
