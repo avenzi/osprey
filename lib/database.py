@@ -456,8 +456,7 @@ class Database:
 
                     # Redis uses the prefix "(" to represent an exclusive interval for XRANGE
                     response = red.xrange('stream:'+stream, min='('+last_read_id, max=max_read_id)
-
-                    print("\n[{}] now_time: {}, time_since: {}, \n    last_read_id: {},   max_id: {}".format(stream[:5], h(temptime), h(time_since_first), h(last_read_id), h(max_read_id)))
+                    #print("\n[{}] now_time: {}, time_since: {}, \n    last_read_id: {},   max_id: {}".format(stream[:5], h(temptime), h(time_since_first), h(last_read_id), h(max_read_id)))
 
             else:  # no last read spot
                 if self.live:  # start reading from latest, block for 1 sec
@@ -607,7 +606,7 @@ class Database:
                 new_id = self.redis_to_time(first_read_id) + time_since_first
                 max_read_id = self.time_to_redis(new_id)
                 response = red.xrevrange('stream:'+stream, min='('+last_read_id, max=max_read_id, count=1)
-                print("\n[{}] now_time: {}, time_since: {}, \n    last_read_id: {},   max_id: {}".format(stream[:5], h(temptime), h(time_since_first), h(last_read_id), h(max_read_id)))
+                #print("\n[{}] now_time: {}, time_since: {}, \n    last_read_id: {},   max_id: {}".format(stream[:5], h(temptime), h(time_since_first), h(last_read_id), h(max_read_id)))
 
             else:  # no first read spot exists
                 response = red.xrange('stream:'+stream, count=1)  # get the first one
