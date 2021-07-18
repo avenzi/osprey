@@ -433,7 +433,7 @@ class Database:
                     response = red.xread({'stream:' + stream: last_read_id})
 
                 else:  # calculate new ID by how much time has passed between now and beginning
-                    first_read_id = info['fist_id']
+                    first_read_id = info['first_id']
                     first_read_time = info['first_time']
                     time_since_first = self.time()-first_read_time
                     new_id = self.redis_to_time(first_read_id) + time_since_first
@@ -585,7 +585,7 @@ class Database:
             if info:  # last read spot exists
                 last_read_id = info['last_id']
                 last_read_time = info['last_time']
-                first_read_id = info['fist_id']
+                first_read_id = info['first_id']
                 first_read_time = info['first_time']
                 temptime = self.time()
                 time_since_first = self.time() - first_read_time
