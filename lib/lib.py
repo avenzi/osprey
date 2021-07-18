@@ -125,10 +125,12 @@ class Base:
         err = "Process: {}\nThread: {}\nERROR: {}\n".format(current_process().name, current_thread().name, msg)
         if cause is not None:
             err += "CAUSE: {}\n".format(cause)
-        self.display(err)
         if trace:
-            traceback.print_stack()
-            traceback.print_exc()
+            with Base.log_lock:  # get exclusive lock on outputs
+                traceback.print_stack()
+                traceback.print_exc()
+        self.display(err)
+
 
     def generate_uuid(self):
         """ Return a UUID as a URN string """
