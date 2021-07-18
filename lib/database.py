@@ -232,7 +232,11 @@ class Database:
 
     def time_to_redis(self, unix_time):
         """ Convert unix time (ms) to a redis timestamp (ms) """
-        string_time = "{:.20f}".format(unix_time)  # ensure exact precision
+        # ensure exact precision of 12 decimal points
+        # redis timestamps can handle any integer time in milliseconds
+        # followed by a hyphen and then a 64-bit sequence number.
+        # This means that the sequence number can't be over 2^64, so like ~19 decimal points
+        string_time = "{:.12f}".format(unix_time)  
         ms, num = string_time.split('.')  # split at decimal
         return ms + '-' + num  # convert to redis format
 
