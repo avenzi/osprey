@@ -337,18 +337,20 @@ class Database:
 
             # add data to the Redis database one data point at a time
             #  because there isn't a mass-insert-to-stream command
+            ids = []
             for i in range(length):
                 d = {}
                 for key in data.keys():
                     d[key] = data[key][i]
                 time_id = self.time_to_redis(data['time'][i])  # redis time stamp in which to insert
-                try:
-                    pipe.xadd('stream:'+stream, d, id=time_id)
-                except redis.exceptions.ResponseError as e:
-                    print(e)
-                    print(time_id)
+                ids.append(time_id)
+                pipe.xadd('stream:'+stream, d, id=time_id)
 
-            pipe.execute()
+            try:
+                pipe.execute()
+            except redis.exceptions.ResponseError as e:
+                print(e)
+                print(ids)
         else:  # assume this is a single data point
             time_id = self.time_to_redis(data['time'])  # redis time stamp in which to insert
             self.redis.xadd('stream:'+stream, {key: data[key] for key in data.keys()}, id=time_id)
@@ -515,7 +517,12 @@ class Database:
                 new_data[key] = ','.join(str(val) for val in data[key])
 
         time_id = self.time_to_redis(data['time'])  # redis time stamp in which to insert
-        self.redis.xadd('stream:'+stream, new_data, id=time_id)
+
+        try:
+            self.redis.xadd('stream:' + stream, new_data, id=time_id)
+        except redis.exceptions.ResponseError as e:
+            print(e)
+            print(time_id)
 
     @catch_connection_errors
     def read_snapshot(self, stream, to_json=False, decode=True):
