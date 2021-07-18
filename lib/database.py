@@ -436,7 +436,7 @@ class Database:
                     # Redis uses the prefix "(" to represent an exclusive interval for XRANGE
                     response = red.xrange('stream:'+stream, min='('+last_read_id, max=max_read_id)
 
-                    print("\n[{}] last_read_time: {}, now_time: {}, time_since: {}, \n          last_read_id: {}, max_id: {}".format(stream[:5], h(last_read_time), h(temptime), h(time_since), h(time_since), h(last_read_id), h(max_read_id)))
+                    print("\n[{}] last_read_time: {}, now_time: {}, time_since: {}, \n        last_read_id: {}, max_id: {}".format(stream[:5], h(last_read_time), h(temptime), h(time_since), h(last_read_id), h(max_read_id)))
 
             else:  # no last read spot
                 if self.live:  # start reading from latest, block for 1 sec
@@ -581,7 +581,7 @@ class Database:
                 new_id = self.redis_to_time(last_read_id) + time_since
                 max_read_id = self.time_to_redis(new_id)
                 response = red.xrevrange('stream:'+stream, min='('+last_read_id, max=max_read_id, count=1)
-                print("\n[{}] last_read_time: {}, now_time: {}, time_since: {}, \n          last_read_id: {}, max_id: {}".format(stream[:5], h(last_read_time), h(temptime), h(time_since), h(time_since), h(last_read_id), h(max_read_id)))
+                print("\n[{}] last_read_time: {}, now_time: {}, time_since: {}, \n        last_read_id: {}, max_id: {}".format(stream[:5], h(last_read_time), h(temptime), h(time_since), h(last_read_id), h(max_read_id)))
 
             else:  # no first read spot exists
                 response = red.xrange('stream:'+stream, count=1)  # get the first one
@@ -599,7 +599,6 @@ class Database:
 
         # store the last timestamp ID in this response
         self.read_bookmarks[stream]['id'] = response[-1][0]  # store last timestamp
-        print("storing: {}", response[-1][0])
 
         data = response[0][1]  # data dict
         keys = data.keys()  # get keys from data dict
