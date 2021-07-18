@@ -343,6 +343,7 @@ class Database:
 
             pipe.execute()
         else:  # assume this is a single data point
+            print("STREAM: {}, DATAKEYS: {}".format(stream, data.keys()))
             self.redis.xadd('stream:'+stream, {key: data[key] for key in data.keys()}, id=data['time'])
 
     @catch_connection_errors
