@@ -461,39 +461,32 @@ class Database:
             else:  # no last read spot
                 if self.live:  # start reading from latest, block for 1 sec
                     response = red.xread({'stream:'+stream: '$'}, block=1000)
-                else:  # return nothing and set info for next read
-                    # set last read id to the first time stamp available
-                    # set last read time to the time that playback was started
-                    first_data_point = red.xrange('stream:'+stream, count=1)
-                    if first_data_point:
-                        first_time_stamp = first_data_point[0][0]
-                        self.read_bookmarks[stream] = {'last_id': first_time_stamp,
-                                                       'last_time': self.time(),
-                                                       'first_id': first_time_stamp,
-                                                       'first_time': self.time()}
-                    response = None
+                else:  # return first written data point
+                    response = red.xrange('stream:'+stream, count=1)
 
         if not response:
             return None
 
+        # If count is given or in playback mode, XRANGE is used, which gives a list of dicts.
+        #   this means that the data is stored in response.
+        # If in live mode without a count, XREAD is used, which gives a a list of tuples
+        #   (one for each stream read from), each of which contains a list of dicts. But since
+        #   we are only reading from one stream, the data is stored in response[0][1]
+
+        # set first-read info
         if not self.read_bookmarks.get(stream):
             self.read_bookmarks[stream] = {}
+            self.read_bookmarks['first_time'] = self.time()  # get first time
+            if count or not self.live:
+                self.read_bookmarks['first_id'] = response[-1][0]  # get first ID
+            else:
+                self.read_bookmarks['first_id'] = response[0][1][-1][0]
 
-        # set last read time
+        # set last-read info
         self.read_bookmarks[stream]['last_time'] = self.time()
-
-        # store the last timestamp ID in this response
-
-        # If count is given or in playback mode,
-        #  XRANGE is used, which gives a list of dictionaries
         if count or not self.live:
             self.read_bookmarks[stream]['last_id'] = response[-1][0]  # store last timestamp
             data_list = response  # get list of data dicts
-
-        # If count isn't given and in live mode,
-        #  XREAD is used, which gives a list of tuples.
-        # But since we read from only one stream,
-        #  the actual data is in response[0][1].
         else:
             self.read_bookmarks[stream]['last_id'] = response[0][1][-1][0]  # store last timestamp
             data_list = response[0][1]  # get list of data dicts
@@ -610,22 +603,18 @@ class Database:
 
             else:  # no first read spot exists
                 response = red.xrange('stream:'+stream, count=1)  # get the first one
-                if response:
-                    self.read_bookmarks[stream] = {'last_id': response[-1][0],
-                                                   'last_time': self.time(),
-                                                   'first_id': response[-1][0],
-                                                   'first_time': self.time()}
 
         if not response:
             return None
 
+        # set first-read info
         if not self.read_bookmarks.get(stream):
             self.read_bookmarks[stream] = {}
+            self.read_bookmarks[stream]['first_id'] = response[-1][0]
+            self.read_bookmarks[stream]['first_time'] = self.time()
 
-        # set last read time
+        # set last-read info
         self.read_bookmarks[stream]['last_time'] = self.time()
-
-        # store the last timestamp ID in this response
         self.read_bookmarks[stream]['last_id'] = response[-1][0]  # store last timestamp
 
         data = response[0][1]  # data dict
