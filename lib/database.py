@@ -3,6 +3,7 @@ import functools
 import json
 from os import system, path
 from traceback import print_exc, print_stack
+from numpy import ndarray
 
 import redis
 from redistimeseries.client import Client as RedisTS
@@ -263,6 +264,15 @@ class Database:
         else:
             return self.playback_active
 
+    def valid_list(self, data):
+        """ Checks if the given data is in a valid 'listy' format for ordered data """
+        # todo: can this be more robust? Other possible formats?
+        #  I tried to use "hasattr(type(data), '__iter__')" but that
+        #     returns True for strings and byte arrays.
+        if isinstance(data, (list, ndarray, tuple)):
+            return True
+        return False
+
     @catch_connection_errors
     def get_total_time(self, stream):
         """ Gets the total length in time of a given stream in seconds """
@@ -309,7 +319,7 @@ class Database:
         # make sure all values are the same size
         sizes = set()
         for val in data.values():
-            if hasattr(type(val), '__iter__'):  # iterable
+            if self.valid_list(val):  # iterable
                 sizes.add(len(val))
             else:  # non-iterable
                 sizes.add(None)
@@ -318,7 +328,7 @@ class Database:
         elif len(sizes) == 0:  # no data?
             raise DatabaseError("Data input contained no data columns? : {}".format(data))
 
-        if hasattr(type(list(data.values())[0]), '__iter__'):  # if an iterable sequence of data points
+        if self.valid_list(list(data.values())[0]):  # if an iterable sequence of data points
             pipe = self.redis.pipeline()  # pipeline queues a series of commands at once
             length = len(list(data.values())[0])  # length of data (all must be the same)
 

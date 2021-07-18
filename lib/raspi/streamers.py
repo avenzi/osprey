@@ -161,7 +161,6 @@ class VideoStreamer(Streamer):
         )
         sleep(2)  # let camera warm up for a sec. Does weird stuff otherwise.
 
-
     def stop(self):
         """
         HTTPRequest method STOP
