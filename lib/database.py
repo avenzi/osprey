@@ -579,8 +579,6 @@ class Database:
                 response = red.xrange('stream:'+stream, count=1)  # get the first one
                 if response:
                     self.read_bookmarks[stream] = {'id': response[0][0], 'time': self.time()}
-                else:
-                    print("no respopnse????")
 
         if not response:
             return None
@@ -594,7 +592,7 @@ class Database:
             self.read_bookmarks[stream]['time'] = self.time()
 
             # store the last timestamp ID in this response
-            self.read_bookmarks[stream]['id'] = response[-1][0]  # store last timestamp
+            self.read_bookmarks[stream]['id'] = response[0][0]  # store last timestamp
 
         data = response[0][1]  # data dict
         keys = data.keys()  # get keys from data dict
