@@ -332,10 +332,8 @@ class Database:
 
         if self.read_bookmarks.get(stream):
             current_time = self.redis_to_time(self.read_bookmarks[stream]['id'])
-            print("CUR: ", current_time)
         else:
             current_time = start_time  # if no bookmark for this stream yet, it's at the beginning
-            print("STR: ",  current_time)
         return (current_time - start_time)/1000  # ms to s
 
     @catch_connection_errors
@@ -581,6 +579,8 @@ class Database:
                 response = red.xrange('stream:'+stream, count=1)  # get the first one
                 if response:
                     self.read_bookmarks[stream] = {'id': response[0][0], 'time': self.time()}
+                else:
+                    print("no respopnse????")
 
         if not response:
             return None
