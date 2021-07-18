@@ -8,4 +8,6 @@ RTIMULib==7.2.1
 sense-hat>=2.2.0
 
 redis==3.5.3
+redistimeseries>=1.4.3
+
 python-socketio[client]>=5.3.0
