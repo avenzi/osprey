@@ -343,8 +343,8 @@ class Database:
 
             pipe.execute()
         else:  # assume this is a single data point
-            print("STREAM: {}, DATAKEYS: {}".format(stream, data.keys()))
-            self.redis.xadd('stream:'+stream, {key: data[key] for key in data.keys()}, id=data['time'])
+            time_id = self.time_to_redis(data['time'])  # redis time stamp in which to insert
+            self.redis.xadd('stream:'+stream, {key: data[key] for key in data.keys()}, id=time_id)
 
     @catch_connection_errors
     def read_data(self, stream, count=None, max_time=None, numerical=True, to_json=False, decode=True):
@@ -503,10 +503,12 @@ class Database:
         new_data = {}
         for key in data.keys():
             if key == 'time':
-                continue
-            new_data[key] = ','.join(str(val) for val in data[key])
+                new_data['time'] = data['time']
+            else:
+                new_data[key] = ','.join(str(val) for val in data[key])
 
-        self.redis.xadd('stream:'+stream, new_data, id=data['time'])
+        time_id = self.time_to_redis(data['time'])  # redis time stamp in which to insert
+        self.redis.xadd('stream:'+stream, new_data, id=time_id)
 
     @catch_connection_errors
     def read_snapshot(self, stream, to_json=False, decode=True):
