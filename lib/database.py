@@ -238,7 +238,8 @@ class Database:
 
     def redis_to_time(self, redis_time):
         """ Convert redis time stand to unix time stamp in milliseconds"""
-        return float(redis_time.split('-')[0])
+        ms, num = redis_time.split('-')
+        return float(ms)+float(num)
 
     def ping(self, catch_error=True):
         """ Ping database to ensure connecting is functioning """
