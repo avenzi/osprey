@@ -228,7 +228,6 @@ class Database:
         self.real_start_time = time()*1000      # absolute time playback was last started (ms)
         self.relative_stop_time = time()*1000   # time (relative to playback) that playback was last paused (ms)
 
-
     def time(self):
         """
         Live mode: Get current time in milliseconds.
@@ -269,10 +268,7 @@ class Database:
         if int(redis_id) == last_write:  # same millisecond
             redis_id = redis_id + '-' + str(last_seq+1)
             self.write_bookmarks[stream]['n'] = last_seq+1
-            print("NEW: {}".format(redis_id))
         return redis_id
-
-
 
     def ping(self, catch_error=True):
         """ Ping database to ensure connecting is functioning """
@@ -332,7 +328,7 @@ class Database:
         if first_data_point:
             start_time = self.redis_to_time(first_data_point[0][0])
         else:
-            return 0
+            return -1
 
         if self.read_bookmarks.get(stream):
             current_time = self.redis_to_time(self.read_bookmarks[stream]['id'])

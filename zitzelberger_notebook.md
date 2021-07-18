@@ -33,6 +33,12 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### July 18th, 2021:
+
+​	Alright so I have a wrote a new method called Database.validate_redis_time() which takes in a redis timestamp returned by Database.time_to_redis() and a stream ID. It checks to make sure the timestamp is greater than the last one used for that stream, and if not it adds a redis-style sequence number to the timestamp. The benefit of this is that I can now completely control the Redis timestamp ID of a given data insertion, meaning that the playback of database files will be true to when the data was collected by the measurement device, not the database. The downside is that this adds some overhead to reading and writing to the database - thought I haven't *noticed* any performance issues. Also the redis timestamps gen are only accurate to the millisecond, which means that any timestamps taken by a measurement device which are more accurate will not be reflected in the redis timestamps. This only affects visual playback - of course the fully accurate timestamps are stored along side it for analysis. Again, I am hopeful that this will all go away when we move to a database designed specifically for time series data. Still, I would like to try and implement RedisTimeSeries before we go that far, because form what I can tell they circumvent this problem with the Redis Stream data type and make everything much nicer. Regardless, that will have to come at a future time.
+
+​	
+
 ##### July 17th, 2021:
 
 ​	The first bug that I fixed was the last one I mentioned yesterday - where stopping the playback would jump the stream ahead by some number of seconds. I figured out that the problem was that while self.last_start_time is an absolute time, self.last_stop_time is relative (it's relative to the "time" with respect to the stream, which is currently paused and not moving forward). The mistake was that when the stop button was pressed, I was moving self.last_stop_time up to the current absolute time(), which is wrong since it must be relative to the current time *relative to the stream time*. To fix this, instead of setting self.last_stop_time to time() in the database stop() method, it is instead set to self.time(), which returns a relative time in playback mode. Also, I changed the variable names to reflect this distinction. self.last_start_time is now self.real_start_time, and self.last_stop_time is now self.relative_stop_time.
