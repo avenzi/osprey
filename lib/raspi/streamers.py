@@ -23,7 +23,7 @@ class TestStreamer(Streamer):
             self.val_1 += random()-0.5
             self.val_2 += random()-0.5
             self.val_3 += random()-0.5
-            data['time'].append(time()*1000)
+            data['time'].append(time()*1000)  # seconds to milliseconds
             data['val_1'].append(self.val_1)
             data['val_2'].append(self.val_2)
             data['val_3'].append(self.val_3)
@@ -212,7 +212,7 @@ class SynthEEGStreamer(Streamer):
         except Exception as e:
             return
 
-        # convert from epoch time to relative time since session start
+        # convert from unix time (in s) to ms
         data['time'] = list(raw_data[self.time_channel]*1000)
 
         for i, j in enumerate(self.eeg_channel_indexes):
@@ -279,7 +279,7 @@ class EEGStreamer(Streamer):
         except Exception as e:
             return
 
-        # convert from epoch time to relative time since session start
+        # convert from unix time (in s) to ms
         data['time'] = list(raw_data[self.time_channel]*1000)
 
         for i, j in enumerate(self.eeg_channel_indexes):
@@ -368,7 +368,7 @@ class ECGStreamer(Streamer):
         except Exception as e:
             return
 
-        # convert from epoch time to relative time since session start
+        # convert from unix time (in s) to ms
         data['time'] = list(raw_data[self.time_channel]*1000)
 
         for i, j in enumerate(self.pulse_channel_indexes):

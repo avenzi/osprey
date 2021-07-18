@@ -34,7 +34,9 @@ def stream():
     # get stream page template
     file = server_stream_config.pages.get(group_name)
     if not file:
-        print("No stream page configured for: {}".format(group_name))
+        err = "No stream page configured for: {}".format(group_name)
+        print(err)
+        flash(err)
         return redirect(url_for('index'))
 
     template_path = '/streams/{}'.format(file)

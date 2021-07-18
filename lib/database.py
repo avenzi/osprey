@@ -229,12 +229,13 @@ class Database:
                 return self.relative_stop_time  # only return the time at which it was paused
 
     def time_to_redis(self, unix_time):
-        """ Convert unix time in seconds to a redis timestamp, which is a string of an int in milliseconds """
-        return str(int(1000*unix_time))
+        """ Convert unix time to a redis timestamp (all in milliseconds) """
+        return str(int(unix_time))
 
     def redis_to_time(self, redis_time):
-        """ Convert redis time stand to unix time stamp in seconds """
-        return float(redis_time.split('-')[0])/1000
+        """ Convert redis time stand to unix time stamp in milliseconds"""
+        t = redis_time.split('-')
+        return float(t[0])+float(t[1])
 
     def ping(self, catch_error=True):
         """ Ping database to ensure connecting is functioning """
@@ -300,7 +301,7 @@ class Database:
         If <data> is a dictionary of items where keys are column names.
         Items must either all be iterable or all non-iterable.
         All Items (if iterable) must be of same length.
-        Must include a 'time' column with unix time stamps in seconds.
+        Must include a 'time' column with unix time stamps in milliseconds.
         """
         if not data.get('time'):  # check for time key
             raise DatabaseError("Data input dictionary must contain a 'time' key.")
