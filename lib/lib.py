@@ -127,8 +127,7 @@ class Base:
             err += "CAUSE: {}\n".format(cause)
         self.display(err)
         if trace:
-            with Base.log_lock:
-                traceback.print_exc()
+            traceback.print_exc()
 
     def generate_uuid(self):
         """ Return a UUID as a URN string """
