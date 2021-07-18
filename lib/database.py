@@ -222,6 +222,7 @@ class Database:
         # "last_id":    last read database timestamp ID
         # "last_time":  real time when last read
         # "first_time":  real time when first read
+        # "end_id": last database timestamp ID in the stream.
         self.read_bookmarks = {}
 
         # Similar to read_bookmarks, but for writes.
@@ -316,31 +317,45 @@ class Database:
     def get_total_time(self, stream):
         """ Gets the total length in time of a given stream in seconds """
         assert not self.live, "Cannot get total time of a live stream, only elapsed time."
-        first_data_point = self.redis.xrange('stream:'+stream, count=1)
-        last_data_point = self.redis.xrevrange('stream:'+stream, count=1)
-        if first_data_point and last_data_point:
-            start_time = self.redis_to_time(first_data_point[0][0])
-            end_time = self.redis_to_time(last_data_point[0][0])
-            diff = end_time - start_time
-            return diff/1000  # ms to s
-        else:
-            print("NO TOTAL: ".format(first_data_point, last_data_point))
-            print("ID: ", stream)
+        bookmark = self.read_bookmarks.get(stream)
+        if not bookmark:
             return 0
+        start_id = bookmark.get('first_id')
+        if not start_id:
+            try:
+                self.read_bookmarks[stream]['first_id'] = self.redis.xrange('stream:'+stream, count=1)
+                start_id = self.read_bookmarks[stream]['first_id']
+            except:
+                return 0
+
+        end_id = bookmark.get('end_id')
+        if not end_id:
+            try:
+                self.read_bookmarks[stream]['end_id'] = self.redis.xrevrange('stream:'+stream, count=1)
+                end_id = self.read_bookmarks[stream]['end_id']
+            except:
+                return 0
+
+        start_time = self.redis_to_time(start_id)
+        end_time = self.redis_to_time(end_id)
+        diff = end_time - start_time
+        return diff/1000  # ms to s
 
     @catch_connection_errors
     def get_elapsed_time(self, stream):
         """ Gets the current length of time that a database has been playing for in seconds """
-        first_data_point = self.redis.xrange('stream:'+stream, count=1)
-        if first_data_point:
-            start_time = self.redis_to_time(first_data_point[0][0])
-        else:
+        bookmark = self.read_bookmarks.get(stream)
+        if not bookmark:
             return 0
 
-        if self.read_bookmarks.get(stream):
-            current_time = self.redis_to_time(self.read_bookmarks[stream]['id'])
-        else:
-            current_time = start_time  # if no bookmark for this stream yet, it's at the beginning
+        start_time = bookmark.get('first_time')
+        if not start_time:
+            return 0
+
+        current_time = bookmark.get('last_time')
+        if not current_time:
+            return 0
+
         return (current_time - start_time)/1000  # ms to s
 
     @catch_connection_errors
