@@ -8,6 +8,10 @@ from numpy import ndarray
 import redis
 from redistimeseries.client import Client as RedisTS
 
+from datetime import timedelta
+def h(ms):
+    return timedelta(milliseconds=float(ms))
+
 
 class DatabaseError(Exception):
     """ invoked when the connection fails when performing a read/write operation """
@@ -422,14 +426,14 @@ class Database:
 
                 if self.live:  # read from last ID to now
                     response = red.xread({'stream:' + stream: last_read_id})
-                    #print("\nL ------ [{}] last_read_time: {}, now_time: {}, \n-----------time_since: {}, last_read_id: {}".format(stream, last_read_time, temptime, time_since, last_read_id))
                 else:  # read from last ID to ID given by time_since
                     new_id = self.redis_to_time(last_read_id) + time_since
                     max_read_id = self.time_to_redis(new_id)
 
                     # Redis uses the prefix "(" to represent an exclusive interval for XRANGE
                     response = red.xrange('stream:'+stream, min='('+last_read_id, max=max_read_id)
-                    #print("\n------ [{}] last_read_time: {}, now_time: {}, \n-----------time_since: {}, last_read_id: {}, max_id: {}".format(stream, last_read_time, temptime, time_since, last_read_id, max_read_id))
+
+                    print("\n[{}] last_read_time: {}, now_time: {}, time_since: {}, \n          last_read_id: {}, max_id: {}".format(stream[:5], h(last_read_time), h(temptime), h(time_since), h(time_since), h(last_read_id), h(max_read_id)))
 
             else:  # no last read spot
                 if self.live:  # start reading from latest, block for 1 sec
@@ -574,7 +578,8 @@ class Database:
                 new_id = self.redis_to_time(last_read_id) + time_since
                 max_read_id = self.time_to_redis(new_id)
                 response = red.xrevrange('stream:'+stream, min='('+last_read_id, max=max_read_id, count=1)
-                print("\nS ------ [{}] last_read_time: {}, now_time: {}, \n                     time_since: {}, last_read_id: {}, max_id: {}".format(stream, last_read_time, temptime, time_since, last_read_id, max_read_id))
+                print("\n[{}] last_read_time: {}, now_time: {}, time_since: {}, \n          last_read_id: {}, max_id: {}".format(stream[:5], h(last_read_time), h(temptime), h(time_since), h(time_since), h(last_read_id), h(max_read_id)))
+
             else:  # no first read spot exists
                 response = red.xrange('stream:'+stream, count=1)  # get the first one
                 if response:
