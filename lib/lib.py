@@ -465,6 +465,9 @@ class Streamer(WorkerNode):
             self.streaming.wait()  # block until streaming event is set
             try:
                 self.loop()  # call user-defined main execution
+            except DatabaseError as e:
+                self.debug(e)
+                self._stop()
             except Exception as e:
                 self._stop()
                 self.throw("Unhandled exception: {}".format(e), trace=True)
