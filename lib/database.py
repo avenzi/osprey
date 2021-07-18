@@ -467,29 +467,23 @@ class Database:
         if not response:
             return None
 
-        # If count is given or in playback mode, XRANGE is used, which gives a list of dicts.
+        # If count is given or in playback mode, XRANGE is used, which gives a list of data points
         #   this means that the data is stored in response.
         # If in live mode without a count, XREAD is used, which gives a a list of tuples
-        #   (one for each stream read from), each of which contains a list of dicts. But since
-        #   we are only reading from one stream, the data is stored in response[0][1]
+        #   (one for each stream read from), each of which contains a list of data points. But since
+        #   we are only reading from one stream, the data is stored in response[0][1].
+        if self.live and not count:
+            response = response[0][1]
 
         # set first-read info
         if not self.read_bookmarks.get(stream):
             self.read_bookmarks[stream] = {}
-            self.read_bookmarks['first_time'] = self.time()  # get first time
-            if count or not self.live:
-                self.read_bookmarks['first_id'] = response[-1][0]  # get first ID
-            else:
-                self.read_bookmarks['first_id'] = response[0][1][-1][0]
+            self.read_bookmarks[stream]['first_time'] = self.time()  # get first time
+            self.read_bookmarks[stream]['first_id'] = response[-1][0]  # get first ID
 
         # set last-read info
         self.read_bookmarks[stream]['last_time'] = self.time()
-        if count or not self.live:
-            self.read_bookmarks[stream]['last_id'] = response[-1][0]  # store last timestamp
-            data_list = response  # get list of data dicts
-        else:
-            self.read_bookmarks[stream]['last_id'] = response[0][1][-1][0]  # store last timestamp
-            data_list = response[0][1]  # get list of data dicts
+        self.read_bookmarks[stream]['last_id'] = response[-1][0]  # store last timestamp
 
         # create final output dict
         output = {}
@@ -498,7 +492,7 @@ class Database:
 
         # I hate this
         if numerical and decode:
-            for data in data_list:
+            for data in response:
                 d = data[1]  # data dict. data[0] is the timestamp ID
                 for key in d.keys():
                     if output.get(key):
@@ -507,7 +501,7 @@ class Database:
                         output[key] = [float(d[key])]
 
         elif numerical and not decode:
-            for data in data_list:
+            for data in response:
                 d = data[1]  # data dict. data[0] is the timestamp ID
                 for key in d.keys():
                     k = key.decode('utf-8')  # key won't be decoded, but it needs to be
@@ -517,7 +511,7 @@ class Database:
                         output[k] = [float(d[key])]
 
         elif not numerical and decode:
-            for data in data_list:
+            for data in response:
                 # data[0] is the timestamp ID
                 d = data[1]  # data dict
                 for key in d.keys():
@@ -527,7 +521,7 @@ class Database:
                         output[key] = [d[key]]
 
         elif not numerical and not decode:
-            for data in data_list:
+            for data in response:
                 # data[0] is the timestamp ID
                 d = data[1]  # data dict
                 for key in d.keys():
@@ -571,7 +565,7 @@ class Database:
     @catch_connection_errors
     def read_snapshot(self, stream, to_json=False, decode=True):
         """
-        Gets latest snapshot for <reader> from data column <stream>.
+        Gets latest snapshot for <reader> from data column <stream>. Only gets 1 data point.
         <stream> is some ID that identifies the stream in the database.
         <to_json> whether to convert to json string. if False, uses dictionary of lists.
             - Also note that this removes the 'time' data column. This is for
@@ -610,12 +604,12 @@ class Database:
         # set first-read info
         if not self.read_bookmarks.get(stream):
             self.read_bookmarks[stream] = {}
-            self.read_bookmarks[stream]['first_id'] = response[-1][0]
+            self.read_bookmarks[stream]['first_id'] = response[0][0]
             self.read_bookmarks[stream]['first_time'] = self.time()
 
         # set last-read info
         self.read_bookmarks[stream]['last_time'] = self.time()
-        self.read_bookmarks[stream]['last_id'] = response[-1][0]  # store last timestamp
+        self.read_bookmarks[stream]['last_id'] = response[0][0]  # store last timestamp
 
         data = response[0][1]  # data dict
         keys = data.keys()  # get keys from data dict
