@@ -557,6 +557,9 @@ class Database:
         Gets latest snapshot for <reader> from data column <stream>.
         <stream> is some ID that identifies the stream in the database.
         <to_json> whether to convert to json string. if False, uses dictionary of lists.
+            - Also note that this removes the 'time' data column. This is for
+                plotting purposes - plotting software requires that all columns
+                be of same length, and the time column only has one entry.
         Since this is a snapshot (not time series), gets last 1 data point from redis
         """
         if decode:
@@ -604,6 +607,7 @@ class Database:
             output[key] = [float(val) for val in vals]
 
         if to_json:
+            del output['time']  # remove time column for json format
             return json.dumps(output)
         return output
 
