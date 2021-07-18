@@ -39,7 +39,7 @@ def catch_connection_errors(method):
         except (ConnectionResetError, ConnectionRefusedError, TimeoutError, redis.exceptions.ConnectionError, redis.exceptions.TimeoutError, redis.exceptions.ResponseError) as e:
             raise DatabaseError("{}: {}".format(e.__class__.__name__, e))
         except Exception as e:  # other type of error
-            format_exc()
+            print(format_exc())
             raise DatabaseError('Uncaught Error in Database ({}). {}: {}'.format(method.__name__, e.__class__.__name__, e))
     return wrapped
 
