@@ -518,6 +518,8 @@ class Streamer(WorkerNode):
 
     def update(self):
         """ Send info to database and signal update to server """
+        if not self.database:
+            return
         # add name and ID to group column if not already
         self.database.write_group(self.group, {self.name: self.id, 'name': self.group})
 
