@@ -5,6 +5,7 @@ from os import system, path
 from traceback import print_exc
 
 import redis
+from redistimeseries.client import Client as RedisTS
 
 
 class DatabaseError(Exception):
@@ -170,8 +171,6 @@ class Database:
     """
     Wrapper class to handle a single connection to a database
     May be created on its own - intended for use on remove device writing data.
-    Does not use Redis's native time stamping - instead requires that a 'time' column
-        is present in every write command.
     """
     def __init__(self, ip, port, password):
         self.ip = ip  # ip of database
@@ -188,10 +187,18 @@ class Database:
         }
 
         # Separate redis pools for reading decoded data or reading raw bytes data.
-        self.pool = redis.ConnectionPool(decode_responses=True, **options)
-        self.bytes_pool = redis.ConnectionPool(decode_responses=False, **options)
-        self.redis = redis.Redis(connection_pool=self.pool)
-        self.bytes_redis = redis.Redis(connection_pool=self.bytes_pool)
+        pool = redis.ConnectionPool(decode_responses=True, **options)
+        bytes_pool = redis.ConnectionPool(decode_responses=False, **options)
+
+        # Redis connection client
+        self.redis = redis.Redis(connection_pool=pool)
+        self.bytes_redis = RedisTS(connection_pool=bytes_pool)
+
+        # Create RedisTimeSeries Client instances as well
+        # (wrapper around Redis instance to implement RedisTimeSeries commands)
+        self.redis_ts = RedisTS(conn=self.redis)
+        self.bytes_redis_ts = RedisTS(conn=self.bytes_redis)
+        # todo: figure out how to convert to using RedisTimeSeries
 
         self.exit = False  # flag to determine when to stop running if looping
         self.live = True   # Whether in live mode
@@ -290,34 +297,42 @@ class Database:
     def write_data(self, stream, data):
         """
         Writes time series <data> to stream:<stream>.
-        if <data> is a dictionary of items where keys are column names.
-        items must either all be iterable or all non-iterable.
-        Must include a 'time' column.
+        If <data> is a dictionary of items where keys are column names.
+        Items must either all be iterable or all non-iterable.
+        All Items (if iterable) must be of same length.
+        Must include a 'time' column with unix time stamps in seconds.
         """
         if not data.get('time'):  # check for time key
             raise DatabaseError("Data input dictionary must contain a 'time' key.")
 
+        # make sure all values are the same size
+        sizes = set()
+        for val in data.values():
+            if hasattr(type(val), '__iter__'):  # iterable
+                sizes.add(len(val))
+            else:  # non-iterable
+                sizes.add(None)
+        if len(sizes) > 1:  # more than one size
+            raise DatabaseError("Data input columns are not all the same size. Found sizes: {}".format(sizes))
+        elif len(sizes) == 0:  # no data?
+            raise DatabaseError("Data input contained no data columns? : {}".format(data))
+
         if hasattr(type(list(data.values())[0]), '__iter__'):  # if an iterable sequence of data points
             pipe = self.redis.pipeline()  # pipeline queues a series of commands at once
-            max_length = 0  # get the size of the longest column
-            for val in data.values():
-                length = len(val)
-                if length > max_length:
-                    max_length = length
+            length = len(list(data.values())[0])  # length of data (all must be the same)
 
-            # add them to the Redis database one data point at a time
-            #  because there isn't a mass-instert-to-stream command
-            for i in range(max_length):
+            # add data to the Redis database one data point at a time
+            #  because there isn't a mass-insert-to-stream command
+            for i in range(length):
                 d = {}
-                for key, val in data.items():
-                    if len(val) <= i:
-                        continue
+                for key in data.keys():
                     d[key] = data[key][i]
-                pipe.xadd('stream:'+stream, d)
+                time_id = self.time_to_redis(data['time'][i])  # redis time stamp in which to insert
+                pipe.xadd('stream:'+stream, d, id=time_id)
 
             pipe.execute()
         else:  # assume this is a single data point
-            self.redis.xadd('stream:'+stream, {key: data[key] for key in data.keys()})
+            self.redis.xadd('stream:'+stream, {key: data[key] for key in data.keys()}, id=data['time'])
 
     @catch_connection_errors
     def read_data(self, stream, count=None, max_time=None, numerical=True, to_json=False, decode=True):
@@ -463,15 +478,21 @@ class Database:
         """
         Writes a snapshot of data <data> to stream:<stream>.
         <data> must be a dictionary of lists, where keys are data column names.
-        Note that this method is for data which is not consecutive (like time series).
+        Note that this method is for data which is not consecutive (like time series would be).
         It is for data that is meant to be viewed a chunk at a time.
         It places each list of data values as a comma separated list under one key.
+        Must include a 'time' column with unix time stamps in seconds.
         """
+        if not data.get('time'):  # check for time key
+            raise DatabaseError("Data input dictionary must contain a 'time' key.")
+        if type(data['time']) not in [int, float]:
+            raise DatabaseError("Time of this snapshot must be an integer or float.")
+
         new_data = {}
         for key in data.keys():
             new_data[key] = ','.join(str(val) for val in data[key])
 
-        self.redis.xadd('stream:'+stream, new_data)
+        self.redis.xadd('stream:'+stream, new_data, id=data['time'])
 
     @catch_connection_errors
     def read_snapshot(self, stream, to_json=False, decode=True):
