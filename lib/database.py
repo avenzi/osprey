@@ -231,8 +231,10 @@ class Database:
                 return self.relative_stop_time  # only return the time at which it was paused
 
     def time_to_redis(self, unix_time):
-        """ Convert unix time to a redis timestamp (all in milliseconds) """
-        return str(int(unix_time))
+        """ Convert unix time (ms) to a redis timestamp (ms) """
+        string_time = "{:.10f}".format(unix_time)  # ensure exact precision
+        ms, num = string_time.split('.')  # split at decimal
+        return ms + '-' + num  # convert to redis format
 
     def redis_to_time(self, redis_time):
         """ Convert redis time stand to unix time stamp in milliseconds"""
