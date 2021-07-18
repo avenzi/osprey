@@ -328,12 +328,14 @@ class Database:
         if first_data_point:
             start_time = self.redis_to_time(first_data_point[0][0])
         else:
-            return -1
+            return 0
 
         if self.read_bookmarks.get(stream):
             current_time = self.redis_to_time(self.read_bookmarks[stream]['id'])
+            print("CUR: ", current_time)
         else:
             current_time = start_time  # if no bookmark for this stream yet, it's at the beginning
+            print("STR: ",  current_time)
         return (current_time - start_time)/1000  # ms to s
 
     @catch_connection_errors
