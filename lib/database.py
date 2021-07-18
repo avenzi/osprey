@@ -9,8 +9,11 @@ import redis
 from redistimeseries.client import Client as RedisTS
 
 from datetime import timedelta
+
 def h(ms):
-    return timedelta(milliseconds=float(ms))
+    if type(ms) == str:
+        ms = float(ms.split('-')[0])
+    return timedelta(milliseconds=ms)
 
 
 class DatabaseError(Exception):
