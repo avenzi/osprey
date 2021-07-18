@@ -74,9 +74,9 @@ def create_analyzer_layout(info):
     data = figure(title='Averages', x_axis_label='time', y_axis_label='Average Value', toolbar_location=None, plot_width=600, plot_height=300)
     data.xaxis.formatter = time_format()
     data.toolbar.active_drag = None
-    data.line(x='time_11', y='data_11', legend_label='Data 11', color='blue', source=source11)
-    data.line(x='time_12', y='data_12', legend_label='Data 12', color='green', source=source12)
-    data.line(x='time_21', y='data_21', legend_label='Data 21', color='red', source=source21)
-    data.line(x='time_22', y='data_22', legend_label='Data 22', color='yellow', source=source22)
+    data.line(x='time', y='data', legend_label='Data 11', color='blue', source=source11)
+    data.line(x='time', y='data', legend_label='Data 12', color='green', source=source12)
+    data.line(x='time', y='data', legend_label='Data 21', color='red', source=source21)
+    data.line(x='time', y='data', legend_label='Data 22', color='yellow', source=source22)
 
     return layout(data)  # format into layout object

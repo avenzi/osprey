@@ -44,8 +44,8 @@ class TestAnalyzer(Analyzer):
             b = np.array(data['val_2'])
             c = np.array(data['val_3'])
             output = {
-                'data_'+name: np.average((a, b, c), axis=0),
-                'time_'+name: data['time']}
+                'data': np.average((a, b, c), axis=0),
+                'time': data['time']}
 
             self.database.write_data(name+':'+self.id, output)
 
