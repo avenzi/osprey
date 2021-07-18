@@ -18,6 +18,14 @@ cd /usr/local/lib/redis-stable/
 sudo make
 sudo make install
 
+# Compile RedisTimeSeries
+cd ~
+git clone --recursive https://github.com/RedisTimeSeries/RedisTimeSeries.git
+cd RedisTimeSeries
+sudo make setup
+sudo make build
+rm RedisTimeSeries
+
 # navigate back to top level dir (where venv will go)
 cd $script_dir/../../
 (
