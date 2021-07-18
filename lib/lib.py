@@ -613,16 +613,20 @@ class Analyzer(Streamer):
         Check if given stream is one of the targeted streams. If it is, copy it's info.
         If no stream ID is given, look through all info dicts currently on the database.
         """
-        if not stream_id:
-            try:
+        if not self.database:
+            raise Exception("Analyzer '{}' attempted to get target from database, but database connection has not been initialized.".format(self))
+
+        try:
+            if not stream_id:
                 info_list = self.database.read_all_info()
-                if not info_list:
-                    raise Exception("Database Read operation returned nothing.")
-            except Exception as e:
-                self.debug("{} failed to get target info from database: {}".format(self, e))
-                return
-        else:  # stream ID given
-            info_list = [self.database.read_info(stream_id)]
+            else:  # stream ID given
+                info_list = [self.database.read_info(stream_id)]
+        except Exception as e:
+            self.debug("{} failed to get target info from database: {}".format(self, e))
+            return
+
+        if not info_list:
+            raise Exception("Database Read operation returned nothing.")
 
         info_updated = False  # flag for displaying debug info
         for info in info_list:
