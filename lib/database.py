@@ -323,7 +323,7 @@ class Database:
         start_id = bookmark.get('first_id')
         if not start_id:
             try:
-                self.read_bookmarks[stream]['first_id'] = self.redis.xrange('stream:'+stream, count=1)
+                self.read_bookmarks[stream]['first_id'] = self.redis.xrange('stream:'+stream, count=1)[0][0]
                 start_id = self.read_bookmarks[stream]['first_id']
             except:
                 return 0
@@ -331,7 +331,7 @@ class Database:
         end_id = bookmark.get('end_id')
         if not end_id:
             try:
-                self.read_bookmarks[stream]['end_id'] = self.redis.xrevrange('stream:'+stream, count=1)
+                self.read_bookmarks[stream]['end_id'] = self.redis.xrevrange('stream:'+stream, count=1)[0][0]
                 end_id = self.read_bookmarks[stream]['end_id']
             except:
                 return 0
