@@ -192,7 +192,7 @@ class Database:
 
         # Redis connection client
         self.redis = redis.Redis(connection_pool=pool)
-        self.bytes_redis = RedisTS(connection_pool=bytes_pool)
+        self.bytes_redis = redis.Redis(connection_pool=bytes_pool)
 
         # Create RedisTimeSeries Client instances as well
         # (wrapper around Redis instance to implement RedisTimeSeries commands)
