@@ -218,8 +218,10 @@ class Database:
         # Dictionary to track last read position in the database for each data column
         # First level keys are the ID of each stream in the database. Values are Second level dictionaries.
         # Second level keys:
-        # "id": last read database timestamp ID
-        # "time": last read real time
+        # "first_id":   first read database timestamp ID
+        # "last_id":    last read database timestamp ID
+        # "last_time":  real time when last read
+        # "first_time":  real time when first read
         self.read_bookmarks = {}
 
         # Similar to read_bookmarks, but for writes.
@@ -415,22 +417,26 @@ class Database:
             response = red.xrevrange('stream:'+stream, count=count)
 
         else:
-            last_read = self.read_bookmarks.get(stream)
-            if last_read:  # last read spot exists
-                last_read_id = last_read['id']
-                last_read_time = last_read['time']
+            info = self.read_bookmarks.get(stream)
+            if info:  # last read spot exists
+                last_read_id = info['last_id']
+                last_read_time = info['last_time']
                 temptime = self.time()
-                time_since = self.time()-last_read_time  # time since last read (ms)
-                if max_time and time_since > max_time*1000:  # max_time is in seconds
-                    # if time since last read is greater than set maximum,
-                    # increment last read ID by the difference
-                    new_id = self.redis_to_time(last_read_id) + (time_since-max_time*1000)
+                time_since_last = self.time()-last_read_time  # time since last read (ms)
+
+                # if time since last read is greater than maximum, increment last read ID by the difference
+                if max_time and time_since_last > max_time*1000:  # max_time is in seconds
+                    new_id = self.redis_to_time(last_read_id) + (time_since_last-max_time*1000)
                     last_read_id = self.time_to_redis(new_id)  # convert back to redis timestamp
 
                 if self.live:  # read from last ID to now
                     response = red.xread({'stream:' + stream: last_read_id})
-                else:  # read from last ID to ID given by time_since
-                    new_id = self.redis_to_time(last_read_id) + time_since
+
+                else:  # calculate new ID by how much time has passed between now and beginning
+                    first_read_id = info['fist_id']
+                    first_read_time = info['first_time']
+                    time_since_first = self.time()-first_read_time
+                    new_id = self.redis_to_time(first_read_id) + time_since_first
                     max_read_id = self.time_to_redis(new_id)
 
                     # Redis uses the prefix "(" to represent an exclusive interval for XRANGE
@@ -447,7 +453,10 @@ class Database:
                     first_data_point = red.xrange('stream:'+stream, count=1)
                     if first_data_point:
                         first_time_stamp = first_data_point[0][0]
-                        self.read_bookmarks[stream] = {'id': first_time_stamp, 'time': self.time()}
+                        self.read_bookmarks[stream] = {'last_id': first_time_stamp,
+                                                       'last_time': self.time(),
+                                                       'first_id': first_time_stamp,
+                                                       'first_time': self.time()}
                     response = None
 
         if not response:
@@ -457,14 +466,14 @@ class Database:
             self.read_bookmarks[stream] = {}
 
         # set last read time
-        self.read_bookmarks[stream]['time'] = self.time()
+        self.read_bookmarks[stream]['last_time'] = self.time()
 
         # store the last timestamp ID in this response
 
         # If count is given or in playback mode,
         #  XRANGE is used, which gives a list of dictionaries
         if count or not self.live:
-            self.read_bookmarks[stream]['id'] = response[-1][0]  # store last timestamp
+            self.read_bookmarks[stream]['last_id'] = response[-1][0]  # store last timestamp
             data_list = response  # get list of data dicts
 
         # If count isn't given and in live mode,
@@ -472,7 +481,7 @@ class Database:
         # But since we read from only one stream,
         #  the actual data is in response[0][1].
         else:
-            self.read_bookmarks[stream]['id'] = response[0][1][-1][0]  # store last timestamp
+            self.read_bookmarks[stream]['last_id'] = response[0][1][-1][0]  # store last timestamp
             data_list = response[0][1]  # get list of data dicts
 
         # create final output dict
@@ -568,17 +577,19 @@ class Database:
         else:
             red = self.bytes_redis
 
-        if self.live:  # read most recent snapshot
+        if self.live:  # read most recent snapshot - don't care about bookmarks in live mode
             response = red.xrevrange('stream:'+stream, count=1)
 
         else:  # read snapshot at time since last read
-            last_read = self.read_bookmarks.get(stream)
-            if last_read:  # last read spot exists
-                last_read_id = last_read['id']
-                last_read_time = last_read['time']
+            info = self.read_bookmarks.get(stream)
+            if info:  # last read spot exists
+                last_read_id = info['last_id']
+                last_read_time = info['last_time']
+                first_read_id = info['fist_id']
+                first_read_time = info['first_time']
                 temptime = self.time()
-                time_since = self.time()-last_read_time  # time since last read
-                new_id = self.redis_to_time(last_read_id) + time_since
+                time_since_first = self.time() - first_read_time
+                new_id = self.redis_to_time(first_read_id) + time_since_first
                 max_read_id = self.time_to_redis(new_id)
                 response = red.xrevrange('stream:'+stream, min='('+last_read_id, max=max_read_id, count=1)
                 print("\n[{}] last_read_time: {}, now_time: {}, time_since: {}, \n          last_read_id: {},   max_id: {}".format(stream[:5], h(last_read_time), h(temptime), h(time_since), h(last_read_id), h(max_read_id)))
@@ -586,7 +597,10 @@ class Database:
             else:  # no first read spot exists
                 response = red.xrange('stream:'+stream, count=1)  # get the first one
                 if response:
-                    self.read_bookmarks[stream] = {'id': response[0][0], 'time': self.time()}
+                    self.read_bookmarks[stream] = {'last_id': response[-1][0],
+                                                   'last_time': self.time(),
+                                                   'first_id': response[-1][0],
+                                                   'first_time': self.time()}
 
         if not response:
             return None
@@ -595,10 +609,10 @@ class Database:
             self.read_bookmarks[stream] = {}
 
         # set last read time
-        self.read_bookmarks[stream]['time'] = self.time()
+        self.read_bookmarks[stream]['last_time'] = self.time()
 
         # store the last timestamp ID in this response
-        self.read_bookmarks[stream]['id'] = response[-1][0]  # store last timestamp
+        self.read_bookmarks[stream]['last_id'] = response[-1][0]  # store last timestamp
 
         data = response[0][1]  # data dict
         keys = data.keys()  # get keys from data dict
