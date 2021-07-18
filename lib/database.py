@@ -264,7 +264,7 @@ class Database:
 
     @catch_connection_errors
     def get_total_time(self, stream):
-        """ Gets the total length in time of a given stream """
+        """ Gets the total length in time of a given stream in seconds """
         assert not self.live, "Cannot get total time of a live stream, only elapsed time."
         first_data_point = self.redis.xrange('stream:'+stream, count=1)
         last_data_point = self.redis.xrevrange('stream:'+stream, count=1)
@@ -272,7 +272,7 @@ class Database:
             start_time = self.redis_to_time(first_data_point[0][0])
             end_time = self.redis_to_time(last_data_point[0][0])
             diff = end_time - start_time
-            return diff
+            return diff/1000  # ms to s
         else:
             print("NO TOTAL: ".format(first_data_point, last_data_point))
             print("ID: ", stream)
@@ -280,7 +280,7 @@ class Database:
 
     @catch_connection_errors
     def get_elapsed_time(self, stream):
-        """ Gets the current length of time that a database has been playing for """
+        """ Gets the current length of time that a database has been playing for in seconds """
         first_data_point = self.redis.xrange('stream:'+stream, count=1)
         if first_data_point:
             start_time = self.redis_to_time(first_data_point[0][0])
@@ -291,7 +291,7 @@ class Database:
             current_time = self.redis_to_time(self.bookmarks[stream]['id'])
         else:
             current_time = start_time  # if no bookmark for this stream yet, it's at the beginning
-        return current_time - start_time
+        return (current_time - start_time)/1000  # ms to s
 
     @catch_connection_errors
     def write_data(self, stream, data):
