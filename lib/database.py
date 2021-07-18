@@ -211,19 +211,19 @@ class Database:
         # for playback mode
         self.playback_speed = 1  # speed multiplier in playback mode (live mode False)
         self.playback_active = False       # whether this connection is actively playing back
-        self.real_start_time = time()      # absolute time playback was last started
-        self.relative_stop_time = time()   # time (relative to playback) that playback was last paused
+        self.real_start_time = time()*1000      # absolute time playback was last started
+        self.relative_stop_time = time()*1000   # time (relative to playback) that playback was last paused
 
     def time(self):
         """
-        Live mode: Get current time.
+        Live mode: Get current time in milliseconds.
         Playback mode: Get current playback time (affected by starting and stopping the playback).
         """
         if self.live:
-            return time()
+            return time()*1000
         else:
             if self.playback_active:  # playback is active
-                diff = time()-self.real_start_time  # time since started
+                diff = time()*1000-self.real_start_time  # time since started
                 return self.relative_stop_time + diff  # time difference after last stopped
             else:  # playback is paused
                 return self.relative_stop_time  # only return the time at which it was paused
@@ -234,8 +234,7 @@ class Database:
 
     def redis_to_time(self, redis_time):
         """ Convert redis time stand to unix time stamp in milliseconds"""
-        t = redis_time.split('-')
-        return float(t[0])+float(t[1])
+        return float(redis_time.split('-')[0])
 
     def ping(self, catch_error=True):
         """ Ping database to ensure connecting is functioning """
