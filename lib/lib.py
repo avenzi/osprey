@@ -127,6 +127,7 @@ class Base:
             err += "CAUSE: {}\n".format(cause)
         self.display(err)
         if trace:
+            traceback.print_stack()
             traceback.print_exc()
 
     def generate_uuid(self):
