@@ -40,6 +40,7 @@ def catch_connection_errors(method):
             raise DatabaseError("{}: {}".format(e.__class__.__name__, e))
         except Exception as e:  # other type of error
             print_stack()
+            print_exc()
             raise DatabaseError('Uncaught Error in Database ({}). {}: {}'.format(method.__name__, e.__class__.__name__, e))
     return wrapped
 
