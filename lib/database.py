@@ -492,7 +492,7 @@ class Database:
         Note that this method is for data which is not consecutive (like time series would be).
         It is for data that is meant to be viewed a chunk at a time.
         It places each list of data values as a comma separated list under one key.
-        Must include a 'time' column with unix time stamps in seconds.
+        Must include a 'time' column with a single unix timestamp in milliseconds
         """
         if not data.get('time'):  # check for time key
             raise DatabaseError("Data input dictionary must contain a 'time' key.")
@@ -501,6 +501,8 @@ class Database:
 
         new_data = {}
         for key in data.keys():
+            if key == 'time':
+                continue
             new_data[key] = ','.join(str(val) for val in data[key])
 
         self.redis.xadd('stream:'+stream, new_data, id=data['time'])
