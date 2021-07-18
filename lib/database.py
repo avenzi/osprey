@@ -168,8 +168,10 @@ class DatabaseController:
 
 class Database:
     """
-    Wrapper class to handle a single  connection to a database
-    May be created on its own - intended for use on remove device writing data
+    Wrapper class to handle a single connection to a database
+    May be created on its own - intended for use on remove device writing data.
+    Does not use Redis's native time stamping - instead requires that a 'time' column
+        is present in every write command.
     """
     def __init__(self, ip, port, password):
         self.ip = ip  # ip of database
@@ -290,7 +292,11 @@ class Database:
         Writes time series <data> to stream:<stream>.
         if <data> is a dictionary of items where keys are column names.
         items must either all be iterable or all non-iterable.
+        Must include a 'time' column.
         """
+        if not data.get('time'):  # check for time key
+            raise DatabaseError("Data input dictionary must contain a 'time' key.")
+
         if hasattr(type(list(data.values())[0]), '__iter__'):  # if an iterable sequence of data points
             pipe = self.redis.pipeline()  # pipeline queues a series of commands at once
             max_length = 0  # get the size of the longest column
@@ -299,6 +305,8 @@ class Database:
                 if length > max_length:
                     max_length = length
 
+            # add them to the Redis database one data point at a time
+            #  because there isn't a mass-instert-to-stream command
             for i in range(max_length):
                 d = {}
                 for key, val in data.items():
@@ -390,7 +398,6 @@ class Database:
         #  XRANGE is used, which gives a list of dictionaries
         if count or not self.live:
             self.bookmarks[stream]['id'] = response[-1][0]  # store last timestamp
-            print("RESP", len(response))
             data_list = response  # get list of data dicts
 
         # If count isn't given and in live mode,
