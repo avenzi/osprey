@@ -211,8 +211,8 @@ class Database:
         # for playback mode
         self.playback_speed = 1  # speed multiplier in playback mode (live mode False)
         self.playback_active = False       # whether this connection is actively playing back
-        self.real_start_time = time()*1000      # absolute time playback was last started
-        self.relative_stop_time = time()*1000   # time (relative to playback) that playback was last paused
+        self.real_start_time = time()*1000      # absolute time playback was last started (ms)
+        self.relative_stop_time = time()*1000   # time (relative to playback) that playback was last paused (ms)
 
     def time(self):
         """
@@ -220,10 +220,10 @@ class Database:
         Playback mode: Get current playback time (affected by starting and stopping the playback).
         """
         if self.live:
-            return time()*1000
+            return time()*1000  # ms
         else:
             if self.playback_active:  # playback is active
-                diff = time()*1000-self.real_start_time  # time since started
+                diff = time()*1000-self.real_start_time  # time since started (ms)
                 return self.relative_stop_time + diff  # time difference after last stopped
             else:  # playback is paused
                 return self.relative_stop_time  # only return the time at which it was paused
@@ -676,7 +676,7 @@ class ServerDatabase(Database):
         if self.live:
             self.redis.set('STREAMING', 1)  # set RUNNING key
         else:
-            self.real_start_time = time()  # mark last playback start time
+            self.real_start_time = time()*1000  # mark last playback start time (ms)
             self.playback_active = True
 
     def stop(self):
