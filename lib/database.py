@@ -368,11 +368,11 @@ class Database:
                 last_read_id = last_read['id']
                 last_read_time = last_read['time']
                 temptime = self.time()
-                time_since = self.time()-last_read_time  # time since last read
-                if max_time and time_since > max_time:
+                time_since = self.time()-last_read_time  # time since last read (ms)
+                if max_time and time_since > max_time*1000:  # max_time is in seconds
                     # if time since last read is greater than set maximum,
                     # increment last read ID by the difference
-                    new_id = self.redis_to_time(last_read_id) + (time_since-max_time)
+                    new_id = self.redis_to_time(last_read_id) + (time_since-max_time*1000)
                     last_read_id = self.time_to_redis(new_id)  # convert back to redis timestamp
 
                 if self.live:  # read from last ID to now
