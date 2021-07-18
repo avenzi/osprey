@@ -335,7 +335,7 @@ class Database:
             return 0
 
         if self.read_bookmarks.get(stream):
-            current_time = self.redis_to_time(self.read_bookmarks[stream]['read_id'])
+            current_time = self.redis_to_time(self.read_bookmarks[stream]['id'])
         else:
             current_time = start_time  # if no bookmark for this stream yet, it's at the beginning
         return (current_time - start_time)/1000  # ms to s
