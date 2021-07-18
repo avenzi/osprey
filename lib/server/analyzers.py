@@ -212,6 +212,7 @@ class SignalFourier(SignalAnalyzer):
             return
 
         fourier_data = self.fourier(filtered_data)  # fourier analysis
+        fourier_data['time'] = filtered_data['time'][-1]  # use latest time stamp from filtered data
         self.database.write_snapshot(self.id, fourier_data)
 
         # Slow down rate of performing fourier transforms.
@@ -321,7 +322,10 @@ class EEGFourier(SignalFourier):
             return
 
         fourier_data = self.fourier(filtered_data)  # fourier analysis
+        fourier_data['time'] = filtered_data['time'][-1]  # use latest time stamp from filtered data
+
         headplot_data = self.headplot(fourier_data)  # headplot spectrogram from fourier
+        headplot_data['time'] = filtered_data['time'][-1]  # use latest time stamp from filtered data
 
         self.database.write_snapshot('fourier:' + self.id, fourier_data)
         self.database.write_snapshot('headplot:' + self.id, headplot_data)
@@ -403,8 +407,8 @@ class PulseAnalyzer(Analyzer):
             return
 
         pulse_data = raw[self.channels[0]]
-        heart_rate_data = self.calc_heart_rate(pulse_data)  # perform filtering
-        output = {'heart_rate': heart_rate_data, 'time': raw['time'][-1]}
+        heart_rate = self.calc_heart_rate(pulse_data)  # perform filtering
+        output = {'heart_rate': heart_rate, 'time': raw['time'][-1]}
         self.database.write_data(self.id, output)
         sleep(0.5)
 
