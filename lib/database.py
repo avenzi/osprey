@@ -342,8 +342,11 @@ class Database:
                 for key in data.keys():
                     d[key] = data[key][i]
                 time_id = self.time_to_redis(data['time'][i])  # redis time stamp in which to insert
-                print(time_id)
-                pipe.xadd('stream:'+stream, d, id=time_id)
+                try:
+                    pipe.xadd('stream:'+stream, d, id=time_id)
+                except redis.exceptions.ResponseError as e:
+                    print(e)
+                    print(time_id)
 
             pipe.execute()
         else:  # assume this is a single data point
