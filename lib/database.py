@@ -247,7 +247,7 @@ class Database:
         return str(unix_time).split('.')[0]
 
     def redis_to_time(self, redis_time):
-        """ Convert redis time stand to unix time stamp (ms). Ignores precision beyond ms"""
+        """ Convert redis time stand to unix time stamp (ms). Ignores precision beyond ms """
         return float(redis_time.split('-')[0])
 
     def validate_redis_time(self, redis_id, stream):
@@ -569,10 +569,12 @@ class Database:
             if last_read:  # last read spot exists
                 last_read_id = last_read['id']
                 last_read_time = last_read['time']
+                temptime = self.time()
                 time_since = self.time()-last_read_time  # time since last read
                 new_id = self.redis_to_time(last_read_id) + time_since
                 max_read_id = self.time_to_redis(new_id)
                 response = red.xrevrange('stream:'+stream, max=max_read_id, count=1)
+                print("\nS ------ [{}] last_read_time: {}, now_time: {}, \n                     time_since: {}, last_read_id: {}, max_id: {}".format(stream, last_read_time, temptime, time_since, last_read_id, max_read_id))
             else:  # no first read spot exists
                 response = red.xrange('stream:'+stream, count=1)  # get the first one
                 if response:
@@ -589,6 +591,7 @@ class Database:
 
         # store the last timestamp ID in this response
         self.read_bookmarks[stream]['id'] = response[-1][0]  # store last timestamp
+        print("storing: {}", response[-1][0])
 
         data = response[0][1]  # data dict
         keys = data.keys()  # get keys from data dict
