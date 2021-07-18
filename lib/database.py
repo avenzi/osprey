@@ -573,7 +573,7 @@ class Database:
                 time_since = self.time()-last_read_time  # time since last read
                 new_id = self.redis_to_time(last_read_id) + time_since
                 max_read_id = self.time_to_redis(new_id)
-                response = red.xrevrange('stream:'+stream, max=max_read_id, count=1)
+                response = red.xrevrange('stream:'+stream, min='('+last_read_id, max=max_read_id, count=1)
                 print("\nS ------ [{}] last_read_time: {}, now_time: {}, \n                     time_since: {}, last_read_id: {}, max_id: {}".format(stream, last_read_time, temptime, time_since, last_read_id, max_read_id))
             else:  # no first read spot exists
                 response = red.xrange('stream:'+stream, count=1)  # get the first one
