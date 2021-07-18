@@ -583,16 +583,14 @@ class Database:
         if not response:
             return None
 
-        # only store bookmarks if in playback mode
-        if not self.live:
-            if not self.read_bookmarks.get(stream):
-                self.read_bookmarks[stream] = {}
+        if not self.read_bookmarks.get(stream):
+            self.read_bookmarks[stream] = {}
 
-            # set last read time
-            self.read_bookmarks[stream]['time'] = self.time()
+        # set last read time
+        self.read_bookmarks[stream]['time'] = self.time()
 
-            # store the last timestamp ID in this response
-            self.read_bookmarks[stream]['id'] = response[0][0]  # store last timestamp
+        # store the last timestamp ID in this response
+        self.read_bookmarks[stream]['id'] = response[-1][0]  # store last timestamp
 
         data = response[0][1]  # data dict
         keys = data.keys()  # get keys from data dict
