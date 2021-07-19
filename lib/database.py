@@ -803,10 +803,9 @@ class ServerDatabase(Database):
         if not filename.endswith('.rdb'):
             filename += '.rdb'
 
-        try:  # move current dump file to 'saved' directory with new name
-            system("cp {}/{} {}/{}".format(self.live_path, self.file, self.save_path, filename))
-        except Exception as e:
-            raise DatabaseError("Failed to save database file to '{}': {}".format(filename, e))
+        stat = system("cp {}/{} {}/{}".format(self.live_path, self.file, self.save_path, filename))
+        if stat < 0:
+            raise DatabaseError("Failed to save database file to '{}': Status code: {}".format(filename, stat))
 
         try:  # clear contents of live dump file
             self.redis.flushdb()

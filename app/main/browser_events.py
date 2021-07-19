@@ -1,6 +1,6 @@
 from flask import current_app, session, request
 from datetime import timedelta
-from time import sleep
+from time import sleep, time
 
 from lib.database import DatabaseError, DatabaseLoading
 
@@ -58,11 +58,22 @@ def stop():
     database = get_database()
     database.stop()
     if database.live:
+
         socketio.emit('stop', namespace='/streamers')  # send stop command to streamers
-        try:
-            filename = database.save()  # save database file (if live) and wipe contents
-        except DatabaseLoading
-        log('Session Saved: {}'.format(filename))
+
+        n = 0
+        while True:
+            n += 1
+            try:
+                filename = database.save()  # save database file (if live) and wipe contents
+                log('Session Saved: {}'.format(filename))
+                break
+            except Exception as e:
+                error("Failed to save database - will attempt again in 5 seconds ({}). {}: {}".format(n, e.__class__.__name__, e))
+                sleep(5)
+            # todo: should this 'save' functionality be tied to a different button?
+            #  If the save happens to fail but the streamers are stopped, the stop button will be deactivated
+            #  but there should still be a way to try and save again.
 
     else:  # playback
         log('Paused Playback')
