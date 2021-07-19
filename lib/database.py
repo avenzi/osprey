@@ -301,15 +301,17 @@ class Database:
         else:
             self.redis.ping()
 
-    @catch_connection_errors
     def is_streaming(self):
         """
         Live mode: Check database for "STREAMING" key.
         Playback mode: Check self.playback_active property.
         """
         if self.live:
-            if self.redis.get('STREAMING'):
-                return True
+            try:
+                if self.redis.get('STREAMING'):
+                    return True
+            except Exception as e:
+                return False
             return False
         else:
             return self.playback_active
