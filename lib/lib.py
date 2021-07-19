@@ -643,7 +643,7 @@ class Analyzer(Streamer):
         info_updated = False  # flag for displaying debug info
         for info in info_list:
             group = info.get('group')
-            name = info.get('info')
+            name = info.get('name')
             if not group or not name:
                 print(info_list, info)
                 self.debug("Stream group or name not found in stream info")
