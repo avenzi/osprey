@@ -825,7 +825,7 @@ class ServerDatabase(Database):
             return
         try:
             last_save = self.redis.execute_command("LASTSAVE")  # returns a datetime object
-            return int(time() - last_save.total_seconds())
+            return int(time() - last_save.timestamp())
         except Exception as e:
             print(e.__class__.__name__, e)
             return -1
