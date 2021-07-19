@@ -520,15 +520,18 @@ class Streamer(WorkerNode):
         """ Send info to database and signal update to server """
         if not self.database:
             return
-        # add name and ID to group column if not already
-        self.database.write_group(self.group, {self.name: self.id, 'name': self.group})
+        try:
+            # add name and ID to group column if not already
+            self.database.write_group(self.group, {self.name: self.id, 'name': self.group})
 
-        # write stream info
-        self.info['updated'] = time.time()
-        self.database.write_info(self.id, self.info)
+            # write stream info
+            self.info['updated'] = time.time()
+            self.database.write_info(self.id, self.info)
 
-        # notify server of update
-        self.socket.emit('update', self.id, namespace='/streamers')
+            # notify server of update
+            self.socket.emit('update', self.id, namespace='/streamers')
+        except Exception as e:
+            self.log("Unable to update database. {}: {}".format(e.__class__.__name__, e))
 
     def _start(self):
         """
