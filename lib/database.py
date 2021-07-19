@@ -785,8 +785,8 @@ class ServerDatabase(Database):
 
         try:
             self.redis.save()  # save database to current dump file
-        except redis.exceptions.ResponseError as e:
-            raise DatabaseError("Redis failed to save datababse. Response: {}".format(e))
+        except Exception as e:
+            raise DatabaseError("Failed to save database to disk. {}: {}".format(e.__class__.__name__, e))
 
         if not path.isfile(self.live_path+'/'+self.file):
             raise DatabaseError("Failed to save database file - no database file was found")
