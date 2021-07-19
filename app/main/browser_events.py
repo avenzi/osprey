@@ -167,8 +167,8 @@ def save_time():
         display = "--:--:--"
     else:
         t = database.time_since_save()
-        if not t:  # not a live database
-            display = "[Not live]"
+        if not t:  # database unavailable or in playback mode
+            display = "--:--:--"
         elif t < 0:  # error
             display = "[Err]"
         else:
