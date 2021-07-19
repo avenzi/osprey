@@ -22,7 +22,13 @@ class DatabaseError(Exception):
     pass
 
 
-class DatabaseLoading(DatabaseError):
+class DatabaseTimeout(DatabaseError):
+    """
+    Invoked when database is operation times out - the database may be busy or unresponsive
+    """
+
+
+class DatabaseLoading(DatabaseTimeout):
     """
     Invoked when the database is currently loading a file into memory.
     Essentially just used with a redis.exceptions.BusyLoadingError.
@@ -45,7 +51,9 @@ def catch_connection_errors(method):
             return method(self, *args, **kwargs)
         except redis.exceptions.BusyLoadingError:
             raise DatabaseLoading("Redis is loading the database into memory. Try again later.")
-        except (ConnectionResetError, ConnectionRefusedError, TimeoutError, redis.exceptions.ConnectionError, redis.exceptions.TimeoutError, redis.exceptions.ResponseError) as e:
+        except (redis.exceptions.TimeoutError, TimeoutError) as e:
+            raise DatabaseTimeout("Database operation timed out")
+        except (ConnectionResetError, ConnectionRefusedError, redis.exceptions.ConnectionError, redis.exceptions.ResponseError) as e:
             raise DatabaseError("{}: {}".format(e.__class__.__name__, e))
         except Exception as e:  # other type of error
             print_stack()
@@ -293,17 +301,15 @@ class Database:
         else:
             self.redis.ping()
 
+    @catch_connection_errors
     def is_streaming(self):
         """
         Live mode: Check database for "STREAMING" key.
         Playback mode: Check self.playback_active property.
         """
         if self.live:
-            try:
-                if self.redis.get('STREAMING'):
-                    return True
-            except:
-                return False
+            if self.redis.get('STREAMING'):
+                return True
             return False
         else:
             return self.playback_active
@@ -752,6 +758,7 @@ class ServerDatabase(Database):
     def __repr__(self):
         return "PORT: {}, LIVE: {}, FILE: {}".format(self.port, self.live, self.file)
 
+    @catch_connection_errors
     def start(self):
         """
         Live mode: Sets "STREAMING" key in database.
@@ -763,6 +770,7 @@ class ServerDatabase(Database):
             self.real_start_time = time()*1000  # mark last playback start time (ms)
             self.playback_active = True
 
+    @catch_connection_errors
     def stop(self):
         """
         Live mode:  removes "RUNNING" key in database.
@@ -774,6 +782,7 @@ class ServerDatabase(Database):
             self.relative_stop_time = self.time()  # mark playback pause time relative to playback
             self.playback_active = False
 
+    @catch_connection_errors
     def save(self, filename=None, shutdown=False):
         """
         Save the current database to disk
@@ -783,10 +792,7 @@ class ServerDatabase(Database):
         if not self.live:
             raise DatabaseError("Did not save database file - not a live database")
 
-        try:
-            self.redis.save()  # save database to current dump file
-        except Exception as e:
-            raise DatabaseError("Failed to save database to disk. {}: {}".format(e.__class__.__name__, e))
+        self.redis.save()  # save database to current dump file
 
         if not path.isfile(self.live_path+'/'+self.file):
             raise DatabaseError("Failed to save database file - no database file was found")
@@ -815,21 +821,18 @@ class ServerDatabase(Database):
 
         return filename
 
+    @catch_connection_errors
     def time_since_save(self):
         """
         Returns time since last save in integer seconds.
         If not a live database, returns None.
-        If an error occurred, returns -1.
         """
         if not self.live:
             return
-        try:
-            last_save = self.redis.execute_command("LASTSAVE")  # returns a datetime object
-            return int(time() - last_save.timestamp())
-        except Exception as e:
-            print(e.__class__.__name__, e)
-            return -1
+        last_save = self.redis.execute_command("LASTSAVE")  # returns a datetime object
+        return int(time() - last_save.timestamp())
 
+    @catch_connection_errors
     def shutdown(self):
         """ Shutdown the redis server instance """
         if self.live:  # if live database

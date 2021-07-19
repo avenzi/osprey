@@ -59,13 +59,15 @@ def stop():
     database.stop()
     if database.live:
         socketio.emit('stop', namespace='/streamers')  # send stop command to streamers
-        socketio.emit('update', namespace='/streamers')  # request info update from streamers
-        filename = database.save()  # save database file (if live) and wipe contents
+        try:
+            filename = database.save()  # save database file (if live) and wipe contents
+        except DatabaseLoading
         log('Session Saved: {}'.format(filename))
 
     else:  # playback
         log('Paused Playback')
 
+    socketio.emit('update', namespace='/streamers')  # request info update from streamers
     sleep(0.1)  # hopefully give time for database to get updates from streamers
     # todo: if we want to have confirmation of an update, we must check the info:updated column in redis and check the timestamp
     #  we can't sent a message through socketIO because they will be received in a different session with no way
@@ -167,10 +169,8 @@ def save_time():
         display = "--:--:--"
     else:
         t = database.time_since_save()
-        if not t:  # database unavailable or in playback mode
+        if not t:  # in playback mode
             display = "--:--:--"
-        elif t < 0:  # error
-            display = "[Err]"
         else:
             display = str(timedelta(seconds=t))
     socketio.emit('save_time', display, namespace='/browser', room=request.sid)

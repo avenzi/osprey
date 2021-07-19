@@ -8,7 +8,7 @@ from os import listdir, system
 from os.path import isfile, join
 
 from app.main import socketio
-from lib.database import DatabaseError
+from lib.database import DatabaseError, DatabaseTimeout, DatabaseLoading
 
 
 def log(msg, everywhere=False):
@@ -34,9 +34,14 @@ def catch_errors(handler):
     def wrapped_handler(*args, **kwargs):
         try:
             return handler(*args, **kwargs)
+        except DatabaseLoading:
+            error("Database is still loading into memory - try again in a bit")
+        except DatabaseTimeout:
+            error("Database operation timed out - try again in a bit")
+        except DatabaseError as e:
+            error("Database operation failed: {}".format(e))
         except Exception as e:
             error("Server error in {}(): {}: {}".format(handler.__name__, e.__class__.__name__, e))
-            #print_exc()
     return wrapped_handler
 
 
