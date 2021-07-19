@@ -482,11 +482,11 @@ class Database:
         if not self.read_bookmarks.get(stream):
             self.read_bookmarks[stream] = {}
             self.read_bookmarks[stream]['first_time'] = self.real_start_time  # get first time
-            self.read_bookmarks[stream]['first_id'] = response[-1][0]  # get first ID
+            self.read_bookmarks[stream]['first_id'] = str(response[-1][0])  # get first ID
 
         # set last-read info
         self.read_bookmarks[stream]['last_time'] = self.time()
-        self.read_bookmarks[stream]['last_id'] = response[-1][0]  # store last timestamp
+        self.read_bookmarks[stream]['last_id'] = str(response[-1][0])  # store last timestamp
 
         # create final output dict
         output = {}
@@ -607,12 +607,12 @@ class Database:
         # set first-read info
         if not self.read_bookmarks.get(stream):
             self.read_bookmarks[stream] = {}
-            self.read_bookmarks[stream]['first_id'] = response[0][0]
+            self.read_bookmarks[stream]['first_id'] = str(response[0][0])
             self.read_bookmarks[stream]['first_time'] = self.real_start_time
 
         # set last-read info
         self.read_bookmarks[stream]['last_time'] = self.time()
-        self.read_bookmarks[stream]['last_id'] = response[0][0]  # store last timestamp
+        self.read_bookmarks[stream]['last_id'] = str(response[0][0])  # store last timestamp
 
         data = response[0][1]  # data dict
         keys = data.keys()  # get keys from data dict
