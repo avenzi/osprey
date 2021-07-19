@@ -636,10 +636,11 @@ class Analyzer(Streamer):
             raise Exception("Database Read operation returned nothing.")
 
         info_updated = False  # flag for displaying debug info
-        print(info_list)
         for info in info_list:
-            group = info['group']
-            name = info['name']
+            group = info.get('group')
+            name = info.get('info')
+            if not group or not name:
+                self.debug("Stream group or name not found in stream info")
 
             if not self.targets.get(group):  # group not found
                 continue
