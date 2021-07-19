@@ -816,13 +816,18 @@ class ServerDatabase(Database):
         return filename
 
     def time_since_save(self):
-        """ Returns time since last save in integer seconds """
+        """
+        Returns time since last save in integer seconds.
+        If not a live database, returns None.
+        If an error occurred, returns -1.
+        """
         if not self.live:
             return
         try:
             last_save = self.redis.execute_command("LASTSAVE")
             return int(time() - float(last_save))
         except Exception as e:
+            print(e.__class__.__name__, e)
             return -1
 
     def shutdown(self):
