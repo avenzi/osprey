@@ -316,6 +316,12 @@ class Database:
             return True
         return False
 
+    def decode(self, data):
+        """ Decodes data if necessary """
+        if type(data) == bytes:
+            return data.decode('utf-8')
+        return data
+
     @catch_connection_errors
     def get_total_time(self, stream):
         """ Gets the total length in time of a given stream in seconds """
@@ -482,11 +488,11 @@ class Database:
         if not self.read_bookmarks.get(stream):
             self.read_bookmarks[stream] = {}
             self.read_bookmarks[stream]['first_time'] = self.real_start_time  # get first time
-            self.read_bookmarks[stream]['first_id'] = str(response[-1][0])  # get first ID
+            self.read_bookmarks[stream]['first_id'] = self.decode(response[-1][0])  # get first ID
 
         # set last-read info
         self.read_bookmarks[stream]['last_time'] = self.time()
-        self.read_bookmarks[stream]['last_id'] = str(response[-1][0])  # store last timestamp
+        self.read_bookmarks[stream]['last_id'] = self.decode(response[-1][0])  # store last timestamp
 
         # create final output dict
         output = {}
@@ -528,7 +534,7 @@ class Database:
                 # data[0] is the timestamp ID
                 d = data[1]  # data dict
                 for key in d.keys():
-                    k = key.decode('utf-8')  # key won't be decoded, but it needs to be
+                    k = self.decode(key)  # key won't be decoded, but it needs to be
                     if output.get(k):
                         output[k].append(d[key])  # append
                     else:
@@ -574,12 +580,12 @@ class Database:
             - Also note that this removes the 'time' data column. This is for
                 plotting purposes - plotting software requires that all columns
                 be of same length, and the time column only has one entry.
-        Since this is a snapshot (not time series), gets last 1 data point from redis
+        Since this is a snapshot (not time series), gets last 1 data point from redis.
         """
         if decode:
             red = self.redis
         else:
-            red = self.bytes_redis
+            red = self.bytes_redis  # not implemented for this method
 
         if self.live:  # read most recent snapshot - don't care about bookmarks in live mode
             response = red.xrevrange('stream:'+stream, count=1)
@@ -607,12 +613,12 @@ class Database:
         # set first-read info
         if not self.read_bookmarks.get(stream):
             self.read_bookmarks[stream] = {}
-            self.read_bookmarks[stream]['first_id'] = str(response[0][0])
+            self.read_bookmarks[stream]['first_id'] = response[0][0]
             self.read_bookmarks[stream]['first_time'] = self.real_start_time
 
         # set last-read info
         self.read_bookmarks[stream]['last_time'] = self.time()
-        self.read_bookmarks[stream]['last_id'] = str(response[0][0])  # store last timestamp
+        self.read_bookmarks[stream]['last_id'] = response[0][0]  # store last timestamp
 
         data = response[0][1]  # data dict
         keys = data.keys()  # get keys from data dict
