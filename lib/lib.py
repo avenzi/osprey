@@ -131,7 +131,6 @@ class Base:
                 traceback.print_exc()
         self.display(err)
 
-
     def generate_uuid(self):
         """ Return a UUID as a URN string """
         return uuid4().urn[9:]
@@ -637,6 +636,7 @@ class Analyzer(Streamer):
             raise Exception("Database Read operation returned nothing.")
 
         info_updated = False  # flag for displaying debug info
+        print(info_list)
         for info in info_list:
             group = info['group']
             name = info['name']
