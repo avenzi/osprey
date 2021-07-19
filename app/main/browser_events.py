@@ -158,10 +158,24 @@ def delete(filename):
     refresh()
 
 
+@socketio.on('save_time', namespace='/browser')
+@catch_errors
+def save_time():
+    """ Returns a human readable string displaying the date and time of the last successful database save """
+    database = get_database()
+    if not database:
+        data = "--:--:--"
+    else:
+        data = str(timedelta(seconds=database.time_since_save()))
+        if not data:
+            data = "[Not live]"
+    socketio.emit('save_time', data, namespace='/browser', room=request.sid)
+
+
 @socketio.on('stream_time', namespace='/browser')
 @catch_errors
 def stream_time(group):
-    """ Get the current time information to display for the given stream """
+    """ Return a human-readable string with current time information to display for the given stream """
     database = get_database()
     if not database:
         print("Database not found")

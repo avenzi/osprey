@@ -100,7 +100,17 @@ $(document).ready(function() {
     socket.on('update_header', function(data) {
         // receive new header text to display for streams
         $('div.container > div.streams > h2').text(data);
-    })
+    });
+
+
+    // request save_time update every second
+    setInterval(function() {
+        socket.emit('save_time');
+    }, 1000);
+
+    socket.on('save_time', function(data) {
+        $("div.streams div.save_time").html("Last Save: " + data);
+    });
 
 
     var rename_dialog = $('.rename_dialog').dialog({

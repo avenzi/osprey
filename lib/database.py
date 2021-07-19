@@ -815,6 +815,16 @@ class ServerDatabase(Database):
 
         return filename
 
+    def time_since_save(self):
+        """ Returns time since last save in integer seconds """
+        if not self.live:
+            return
+        try:
+            last_save = self.redis.execute_command("LASTSAVE")
+            return int(time() - float(last_save))
+        except Exception as e:
+            return -1
+
     def shutdown(self):
         """ Shutdown the redis server instance """
         if self.live:  # if live database
