@@ -1,8 +1,10 @@
 from flask import current_app, session, request
+from threading import Thread, Event
+
 from datetime import timedelta
 from time import sleep, time
 
-from lib.database import DatabaseError, DatabaseLoading
+from lib.database import DatabaseError, DatabaseLoading, DatabaseTimeout
 
 from app.main import socketio
 
@@ -31,7 +33,7 @@ def disconnect():
 
 
 ####################################
-# Handlers for browser buttons
+# Handlers for browser socketIO messages and buttons
 
 
 @socketio.on('start', namespace='/browser')
@@ -39,16 +41,16 @@ def disconnect():
 def start():
     """ start all streams """
     database = get_database()
-    if database.ping():  # make sure database connected
-        if database.live:  # live mode
-            log("Sending Start command to streamers")
-            socketio.emit('start', namespace='/streamers')  # send start command to streamers
-        else:  # playback mode
-            log("Started playback")
-        database.start()
-        update_buttons()
-    else:
-        error('Cannot start streams - database ping failed')
+    if not database:
+        error("Could not start streams - database not found")
+        return
+    database.ping()
+    if database.live:  # live mode
+        log("Sending Start command to streamers")
+        socketio.emit('start', namespace='/streamers')  # send start command to streamers
+    else:  # playback mode
+        log("Started playback")
+    database.start()
 
 
 @socketio.on('stop', namespace='/browser')
@@ -117,13 +119,13 @@ def load(filename):
         sleep(1)
         n += 1
         try:  # check if available
-            get_database().ping(catch_error=False)
+            get_database().ping()
             break
         except DatabaseLoading as e:  # still loading
             error("Still loading file... ({})".format(n))
             sleep(5)
         except DatabaseError as e:  # lost connection (might have been aborted)
-            error("Failed to load database: {}".format(e.__class__.__name__, e))
+            error("Failed to load database (ping failed): {}".format(e.__class__.__name__, e))
             return
 
     set_button('live', hidden=False, disabled=False, text='Back to live session')
@@ -168,21 +170,8 @@ def delete(filename):
     refresh()
 
 
-@socketio.on('save_time', namespace='/browser')
-@catch_errors
-def save_time():
-    """ Returns a human readable string displaying the date and time of the last successful database save """
-    database = get_database()
-    if not database:
-        display = "--:--:--"
-    else:
-        t = database.time_since_save()
-        if not t:  # in playback mode
-            display = "--:--:--"
-        else:
-            display = str(timedelta(seconds=t))
-    socketio.emit('save_time', display, namespace='/browser', room=request.sid)
-
+######################################
+# Handler for status polling messages
 
 @socketio.on('stream_time', namespace='/browser')
 @catch_errors
@@ -212,3 +201,54 @@ def stream_time(group):
         display += '<br>'
 
     socketio.emit('stream_time', display, namespace='/browser', room=request.sid)
+
+
+@socketio.on('status', namespace='/browser')
+@catch_errors
+def status():
+    """
+    Emits a data dict with status information to be displayed
+    """
+    data = {
+        'save': database_save_time(),
+        'streaming': database_status()
+    }
+    socketio.emit('save_time', data, namespace='/browser', room=request.sid)
+
+
+def database_save_time():
+    """ last database save time """
+    database = get_database()
+    blank = "--:--:--"
+    if not database:
+        return blank
+    try:
+        t = database.time_since_save()
+        if not t:  # in playback mode
+            return blank
+        else:
+            return str(timedelta(seconds=t))
+    except Exception:
+        return blank
+
+
+def database_status():
+    """ Returns a string representing the database status """
+    database = get_database()
+    if not database:
+        return "No Database Found"
+
+    try:
+        database.ping()  # raises error if problems
+        if database.is_streaming():
+            return "Streaming"
+        else:
+            return "Idle"
+    except DatabaseLoading:
+        return "Loading..."
+    except DatabaseTimeout:
+        return "Not Responding..."
+    except DatabaseError as e:
+        return "Database Error: {}".format(e)
+    except Exception as e:
+        return "Uncaught Error {}: {}".format(e.__class__.__name__, e)

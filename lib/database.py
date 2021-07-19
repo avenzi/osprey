@@ -290,21 +290,21 @@ class Database:
             self.write_bookmarks[stream]['n'] = last_seq+1
         return redis_id
 
-    def ping(self, catch_error=True):
-        """ Ping database to ensure connecting is functioning """
-        if catch_error:
-            try:
-                if self.redis.ping():
-                    return True
-            except:
-                return False
-        else:
-            self.redis.ping()
+    @catch_connection_errors
+    def ping(self):
+        """
+        Ping database to ensure connecting is functioning
+        Meant to be used to catch different database exception classes
+        """
+        if self.redis.ping():
+            return True
+        return False
 
     def is_streaming(self):
         """
         Live mode: Check database for "STREAMING" key.
         Playback mode: Check self.playback_active property.
+        Does not propagate exceptions.
         """
         if self.live:
             try:
