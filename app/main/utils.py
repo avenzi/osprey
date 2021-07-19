@@ -153,7 +153,9 @@ def update_buttons():
         set_button('stop', disabled=False, text='Stop streams and save file to disk')
     else:
         set_button('start', disabled=False, text='Start streams')
-        set_button('stop', disabled=True, text='Streams are stopped')
+        #set_button('stop', disabled=True, text='Streams are stopped')
+    # Todo: use a different indicator of when the database is streaming. Having the buttons be
+    #  enabled or disabled can lead to undintended states if an error happens.
 
     socketio.emit('update_buttons', session['buttons'], namespace='/browser', room=request.sid)
 

@@ -71,9 +71,6 @@ def stop():
             except Exception as e:
                 error("Failed to save database - will attempt again in 5 seconds ({}). {}: {}".format(n, e.__class__.__name__, e))
                 sleep(5)
-            # todo: should this 'save' functionality be tied to a different button?
-            #  If the save happens to fail but the streamers are stopped, the stop button will be deactivated
-            #  but there should still be a way to try and save again.
 
     else:  # playback
         log('Paused Playback')
