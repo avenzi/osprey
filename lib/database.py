@@ -377,7 +377,7 @@ class Database:
         All Items (if iterable) must be of same length.
         Must include a 'time' column with unix time stamps in milliseconds.
         """
-        if not data.get('time'):  # check for time key
+        if data.get('time') is None:  # check for time key
             raise DatabaseError("Data input dictionary must contain a 'time' key.")
 
         # make sure all values are the same size
@@ -555,7 +555,7 @@ class Database:
         It places each list of data values as a comma separated list under one key.
         Must include a 'time' column with a single unix timestamp in milliseconds
         """
-        if not data.get('time'):  # check for time key
+        if data.get('time') is None:  # check for time key
             raise DatabaseError("Data input dictionary must contain a 'time' key.")
         if type(data['time']) not in [int, float]:
             raise DatabaseError("Time of this snapshot must be an integer or float.")
