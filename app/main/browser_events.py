@@ -164,12 +164,16 @@ def save_time():
     """ Returns a human readable string displaying the date and time of the last successful database save """
     database = get_database()
     if not database:
-        data = "--:--:--"
+        display = "--:--:--"
     else:
-        data = str(timedelta(seconds=database.time_since_save()))
-        if not data:
-            data = "[Not live]"
-    socketio.emit('save_time', data, namespace='/browser', room=request.sid)
+        t = database.time_since_save()
+        if not t:  # not a live database
+            display = "[Not live]"
+        elif t < 0:  # error
+            display = "[Err]"
+        else:
+            display = str(timedelta(seconds=t))
+    socketio.emit('save_time', display, namespace='/browser', room=request.sid)
 
 
 @socketio.on('stream_time', namespace='/browser')
