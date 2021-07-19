@@ -824,8 +824,8 @@ class ServerDatabase(Database):
         if not self.live:
             return
         try:
-            last_save = self.redis.execute_command("LASTSAVE")
-            return int(time() - float(last_save))
+            last_save = self.redis.execute_command("LASTSAVE")  # returns a datetime object
+            return int(time() - last_save.total_seconds())
         except Exception as e:
             print(e.__class__.__name__, e)
             return -1
