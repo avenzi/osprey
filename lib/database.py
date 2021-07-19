@@ -258,7 +258,10 @@ class Database:
 
     def redis_to_time(self, redis_time):
         """ Convert redis time stand to unix time stamp (ms). Ignores precision beyond ms """
-        return float(redis_time.split('-')[0])
+        if type(redis_time) == str:
+            return float(redis_time.split('-')[0])
+        elif type(redis_time) == bytes:
+            return float(redis_time.split(b'-')[0])
 
     def validate_redis_time(self, redis_id, stream):
         """
