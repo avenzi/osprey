@@ -783,7 +783,10 @@ class ServerDatabase(Database):
         if not self.live:
             raise DatabaseError("Did not save database file - not a live database")
 
-        self.redis.save()  # save database to current dump file
+        try:
+            self.redis.save()  # save database to current dump file
+        except redis.exceptions.ResponseError as e:
+            raise DatabaseError("Redis failed to save datababse. Response: {}".format(e))
 
         if not path.isfile(self.live_path+'/'+self.file):
             raise DatabaseError("Failed to save database file - no database file was found")

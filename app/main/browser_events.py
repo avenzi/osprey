@@ -59,9 +59,9 @@ def stop():
     database.stop()
     if database.live:
         socketio.emit('stop', namespace='/streamers')  # send stop command to streamers
+        socketio.emit('update', namespace='/streamers')  # request info update from streamers
         filename = database.save()  # save database file (if live) and wipe contents
         log('Session Saved: {}'.format(filename))
-        socketio.emit('update', namespace='/streamers')  # request info update from streamers
 
     else:  # playback
         log('Paused Playback')
