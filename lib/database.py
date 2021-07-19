@@ -6,11 +6,12 @@ from traceback import print_exc, print_stack
 from numpy import ndarray
 
 import redis
-from redistimeseries.client import Client as RedisTS
+#from redistimeseries.client import Client as RedisTS
 
 from datetime import timedelta
 
 def h(ms):
+    """ temporary for testing """
     if type(ms) == str:
         ms = float(ms.split('-')[0])
     return timedelta(milliseconds=ms)
@@ -208,8 +209,8 @@ class Database:
 
         # Create RedisTimeSeries Client instances as well
         # (wrapper around Redis instance to implement RedisTimeSeries commands)
-        self.redis_ts = RedisTS(conn=self.redis)
-        self.bytes_redis_ts = RedisTS(conn=self.bytes_redis)
+        #self.redis_ts = RedisTS(conn=self.redis)
+        #self.bytes_redis_ts = RedisTS(conn=self.bytes_redis)
         # todo: figure out how to convert to using RedisTimeSeries?
 
         self.exit = False  # flag to determine when to stop running if looping
