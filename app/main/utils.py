@@ -93,15 +93,14 @@ def update_pages(room=None):
     If not, send to only the current request.
     """
     database = get_database()
-    if database:
-        try:  # attempt to read list of group names
-            groups = database.read_all_groups()
-        except DatabaseError as e:
-            error("Error retrieving streams from database: {}".format(e))
-            groups = []
-    else:
-        error("Cannot get stream pages - No current database is set")
-        return
+    if not database:
+        return  # no database connection - do nothing
+
+    try:  # attempt to read list of group names
+        groups = database.read_all_groups()
+    except DatabaseError as e:
+        error("Error retrieving streams from database: {}".format(e))
+        groups = []
     if groups is None:
         error("Tried to retrieve list of pages, got None")
         return
