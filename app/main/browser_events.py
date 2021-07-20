@@ -232,7 +232,7 @@ def database_status(database):
         return "Not Responding..."
     except DatabaseConnectionError:
         return "Disconnected"
-    except:
+    except Exception as e:
         return "---"
 
     if database.live:
