@@ -61,13 +61,6 @@ def set_database(file=None):
         ctrl.new_live(ID=session.sid)
 
     database = ctrl.get(session.sid)
-
-    # set Index Header for this session
-    if database.live:  # live database
-        session['database_name'] = 'Live Stream'
-    else:  # playback database
-        session['database_name'] = 'File: '+database.file
-
     print("SET DATABASE:", database)
 
     return database

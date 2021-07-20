@@ -21,6 +21,9 @@ body { max-width: 960px; margin: 0 auto; background: white; }
 .commands {grid-area: commands;}
 
 .streams {grid-area: streams;}
+.streams div.status {
+    padding: 0em 0em 1em 1em;
+}
 .streams div.status p {
     font-weight: bold;
     margin: 0;
