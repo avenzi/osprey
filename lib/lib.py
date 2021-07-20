@@ -117,7 +117,7 @@ class Base:
     def debug(self, msg, level=1):
         """ Sends a debug level message """
         if Base.debug_level >= level:
-            self.display("[{}]: {}".format(self.get_time(), msg))
+            self.display("[{}][{}]: {}".format(self.get_time(), self, msg))
 
     def throw(self, msg, cause=None, trace=True):
         """ display error message and halt """
@@ -265,6 +265,9 @@ class Client(Base):
         self.set_debug(debug)
         self.pipes = {}   # index of Pipe objects, each connecting to a WorkerNode
 
+    def __repr__(self):
+        return self.name
+
     def run(self):
         """
         Default main entry point. Can be overwritten.
@@ -360,7 +363,7 @@ class WorkerNode(Base):
         self.id = self.generate_uuid()
 
     def __repr__(self):
-        return "[{}]".format(self.name)
+        return self.name
 
     def run(self, pipe):
         """
@@ -433,7 +436,7 @@ class Streamer(WorkerNode):
         self.streaming = Event()  # threading event flag set to activate stream
 
     def __repr__(self):
-        return "[{}:{}]".format(self.group, self.name)
+        return "{}:{}".format(self.group, self.name)
 
     def set_info(self, parent):
         """ Takes some parameters from the parent CLient class and sets the worker's info dict """
@@ -495,10 +498,10 @@ class Streamer(WorkerNode):
         while not self.exit:
             try:
                 self.socket.connect('http://{}:{}'.format(self.ip, self.port))
-                self.debug("{} Connected to server socketIO".format(self))
+                self.debug("Connected to server socketIO")
                 return True
             except Exception as e:
-                #self.debug("{} failed to connect to server socketIO: {}".format(self, e))
+                self.debug("Failed to connect to server socketIO: {}".format(self, e))
                 pass
             time.sleep(1)
 
@@ -513,7 +516,7 @@ class Streamer(WorkerNode):
 
         # get connection to database
         self.database = Database(self.ip, self.db_port, self.db_pass)
-        self.log("{} Connected to Database".format(self))
+        self.debug("Connected to Database")
 
     def update(self):
         """ Send info to database and signal update to server """
@@ -549,8 +552,8 @@ class Streamer(WorkerNode):
             self.log("Failed to start {} ({})".format(self, e))
             return
         self.streaming.set()  # set streaming, which starts the main execution while loop
-        self.log("Started {}".format(self))
-        self.socket.emit('log', "Started {}".format(self), namespace='/streamers')
+        self.debug("Started".format(self))
+        self.socket.emit('log', "{} Started".format(self), namespace='/streamers')
         self.update()
 
     def start(self):
@@ -569,8 +572,8 @@ class Streamer(WorkerNode):
             return
         self.streaming.clear()  # stop streaming, stopping the main execution while loop
         self.stop()  # call subclassed stop method
-        self.log("Stopped {}".format(self))
-        self.socket.emit('log', "Stopped Streamer {}".format(self), namespace='/streamers')
+        self.debug("Stopped".format(self))
+        self.socket.emit('log', "{} Stopped".format(self), namespace='/streamers')
         self.update()
 
     def stop(self):
@@ -582,7 +585,7 @@ class Streamer(WorkerNode):
 
     def json(self, dic):
         """ To be called in response to the socketio receiving json (dict) data """
-        self.log("{} Received JSON: {}".format(self.name, dic))
+        self.debug("Received JSON: {}".format(self.name, dic))
         pass
 
 
@@ -625,7 +628,8 @@ class Analyzer(Streamer):
         If no stream ID is given, look through all info dicts currently on the database.
         """
         if not self.database:
-            raise Exception("Analyzer '{}' attempted to get target from database, but database connection has not been initialized.".format(self))
+            self.debug("Attempted to get target from database, but database connection has not been initialized.".format(self))
+            return
 
         try:
             if not stream_id:
@@ -636,11 +640,12 @@ class Analyzer(Streamer):
             self.debug("Failed to get target info from database - database still loading.".format(e.__class__.__name__, e), 3)
             return
         except Exception as e:
-            self.debug("{} failed to get target info from database: {}".format(self, e), 3)
+            self.debug("Failed to get target info from database: {}".format(self, e), 3)
             return
 
         if not info_list:
-            raise Exception("Database Read operation returned nothing.")
+            self.debug("Database returned no info for the targets")
+            return
 
         info_updated = False  # flag for displaying debug info
         for info in info_list:
@@ -675,7 +680,7 @@ class Analyzer(Streamer):
             for group_name, group in self.targets.items():
                 for stream_name, info in group.items():
                     if info.get('id'):
-                        self.debug("{} targeting [{}:{}]".format(self, group_name, stream_name))
+                        self.debug("Targeting [{}:{}]".format(self, group_name, stream_name))
 
     def _start(self):
         """ Checks for any target streams before running """
@@ -688,7 +693,7 @@ class Analyzer(Streamer):
         if any(streams):  # any of the target streams is present
             super()._start()
         else:
-            self.log("{} not started - did not find any target streams.".format(self))
+            self.debug("Not started - did not find any target streams.".format(self))
 
 
 class Namespace(socketio.ClientNamespace):
