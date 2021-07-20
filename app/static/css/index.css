@@ -19,7 +19,11 @@ body { max-width: 960px; margin: 0 auto; background: white; }
 }
 
 .commands {grid-area: commands;}
+
 .streams {grid-area: streams;}
+.streams div.status p{
+    margin: 0;
+}
 
 .files {grid-area: files;}
 .files li.selected {
