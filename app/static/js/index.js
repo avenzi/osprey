@@ -39,7 +39,7 @@ function get_button(name) {
 
 $(document).ready(function() {
     var namespace = '/browser';  // namespace for talking with server
-    var io = io(namespace);
+    var socket = io(namespace);
     var selected_file = ""  // currently selected file
 
     var status_loop
@@ -49,30 +49,30 @@ $(document).ready(function() {
     // Todo: This is because Flask uses HTTPOnly cookies to store the session ID.
     // Todo: So instead, for now each separate socket just polls the server, and the server checks which session it's coming from.
 
-    io.on('connect', function(socket) {
+    socket.on('connect', function() {
         log("SocketIO connected to server");
 
         // start status polling
         status_loop = setInterval(function() {
-            io.emit('status');  // poll server for status updates
+            socket.emit('status');  // poll server for status updates
         }, 1000);
     });
 
-    io.on('disconnect', function(socket) {
+    socket.on('disconnect', function(socket) {
         log("SocketIO disconnected from server");
         clearInterval(status_loop);  // stop status polling
     });
 
-    io.on('log', function(msg) {
+    socket.on('log', function(msg) {
         log(msg);
     });
 
-    io.on('error', function(msg) {
+    socket.on('error', function(msg) {
         error(msg)
     });
 
 
-    io.on('update_pages', function(data) {
+    socket.on('update_pages', function(data) {
         // data is a list of objects with info on each stream
         $('.streams ul').empty()
         data.forEach(function(info) {
@@ -80,7 +80,7 @@ $(document).ready(function() {
         });
     });
 
-    io.on('update_files', function(data) {
+    socket.on('update_files', function(data) {
         // data is a list of file names
         selected_file = ""  // clear selected file
         $('.files ul').empty()
@@ -104,14 +104,14 @@ $(document).ready(function() {
         });
     });
 
-    io.on('update_buttons', function(data) {
+    socket.on('update_buttons', function(data) {
         // data is an object. Each member is a button name with values as the buttons properties
         for (button in data) {
             set_button(button, data[button]);
         };
     });
 
-    io.on('update_status', function(data) {
+    socket.on('update_status', function(data) {
         $("#source").html(data.source);
         $("#streaming").html(data.streaming);
         $("#save").html(data.save);
@@ -153,11 +153,11 @@ $(document).ready(function() {
 
     // each command button emits an event to the server
     $('div.stream_commands button.command').on('click', function(event) {
-        io.emit(event.target.value);
+        socket.emit(event.target.value);
     });
 
     $('div.file_commands button.load').on('click', function(event) {
-        io.emit(event.target.value, selected_file);
+        socket.emit(event.target.value, selected_file);
     });
 
     $('div.file_commands button.rename').on("click", function() {
