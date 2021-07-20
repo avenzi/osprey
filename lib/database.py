@@ -22,13 +22,17 @@ class DatabaseError(Exception):
     pass
 
 
-class DatabaseTimeout(DatabaseError):
+class DatabaseConnectionError(DatabaseError):
+    """ Invoked when the database refuses the connection or disconnects for some reaosn """
+
+
+class DatabaseTimeoutError(DatabaseError):
     """
     Invoked when database is operation times out - the database may be busy or unresponsive
     """
 
 
-class DatabaseLoading(DatabaseTimeout):
+class DatabaseBusyLoadingError(DatabaseError):
     """
     Invoked when the database is currently loading a file into memory.
     Essentially just used with a redis.exceptions.BusyLoadingError.
@@ -40,21 +44,23 @@ def get_time_filename():
     return strftime("%Y-%m-%d_%H:%M:%S.rdb", localtime())
 
 
-def catch_connection_errors(method):
+def catch_database_errors(method):
     """
-    Method wrapper to catch disconnection errors.
-    Turns errors into a single DatabaseError to be caught elsewhere.
+    Method wrapper to catch database errors.
+    Turns errors into a DatabaseError classes that can be caught elsewhere
     """
     @functools.wraps(method)
     def wrapped(self, *args, **kwargs):
         try:  # attempt to perform database operation
             return method(self, *args, **kwargs)
         except redis.exceptions.BusyLoadingError:
-            raise DatabaseLoading("Redis is loading the database into memory. Try again later.")
+            raise DatabaseBusyLoadingError("Redis is loading the database into memory. Try again later.")
         except (redis.exceptions.TimeoutError, TimeoutError) as e:
-            raise DatabaseTimeout("Database operation timed out")
-        except (ConnectionResetError, ConnectionRefusedError, redis.exceptions.ConnectionError, redis.exceptions.ResponseError) as e:
-            raise DatabaseError("{}: {}".format(e.__class__.__name__, e))
+            raise DatabaseTimeoutError("Database operation timed out")
+        except (ConnectionResetError, ConnectionRefusedError, redis.exceptions.ConnectionError) as e:
+            raise DatabaseConnectionError("{}: {}".format(e.__class__.__name__, e))
+        except (redis.exceptions.ResponseError) as e:
+            raise DatabaseError("Database Response Error: {}".format(e))
         except Exception as e:  # other type of error
             print_stack()
             print_exc()
@@ -290,7 +296,7 @@ class Database:
             self.write_bookmarks[stream]['n'] = last_seq+1
         return redis_id
 
-    @catch_connection_errors
+    @catch_database_errors
     def ping(self):
         """
         Ping database to ensure connecting is functioning
@@ -331,7 +337,7 @@ class Database:
             return data.decode('utf-8')
         return data
 
-    @catch_connection_errors
+    @catch_database_errors
     def get_total_time(self, stream):
         """ Gets the total length in time of a given stream in seconds """
         assert not self.live, "Cannot get total time of a live stream, only elapsed time."
@@ -359,7 +365,7 @@ class Database:
         diff = end_time - start_time
         return diff/1000  # ms to s
 
-    @catch_connection_errors
+    @catch_database_errors
     def get_elapsed_time(self, stream):
         """ Gets the current length of time that a database has been playing for in seconds """
         bookmark = self.read_bookmarks.get(stream)
@@ -376,7 +382,7 @@ class Database:
 
         return (current_time - start_time)/1000  # ms to s
 
-    @catch_connection_errors
+    @catch_database_errors
     def write_data(self, stream, data):
         """
         Writes time series <data> to stream:<stream>.
@@ -421,7 +427,7 @@ class Database:
             redis_id = self.validate_redis_time(time_id, stream)
             self.redis.xadd('stream:'+stream, {key: data[key] for key in data.keys()}, id=redis_id)
 
-    @catch_connection_errors
+    @catch_database_errors
     def read_data(self, stream, count=None, max_time=None, numerical=True, to_json=False, decode=True):
         """
         Gets newest data for <reader> from data column <stream>.
@@ -553,7 +559,7 @@ class Database:
             return json.dumps(output)
         return output
 
-    @catch_connection_errors
+    @catch_database_errors
     def write_snapshot(self, stream, data):
         """
         Writes a snapshot of data <data> to stream:<stream>.
@@ -580,7 +586,7 @@ class Database:
 
         self.redis.xadd('stream:' + stream, new_data, id=redis_id)
 
-    @catch_connection_errors
+    @catch_database_errors
     def read_snapshot(self, stream, to_json=False, decode=True):
         """
         Gets latest snapshot for <reader> from data column <stream>. Only gets 1 data point.
@@ -642,7 +648,7 @@ class Database:
             return json.dumps(output)
         return output
 
-    @catch_connection_errors
+    @catch_database_errors
     def write_info(self, key, data):
         """
         Writes <data> to info:<key>
@@ -651,7 +657,7 @@ class Database:
         """
         self.redis.hmset('info:'+key, data)
 
-    @catch_connection_errors
+    @catch_database_errors
     def read_info(self, ID, name=None):
         """
         Reads <name> from map with key info:<key>
@@ -663,7 +669,7 @@ class Database:
             data = self.redis.hgetall('info:' + ID)
             return data
 
-    @catch_connection_errors
+    @catch_database_errors
     def read_all_info(self):
         """ Gets a list of dictionaries containing info for all connected streams """
         info = []
@@ -671,7 +677,7 @@ class Database:
             info.append(self.redis.hgetall(key))
         return info
 
-    @catch_connection_errors
+    @catch_database_errors
     def write_group(self, key, data):
         """
         Writes <data> to group:<key>
@@ -680,7 +686,7 @@ class Database:
         """
         self.redis.hmset('group:'+key, data)
 
-    @catch_connection_errors
+    @catch_database_errors
     def read_group(self, name, stream=None):
         """
         Gets an info dict from stream with name <stream> in group_name <name>
@@ -702,7 +708,7 @@ class Database:
                     data[key] = info
             return data
 
-    @catch_connection_errors
+    @catch_database_errors
     def read_all_groups(self):
         """ Gets a list of dictionaries containing name and ID info for all connected streams """
         info = []
@@ -710,7 +716,7 @@ class Database:
             info.append(self.redis.hgetall(key))
         return info
 
-    @catch_connection_errors
+    @catch_database_errors
     def read_streams(self, group):
         """
         Return a dictionary of all streams in a group
@@ -760,7 +766,7 @@ class ServerDatabase(Database):
     def __repr__(self):
         return "PORT: {}, LIVE: {}, FILE: {}".format(self.port, self.live, self.file)
 
-    @catch_connection_errors
+    @catch_database_errors
     def start(self):
         """
         Live mode: Sets "STREAMING" key in database.
@@ -772,7 +778,7 @@ class ServerDatabase(Database):
             self.real_start_time = time()*1000  # mark last playback start time (ms)
             self.playback_active = True
 
-    @catch_connection_errors
+    @catch_database_errors
     def stop(self):
         """
         Live mode:  removes "RUNNING" key in database.
@@ -784,7 +790,7 @@ class ServerDatabase(Database):
             self.relative_stop_time = self.time()  # mark playback pause time relative to playback
             self.playback_active = False
 
-    @catch_connection_errors
+    @catch_database_errors
     def save(self, filename=None, shutdown=False):
         """
         Save the current database to disk
@@ -794,7 +800,24 @@ class ServerDatabase(Database):
         if not self.live:
             raise DatabaseError("Did not save database file - not a live database")
 
-        self.redis.save()  # save database to current dump file
+        # Todo: Make this more robust to possible errors.
+        #  Check redis's last update time before and after to check if it changed, indicating a successful save
+        try:
+            self.redis.save()  # save database to current dump file
+        except DatabaseTimeoutError:  # busy saving - unresponsive
+            pass
+
+        n = 1
+        while True:  # wait while database gives Timeout Errors.
+            try:
+                self.ping()  # check to see if database is responsive yet
+                break
+            except DatabaseTimeoutError:
+                print("Saving database to disk... ({})".format(n))
+                n += 1
+                sleep(5)
+            except Exception as e:
+                raise DatabaseError("Failed to save database to disk. {}: {}".format(e.__class__.__name__, e))
 
         if not path.isfile(self.live_path+'/'+self.file):
             raise DatabaseError("Failed to save database file - no database file was found")
@@ -809,6 +832,10 @@ class ServerDatabase(Database):
         if stat < 0:
             raise DatabaseError("Failed to save database file to '{}': Status code: {}".format(filename, stat))
 
+        # check to make sure that the new file was indeed created
+        if not path.isfile("{}/{}".format(self.save_path, filename)):
+            raise DatabaseError("Failed to save database file to '{}'. Aborting database wipe.".format(filename))
+
         try:  # clear contents of live dump file
             self.redis.flushdb()
         except Exception as e:
@@ -822,7 +849,7 @@ class ServerDatabase(Database):
 
         return filename
 
-    @catch_connection_errors
+    @catch_database_errors
     def time_since_save(self):
         """
         Returns time since last save in integer seconds.
@@ -833,7 +860,7 @@ class ServerDatabase(Database):
         last_save = self.redis.execute_command("LASTSAVE")  # returns a datetime object
         return int(time() - last_save.timestamp())
 
-    @catch_connection_errors
+    @catch_database_errors
     def shutdown(self):
         """ Shutdown the redis server instance """
         if self.live:  # if live database

@@ -11,7 +11,7 @@ import os
 
 import socketio
 
-from lib.database import Database, DatabaseError, DatabaseLoading, DatabaseTimeout
+from lib.database import Database, DatabaseError, DatabaseBusyLoadingError, DatabaseTimeoutError
 
 
 class Base:
@@ -529,9 +529,9 @@ class Streamer(WorkerNode):
 
             # notify server of update
             self.socket.emit('update', self.id, namespace='/streamers')
-        except DatabaseLoading as e:
+        except DatabaseBusyLoadingError as e:
             self.debug("Unable to update database - database still loading.", 3)
-        except DatabaseTimeout as e:
+        except DatabaseTimeoutError as e:
             self.debug("Unable to update database - connection times out.", 3)
         except Exception as e:
             self.debug("Unable to update database. {}: {}".format(e.__class__.__name__, e))
@@ -632,7 +632,7 @@ class Analyzer(Streamer):
                 info_list = self.database.read_all_info()
             else:  # stream ID given
                 info_list = [self.database.read_info(stream_id)]
-        except DatabaseLoading as e:
+        except DatabaseBusyLoadingError as e:
             self.debug("Failed to get target info from database - database still loading.".format(e.__class__.__name__, e), 3)
             return
         except Exception as e:
