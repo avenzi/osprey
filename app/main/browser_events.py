@@ -63,21 +63,22 @@ def stop():
 
         socketio.emit('stop', namespace='/streamers')  # send stop command to streamers
 
-        n = 0
+        n = 1
         while True:
-            n += 1
             try:
+                database.ping()  # throws error if there's a problem
                 filename = database.save()  # save database file (if live) and wipe contents
                 log('Session Saved: {}'.format(filename))
                 break
             except DatabaseTimeout:  # call to database SAVE operation timed out, so it's still working on it
                 error("Saving database to disk... ({})".format(n))
+                n += 1
+                sleep(5)
             except DatabaseError as e:
                 raise e
             except Exception as e:
                 error("Failed to save database")
                 raise e
-            sleep(5)
 
     else:  # playback
         log('Paused Playback')
@@ -216,8 +217,8 @@ def status():
     db = get_database()
     data = {
         'source': database_source(db),
-        'save': database_save_time(db),
-        'streaming': database_status(db)
+        'streaming': database_status(db),
+        'save': database_save_time(db)
     }
     socketio.emit('update_status', data, namespace='/browser', room=request.sid)
 
@@ -226,11 +227,38 @@ def database_source(database):
     """ Returns the database name to display """
     if not database:
         return "No Database Found"
+    database.ping()
     if database.live:
         return 'Live Stream'
     else:  # playback
         return database.file
 
+def database_status(database):
+    """ Returns a string representing the database status """
+    if not database:
+        return "---"
+
+    try:
+        database.ping()  # raises error if problems
+    except DatabaseLoading:
+        return "Loading..."
+    except DatabaseTimeout:
+        return "Not Responding..."
+    except DatabaseError:
+        return "Disconnected"
+    except Exception as e:
+        return "---"
+
+    if database.live:
+        if database.is_streaming():
+            return "Streaming"
+        else:
+            return "Idle"
+    else:  # playback mode
+        if database.playback_active:
+            return "Streaming (1x speed)"
+        else:
+            return "Paused"
 
 def database_save_time(database):
     """ last database save time """
@@ -247,27 +275,3 @@ def database_save_time(database):
         return blank
 
 
-def database_status(database):
-    """ Returns a string representing the database status """
-    if not database:
-        return "---"
-
-    try:
-        database.ping()  # raises error if problems
-    except DatabaseLoading:
-        return "Loading..."
-    except DatabaseTimeout:
-        return "Not Responding..."
-    except Exception as e:
-        return "---"
-
-    if database.live:
-        if database.is_streaming():
-            return "Streaming"
-        else:
-            return "Idle"
-    else:  # playback mode
-        if database.playback_active:
-            return "Streaming (1x speed)"
-        else:
-            return "Paused"
