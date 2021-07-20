@@ -4,7 +4,7 @@ from threading import Thread, Event
 from datetime import timedelta
 from time import sleep, time
 
-from lib.database import DatabaseError, DatabaseLoading, DatabaseTimeout
+from lib.database import DatabaseError, DatabaseBusyLoadingError, DatabaseTimeoutError, DatabaseConnectionError
 
 from app.main import socketio
 
@@ -60,26 +60,9 @@ def stop():
     database = get_database()
     database.stop()
     if database.live:
-
         socketio.emit('stop', namespace='/streamers')  # send stop command to streamers
-
-        n = 1
-        while True:
-            try:
-                database.ping()  # throws error if there's a problem
-                filename = database.save()  # save database file (if live) and wipe contents
-                log('Session Saved: {}'.format(filename))
-                break
-            except DatabaseTimeout:  # call to database SAVE operation timed out, so it's still working on it
-                error("Saving database to disk... ({})".format(n))
-                n += 1
-                sleep(5)
-            except DatabaseError as e:
-                raise e
-            except Exception as e:
-                error("Failed to save database")
-                raise e
-
+        filename = database.save()  # save database file (if live) and wipe contents.
+        log('Session Saved: {}'.format(filename))
     else:  # playback
         log('Paused Playback')
 
@@ -126,7 +109,7 @@ def load(filename):
         try:  # check if available
             get_database().ping()
             break
-        except DatabaseLoading as e:  # still loading
+        except DatabaseBusyLoadingError as e:  # still loading
             error("Still loading file... ({})".format(n))
             sleep(5)
         except DatabaseError as e:  # lost connection (might have been aborted)
@@ -240,9 +223,9 @@ def database_status(database):
 
     try:
         database.ping()  # raises error if problems
-    except DatabaseLoading:
+    except DatabaseBusyLoadingError:
         return "Loading..."
-    except DatabaseTimeout:
+    except DatabaseTimeoutError:
         return "Not Responding..."
     except DatabaseError:
         return "Disconnected"
