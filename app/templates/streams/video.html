@@ -40,29 +40,33 @@
 
             var id = "{{info['Raw']['id']}}";
 
-            // socketio namespace specifies ID of the stream
-            var socket = io('/video_stream');
+            // socketio for receiving video stream
+            var video_socket = io('/video_stream');
 
-            // request time update every second
-            setInterval(function() {
-                socket.emit('stream_time', id);
-            }, 1000);
-
-            socket.on('connect', function() {
+            video_socket.on('connect', function() {
                 console.log("Video streaming socketIO connected to server");
                 console.log(id);
                 socket.emit('start', id);
             });
 
-            io.of('/browser').on('stream_time', function(data) {
-                $("div.stream_time").html(data);
-            });
-
-            // feed data into jmuxer when received
-            socket.on('data', (frame) => {
+            video_socket.on('data', (frame) => {
+                // feed received frame data into jmuxer
                 jmuxer.feed({video: new Uint8Array(frame)});
             });
+
+
+            // socketio namespace for regular server communication
+            var server_socket = io('/browser')
+
+            // request time update every second
+            setInterval(function() {
+                server_socket.emit('stream_time', id);
+            }, 1000);
+
+            server_socket.on('stream_time', function(data) {
+                $("div.stream_time").html(data);
             });
+        });
     </script>
 </div>
 {% endblock %}

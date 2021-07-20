@@ -8,6 +8,10 @@ video_streams = {}  # {stream_ID: Threading_Event}
 stream_counts = {}  # {stream_ID: number_of_clients}
 browser_clients = {}  # {socketIO_SID: stream_ID}
 
+# TODO: The video.html file loads information like the height and width of the video from the Jinja2 template.
+#  Instead, that information should be sent vid SocketIO from this file instead - much cleaner and more flexible.
+#  Also move all that JS to a dedicated .js file in /static
+
 
 @socketio.on('start', namespace='/video_stream')
 def start_video_stream(ID):
