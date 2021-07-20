@@ -680,7 +680,7 @@ class Analyzer(Streamer):
             for group_name, group in self.targets.items():
                 for stream_name, info in group.items():
                     if info.get('id'):
-                        self.debug("Targeting [{}:{}]".format(self, group_name, stream_name))
+                        self.debug("Targeting [{}:{}]".format(group_name, stream_name))
 
     def _start(self):
         """ Checks for any target streams before running """
