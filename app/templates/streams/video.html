@@ -1,4 +1,6 @@
 {% extends 'streams/stream_base.html' %}
+{% import 'cdn.html' as cdn %}
+
 {% block head %}
     {{ cdn.jquery() }}
     {{ cdn.socketio() }}
