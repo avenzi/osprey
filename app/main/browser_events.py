@@ -70,9 +70,14 @@ def stop():
                 filename = database.save()  # save database file (if live) and wipe contents
                 log('Session Saved: {}'.format(filename))
                 break
+            except DatabaseTimeout:  # call to database SAVE operation timed out, so it's still working on it
+                error("Saving database to disk... ({})".format(n))
+            except DatabaseError as e:
+                raise e
             except Exception as e:
-                error("Failed to save database - will attempt again in 5 seconds ({}). {}: {}".format(n, e.__class__.__name__, e))
-                sleep(5)
+                error("Failed to save database")
+                raise e
+            sleep(5)
 
     else:  # playback
         log('Paused Playback')
@@ -253,10 +258,8 @@ def database_status(database):
         return "Loading..."
     except DatabaseTimeout:
         return "Not Responding..."
-    except DatabaseError as e:
-        return "Database Error: {}".format(e)
     except Exception as e:
-        return "Uncaught Error {}: {}".format(e.__class__.__name__, e)
+        return "---"
 
     if database.live:
         if database.is_streaming():
