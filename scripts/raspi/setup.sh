@@ -19,9 +19,9 @@ pip3 install -r scripts/raspi/python_requirements.txt  # install requirements (d
 #loading $! "Installing Python3 and dependent requirements.... \n\
 #Please wait until this is finished to provide configuration information\n"
 
-# Add crontab line to start the app on boot, targetting data-hub/main/run.sh
+# Add crontab line to start the app on boot, targetting data-hub/main/run_all.sh
 echo "Writing Crontab line to start the application on boot..."
-run_path="$(pwd -P)/run.sh"  # get absolute path of run.sh
+run_path="$(pwd -P)/run.sh"  # get absolute path of run_all.sh
 (sudo crontab -l ; echo "@reboot sh ${run_path}") 2>/dev/null | sort | uniq | sudo crontab -
 
 # Enable Picam if not already
