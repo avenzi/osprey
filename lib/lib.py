@@ -664,7 +664,7 @@ class Analyzer(Streamer):
             # found stream not the first and not the most recently updated.
             # This only happens if there is more than 1 stream with the same name and group,
             #  which means it's an old version of the same stream.
-            if float(info['updated']) < self.targets[group][name].get('updated', 0):
+            if float(info['updated']) <= self.targets[group][name].get('updated', 0):
                 continue
 
             # copy info from database to appropriate dictionary
