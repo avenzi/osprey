@@ -119,8 +119,8 @@ $(document).ready(function() {
     socket.on('update_status', function(data) {
         // data.save: Time since last database save (string)
         // data.streaming: Database streaming status (string)
-        $("div.streams span.streaming").html("Streaming: " + data.streaming);
-        $("div.streams span.save").html(     "Last Save: " + data.save);
+        $("#streaming").html("Streaming: " + data.streaming);
+        $("#save").html(     "Last Save: " + data.save);
     });
 
 
