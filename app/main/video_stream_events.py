@@ -20,6 +20,7 @@ def start_video_stream(ID):
     If none is found, then create one and start streaming to a socketIO room with that ID.
     If there is one, add to the number of watching streams. The browser will connect to the existing stream in that room.
     """
+    print("GOT VIDEO START REQUEST FROM: {}".format(request.sid))
     join_room(ID)  # put client in room with ID of stream ID
     if not video_streams.get(ID):  # no event associated with this stream
         video_streams[ID] = Event()  # create event for this stream ID
@@ -55,6 +56,7 @@ def run_video_stream(database, ID):
     <ID> is the ID of the stream
     <event> is the threading event used to stop the stream
     """
+    print("STARTED VIDEOS STREAM")
     event = video_streams[ID]
     while True:
         event.wait()  # stream only when even is set
