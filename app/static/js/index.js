@@ -112,7 +112,7 @@ $(document).ready(function() {
     });
 
     socket.on('update_status', function(data) {
-        $("#database_name").html(data.name);
+        $("#source").html(data.source);
         $("#streaming").html(data.streaming);
         $("#save").html(data.save);
     });

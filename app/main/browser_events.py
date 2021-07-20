@@ -210,17 +210,22 @@ def status():
     """
     db = get_database()
     data = {
-        'name': database_name(db),
+        'source': database_source(db),
         'save': database_save_time(db),
         'streaming': database_status(db)
     }
     socketio.emit('update_status', data, namespace='/browser', room=request.sid)
 
-def database_name(database):
-    """ Returns the datbase name to display """
+
+def database_source(database):
+    """ Returns the database name to display """
     if not database:
         return "No Database Found"
-    return session['database_name']
+    if database.live:
+        return 'Live Stream'
+    else:  # playback
+        return database.file
+
 
 def database_save_time(database):
     """ last database save time """
