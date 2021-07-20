@@ -59,7 +59,8 @@
 
             // request time update every second
             setInterval(function() {
-                server_socket.emit('stream_time', id);
+                params = new URLSearchParams(document.location.search);
+                server_socket.emit('stream_time', params.get('group'));
             }, 1000);
 
             server_socket.on('stream_time', function(data) {
