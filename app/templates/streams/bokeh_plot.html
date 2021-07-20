@@ -1,4 +1,5 @@
 {% extends 'streams/stream_base.html' %}
+{% import 'cdn.html' as cdn %}
 
 {% block style %}
 {{ super() }}
@@ -6,13 +7,10 @@
 {% endblock %}
 
 {% block head %}
-    <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-2.3.2.min.js" crossorigin="anonymous"></script>
-    <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.3.2.min.js" crossorigin="anonymous"></script>
-    <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-api-2.3.2.min.js" crossorigin="anonymous"></script>
-    <script type="text/javascript">Bokeh.set_log_level("info");</script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
-    <script src="static/js/stream.js"></script>
+    {{ cdn.bokeh() }}
+    {{ cdn.jquery() }}
+    {{ cdn.socketio() }}
+    <script src="static/js/bokeh_stream.js"></script>
 {% endblock %}
 
 {% block content %}

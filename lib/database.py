@@ -772,10 +772,10 @@ class ServerDatabase(Database):
         Live mode: Sets "STREAMING" key in database.
         Playback mode: Starts playback.
         """
+        self.real_start_time = time() * 1000  # mark last playback start time (ms)
         if self.live:
             self.redis.set('STREAMING', 1)  # set RUNNING key
         else:
-            self.real_start_time = time()*1000  # mark last playback start time (ms)
             self.playback_active = True
 
     @catch_database_errors
