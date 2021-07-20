@@ -111,16 +111,10 @@ $(document).ready(function() {
         };
     });
 
-    socket.on('update_header', function(data) {
-        // receive new header text to display for streams
-        $('div.container > div.streams > h2').text(data);
-    });
-
     socket.on('update_status', function(data) {
-        // data.save: Time since last database save (string)
-        // data.streaming: Database streaming status (string)
-        $("#streaming").html("Streaming: " + data.streaming);
-        $("#save").html(     "Last Save: " + data.save);
+        $("#database_name").html(data.name);
+        $("#streaming").html(data.streaming);
+        $("#save").html(data.save);
     });
 
 

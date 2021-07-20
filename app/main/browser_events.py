@@ -11,7 +11,7 @@ from app.main import socketio
 from app.main.utils import (
     log, error, catch_errors,
     set_database, get_database, set_button,
-    update_pages, update_files, update_buttons, update_text,
+    update_pages, update_files, update_buttons,
     check_filename
 )
 
@@ -89,7 +89,6 @@ def stop():
 @catch_errors
 def refresh():
     """ Refresh all data displayed in browser index """
-    update_text()
     update_pages()
     update_files()
     update_buttons()
@@ -209,16 +208,22 @@ def status():
     """
     Emits a data dict with status information to be displayed
     """
+    db = get_database()
     data = {
-        'save': database_save_time(),
-        'streaming': database_status()
+        'name': database_name(db),
+        'save': database_save_time(db),
+        'streaming': database_status(db)
     }
     socketio.emit('update_status', data, namespace='/browser', room=request.sid)
 
+def database_name(database):
+    """ Returns the datbase name to display """
+    if not database:
+        return "No Database Found"
+    return session['database_name']
 
-def database_save_time():
+def database_save_time(database):
     """ last database save time """
-    database = get_database()
     blank = "--:--:--"
     if not database:
         return blank
@@ -232,18 +237,13 @@ def database_save_time():
         return blank
 
 
-def database_status():
+def database_status(database):
     """ Returns a string representing the database status """
-    database = get_database()
     if not database:
-        return "No Database Found"
+        return "---"
 
     try:
         database.ping()  # raises error if problems
-        if database.is_streaming():
-            return "Streaming"
-        else:
-            return "Idle"
     except DatabaseLoading:
         return "Loading..."
     except DatabaseTimeout:
@@ -252,3 +252,14 @@ def database_status():
         return "Database Error: {}".format(e)
     except Exception as e:
         return "Uncaught Error {}: {}".format(e.__class__.__name__, e)
+
+    if database.live:
+        if database.is_streaming():
+            return "Streaming"
+        else:
+            return "Idle"
+    else:  # playback mode
+        if database.playback_active:
+            return "Streaming (1x speed)"
+        else:
+            return "Paused"

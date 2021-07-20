@@ -64,9 +64,9 @@ def set_database(file=None):
 
     # set Index Header for this session
     if database.live:  # live database
-        session['index_header'] = 'Connected Live Streams'
+        session['database_name'] = 'Live Stream'
     else:  # playback database
-        session['index_header'] = 'Playback: '+database.file
+        session['database_name'] = 'File: '+database.file
 
     print("SET DATABASE:", database)
 
@@ -119,12 +119,6 @@ def update_files():
         if isfile(join(data_path, file)) and not file.startswith('.'):
             files.append(file)
     socketio.emit('update_files', files, namespace='/browser', room=request.sid)
-
-
-@catch_errors
-def update_text():
-    """ Sends text data to the page to update """
-    socketio.emit('update_header', session['index_header'], namespace='/browser', room=request.sid)
 
 
 def set_button(name, hidden=None, disabled=None, text=None):
