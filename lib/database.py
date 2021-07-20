@@ -806,26 +806,23 @@ class ServerDatabase(Database):
         <save> whether to save the file in the storage directory,
             and returns the full filename used (may not be the same as given)
         """
-        print("BEGINNING")
         if not self.live:
             raise DatabaseError("Did not save database file - not a live database")
 
         # Todo: Make this more robust to possible errors.
         #  Check redis's last update time before and after to check if it changed, indicating a successful save
+
+        n = 1
         try:
-            print("GONNA SAVE")
             self._save_to_disk()
         except DatabaseTimeoutError:  # busy saving - unresponsive
-            print("SENT SAVE, GOT TIMEOUT")
-            pass
+            print("Saving database to disk... ({})".format(n))
+            n += 1
+            sleep(2)
 
-        print('GOING TO WHILE LOOP')
-        n = 1
         while True:  # wait while database gives Timeout Errors.
             try:
-                print("PINIGNG")
                 self.ping()  # check to see if database is responsive yet
-                print("SUCCESS!!!!!!")
                 break
             except DatabaseTimeoutError:
                 print("Saving database to disk... ({})".format(n))
@@ -833,7 +830,6 @@ class ServerDatabase(Database):
                 sleep(5)
             except Exception as e:
                 raise DatabaseError("Failed to save database to disk. {}: {}".format(e.__class__.__name__, e))
-        print("PAST PNIG???")
 
         if not path.isfile(self.live_path+'/'+self.file):
             raise DatabaseError("Failed to save database file - no database file was found")
