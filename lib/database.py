@@ -791,6 +791,15 @@ class ServerDatabase(Database):
             self.playback_active = False
 
     @catch_database_errors
+    def _save_to_disk(self):
+        """
+        Saves current database in memory to disk.
+        This is in a separate method so I could add the @catch_database_errors decorator
+            instead of rewriting those try/except clauses.
+        """
+        self.redis.save()
+
+    @catch_database_errors
     def save(self, filename=None, shutdown=False):
         """
         Save the current database to disk
@@ -805,8 +814,7 @@ class ServerDatabase(Database):
         #  Check redis's last update time before and after to check if it changed, indicating a successful save
         try:
             print("GONNA SAVE")
-            self.redis.save()  # save database to current dump file
-            print("AFTER SAVE")
+            self._save_to_disk()
         except DatabaseTimeoutError:  # busy saving - unresponsive
             print("SENT SAVE, GOT TIMEOUT")
             pass
