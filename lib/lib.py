@@ -677,6 +677,9 @@ class Analyzer(Streamer):
 
         # output notification that targets were found
         if info_updated:
+            print()
+            print(self.targets)
+            print()
             for group_name, group in self.targets.items():
                 for stream_name, info in group.items():
                     if info.get('id'):
