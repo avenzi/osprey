@@ -4,6 +4,7 @@
     <script src="/js/jmuxer.min.js"></script>
 {% endblock %}
 {% block content %}
+<div class="stream_time"></div>
 <div id="streamtage">
     <video controls autoplay muted id="stream" onplay="skip()"></video>
     <script>
@@ -41,15 +42,20 @@
         // socketio namespace specifies ID of the stream
         var socket = io('/video_stream');
 
+        // request time update every second
+        setInterval(function() {
+            socket.emit('stream_time', id);
+        }, 1000);
+
         socket.on('connect', function() {
             console.log("Video streaming socketIO connected to server");
             console.log(id);
             socket.emit('start', id);
         });
 
-		host = window.location.host
-		path = window.location.pathname
-		queries = window.location.search
+        socket.on('stream_time', function(data) {
+            $("div.stream_time").html(data);
+        });
 
         // feed data into jmuxer when received
 		socket.on('data', (frame) => {

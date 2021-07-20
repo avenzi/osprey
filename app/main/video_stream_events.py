@@ -51,7 +51,6 @@ def run_video_stream(database, ID):
     <ID> is the ID of the stream
     <event> is the threading event used to stop the stream
     """
-    print("VIDEO STREAM DB: {}".format(database))
     event = video_streams[ID]
     while True:
         event.wait()  # stream only when even is set

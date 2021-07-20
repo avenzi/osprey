@@ -786,6 +786,7 @@ class ServerDatabase(Database):
         """
         if self.live:
             self.redis.delete('STREAMING')  # unset RUNNING key
+            self.read_bookmarks = {}  # clear all bookmarks when live stream is stopped.
         else:
             self.relative_stop_time = self.time()  # mark playback pause time relative to playback
             self.playback_active = False
