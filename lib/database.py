@@ -805,12 +805,16 @@ class ServerDatabase(Database):
         try:
             self.redis.save()  # save database to current dump file
         except DatabaseTimeoutError:  # busy saving - unresponsive
+            print("SENT SAVE, GOT TIMEOUT")
             pass
 
+        print('GOING TO WHILE LOOP')
         n = 1
         while True:  # wait while database gives Timeout Errors.
             try:
+                print("PINIGNG")
                 self.ping()  # check to see if database is responsive yet
+                print("SUCCESS!!!!!!")
                 break
             except DatabaseTimeoutError:
                 print("Saving database to disk... ({})".format(n))
@@ -818,6 +822,7 @@ class ServerDatabase(Database):
                 sleep(5)
             except Exception as e:
                 raise DatabaseError("Failed to save database to disk. {}: {}".format(e.__class__.__name__, e))
+        print("PAST PNIG???")
 
         if not path.isfile(self.live_path+'/'+self.file):
             raise DatabaseError("Failed to save database file - no database file was found")

@@ -58,10 +58,7 @@ def start():
 def stop():
     """ Stop streams, dump database file to disk, start a clean database file """
     database = get_database()
-    try:
-        database.stop()
-    except:
-        raise Exception("IT WAS HERE AT STOP")
+    database.stop()
     if database.live:
         socketio.emit('stop', namespace='/streamers')  # send stop command to streamers
         try:
@@ -216,11 +213,11 @@ def database_source(database):
     """ Returns the database name to display """
     if not database:
         return "No Database Found"
-    database.ping()
     if database.live:
-        return 'Live Stream'
+        return "Live Stream"
     else:  # playback
         return database.file
+
 
 def database_status(database):
     """ Returns a string representing the database status """
@@ -233,9 +230,9 @@ def database_status(database):
         return "Loading..."
     except DatabaseTimeoutError:
         return "Not Responding..."
-    except DatabaseError:
+    except DatabaseConnectionError:
         return "Disconnected"
-    except Exception as e:
+    except:
         return "---"
 
     if database.live:
@@ -249,6 +246,7 @@ def database_status(database):
         else:
             return "Paused"
 
+
 def database_save_time(database):
     """ last database save time """
     blank = "--:--:--"
@@ -260,7 +258,7 @@ def database_save_time(database):
             return blank
         else:
             return str(timedelta(seconds=t))
-    except Exception:
+    except:
         return blank
 
 
