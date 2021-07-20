@@ -86,8 +86,12 @@ def check_filename(file):
 
 
 @catch_errors
-def update_pages():
-    """ Updates list of connected streams in browser """
+def update_pages(room=None):
+    """
+    Updates list of connected streams in browser.
+    If room is given, send update to that room.
+    If not, send to only the current request.
+    """
     database = get_database()
     if database:
         try:  # attempt to read list of group names
@@ -101,27 +105,37 @@ def update_pages():
     if groups is None:
         error("Tried to retrieve list of pages, got None")
         return
-    socketio.emit('update_pages', groups, namespace='/browser', room=request.sid)
+
+    if not room:  # if room not given, send to room ID of current request
+        room = request.sid
+    socketio.emit('update_pages', groups, namespace='/browser', room=room)
 
 
 @catch_errors
-def update_files():
-    """ Updates list of database files in browser """
+def update_files(room=None):
+    """
+    Updates list of database files in browser.
+    If room is given, send update to that room.
+    If not, send to only the current request.
+    """
     data_path = 'data/saved'
     files = []
     for file in listdir(data_path):
         # if a valid file and doesn't start with a period (hidden files)
         if isfile(join(data_path, file)) and not file.startswith('.'):
             files.append(file)
-    socketio.emit('update_files', files, namespace='/browser', room=request.sid)
+
+    if not room:  # if room not given, send to room ID of current request
+        room = request.sid
+    socketio.emit('update_files', files, namespace='/browser', room=room)
 
 
 def set_button(name, hidden=None, disabled=None, text=None):
     """
-    Updates the state of a single button in the current session
-    <name>: class name of the button to be targeted
-    <hidden>: whether the button is hidden
-    <disabled>: whether the button is disabled
+    Updates the state of a single button in the current session.
+    <name>: class name of the button to be targeted.
+    <hidden>: whether the button is hidden.
+    <disabled>: whether the button is disabled.
     <text>: button text, if changed.
     """
     if not session.get('buttons'):
@@ -131,9 +145,16 @@ def set_button(name, hidden=None, disabled=None, text=None):
 
 
 @catch_errors
-def update_buttons():
-    """ Sends all button data stored in session """
+def update_buttons(room=None):
+    """
+    Sends all button data stored in session.
+    If room is given, send update to that room.
+    If not, send to only the current request.
+    """
     if not session.get('buttons'):
         session['buttons'] = {}
-    socketio.emit('update_buttons', session['buttons'], namespace='/browser', room=request.sid)
+
+    if not room:  # if room not given, send to room ID of current request
+        room = request.sid
+    socketio.emit('update_buttons', session['buttons'], namespace='/browser', room=room)
 

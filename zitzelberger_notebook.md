@@ -33,6 +33,14 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### July 20th, 2021:
+
+​	Ok so just quickly before I work on playback, I added a small script reload_flask.sh that sends a HUP signal to Gunicorn which reloads the Flask app. This is just so I can push changes to the server without interrupting the databases or streams. I also fixed a minor bug where Analyzers would target the same stream twice unnecessarily.
+
+​	I also had a great idea to solve the issue I've mentioned the last few days regarding different browser socketIO clients not being able to share global data from their session because they don't know their own session ID: Add a socket message handler that echoes the socket's session ID, so it knows what session that is. Also emit some info like what databse they are viewing - that will allow them to a join a room for that too. This way, all tabs of a single session can receive the same data, and all sessions viewing the same database can receive the same data. Not gonna do this now, but I think it will work great.
+
+​	
+
 ##### July 19th, 2021:
 
 ​	Started today by trying to figure out why the video stream isn't working during playback. Luckily, this wasn't a huge issue - just some byte decoding problems that were easily fixed.

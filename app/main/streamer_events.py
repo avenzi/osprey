@@ -9,6 +9,11 @@ Namespaces:
     "/streamers": all streams (including analyzers)
 """
 
+# todo: Idea to allow client sockets to join certain rooms tied to the database they are viewing:
+#  Add a socket message handler that echos the socket's session ID, so it knows what session that is.
+#  Also emit some info like what databse they are viewing - that will allow them to a join a room for that too.
+#  This way, all tabs of a single session can receive the same data, and all sessions viewing the same database can receive the same data.
+
 
 @socketio.on('connect', namespace='/streamers')
 def connect():
@@ -34,7 +39,7 @@ def streamer_init(stream_id):
 @socketio.on('update', namespace='/streamers')
 def streamer_update(stream_id):
     """ notified that the streamer's info has updated """
-    pass
+    update_pages(room='live')  # update pages of live streams
 
 
 @socketio.on('log', namespace='/streamers')
