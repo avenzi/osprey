@@ -61,11 +61,8 @@ def stop():
     database.stop()
     if database.live:
         socketio.emit('stop', namespace='/streamers')  # send stop command to streamers
-        try:
-            filename = database.save()  # save database file (if live) and wipe contents.
-        except:
-            raise Exception("IT WAS HERE AT SAVE")
-        log('Session Saved: {}'.format(filename))
+        filename = database.save()  # save database file (if live) and wipe contents.
+        log('Session Exported to file: {}'.format(filename))
     else:  # playback
         log('Paused Playback')
 
@@ -257,7 +254,7 @@ def database_save_time(database):
         if not t:  # in playback mode
             return blank
         else:
-            return str(timedelta(seconds=t))
+            return str(timedelta(seconds=t)) + 's ago'
     except:
         return blank
 
