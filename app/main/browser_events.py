@@ -58,10 +58,16 @@ def start():
 def stop():
     """ Stop streams, dump database file to disk, start a clean database file """
     database = get_database()
-    database.stop()
+    try:
+        database.stop()
+    except:
+        raise Exception("IT WAS HERE AT STOP")
     if database.live:
         socketio.emit('stop', namespace='/streamers')  # send stop command to streamers
-        filename = database.save()  # save database file (if live) and wipe contents.
+        try:
+            filename = database.save()  # save database file (if live) and wipe contents.
+        except:
+            raise Exception("IT WAS HERE AT SAVE")
         log('Session Saved: {}'.format(filename))
     else:  # playback
         log('Paused Playback')
