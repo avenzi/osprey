@@ -42,12 +42,25 @@ $(document).ready(function() {
     var socket = io(namespace);
     var selected_file = ""  // currently selected file
 
+    var status_loop
+    // Todo: Ideally, this socket would just join a room with ID equal to the session ID.
+    // Todo: Then the server could just broadcast session-specific updates every second, with no need for polling.
+    // Todo: However, I have no idea how to get the session ID on this client side socket.
+    // Todo: This is because Flask uses HTTPOnly cookies to store the session ID.
+    // Todo: So instead, for now each separate socket just polls the server, and the server checks which session it's coming from.
+
     socket.on('connect', function() {
         log("SocketIO connected to server");
+
+        // start status polling
+        status_loop = setInterval(function() {
+            socket.emit('status');  // poll server for status updates
+        }, 1000);
     });
 
     socket.on('disconnect', function() {
         log("SocketIO disconnected from server");
+        clearInterval(status_loop);  // stop status polling
     });
 
     socket.on('log', function(msg) {
@@ -58,7 +71,7 @@ $(document).ready(function() {
         error(msg)
     });
 
-    // intermittent updates initiated by the server or a manual refresh
+
     socket.on('update_pages', function(data) {
         // data is a list of objects with info on each stream
         $('.streams ul').empty()
@@ -103,18 +116,7 @@ $(document).ready(function() {
         $('div.container > div.streams > h2').text(data);
     });
 
-
-    // Constant updates polled every second
-    // Todo: Ideally, this socket would just join a room with ID equal to the session ID.
-    // Todo: Then the server could just broadcast session-specific updates every second, with no need for polling.
-    // Todo: However, I have no idea how to get the session ID on this client side socket.
-    // Todo: This is because Flask uses HTTPOnly cookies to store the session ID.
-    // Todo: So instead, for now each separate socket just polls the server, and the server checks which session it's coming from.
-    setInterval(function() {
-        socket.emit('status');
-    }, 1000);
-
-    socket.on('status', function(data) {
+    socket.on('update_status', function(data) {
         // data.save: Time since last database save (string)
         // data.streaming: Database streaming status (string)
         $("div.streams div.streaming").html("Streaming: " + data.streaming);
