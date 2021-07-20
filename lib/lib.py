@@ -11,7 +11,7 @@ import os
 
 import socketio
 
-from lib.database import Database, DatabaseError, DatabaseBusyLoadingError, DatabaseTimeoutError
+from lib.database import Database, DatabaseError, DatabaseBusyLoadingError, DatabaseTimeoutError, DatabaseConnectionError
 
 
 class Base:
@@ -466,14 +466,13 @@ class Streamer(WorkerNode):
         while not self.exit:  # run until exit
             self.streaming.wait()  # block until streaming event is set
             try:
-                self.loop()  # call user-defined main execution
-            except DatabaseError as e:
-                self.debug(e)
+                self.loop()  # call inherited main execution loop
+            except DatabaseError:
+                self.connect_database()  # ping database, may continue or stop the loop
+            except Exception as e:  # non-database related error
+                self.throw("Unhandled Exception in main loop", trace=True)
                 self._stop()
-            except Exception as e:
-                self._stop()
-                self.throw("Unhandled exception: {}".format(e), trace=True)
-                return
+                raise e
 
     def loop(self):
         """
@@ -505,6 +504,47 @@ class Streamer(WorkerNode):
                 pass
             time.sleep(1)
 
+    def connect_database(self):
+        """
+        Initialize the database connection if it doesn't already exist.
+        Try to ping the database and return only when the ping is successful.
+        """
+        if not self.database:
+            self.database = Database(self.ip, self.db_port, self.db_pass)
+
+        start = time.time()
+        while True:
+            try:
+                self.database.ping()  # attempt database ping
+                self.debug("Connected to Database")
+                return
+
+            except DatabaseBusyLoadingError as e:
+                self.debug("Database still loading - trying again in 1 second")
+                time.sleep(1)
+
+            except DatabaseTimeoutError as e:
+                self.debug("Database operation timed out - trying again in 5 seconds")
+                time.sleep(5)
+
+            except DatabaseConnectionError as e:
+                if time.time() - start > 30:
+                    self._stop()
+                    self.debug("Could not connect to database after 30 seconds. Aborting.")
+                    return
+                self.debug("Database connection lost - trying again in 5 seconds")
+                time.sleep(5)
+
+            except DatabaseError as e:
+                self._stop()
+                self.debug("Unhandled Database Error. Aborting. {}: {}".format(e.__class__.__name__, e))
+                return
+
+            except Exception as e:
+                self._stop()
+                self.throw("Unhandled exception. Aborting. {}".format(e), trace=True)
+                return
+
     def init(self):
         """ Initialize connections """
         # register each namespace
@@ -515,8 +555,7 @@ class Streamer(WorkerNode):
         self.connect_socket()
 
         # get connection to database
-        self.database = Database(self.ip, self.db_port, self.db_pass)
-        self.debug("Connected to Database")
+        self.connect_database()
 
     def update(self):
         """ Send info to database and signal update to server """
@@ -661,9 +700,10 @@ class Analyzer(Streamer):
             if not self.targets[group].get(name):  # name not found in group
                 continue
 
-            # found stream not the first and not the most recently updated.
+            # If the found stream is not as updated as the current one, go to the next one.
             # This only happens if there is more than 1 stream with the same name and group,
             #  which means it's an old version of the same stream.
+            # Also if it's exactly as update, it's just the same stream so don't bother updating again.
             if float(info['updated']) <= self.targets[group][name].get('updated', 0):
                 continue
 
@@ -677,9 +717,6 @@ class Analyzer(Streamer):
 
         # output notification that targets were found
         if info_updated:
-            print()
-            print(self.targets)
-            print()
             for group_name, group in self.targets.items():
                 for stream_name, info in group.items():
                     if info.get('id'):
