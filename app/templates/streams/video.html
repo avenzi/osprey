@@ -18,49 +18,47 @@
         var vid = document.getElementById("stream");
         vid.setAttribute("width", width);
         vid.setAttribute("height", height);
+
+        $(document).ready(function() {
+            var jmuxer = new JMuxer({
+                node: 'stream',
+                mode: 'video',
+                flushingTime: 0,
+                fps: {{info['Raw']['framerate']}},
+                debug: false
+            });
+
+            var vid = document.getElementById("stream");
+            vid.playbackRate = 1.1;  // catch up to current position if fall behind
+            skip = function() {  // called onplay to skip to live stream
+                vid.currentTime = Math.floor(vid.duration);
+            }
+
+            var id = "{{info['Raw']['id']}}";
+
+            // socketio namespace specifies ID of the stream
+            var socket = io('/video_stream');
+
+            // request time update every second
+            setInterval(function() {
+                socket.emit('stream_time', id);
+            }, 1000);
+
+            socket.on('connect', function() {
+                console.log("Video streaming socketIO connected to server");
+                console.log(id);
+                socket.emit('start', id);
+            });
+
+            io.of('/browser').on('stream_time', function(data) {
+                $("div.stream_time").html(data);
+            });
+
+            // feed data into jmuxer when received
+            socket.on('data', (frame) => {
+                jmuxer.feed({video: new Uint8Array(frame)});
+            });
+            });
     </script>
 </div>
-
-<script type="text/javascript">
-	window.onload = function(){
-		var jmuxer = new JMuxer({
-			node: 'stream',
-			mode: 'video',
-			flushingTime: 0,
-			fps: {{info['Raw']['framerate']}},
-			debug: false
-		});
-
-		var vid = document.getElementById("stream");
-		vid.playbackRate = 1.1;  // catch up to current position if fall behind
-		skip = function() {  // called onplay to skip to live stream
-		    vid.currentTime = Math.floor(vid.duration);
-		}
-
-		var id = "{{info['Raw']['id']}}";
-
-        // socketio namespace specifies ID of the stream
-        var socket = io('/video_stream');
-
-        // request time update every second
-        setInterval(function() {
-            socket.emit('stream_time', id);
-        }, 1000);
-
-        socket.on('connect', function() {
-            console.log("Video streaming socketIO connected to server");
-            console.log(id);
-            socket.emit('start', id);
-        });
-
-        socket.on('stream_time', function(data) {
-            $("div.stream_time").html(data);
-        });
-
-        // feed data into jmuxer when received
-		socket.on('data', (frame) => {
-			jmuxer.feed({video: new Uint8Array(frame)});
-		});
-	}
-</script>
 {% endblock %}
