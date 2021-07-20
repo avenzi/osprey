@@ -20,6 +20,9 @@ redis-server config/live_redis.conf
 # start redis server for Flask session store
 redis-server config/session_redis.conf
 
+# activate virtual environment
+. venv/bin/activate
+
 # call gunicorn with appropriate config file
 gunicorn -c config/gunicorn.conf.py "app:create_app()"
 
