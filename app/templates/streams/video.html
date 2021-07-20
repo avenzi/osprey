@@ -46,14 +46,13 @@
             video_socket.on('connect', function() {
                 console.log("Video streaming socketIO connected to server");
                 console.log(id);
-                socket.emit('start', id);
+                video_socket.emit('start', id);
             });
 
             video_socket.on('data', (frame) => {
                 // feed received frame data into jmuxer
                 jmuxer.feed({video: new Uint8Array(frame)});
             });
-
 
             // socketio namespace for regular server communication
             var server_socket = io('/browser')
