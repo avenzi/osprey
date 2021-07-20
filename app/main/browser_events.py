@@ -188,6 +188,7 @@ def stream_time(group):
             display += " / {}".format(str(timedelta(seconds=int(total))))
         display += '<br>'
 
+    print("GETTING STREAM TIME REQUEST FROM: ".format(request.sid))
     socketio.emit('stream_time', display, namespace='/browser', room=request.sid)
 
 
