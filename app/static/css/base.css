@@ -4,7 +4,11 @@ html {
     padding: 1rem;
 }
 h1 {color: #377ba8;}
-h2 {margin: 0em; padding: 0em 0em 0.5em 0em;}
+h2 {
+    margin: 0em;
+    padding: 0em 0em 0.3em 0em;
+    font-size: 1.2em;
+}
 a, li {color: #377ba8;}
 
 nav {

@@ -21,7 +21,12 @@ body { max-width: 960px; margin: 0 auto; background: white; }
 .commands {grid-area: commands;}
 
 .streams {grid-area: streams;}
-.streams div.status p{
+.streams div.status p {
+    font-weight: bold;
+    margin: 0;
+}
+.streams div.status p span {
+    font-weight: normal;
     margin: 0;
 }
 
