@@ -213,7 +213,7 @@ def status():
         'save': database_save_time(),
         'streaming': database_status()
     }
-    socketio.emit('status', data, namespace='/browser', room=request.sid)
+    socketio.emit('update_status', data, namespace='/browser', room=request.sid)
 
 
 def database_save_time():
