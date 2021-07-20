@@ -1,8 +1,10 @@
 {% extends 'streams/stream_base.html' %}
 {% block head %}
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    {{ cdn.jquery() }}
+    {{ cdn.socketio() }}
     <script src="/js/jmuxer.min.js"></script>
 {% endblock %}
+
 {% block content %}
 <div class="stream_time"></div>
 <div id="streamtage">
