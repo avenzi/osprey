@@ -37,7 +37,7 @@ class PicamOutput:
         """ Write data to the buffer, adding the new frame when necessary """
         with self.ready:
             self.buffer.write(data)
-            self.ready.notify_all()  # TODO: Change to notify() ? notify_all may cause exclusive access violation
+            self.ready.notify_all()  # TODO: Change to notify()? notify_all may cause exclusive access violation
 
     def read(self):
         """ Blocking operation to read the newest frame """
