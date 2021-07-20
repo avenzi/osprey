@@ -797,13 +797,16 @@ class ServerDatabase(Database):
         <save> whether to save the file in the storage directory,
             and returns the full filename used (may not be the same as given)
         """
+        print("BEGINNING")
         if not self.live:
             raise DatabaseError("Did not save database file - not a live database")
 
         # Todo: Make this more robust to possible errors.
         #  Check redis's last update time before and after to check if it changed, indicating a successful save
         try:
+            print("GONNA SAVE")
             self.redis.save()  # save database to current dump file
+            print("AFTER SAVE")
         except DatabaseTimeoutError:  # busy saving - unresponsive
             print("SENT SAVE, GOT TIMEOUT")
             pass
