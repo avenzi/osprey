@@ -443,6 +443,7 @@ class Database:
         # set last-read info
         self.read_bookmarks[stream]['last_time'] = self.time()
         self.read_bookmarks[stream]['last_id'] = self.decode(response[-1][0])  # store last timestamp
+        print("SET LAST TIME: {}".format(self.read_bookmarks[stream]['last_time']))
 
         # create final output dict
         output = {}
