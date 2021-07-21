@@ -882,6 +882,7 @@ class PlaybackDatabase(ServerDatabase):
                 end_id = self.read_bookmarks[stream]['end_id']
             except Exception as e:
                 print("END ID: ", e)
+                print(self.redis.xrevrange('stream:'+stream, count=1)[0][0])
                 return 0
 
         start_time = self.redis_to_time(start_id)
