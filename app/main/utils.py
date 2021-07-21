@@ -44,6 +44,7 @@ def catch_errors(handler):
             error("Database operation failed: {}".format(e))
         except Exception as e:
             error("Server error in {}(): {}: {}".format(handler.__name__, e.__class__.__name__, e))
+            print_exc()
     return wrapped_handler
 
 
