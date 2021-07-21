@@ -41,7 +41,7 @@ function start_stream(info) {
 
     $('button.skip').on('click', skip)
     function skip() {  // called onplay to skip to live
-        console.log("SKIPPPPINGNGNGNGNGN")
+        // for some reason this doesn't work in Microsoft Edge
         vid.currentTime = Math.floor(vid.duration);
     }
 
