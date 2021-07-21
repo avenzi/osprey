@@ -33,6 +33,12 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### July 21st, 2021:
+
+​	Alright so this morning I had the task of testing and debugging the frantic 2am rewrite that I did last night. Surprisingly, there were relatively few issues. The one that I did run into was actually not a result of that - it was something already on my list to fix. The problem was that the total_time wasn't being correctly retrieved for video streams. The problem was that I was trying to read the last redis timestamp ID in the stream, but to do so I was using the redis instance that automatically decodes bytes data. However because it technically also reads the video frame in that data point, it was throwing an error because it couldn't decode it. Using the redis connection instance with decode=False fixed that issue, but I then had to manually decode the timestamp from bytes afterward. 
+
+​	
+
 ##### July 20th, 2021:
 
 ​	Ok so just quickly before I work on playback, I added a small script reload_flask.sh that sends a HUP signal to Gunicorn which reloads the Flask app. This is just so I can push changes to the server without interrupting the databases or streams. I also fixed a minor bug where Analyzers would target the same stream twice unnecessarily.
