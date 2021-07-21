@@ -15,6 +15,7 @@ events = {}  # {socket_id: event}
 #  I haven't implemented that now because I want to wait until I know how to set up a Bokeh server.
 #  At that point, I want to create some generalized method to implement this functionality for ANY data stream,
 #   and simply apply it to both the Bokeh data and the video data.
+#  This general method should take in the group name of a stream, and return the full html document for the browser.
 #  .
 #  Also I have my previous version of this in video_stream_events_room_version.py, however not that it
 #   does NOT function as intended, because each incoming connection still uses it's own database object to retrieve
@@ -31,11 +32,6 @@ events = {}  # {socket_id: event}
 #   for each room, which then operate independently.
 #  Just be careful that when a live database requests a stream, it will be put in a room already streaming that live database.
 #  However, when a playback database requests a stream, it will be put in a room UNIQUE TO ITS OWN SESSION.
-
-# TODO: The video.html file loads information like the height and width of the video from the Jinja2 template.
-#  Instead, that information should be sent vid SocketIO from this file instead - much cleaner and more flexible.
-#  Also move all that JS to a dedicated .js file in /static
-
 
 @socketio.on('start', namespace='/video_stream')
 def start_video_stream(stream_id):
