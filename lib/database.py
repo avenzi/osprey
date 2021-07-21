@@ -328,9 +328,6 @@ class Database:
         if not current_time:
             return 0
 
-        print()
-        print(h(start_time), h(current_time))
-        print(h(self.start_time))
         return (current_time - start_time)/1000  # ms to s
 
     @catch_database_errors
@@ -874,7 +871,8 @@ class PlaybackDatabase(ServerDatabase):
             try:
                 self.read_bookmarks[stream]['first_id'] = self.decode(self.redis.xrange('stream:'+stream, count=1)[0][0])
                 start_id = self.read_bookmarks[stream]['first_id']
-            except:
+            except Exception as e:
+                print("START ID: ", e)
                 return 0
 
         end_id = bookmark.get('end_id')
@@ -882,7 +880,8 @@ class PlaybackDatabase(ServerDatabase):
             try:
                 self.read_bookmarks[stream]['end_id'] = self.decode(self.redis.xrevrange('stream:'+stream, count=1)[0][0])
                 end_id = self.read_bookmarks[stream]['end_id']
-            except:
+            except Exception as e:
+                print("END ID: ", e)
                 return 0
 
         start_time = self.redis_to_time(start_id)
