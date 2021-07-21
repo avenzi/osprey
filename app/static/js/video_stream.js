@@ -37,6 +37,7 @@ function start_stream(info) {
     vid.setAttribute("height", height);
     vid.onplay = skip  // call skip() on play
     vid.playbackRate = info.speed;  // set playback speed
+    vid.defaultPlaybackRate = info.speed  // gotta set this too or it doesn't work
     console.log('SPEED', vid.playbackRate)
 
     function skip() {  // called onplay to skip to live
