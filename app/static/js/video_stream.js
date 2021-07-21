@@ -89,7 +89,7 @@ $(document).ready(function() {
         $("div.stream_time").html(data);
     });
 
-    serve_socket.on('info', function(data) {
+    server_socket.on('info', function(data) {
         console.log("RECEIVED INFO:");
         console.log(data);
         start_stream(data);
