@@ -57,7 +57,7 @@ def browser_disconnect():
     """ On disconnecting from the browser, clear event and stop streaming thread """
     socket_id = request.sid  # SocketIO session ID
     room_id = rooms[socket_id]  # get room associated with this socket connection
-    print("DISCONNECTED room {}".format(socket_id, room_id[:10]))
+    print("DISCONNECTED room {}".format(room_id[:10]))
     room_counts[room_id] -= 1  # decrement number of clients in that room
     if room_counts[room_id] == 0:  # was the last one in there
         room_events[room_id].clear()  # stop stream (unset threading event to stop loop)
