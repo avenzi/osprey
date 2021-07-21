@@ -4,9 +4,10 @@ from app.main import socketio
 from threading import Thread, Event
 
 # Maps to keep track of what socketIO connections are watching which video streams.
-video_streams = {}  # {stream_ID: Threading_Event}
-stream_counts = {}  # {stream_ID: number_of_clients}
-browser_clients = {}  # {socketIO_SID: stream_ID}
+rooms = {}  # {socketIO_SID: room_ID}
+room_events = {}  # {room_ID: Threading_Event}
+room_counts = {}  # {room_ID: number_of_clients}
+
 
 # TODO: The video.html file loads information like the height and width of the video from the Jinja2 template.
 #  Instead, that information should be sent vid SocketIO from this file instead - much cleaner and more flexible.
@@ -14,66 +15,79 @@ browser_clients = {}  # {socketIO_SID: stream_ID}
 
 
 @socketio.on('start', namespace='/video_stream')
-def start_video_stream(ID):
+def start_video_stream(stream_id):
     """
-    Looks for a threading event associated with this stream ID.
-    If none is found, then create one and start streaming to a socketIO room with that ID.
-    If there is one, add to the number of watching streams. The browser will connect to the existing stream in that room.
+    Creates a room for each video stream.
+    IF the stream is from a live database, that room can be joined from any session.
+    If the stream is from a playback database, that room can only be joined from that session.
+    Starts a new thread for each room that emits data from the database.
     """
-    print("GOT VIDEO START REQUEST FROM: {}".format(request.sid))
-    join_room(ID)  # put client in room with ID of stream ID
-    if not video_streams.get(ID):  # no event associated with this stream
-        print("NO EVENT FOR THIS STREAM: {}".format(ID))
-        video_streams[ID] = Event()  # create event for this stream ID
-        stream_counts[ID] = 0  # start count for this ID
+    session_id = session.sid  # Server session ID
+    socket_id = request.sid   # SocketIO session ID
+
+    print("GOT VIDEO START REQUEST FROM: {}:{}".format(session_id, socket_id))
+
+    # database associated with this session
+    database = current_app.database_controller.get(session_id)
+    if database.live:
+        room_id = stream_id  # join room for that live stream ID (can be seen by any session)
+    else:  # playback
+        room_id = stream_id+session_id # join room unique to that stream and session.
+
+    join_room(room_id)
+
+    if not room_events.get(room_id):  # no event associated with this room
+        print("NO EVENT FOR THIS ROOM: {}".format(room_id))
+        room_events[room_id] = Event()  # create event for this room
+        room_events[room_id].set()      # activate that event
+        room_counts[room_id] = 1        # start count for this room at 1
 
         # run streaming thread
-        db = current_app.database_controller.get(session.sid)
-        video_streams[ID].set()  # set event to run stream
-        print("STARTING VIDEO STREAM THREAD: {}".format(ID))
-        Thread(target=run_video_stream, args=(db, ID), name='VIDEO', daemon=False).start()
+        print("STARTING VIDEO STREAM THREAD: {}".format(room_id))
+        Thread(target=run_video_stream, args=(database, stream_id, room_id), name='VIDEO', daemon=False).start()
         # TODO: Should I be using a gevent spawn here instead?
 
-    print("EVENT EXISTS FOR THIS STREAM: {}".format(ID))
-    # if stream already exists
-    video_streams[ID].set()  # set event if not already
-    stream_counts[ID] += 1  # increment number of clients watching this stream
-    browser_clients[request.sid] = ID  # associate this socket connection to this stream
+    else:  # if this room already exists
+        print("EVENT EXISTS FOR THIS ROOM: {}".format(room_id))
+        room_events[room_id].set()  # set event if not already
+        room_counts[room_id] += 1  # increment number of clients watching this stream
+        rooms[socket_id] = room_id  # associate this socket connection to this room (to lookup when it disconnects)
 
 
 @socketio.on('disconnect', namespace='/video_stream')
 def browser_disconnect():
     """ On disconnecting from the browser, clear event and stop streaming thread """
+    socket_id = request.sid  # SocketIO session ID
+
     print("DISCONNECTED: {}".format(request.sid))
-    ID = browser_clients[request.sid]  # get stream ID associated with this socket connection
-
-    stream_counts[ID] -= 1  # decrement number of watching clients
-    if stream_counts[ID] == 0:  # last one
-        video_streams[ID].clear()  # stop stream (unset threading event to stop loop)
-        print("EVENT CLEARED: {}".format(ID))
-
-    leave_room(ID)  # remove this client from the room
+    room_id = rooms[socket_id]  # get room associated with this socket connection
+    room_counts[room_id] -= 1  # decrement number of clients in that room
+    if room_counts[room_id] == 0:  # was the last one in there
+        room_events[room_id].clear()  # stop stream (unset threading event to stop loop)
+        print("EVENT CLEARED: {}".format(room_id))
+    # No need to leave the room - SocketIO does this automatically on disconnect
 
 
-def run_video_stream(database, ID):
+def run_video_stream(database, stream_id, room_id):
     """
-    Runs a video stream until stopped
-    Should be run on a separate thread
-    <ID> is the ID of the stream
-    <event> is the threading event used to stop the stream
+    Reads video stream data until stopped.
+    Should be run on a separate thread.
+    <database> is the database to read the stream from
+    <stream_id> is the database ID of the video stream
+    <room_id> is the ID of the SocketIO room that this thread serves
     """
-    print("STARTED VIDEOS STREAM: {}".format(ID))
-    event = video_streams[ID]
+    print("STARTED VIDEOS STREAM: {}".format(room_id))
+    event = room_events[room_id]
     while event.is_set():  # while event is set (while socket is connected)
         try:
-            data_dict = database.read_data(ID, numerical=False, decode=False)
-            if not data_dict:
-                socketio.sleep(0.1)
+            data_dict = database.read_data(stream_id, numerical=False, decode=False)
+            if not data_dict:  # no data is returned
+                socketio.sleep(0.5)
                 continue
         except Exception as e:
             print("Video stream failed to read from database. {}".format(e))
             break
         frames = data_dict['frame']  # get list of unread frames
         data = b''.join(frames)  # concatenate all frames
-        socketio.emit('data', data, namespace='/video_stream', room=ID)
-    print("STREAM WHILE LOOP ENDED: {}".format(ID))
+        socketio.emit('data', data, namespace='/video_stream', room=room_id)
+    print("STREAM WHILE LOOP ENDED: {}".format(room_id))
