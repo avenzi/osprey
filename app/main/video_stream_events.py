@@ -23,14 +23,17 @@ def start_video_stream(ID):
     print("GOT VIDEO START REQUEST FROM: {}".format(request.sid))
     join_room(ID)  # put client in room with ID of stream ID
     if not video_streams.get(ID):  # no event associated with this stream
+        print("NO EVENT FOR THIS STREAM")
         video_streams[ID] = Event()  # create event for this stream ID
         stream_counts[ID] = 0  # start count for this ID
 
         # run streaming thread
         db = current_app.database_controller.get(session.sid)
+        print("STARTING VIDEO STREAM THREAD")
         Thread(target=run_video_stream, args=(db, ID), name='VIDEO', daemon=False).start()
         # TODO: Should I be using a gevent spawn here instead?
 
+    print("EVENT EXISTS FOR THIS STREAM")
     # if stream already exists
     video_streams[ID].set()  # set event if not already
     stream_counts[ID] += 1  # increment number of clients watching this stream
@@ -40,6 +43,7 @@ def start_video_stream(ID):
 @socketio.on('disconnect', namespace='/video_stream')
 def browser_disconnect():
     """ On disconnecting from the browser, clear event and stop streaming thread """
+    print("DISCONNECTED: {}".format(request.sid))
     ID = browser_clients[request.sid]  # get stream ID associated with this socket connection
 
     stream_counts[ID] -= 1  # decrement number of watching clients
