@@ -1,4 +1,4 @@
-from flask import request, current_app, session, copy_current_request_context
+from flask import request, current_app, session
 from app.main import socketio
 from threading import Thread, Event
 
@@ -48,7 +48,7 @@ def start_video_stream(stream_id):
     events[socket].set()      # activate that event before the thread starts
 
     # run streaming thread
-    Thread(target=run_video_stream, args=(database, stream_id), name='VIDEO', daemon=False).start()
+    Thread(target=run_video_stream, args=(database, stream_id, socket), name='VIDEO', daemon=False).start()
 
 
 @socketio.on('disconnect', namespace='/video_stream')
@@ -59,14 +59,15 @@ def browser_disconnect():
     del events[socket]      # remove this event from the index of events
 
 
-def run_video_stream(database, stream_id):
+def run_video_stream(database, stream_id, socket):
     """
     Reads video stream data until stopped.
     Should be run on a separate thread.
     <database> is the database to read the stream from
     <stream_id> is the database ID of the video stream
+    <socket> is the SocketIO ID of the socket this thread should stream to.
+        (Can't use request.sid because this thread is out of the request context)
     """
-    socket = request.sid
     event = events[socket]
     while event.is_set():  # while event is set (while socket is connected)
         try:
