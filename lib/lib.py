@@ -589,13 +589,13 @@ class Streamer(WorkerNode):
         try:
             self.start()  # call subclassed start method
         except Exception as e:
-            err = "Failed to start {} ({})".format(self, e)
+            err = "Failed to start [{}] ({})".format(self, e)
             self.log(err)
             self.socket.emit('error', err, namespace='/streamers')
             return
         self.streaming.set()  # set streaming, which starts the main execution while loop
         self.debug("Started".format(self))
-        self.socket.emit('log', "{} Started".format(self), namespace='/streamers')
+        self.socket.emit('log', "[{}] Started".format(self), namespace='/streamers')
         self.update()
 
     def start(self):
@@ -615,7 +615,7 @@ class Streamer(WorkerNode):
         self.streaming.clear()  # stop streaming, stopping the main execution while loop
         self.stop()  # call subclassed stop method
         self.debug("Stopped".format(self))
-        self.socket.emit('log', "{} Stopped".format(self), namespace='/streamers')
+        self.socket.emit('log', "[{}] Stopped".format(self), namespace='/streamers')
         self.update()
 
     def stop(self):
