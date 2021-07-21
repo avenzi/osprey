@@ -61,6 +61,7 @@ def browser_disconnect():
     room_counts[room_id] -= 1  # decrement number of clients in that room
     if room_counts[room_id] == 0:  # was the last one in there
         room_events[room_id].clear()  # stop stream (unset threading event to stop loop)
+        del room_events[room_id]  # remove this event from the room
         print("EVENT CLEARED: {}".format(room_id[:10]))
     # No need to leave the room - SocketIO does this automatically on disconnect
 
