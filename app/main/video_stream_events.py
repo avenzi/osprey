@@ -29,6 +29,7 @@ def start_video_stream(ID):
 
         # run streaming thread
         db = current_app.database_controller.get(session.sid)
+        video_streams[ID].set()  # set event to run stream
         print("STARTING VIDEO STREAM THREAD: {}".format(ID))
         Thread(target=run_video_stream, args=(db, ID), name='VIDEO', daemon=False).start()
         # TODO: Should I be using a gevent spawn here instead?
