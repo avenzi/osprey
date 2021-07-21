@@ -328,8 +328,6 @@ class Database:
         if not current_time:
             return 0
 
-        print()
-        print("FIRST TIME: {}, CUR TIME: {}".format(start_time, current_time))
         return (current_time - start_time)/1000  # ms to s
 
     @catch_database_errors
@@ -443,7 +441,6 @@ class Database:
         # set last-read info
         self.read_bookmarks[stream]['last_time'] = self.time()
         self.read_bookmarks[stream]['last_id'] = self.decode(response[-1][0])  # store last timestamp
-        print("SET LAST TIME: {}".format(self.read_bookmarks[stream]['last_time']))
 
         # create final output dict
         output = {}
@@ -714,11 +711,9 @@ class LiveDatabase(ServerDatabase):
         Playback mode: Starts playback.
         """
         self.start_time = self.get_start_time()
-        print("GOT START TIME", self.start_time)
         if not self.start_time:  # no start time set - not yet streaming
             self.start_time = self.time()  # mark streaming start time
             self.redis.set('START_TIME', self.start_time)  # set start time to be read by others
-            print("WASNT STARTED. SET START TIME")
 
         self.redis.set('STREAMING', 1)  # set STREAMING
 
