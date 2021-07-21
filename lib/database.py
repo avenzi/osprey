@@ -328,6 +328,8 @@ class Database:
         if not current_time:
             return 0
 
+        print()
+        print(h(start_time), current_time)
         return (current_time - start_time)/1000  # ms to s
 
     @catch_database_errors
