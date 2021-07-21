@@ -158,6 +158,26 @@ def delete(filename):
     refresh()
 
 
+@socketio.on('info', namespace='/browser')
+@catch_errors
+def delete(data):
+    """ Sends the info dict from the requested data stream """
+    database = get_database()
+    if not database:
+        return
+    group = data['group']
+    stream_id = data['stream']
+
+    info = database.read_info(stream_id)
+
+    # If in playback mode, send playback speed.
+    # Note that right now, only the video stream needs this information to set the HTML5 MediaElement playback speed.
+    if not database.live:
+        info['speed'] = database.playback_speed
+
+    socketio.emit('info', info, namespace='/browser', room=request.sid)
+
+
 ######################################
 # Handler for status polling messages
 

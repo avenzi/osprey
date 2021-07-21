@@ -575,7 +575,7 @@ class Database:
     @catch_database_errors
     def read_info(self, ID, name=None):
         """
-        Reads <name> from map with key info:<key>
+        Reads <name> from map with key info:<ID>
         if <name> not specified, gives dictionary with all key value pairs
         """
         if name is not None:
