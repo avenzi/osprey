@@ -872,16 +872,16 @@ class PlaybackDatabase(ServerDatabase):
                 self.read_bookmarks[stream]['first_id'] = self.decode(self.bytes_redis.xrange('stream:'+stream, count=1)[0][0])
                 start_id = self.read_bookmarks[stream]['first_id']
             except Exception as e:
-                print("START ID: ", e)
                 return 0
 
         end_id = bookmark.get('end_id')
         if not end_id:
             try:
+                # must use bytes redis here because if the data column has un-decodable bytes data (like for the video), then it
+                #  will throw an error trying to read it.
                 self.read_bookmarks[stream]['end_id'] = self.decode(self.bytes_redis.xrevrange('stream:'+stream, count=1)[0][0])
                 end_id = self.read_bookmarks[stream]['end_id']
             except Exception as e:
-                print("END ID: ", e)
                 return 0
 
         start_time = self.redis_to_time(start_id)
