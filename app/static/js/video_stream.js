@@ -38,10 +38,10 @@ function start_stream(info) {
     vid.onplay = skip  // call skip() on play
     vid.playbackRate = info.speed;  // set playback speed
     vid.defaultPlaybackRate = info.speed  // gotta set this too or it doesn't work
-    console.log('SPEED', vid.playbackRate)
 
+    $('button.skip').on('click', skip)
     function skip() {  // called onplay to skip to live
-    console.log("SKIPPPPINGNGNGNGNGN")
+        console.log("SKIPPPPINGNGNGNGNGN")
         vid.currentTime = Math.floor(vid.duration);
     }
 
@@ -96,7 +96,5 @@ $(document).ready(function() {
         console.log("RECEIVED INFO:");
         console.log(data);
         start_stream(data);
-        vid = document.getElementById("stream");
-        console.log('SPEED 2', vid.playbackRate)
     });
 });
