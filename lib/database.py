@@ -878,11 +878,14 @@ class PlaybackDatabase(ServerDatabase):
         end_id = bookmark.get('end_id')
         if not end_id:
             try:
-                self.read_bookmarks[stream]['end_id'] = self.decode(self.redis.xrevrange('stream:'+stream, count=1)[0][0])
+                raw = self.redis.xrevrange('stream:'+stream, count=1)
+                raw_id = raw[0][0]
+                self.read_bookmarks[stream]['end_id'] = self.decode(raw_id)
                 end_id = self.read_bookmarks[stream]['end_id']
             except Exception as e:
                 print("END ID: ", e)
-                print(self.redis.xrevrange('stream:'+stream, count=1)[0][0])
+                print(raw)
+                print(raw_id)
                 return 0
 
         start_time = self.redis_to_time(start_id)
