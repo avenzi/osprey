@@ -712,7 +712,7 @@ class LiveDatabase(ServerDatabase):
         Live mode: Sets "STREAMING" key in database.
         Playback mode: Starts playback.
         """
-        self.start_time = self.get_start_time
+        self.start_time = self.get_start_time()
         print("GOT START TIME", self.start_time)
         if not self.start_time:  # no start time set - not yet streaming
             self.start_time = self.time()  # mark streaming start time
