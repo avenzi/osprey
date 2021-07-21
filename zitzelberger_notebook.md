@@ -46,9 +46,7 @@ By working on this project you are agreeing to abide by the following expectatio
 ​	So after rewriting the video.html file and some wrestling with the HTML5MediaElement, I finally got the video to playback at the speed determined by the Database object. Yay!
 ​	I noticed that the video was having trouble playing right with the most recently obtained frame data, so I added a button in the browser that sets the video time to the current duration. This works just fine in Firefox, but for some reason not in Microsoft Edge, where I get an error saying that the HTML5MediaElement has no property currentTime. This is strange especially since I know that this property is supported by Edge (https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/currentTime), and my Edge browser is definitely up to date. Weird.
 
-​	Next I am going to try collecting 20 minutes of data and seeing if it will handle 10x playback speed.
-
-​	
+​	Next I was going to try collecting 20 minutes of data and seeing if it will handle 10x playback speed, but evidently my wifi is intent on being terrible. I still don't understand these periodic slow-upload times. My ISP is a demon company run my demon people.
 
 ##### July 20th, 2021:
 
