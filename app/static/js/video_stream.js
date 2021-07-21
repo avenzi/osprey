@@ -33,13 +33,14 @@ function start_stream(info) {
     var width = Math.round(ratio*height)  // set width to maintain aspect ratio
 
     var vid = $("#stream");
-    vid.setAttribute("width", width);
-    vid.setAttribute("height", height);
+    vid.attr("width", width);
+    vid.attr("height", height);
     vid.onplay = skip  // call skip() on play
     vid.playbackRate = info.speed;  // set playback speed
     console.log('SPEED', vid.playbackRate)
 
     function skip() {  // called onplay to skip to live
+    console.log("SKIPPPPINGNGNGNGNGN")
         vid.currentTime = Math.floor(vid.duration);
     }
 
