@@ -58,7 +58,7 @@ function start_stream(info) {
 
 $(document).ready(function() {
     var server_socket = io('/browser');  // communication with server
-    var group = get_id()  // group ID for this page
+    var group = get_group()  // group ID for this page
     console.log("ID: "+group)
 
     server_socket.on('connect', function() {
