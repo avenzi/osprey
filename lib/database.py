@@ -878,7 +878,7 @@ class PlaybackDatabase(ServerDatabase):
         end_id = bookmark.get('end_id')
         if not end_id:
             try:
-                raw = self.redis.xrevrange('stream:'+stream, count=1)
+                raw = self.bytes_redis.xrevrange('stream:'+stream, count=1)
                 raw_id = raw[0][0]
                 self.read_bookmarks[stream]['end_id'] = self.decode(raw_id)
                 end_id = self.read_bookmarks[stream]['end_id']
