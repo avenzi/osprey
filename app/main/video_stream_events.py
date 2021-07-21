@@ -59,7 +59,7 @@ def browser_disconnect():
     del events[socket]      # remove this event from the index of events
 
 
-def run_video_stream(database, stream_id, room_id):
+def run_video_stream(database, stream_id):
     """
     Reads video stream data until stopped.
     Should be run on a separate thread.
