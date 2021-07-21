@@ -696,6 +696,10 @@ class LiveDatabase(ServerDatabase):
         self.live_path = live_path  # path to live directory
         self.save_path = save_path  # path to save directory
         self.start_time = self.get_start_time()  # get start time from database
+        # todo: if two sessions are viewing the same live database, and one session
+        #  stops and restarts the streams, the other session does not update its own
+        #  self.start_time. I'm not fixing this now because of my idea about
+        #  database connection rooms. See the comment in video_stream_events.py
 
     def __repr__(self):
         return "Live, {}:{}, {}".format(self.ip, self.port, self.file)
@@ -804,7 +808,6 @@ class LiveDatabase(ServerDatabase):
         if response:
             return float(response)
         # return None if no response
-
 
     @catch_database_errors
     def shutdown(self):
