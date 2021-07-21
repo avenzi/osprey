@@ -46,7 +46,7 @@ def stream():
         if not database:  # no database found for this session
             print("Database not found for session: {}".format(session.sid))
             return redirect(url_for('index'))
-        info = database.read_group(group_name)
+        info = database.get_group(group_name)
         return render_template(template_path, info=info, title=group_name)
     except TemplateNotFound as e:
         return render_template('/error.html', error="Template Not Found: \"{}\"".format(template_path))
@@ -63,7 +63,7 @@ def plot_layout():
 
     try:
         # get info dict of all streams in this group
-        info = get_database().read_group(group_name)
+        info = get_database().get_group(group_name)
     except DatabaseError as e:
         print('Database Error occurred when trying to read stream info: {}'.format(e))
         return

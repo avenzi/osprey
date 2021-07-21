@@ -165,10 +165,11 @@ def delete(data):
     database = get_database()
     if not database:
         return
-    group = data['group']
-    stream_id = data['stream']
+    group_name = data['group']
+    stream_name = data['stream']
 
-    info = database.read_info(stream_id)
+    # get info dict for this stream
+    info = database.get_group(group_name, stream_name)
 
     # If in playback mode, send playback speed.
     # Note that right now, only the video stream needs this information to set the HTML5 MediaElement playback speed.
@@ -194,7 +195,7 @@ def stream_time(group):
         raise Exception("Stream time was requested, but no group ID was given")
 
     # all streams in this group
-    streams = database.read_streams(group)
+    streams = database.get_streams(group)
     if not streams:
         return
 

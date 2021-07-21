@@ -98,7 +98,7 @@ def update_pages(room=None):
         return  # no database connection - do nothing
 
     try:  # attempt to read list of group names
-        groups = database.read_all_groups()
+        groups = database.get_all_groups()
     except DatabaseError as e:
         error("Error retrieving streams from database: {}".format(e))
         groups = []

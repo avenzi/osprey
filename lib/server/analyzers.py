@@ -183,7 +183,7 @@ class SignalFilter(SignalAnalyzer):
             self.widgets[key] = val
 
         # write widgets as JSON string to database under the key 'widgets'
-        self.database.write_info(self.id, {'widgets': json.dumps(self.widgets)})
+        self.database.set_info(self.id, {'widgets': json.dumps(self.widgets)})
 
 
 class SignalFourier(SignalAnalyzer):
@@ -255,7 +255,7 @@ class SignalFourier(SignalAnalyzer):
             self.widgets[key] = dic[key]
 
         # write widgets as JSON string to database under the key 'widgets'
-        self.database.write_info(self.id, {'widgets': json.dumps(self.widgets)})
+        self.database.set_info(self.id, {'widgets': json.dumps(self.widgets)})
 
 
 class EEGFilter(SignalFilter):
