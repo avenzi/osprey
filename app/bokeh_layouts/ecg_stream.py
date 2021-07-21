@@ -139,6 +139,7 @@ def create_layout(info):
         output_backend=BACKEND
     )
     ecg.toolbar.active_drag = None  # disable drag
+    ecg.xaxis.formatter = time_format()
 
     # y-axis range will autoscale to currently selected channel
     ecg.y_range.only_visible = True
@@ -192,7 +193,6 @@ if (diff > 0 && diff < end-start) {
         tools='xpan,xwheel_zoom,reset', toolbar_location='above',
         output_backend=BACKEND
     )
-    fourier.xaxis.formatter = time_format()
 
     for i in range(len(channels)):
         fourier.line(x='frequencies', y=channels[i], color=colors[i], source=fourier_source)
