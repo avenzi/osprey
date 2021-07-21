@@ -227,7 +227,7 @@ class Database:
         # todo: figure out how to convert to using RedisTimeSeries?
 
         self.exit = False  # flag to determine when to stop running if looping
-        self.start_time = self.time()
+        self.start_time = time()*1000  # real time that streaming is started (ms)
 
         # Dictionary to track last read position in the database for each data column
         # First level keys are the ID of each stream in the database. Values are Second level dictionaries.
