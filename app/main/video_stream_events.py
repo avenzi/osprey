@@ -32,6 +32,10 @@ events = {}  # {socket_id: event}
 #   for each room, which then operate independently.
 #  Just be careful that when a live database requests a stream, it will be put in a room already streaming that live database.
 #  However, when a playback database requests a stream, it will be put in a room UNIQUE TO ITS OWN SESSION.
+#  .
+#  Also just a note (because I struggled with this before), a browser client socket does not need to know what session it's in.
+#  All joining of rooms happen on the server side, so the socket does not even need to have that information.
+
 
 @socketio.on('start', namespace='/video_stream')
 def start_video_stream(stream_id):

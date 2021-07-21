@@ -22,9 +22,12 @@ def log(msg, everywhere=False):
         socketio.emit('log', msg, namespace='/browser', room=request.sid)
 
 
-def error(msg):
+def error(msg, everywhere=False):
     """ Log an error message in the browser """
-    socketio.emit('error', str(msg), namespace='/browser', room=request.sid)
+    if everywhere:
+        socketio.emit('error', str(msg), namespace='/browser')
+    else:
+        socketio.emit('error', str(msg), namespace='/browser', room=request.sid)
     print("ERROR: {}".format(str(msg)))
 
 

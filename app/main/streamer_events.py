@@ -1,6 +1,6 @@
 from app.main import socketio
 
-from app.main.browser_events import log, update_pages
+from app.main.browser_events import log, error, update_pages
 
 """
 Namespaces:
@@ -8,11 +8,6 @@ Namespaces:
     "/analyzers": all analyzer streams
     "/streamers": all streams (including analyzers)
 """
-
-# todo: Idea to allow client sockets to join certain rooms tied to the database they are viewing:
-#  Add a socket message handler that echos the socket's session ID, so it knows what session that is.
-#  Also emit some info like what databse they are viewing - that will allow them to a join a room for that too.
-#  This way, all tabs of a single session can receive the same data, and all sessions viewing the same database can receive the same data.
 
 
 @socketio.on('connect', namespace='/streamers')
@@ -46,3 +41,9 @@ def streamer_update(stream_id):
 def streamer_log(resp):
     """ On receiving logs from streamers, forward to all browser logs """
     log(resp, everywhere=True)
+
+
+@socketio.on('error', namespace='/streamers')
+def streamer_error(resp):
+    """ On receiving error logs from streamers, forward to all browser logs """
+    error(resp, everywhere=True)
