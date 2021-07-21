@@ -804,7 +804,7 @@ class LiveDatabase(ServerDatabase):
     @catch_database_errors
     def get_start_time(self):
         """ Get the time that streaming started form the database """
-        return self.redis.get("START_TIME")  # get START_TIME key
+        return float(self.redis.get("START_TIME"))  # get START_TIME key
 
     @catch_database_errors
     def shutdown(self):
