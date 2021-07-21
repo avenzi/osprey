@@ -824,7 +824,7 @@ class PlaybackDatabase(ServerDatabase):
     """
     def __init__(self, ip, port, password, file):
         super().__init__(ip, port, password, file)
-        self.playback_speed = 1                 # speed multiplier in playback mode (live mode False)
+        self.playback_speed = 1                 # speed multiplier
         self.playback_active = False            # whether this connection is actively playing back
         self.start_time = time()*1000           # real time playback was last started (ms)
         self.relative_stop_time = time()*1000   # time (relative to playback) that playback was last paused (ms)
@@ -843,7 +843,8 @@ class PlaybackDatabase(ServerDatabase):
     def time(self):
         """ Get current playback time (affected by starting and stopping the playback) """
         if self.is_streaming():  # playback is active
-            diff = time()*1000-self.start_time  # time since started (ms)
+            # time since started (ms)
+            diff = (time()*1000-self.start_time) * self.playback_speed
             return self.relative_stop_time + diff  # time difference after last stopped
         else:  # playback is paused
             return self.relative_stop_time  # only return the time at which it was paused
