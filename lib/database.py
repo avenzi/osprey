@@ -329,7 +329,8 @@ class Database:
             return 0
 
         print()
-        print(h(start_time), current_time)
+        print(h(start_time), h(current_time))
+        print(h(self.start_time))
         return (current_time - start_time)/1000  # ms to s
 
     @catch_database_errors
