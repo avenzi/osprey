@@ -697,6 +697,7 @@ class LiveDatabase(ServerDatabase):
         super().__init__(ip, port, password, file)
         self.live_path = live_path  # path to live directory
         self.save_path = save_path  # path to save directory
+        self.start_time = self.get_start_time()  # get start time from database
 
     def __repr__(self):
         return "Live, {}:{}, {}".format(self.ip, self.port, self.file)
@@ -711,7 +712,7 @@ class LiveDatabase(ServerDatabase):
         Live mode: Sets "STREAMING" key in database.
         Playback mode: Starts playback.
         """
-        self.start_time = self.redis.get('START_TIME')
+        self.start_time = self.get_start_time
         print("GOT START TIME", self.start_time)
         if not self.start_time:  # no start time set - not yet streaming
             self.start_time = self.time()  # mark streaming start time
@@ -799,6 +800,11 @@ class LiveDatabase(ServerDatabase):
         """ Returns time since last save in integer seconds """
         last_save = self.redis.execute_command("LASTSAVE")  # returns a datetime object
         return int(time() - last_save.timestamp())
+
+    @catch_database_errors
+    def get_start_time(self):
+        """ Get the time that streaming started form the database """
+        return self.redis.get("START_TIME")  # get START_TIME key
 
     @catch_database_errors
     def shutdown(self):
