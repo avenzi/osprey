@@ -1,4 +1,4 @@
-from flask import request, current_app, session
+from flask import request, current_app, session, copy_current_request_context
 from app.main import socketio
 from threading import Thread, Event
 
