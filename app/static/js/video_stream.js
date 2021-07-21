@@ -36,7 +36,7 @@ function start_stream(info) {
     vid.setAttribute("width", width);
     vid.setAttribute("height", height);
     vid.onplay = skip  // call skip() on play
-    vid.playbackRate = 1.1;  // catch up to current position if fall behind
+    vid.playbackRate = info.speed;  // set playback speed
 
     function skip() {  // called onplay to skip to live
         vid.currentTime = Math.floor(vid.duration);
