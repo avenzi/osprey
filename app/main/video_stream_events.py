@@ -25,8 +25,6 @@ def start_video_stream(stream_id):
     session_id = session.sid  # Server session ID
     socket_id = request.sid   # SocketIO session ID
 
-    print("GOT VIDEO START REQUEST FROM: {}:{}".format(session_id, socket_id))
-
     # database associated with this session
     database = current_app.database_controller.get(session_id)
     if database.live:
@@ -35,11 +33,12 @@ def start_video_stream(stream_id):
         room_id = stream_id+session_id # join room unique to that stream and session.
 
     join_room(room_id)
-
+    rooms[socket_id] = room_id  # associate this socket connection to this room (to lookup when it disconnects)
+    print("GOT VIDEO START REQUEST FROM: {}".format(room_id))
     if not room_events.get(room_id):  # no event associated with this room
         print("NO EVENT FOR THIS ROOM: {}".format(room_id))
         room_events[room_id] = Event()  # create event for this room
-        room_events[room_id].set()      # activate that event
+        room_events[room_id].set()      # activate that event before the thread starts
         room_counts[room_id] = 1        # start count for this room at 1
 
         # run streaming thread
@@ -51,16 +50,14 @@ def start_video_stream(stream_id):
         print("EVENT EXISTS FOR THIS ROOM: {}".format(room_id))
         room_events[room_id].set()  # set event if not already
         room_counts[room_id] += 1  # increment number of clients watching this stream
-        rooms[socket_id] = room_id  # associate this socket connection to this room (to lookup when it disconnects)
 
 
 @socketio.on('disconnect', namespace='/video_stream')
 def browser_disconnect():
     """ On disconnecting from the browser, clear event and stop streaming thread """
     socket_id = request.sid  # SocketIO session ID
-
-    print("DISCONNECTED: {}".format(request.sid))
     room_id = rooms[socket_id]  # get room associated with this socket connection
+    print("DISCONNECTED: {} from room {}".format(socket_id, room_id))
     room_counts[room_id] -= 1  # decrement number of clients in that room
     if room_counts[room_id] == 0:  # was the last one in there
         room_events[room_id].clear()  # stop stream (unset threading event to stop loop)
