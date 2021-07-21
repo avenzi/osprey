@@ -236,7 +236,7 @@ def database_status(database):
         if database.live:
             return "Streaming"
         else:  # playback mode
-            return "Streaming (1x speed)"
+            return "Streaming ({}x speed)".format(database.playback_speed)
     else:
         if database.live:
             return "Idle"
