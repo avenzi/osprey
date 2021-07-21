@@ -227,6 +227,7 @@ class Database:
         # todo: figure out how to convert to using RedisTimeSeries?
 
         self.exit = False  # flag to determine when to stop running if looping
+        self.start_time = self.time()
 
         # Dictionary to track last read position in the database for each data column
         # First level keys are the ID of each stream in the database. Values are Second level dictionaries.
@@ -434,7 +435,7 @@ class Database:
         # set first-read info
         if not self.read_bookmarks.get(stream):
             self.read_bookmarks[stream] = {}
-            self.read_bookmarks[stream]['first_time'] = self.real_start_time  # get first time
+            self.read_bookmarks[stream]['first_time'] = self.start_time  # get first time
             self.read_bookmarks[stream]['first_id'] = self.decode(response[-1][0])  # get first ID
 
         # set last-read info
@@ -543,7 +544,7 @@ class Database:
         if not self.read_bookmarks.get(stream):
             self.read_bookmarks[stream] = {}
             self.read_bookmarks[stream]['first_id'] = response[0][0]
-            self.read_bookmarks[stream]['first_time'] = self.real_start_time
+            self.read_bookmarks[stream]['first_time'] = self.start_time
 
         # set last-read info
         self.read_bookmarks[stream]['last_time'] = self.time()
@@ -704,14 +705,12 @@ class LiveDatabase(ServerDatabase):
         Live mode: Sets "STREAMING" key in database.
         Playback mode: Starts playback.
         """
-        if self.is_streaming():  # already streaming
-            return
+        self.start_time = self.redis.get('START_TIME')
+        if not self.start_time:  # no start time set - not yet streaming
+            self.start_time = self.time()  # mark streaming start time
+            self.redis.set('START_TIME', self.start_time)  # set start time to be read by others
 
-        # check database for 'START_TIME'
-
-        self.real_start_time = time() * 1000  # mark last playback start time (ms)
-        self.redis.set('STREAMING', 1)  # set RUNNING key
-        self.redis.set('START_TIME', self.real_start_time)  # set start time to be read by others
+        self.redis.set('STREAMING', 1)  # set STREAMING
 
     @catch_database_errors
     def stop(self):
@@ -809,8 +808,8 @@ class PlaybackDatabase(ServerDatabase):
     def __init__(self, ip, port, password, file):
         super().__init__(ip, port, password, file)
         self.playback_speed = 1  # speed multiplier in playback mode (live mode False)
-        self.playback_active = False       # whether this connection is actively playing back
-        self.real_start_time = time()*1000      # absolute time playback was last started (ms)
+        self.playback_active = False            # whether this connection is actively playing back
+        self.start_time = time()*1000           # real time playback was last started (ms)
         self.relative_stop_time = time()*1000   # time (relative to playback) that playback was last paused (ms)
 
     def __repr__(self):
@@ -827,7 +826,7 @@ class PlaybackDatabase(ServerDatabase):
     def time(self):
         """ Get current playback time (affected by starting and stopping the playback) """
         if self.is_streaming():  # playback is active
-            diff = time()*1000-self.real_start_time  # time since started (ms)
+            diff = time()*1000-self.start_time  # time since started (ms)
             return self.relative_stop_time + diff  # time difference after last stopped
         else:  # playback is paused
             return self.relative_stop_time  # only return the time at which it was paused
@@ -840,7 +839,7 @@ class PlaybackDatabase(ServerDatabase):
         """
         if self.is_streaming():  # already streaming
             return
-        self.real_start_time = time() * 1000  # mark last playback start time (ms)
+        self.start_time = time() * 1000  # mark last playback start time (ms)
         self.playback_active = True
 
     @catch_database_errors
@@ -949,7 +948,7 @@ class PlaybackDatabase(ServerDatabase):
         # set first-read info
         if not self.read_bookmarks.get(stream):
             self.read_bookmarks[stream] = {}
-            self.read_bookmarks[stream]['first_time'] = self.real_start_time  # get first time
+            self.read_bookmarks[stream]['first_time'] = self.start_time  # get first time
             self.read_bookmarks[stream]['first_id'] = self.decode(response[-1][0])  # get first ID
 
         # set last-read info
@@ -1045,7 +1044,7 @@ class PlaybackDatabase(ServerDatabase):
         if not self.read_bookmarks.get(stream):
             self.read_bookmarks[stream] = {}
             self.read_bookmarks[stream]['first_id'] = response[0][0]
-            self.read_bookmarks[stream]['first_time'] = self.real_start_time
+            self.read_bookmarks[stream]['first_time'] = self.start_time
 
         # set last-read info
         self.read_bookmarks[stream]['last_time'] = self.time()
