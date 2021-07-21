@@ -78,7 +78,7 @@ $(document).ready(function() {
     });
 
     // request the meta data for the stream 'Raw' in this group
-    sever_socket.emit('info', group, 'Raw')
+    server_socket.emit('info', group, 'Raw')
 
     // request time update every second
     setInterval(function() {
