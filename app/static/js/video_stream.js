@@ -32,9 +32,9 @@ function start_stream(info) {
     var height = 600; // desired height in browser
     var width = Math.round(ratio*height)  // set width to maintain aspect ratio
 
-    var vid = $("#stream");
-    vid.attr("width", width);
-    vid.attr("height", height);
+    var vid = document.getElementById("stream");
+    vid.setAttribute("width", width);
+    vid.setAttribute("height", height);
     vid.onplay = skip  // call skip() on play
     vid.playbackRate = info.speed;  // set playback speed
     console.log('SPEED', vid.playbackRate)
@@ -95,5 +95,7 @@ $(document).ready(function() {
         console.log("RECEIVED INFO:");
         console.log(data);
         start_stream(data);
+        vid = document.getElementById("stream");
+        console.log('SPEED 2', vid.playbackRate)
     });
 });
