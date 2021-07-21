@@ -328,6 +328,8 @@ class Database:
         if not current_time:
             return 0
 
+        print()
+        print("FIRST TIME: {}, CUR TIME: {}".format(start_time, current_time))
         return (current_time - start_time)/1000  # ms to s
 
     @catch_database_errors
@@ -710,9 +712,11 @@ class LiveDatabase(ServerDatabase):
         Playback mode: Starts playback.
         """
         self.start_time = self.redis.get('START_TIME')
+        print("GOT START TIME", self.start_time)
         if not self.start_time:  # no start time set - not yet streaming
             self.start_time = self.time()  # mark streaming start time
             self.redis.set('START_TIME', self.start_time)  # set start time to be read by others
+            print("WASNT STARTED. SET START TIME")
 
         self.redis.set('STREAMING', 1)  # set STREAMING
 
