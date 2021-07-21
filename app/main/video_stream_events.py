@@ -1,13 +1,36 @@
-from flask import request, current_app, session, copy_current_request_context
-from flask_socketio import join_room, leave_room
+from flask import request, current_app, session
 from app.main import socketio
 from threading import Thread, Event
 
-# Maps to keep track of what socketIO connections are watching which video streams.
-rooms = {}  # {socketIO_SID: room_ID}
-room_events = {}  # {room_ID: Threading_Event}
-room_counts = {}  # {room_ID: number_of_clients}
+events = {}  # {socket_id: event}
 
+# TODO: These event start a new thread for each SocketIO that connects.
+#  This thread streams data from that SESSION's associated database connection.
+#  This means that if one session opens two tabs to view the same stream, data will be split.
+#  Two different sessions, however, will read the same data independently.
+#  This behavior intended to be the same as the current Bokeh streams, even though it is not the most efficient.
+#  At some point, I want to redo both the Bokeh streams (with a bokeh server) AND this video stream to make it so that
+#   incoming sockets join a room for a given stream, and any other sockets wanting to see that same stream will just join
+#   that room. This means both that data will not be read redundantly AND no data splitting will occur.
+#  I haven't implemented that now because I want to wait until I know how to set up a Bokeh server.
+#  At that point, I want to create some generalized method to implement this functionality for ANY data stream,
+#   and simply apply it to both the Bokeh data and the video data.
+#  .
+#  Also I have my previous version of this in video_stream_events_room_version.py, however not that it
+#   does NOT function as intended, because each incoming connection still uses it's own database object to retrieve
+#   time information (start_time, elapsed_time, etc), but the actual streaming is done by the first Datbase connection
+#   that enters the room. This means that the time display information between sessions will NOT be synced.
+#  .
+#  The solution to this (for both the Bokeh and video streams) will be to completely redo how the server requests data.
+#  Rather than each session having an associated Database connection, rather each ROOM will have an associated connection.
+#  Then, when a session requests data, the server will look for a ROOM streaming that data, if it exists.
+#  The session can still have a default database connection to get information for the index page, but that connection
+#   won't actually be used to read data, only metadata. It could even be a separate class designed for that purpose.
+#  To sessions both viewing the same redis instance could have the same associated "metadata" database connection.
+#  This "metadata" Database connection could be the one to spawn the actual LiveDatabase or PlaybackDatabase connections
+#   for each room, which then operate independently.
+#  Just be careful that when a live database requests a stream, it will be put in a room already streaming that live database.
+#  However, when a playback database requests a stream, it will be put in a room UNIQUE TO ITS OWN SESSION.
 
 # TODO: The video.html file loads information like the height and width of the video from the Jinja2 template.
 #  Instead, that information should be sent vid SocketIO from this file instead - much cleaner and more flexible.
@@ -16,54 +39,24 @@ room_counts = {}  # {room_ID: number_of_clients}
 
 @socketio.on('start', namespace='/video_stream')
 def start_video_stream(stream_id):
-    """
-    Creates a room for each video stream.
-    IF the stream is from a live database, that room can be joined from any session.
-    If the stream is from a playback database, that room can only be joined from that session.
-    Starts a new thread for each room that emits data from the database.
-    """
-    session_id = session.sid  # Server session ID
-    socket_id = request.sid   # SocketIO session ID
+    """ Starts a streaming thread for each video stream and each session """
+    socket = request.sid  # socket ID
 
     # database associated with this session
-    database = current_app.database_controller.get(session_id)
-    if database.live:
-        room_id = stream_id  # join room for that live stream ID (can be seen by any session)
-    else:  # playback
-        room_id = stream_id+session_id  # join room unique to that stream and session.
+    database = current_app.database_controller.get(session.sid)
+    events[socket] = Event()  # create event
+    events[socket].set()      # activate that event before the thread starts
 
-    join_room(room_id)
-    rooms[socket_id] = room_id  # associate this socket connection to this room (to lookup when it disconnects)
-    #print("GOT VIDEO START REQUEST FROM: {}".format(room_id[:10]))
-    if not room_events.get(room_id):  # no event associated with this room
-        #print("NO EVENT FOR THIS ROOM: {}".format(room_id[:10]))
-        room_events[room_id] = Event()  # create event for this room
-        room_events[room_id].set()      # activate that event before the thread starts
-        room_counts[room_id] = 1        # start count for this room at 1
-
-        # run streaming thread
-        #print("STARTING VIDEO STREAM THREAD: {}".format(room_id[:10]))
-        Thread(target=run_video_stream, args=(database, stream_id, room_id), name='VIDEO', daemon=False).start()
-        # TODO: Should I be using a gevent spawn here instead?
-
-    else:  # if this room already exists
-        #print("EVENT EXISTS FOR THIS ROOM: {}".format(room_id[:10]))
-        room_events[room_id].set()  # set event if not already
-        room_counts[room_id] += 1  # increment number of clients watching this stream
+    # run streaming thread
+    Thread(target=run_video_stream, args=(database, stream_id), name='VIDEO', daemon=False).start()
 
 
 @socketio.on('disconnect', namespace='/video_stream')
 def browser_disconnect():
     """ On disconnecting from the browser, clear event and stop streaming thread """
-    socket_id = request.sid  # SocketIO session ID
-    room_id = rooms[socket_id]  # get room associated with this socket connection
-    #print("DISCONNECTED room {}".format(room_id[:10]))
-    room_counts[room_id] -= 1  # decrement number of clients in that room
-    if room_counts[room_id] == 0:  # was the last one in there
-        room_events[room_id].clear()  # stop stream (unset threading event to stop loop)
-        del room_events[room_id]  # remove this event from the room
-        #print("EVENT CLEARED: {}".format(room_id[:10]))
-    # No need to leave the room - SocketIO does this automatically on disconnect
+    socket = request.sid
+    events[socket].clear()  # stop stream (unset threading event to stop loop)
+    del events[socket]      # remove this event from the index of events
 
 
 def run_video_stream(database, stream_id, room_id):
@@ -72,10 +65,9 @@ def run_video_stream(database, stream_id, room_id):
     Should be run on a separate thread.
     <database> is the database to read the stream from
     <stream_id> is the database ID of the video stream
-    <room_id> is the ID of the SocketIO room that this thread serves
     """
-    #print("STARTED VIDEOS STREAM: {}".format(room_id[:10]))
-    event = room_events[room_id]
+    socket = request.sid
+    event = events[socket]
     while event.is_set():  # while event is set (while socket is connected)
         try:
             data_dict = database.read_data(stream_id, numerical=False, decode=False)
@@ -87,5 +79,4 @@ def run_video_stream(database, stream_id, room_id):
             break
         frames = data_dict['frame']  # get list of unread frames
         data = b''.join(frames)  # concatenate all frames
-        socketio.emit('data', data, namespace='/video_stream', room=room_id)
-    #print("STREAM WHILE LOOP ENDED: {}".format(room_id[:10]))
+        socketio.emit('data', data, namespace='/video_stream', room=socket)  # send back to socket
