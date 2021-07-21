@@ -472,6 +472,7 @@ class Streamer(WorkerNode):
             except Exception as e:  # non-database related error
                 self.throw("Unhandled Exception in main loop", trace=True)
                 self._stop()
+                self.socket.emit('error', "[{}] stopped unexpectedly".format(self), namespace='/streamers')
                 raise e
 
     def loop(self):
@@ -588,7 +589,9 @@ class Streamer(WorkerNode):
         try:
             self.start()  # call subclassed start method
         except Exception as e:
-            self.log("Failed to start {} ({})".format(self, e))
+            err = "Failed to start {} ({})".format(self, e)
+            self.log(err)
+            self.socket.emit('error', err, namespace='/streamers')
             return
         self.streaming.set()  # set streaming, which starts the main execution while loop
         self.debug("Started".format(self))
