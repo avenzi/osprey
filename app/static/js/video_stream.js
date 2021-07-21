@@ -32,7 +32,7 @@ function start_stream(info) {
     var height = 600; // desired height in browser
     var width = Math.round(ratio*height)  // set width to maintain aspect ratio
 
-    var vid = document.getElementById("stream");
+    var vid = $("#stream");
     vid.setAttribute("width", width);
     vid.setAttribute("height", height);
     vid.onplay = skip  // call skip() on play
