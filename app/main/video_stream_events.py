@@ -23,17 +23,17 @@ def start_video_stream(ID):
     print("GOT VIDEO START REQUEST FROM: {}".format(request.sid))
     join_room(ID)  # put client in room with ID of stream ID
     if not video_streams.get(ID):  # no event associated with this stream
-        print("NO EVENT FOR THIS STREAM")
+        print("NO EVENT FOR THIS STREAM: {}".format(ID))
         video_streams[ID] = Event()  # create event for this stream ID
         stream_counts[ID] = 0  # start count for this ID
 
         # run streaming thread
         db = current_app.database_controller.get(session.sid)
-        print("STARTING VIDEO STREAM THREAD")
+        print("STARTING VIDEO STREAM THREAD: {}".format(ID))
         Thread(target=run_video_stream, args=(db, ID), name='VIDEO', daemon=False).start()
         # TODO: Should I be using a gevent spawn here instead?
 
-    print("EVENT EXISTS FOR THIS STREAM")
+    print("EVENT EXISTS FOR THIS STREAM: {}".format(ID))
     # if stream already exists
     video_streams[ID].set()  # set event if not already
     stream_counts[ID] += 1  # increment number of clients watching this stream
@@ -49,6 +49,7 @@ def browser_disconnect():
     stream_counts[ID] -= 1  # decrement number of watching clients
     if stream_counts[ID] == 0:  # last one
         video_streams[ID].clear()  # stop stream (unset threading event to stop loop)
+        print("EVENT CLEARED: {}".format(ID))
 
     leave_room(ID)  # remove this client from the room
 
@@ -60,24 +61,18 @@ def run_video_stream(database, ID):
     <ID> is the ID of the stream
     <event> is the threading event used to stop the stream
     """
-    print("STARTED VIDEOS STREAM")
+    print("STARTED VIDEOS STREAM: {}".format(ID))
     event = video_streams[ID]
-    while True:
-        event.wait()  # stream only when even is set
+    while event.is_set():  # while event is set (while socket is connected)
         try:
             data_dict = database.read_data(ID, numerical=False, decode=False)
             if not data_dict:
                 socketio.sleep(0.1)
                 continue
         except Exception as e:
-            print("Failed to read from database. {}".format(e))
+            print("Video stream failed to read from database. {}".format(e))
             break
         frames = data_dict['frame']  # get list of unread frames
-        data = b''.join(frames)  # concatenate all read frames
-        try:
-            socketio.emit('data', data, namespace='/video_stream', room=ID)
-        except Exception as e:
-            print("Failed to emit video stream to browser. {}".format(e))
-            break
-
-        #socketio.sleep(1)
+        data = b''.join(frames)  # concatenate all frames
+        socketio.emit('data', data, namespace='/video_stream', room=ID)
+    print("STREAM WHILE LOOP ENDED: {}".format(ID))
