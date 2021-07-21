@@ -675,6 +675,10 @@ class ServerDatabase(Database):
         super().__init__(ip, port, password)
         self._file = file
 
+    @property
+    def file(self):
+        return self._file
+
     def kill(self):
         """ Manually kills the redis process by stopping activity on the port it's using """
         system("sudo fuser -k {}/tcp".format(self.port))
@@ -693,7 +697,7 @@ class LiveDatabase(ServerDatabase):
         self.save_path = save_path  # path to save directory
 
     def __repr__(self):
-        return "Live, {}:{}, {}".format(self.ip, self.port, self._file)
+        return "Live, {}:{}, {}".format(self.ip, self.port, self.file)
 
     @property
     def live(self):
@@ -813,7 +817,7 @@ class PlaybackDatabase(ServerDatabase):
         self.relative_stop_time = time()*1000   # time (relative to playback) that playback was last paused (ms)
 
     def __repr__(self):
-        return "Playback, {}:{}, {}".format(self.ip, self.port, self._file)
+        return "Playback, {}:{}, {}".format(self.ip, self.port, self.file)
 
     @property
     def live(self):
