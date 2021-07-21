@@ -564,7 +564,7 @@ class Database:
         return output
 
     @catch_database_errors
-    def write_info(self, key, data):
+    def set_info(self, key, data):
         """
         Writes <data> to info:<key>
         <data> must be a dictionary of key-value pairs.
@@ -573,7 +573,7 @@ class Database:
         self.redis.hmset('info:'+key, data)
 
     @catch_database_errors
-    def read_info(self, ID, name=None):
+    def get_info(self, ID, name=None):
         """
         Reads <name> from map with key info:<ID>
         if <name> not specified, gives dictionary with all key value pairs
@@ -585,7 +585,7 @@ class Database:
             return data
 
     @catch_database_errors
-    def read_all_info(self):
+    def get_all_info(self):
         """ Gets a list of dictionaries containing info for all connected streams """
         info = []
         for key in self.redis.execute_command('keys info:*'):
@@ -593,7 +593,7 @@ class Database:
         return info
 
     @catch_database_errors
-    def write_group(self, key, data):
+    def set_group(self, key, data):
         """
         Writes <data> to group:<key>
         <data> must be a dictionary of key-value pairs.
@@ -602,7 +602,7 @@ class Database:
         self.redis.hmset('group:'+key, data)
 
     @catch_database_errors
-    def read_group(self, name, stream=None):
+    def get_group(self, name, stream=None):
         """
         Gets an info dict from stream with name <stream> in group_name <name>
         if <name> not specified, gives list of all dicts in that group.
@@ -612,19 +612,19 @@ class Database:
         """
         if stream is not None:  # stream name specified
             stream_id = self.redis.hget('group:'+name, stream)  # get stream ID from group dict
-            return self.read_info(stream_id)  # return dict for that stream
+            return self.get_info(stream_id)  # return dict for that stream
 
         else:  # no stream name specified - get whole group
             data = {}  # name: {stream info dict}
             group = self.redis.hgetall('group:'+name)  # name:ID
             for key in group.keys():  # for each stream name
-                info = self.read_info(group[key])
+                info = self.get_info(group[key])
                 if info:
                     data[key] = info
             return data
 
     @catch_database_errors
-    def read_all_groups(self):
+    def get_all_groups(self):
         """ Gets a list of dictionaries containing name and ID info for all connected streams """
         info = []
         for key in self.redis.execute_command('keys group:*'):
@@ -632,7 +632,7 @@ class Database:
         return info
 
     @catch_database_errors
-    def read_streams(self, group):
+    def get_streams(self, group):
         """
         Return a dictionary of all streams in a group
         This returns all 'stream:' columns in a group,

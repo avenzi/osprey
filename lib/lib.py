@@ -563,11 +563,11 @@ class Streamer(WorkerNode):
             return
         try:
             # add name and ID to group column if not already
-            self.database.write_group(self.group, {self.name: self.id, 'name': self.group})
+            self.database.set_group(self.group, {self.name: self.id, 'name': self.group})
 
             # write stream info
             self.info['updated'] = time.time()
-            self.database.write_info(self.id, self.info)
+            self.database.set_info(self.id, self.info)
 
             # notify server of update
             self.socket.emit('update', self.id, namespace='/streamers')
@@ -672,9 +672,9 @@ class Analyzer(Streamer):
 
         try:
             if not stream_id:
-                info_list = self.database.read_all_info()
+                info_list = self.database.get_all_info()
             else:  # stream ID given
-                info_list = [self.database.read_info(stream_id)]
+                info_list = [self.database.get_info(stream_id)]
         except DatabaseBusyLoadingError as e:
             self.debug("Failed to get target info from database - database still loading.".format(e.__class__.__name__, e), 3)
             return
