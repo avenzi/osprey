@@ -171,10 +171,12 @@ def delete(data):
     # get info dict for this stream
     info = database.get_group(group_name, stream_name)
 
-    # If in playback mode, send playback speed.
+    # Send playback speed (multiplier).
     # Note that right now, only the video stream needs this information to set the HTML5 MediaElement playback speed.
     if not database.live:
         info['speed'] = database.playback_speed
+    else:
+        info['speed'] = 1
 
     socketio.emit('info', info, namespace='/browser', room=request.sid)
 
