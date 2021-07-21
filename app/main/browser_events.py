@@ -232,15 +232,15 @@ def database_status(database):
     except Exception as e:
         return "---"
 
-    if database.live:
-        if database.is_streaming():
+    if database.is_streaming():
+        if database.live:
             return "Streaming"
-        else:
-            return "Idle"
-    else:  # playback mode
-        if database.playback_active:
+        else:  # playback mode
             return "Streaming (1x speed)"
-        else:
+    else:
+        if database.live:
+            return "Idle"
+        else:  # playback mode
             return "Paused"
 
 

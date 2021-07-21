@@ -807,7 +807,7 @@ class PlaybackDatabase(ServerDatabase):
     """
     def __init__(self, ip, port, password, file):
         super().__init__(ip, port, password, file)
-        self.playback_speed = 1  # speed multiplier in playback mode (live mode False)
+        self.playback_speed = 1                 # speed multiplier in playback mode (live mode False)
         self.playback_active = False            # whether this connection is actively playing back
         self.start_time = time()*1000           # real time playback was last started (ms)
         self.relative_stop_time = time()*1000   # time (relative to playback) that playback was last paused (ms)
