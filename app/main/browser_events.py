@@ -250,11 +250,11 @@ def database_save_time(database):
     if not database:
         return blank
     try:
-        t = database.time_since_save()
-        if not t:  # in playback mode
-            return blank
-        else:
+        if database.live:
+            t = database.time_since_save()
             return str(timedelta(seconds=t)) + 's ago'
+        else:
+            return blank
     except:
         return blank
 

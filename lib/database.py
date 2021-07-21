@@ -84,19 +84,20 @@ class DatabaseController:
         # index of ports used for playback files and how many Database object connected
         self.playback_ports = {port: {'file': None, 'count': 0} for port in [7000, 7001, 7002]}
         self.playback_ip = '127.0.0.1'
+        self.playback_pass = 'thisisthepasswordtotheredisplaybackserver'  # todo: just randomize this I guess
         self.save_path = saved_path
 
     def new_live(self, ID):
-        """ Creates and returns a new live Database instance for the given ID key """
+        """ Creates and returns a new liveDatabase instance for the given ID key """
         if self.sessions.get(ID):  # Database already associated
             self.remove(ID)  # remove and disconnect
-        self.sessions[ID] = ServerDatabase(
+        self.sessions[ID] = LiveDatabase(
             ip=self.live_ip, port=self.live_port, password=self.live_pass,
-            live=True, file=self.live_file, live_path=self.live_path, save_path=self.save_path
+            file=self.live_file, live_path=self.live_path, save_path=self.save_path
         )
 
     def new_playback(self, file, ID):
-        """ Creates and returns a new playback Database instance for the given ID key """
+        """ Creates and returns a new PlaybackDatabase instance for the given ID key """
         # iterate through index of ports
         port = None
         for p, info in self.playback_ports.items():
@@ -111,7 +112,7 @@ class DatabaseController:
             if port is None:  # no ports available
                 raise DatabaseError("Could not create new playback server - no ports available")
             else:  # a port is available
-                self.start_server(file=file, port=port)
+                self.start_playback_server(file=file, port=port)
 
         self.playback_ports[port]['file'] = file  # set the file for this port if not already
         self.playback_ports[port]['count'] += 1  # increment count of Database classes connecting to this port
@@ -122,10 +123,8 @@ class DatabaseController:
         if self.sessions.get(ID):  # Database already associated
             self.remove(ID)  # remove and disconnect
 
-        # empty password
-        self.sessions[ID] = ServerDatabase(
-            ip=self.playback_ip, port=port, password='',
-            file=file, live=False, live_path=self.live_path, save_path=self.save_path
+        self.sessions[ID] = PlaybackDatabase(
+            ip=self.playback_ip, port=port, password=self.playback_pass, file=file
         )
 
         count = self.playback_ports[port]['count']
@@ -186,14 +185,14 @@ class DatabaseController:
         except Exception as e:
             raise DatabaseError("Failed to delete file: {}".format(e))
 
-    def start_server(self, file, port):
+    def start_playback_server(self, file, port):
         """ Start a new local Redis server instance initialized from <file> on port <port> """
-        system("redis-server --bind 127.0.0.1 --daemonize yes --dir {} --dbfilename {} --port {}".format(self.save_path, file, port))
+        system("redis-server --bind 127.0.0.1 --daemonize yes --dir {} --dbfilename {} --port {} --requirepass {}".format(self.save_path, file, port, self.playback_pass))
 
 
 class Database:
     """
-    Wrapper class to handle a single connection to a database
+    Wrapper class to handle a single connection to a database.
     May be created on its own - intended for use on remove device writing data.
     Note that redis timestamps are approximate - they will be accurate to a millisecond,
         which is enough for visual inspection. However the 'time' data column is the
@@ -228,7 +227,6 @@ class Database:
         # todo: figure out how to convert to using RedisTimeSeries?
 
         self.exit = False  # flag to determine when to stop running if looping
-        self.live = True   # Whether in live mode
 
         # Dictionary to track last read position in the database for each data column
         # First level keys are the ID of each stream in the database. Values are Second level dictionaries.
@@ -247,25 +245,9 @@ class Database:
         # "n": last sequence number used INTEGER
         self.write_bookmarks = {}
 
-        # for playback mode
-        self.playback_speed = 1  # speed multiplier in playback mode (live mode False)
-        self.playback_active = False       # whether this connection is actively playing back
-        self.real_start_time = time()*1000      # absolute time playback was last started (ms)
-        self.relative_stop_time = time()*1000   # time (relative to playback) that playback was last paused (ms)
-
     def time(self):
-        """
-        Live mode: Get current time in milliseconds.
-        Playback mode: Get current playback time (affected by starting and stopping the playback).
-        """
-        if self.live:
-            return time()*1000  # ms
-        else:
-            if self.playback_active:  # playback is active
-                diff = time()*1000-self.real_start_time  # time since started (ms)
-                return self.relative_stop_time + diff  # time difference after last stopped
-            else:  # playback is paused
-                return self.relative_stop_time  # only return the time at which it was paused
+        """ returns the current time in milliseconds """
+        return time()*1000
 
     def time_to_redis(self, unix_time):
         """ Convert unix time (ms) to a redis timestamp (ms). Ignores precision beyond ms"""
@@ -307,20 +289,13 @@ class Database:
         return False
 
     def is_streaming(self):
-        """
-        Live mode: Check database for "STREAMING" key.
-        Playback mode: Check self.playback_active property.
-        Does not propagate exceptions.
-        """
-        if self.live:
-            try:
-                if self.redis.get('STREAMING'):
-                    return True
-            except Exception as e:
-                return False
+        """ Checks the database 'STREAMING" key. Does not propagate exceptions. """
+        try:
+            if self.redis.get('STREAMING'):
+                return True
+        except Exception as e:
             return False
-        else:
-            return self.playback_active
+        return False
 
     def valid_list(self, data):
         """ Checks if the given data is in a valid 'listy' format for ordered data """
@@ -336,34 +311,6 @@ class Database:
         if type(data) == bytes:
             return data.decode('utf-8')
         return data
-
-    @catch_database_errors
-    def get_total_time(self, stream):
-        """ Gets the total length in time of a given stream in seconds """
-        assert not self.live, "Cannot get total time of a live stream, only elapsed time."
-        bookmark = self.read_bookmarks.get(stream)
-        if not bookmark:
-            return 0
-        start_id = bookmark.get('first_id')
-        if not start_id:
-            try:
-                self.read_bookmarks[stream]['first_id'] = self.decode(self.redis.xrange('stream:'+stream, count=1)[0][0])
-                start_id = self.read_bookmarks[stream]['first_id']
-            except:
-                return 0
-
-        end_id = bookmark.get('end_id')
-        if not end_id:
-            try:
-                self.read_bookmarks[stream]['end_id'] = self.decode(self.redis.xrevrange('stream:'+stream, count=1)[0][0])
-                end_id = self.read_bookmarks[stream]['end_id']
-            except:
-                return 0
-
-        start_time = self.redis_to_time(start_id)
-        end_time = self.redis_to_time(end_id)
-        diff = end_time - start_time
-        return diff/1000  # ms to s
 
     @catch_database_errors
     def get_elapsed_time(self, stream):
@@ -468,35 +415,20 @@ class Database:
                     new_id = self.redis_to_time(last_read_id) + (time_since_last-max_time*1000)
                     last_read_id = self.time_to_redis(new_id)  # convert back to redis timestamp
 
-                if self.live:  # read from last ID to now
-                    response = red.xread({'stream:' + stream: last_read_id})
-
-                else:  # calculate new ID by how much time has passed between now and beginning
-                    first_read_id = info['first_id']
-                    first_read_time = info['first_time']
-                    time_since_first = self.time()-first_read_time
-                    new_id = self.redis_to_time(first_read_id) + time_since_first
-                    max_read_id = self.time_to_redis(new_id)
-
-                    # Redis uses the prefix "(" to represent an exclusive interval for XRANGE
-                    response = red.xrange('stream:'+stream, min='('+last_read_id, max=max_read_id)
-                    #print("\n[{}] now_time: {}, time_since: {}, \n    last_read_id: {},   max_id: {}".format(stream[:5], h(temptime), h(time_since_first), h(last_read_id), h(max_read_id)))
+                response = red.xread({'stream:' + stream: last_read_id})
 
             else:  # no last read spot
-                if self.live:  # start reading from latest, block for 1 sec
-                    response = red.xread({'stream:'+stream: '$'}, block=1000)
-                else:  # return first written data point
-                    response = red.xrange('stream:'+stream, count=1)
+                response = red.xread({'stream:'+stream: '$'}, block=1000)
 
         if not response:
             return None
 
-        # If count is given or in playback mode, XRANGE is used, which gives a list of data points
+        # If count is given XRANGE is used, which gives a list of data points
         #   this means that the data is stored in response.
-        # If in live mode without a count, XREAD is used, which gives a a list of tuples
+        # If no count is given, XREAD is used, which gives a a list of tuples
         #   (one for each stream read from), each of which contains a list of data points. But since
         #   we are only reading from one stream, the data is stored in response[0][1].
-        if self.live and not count:
+        if not count:
             response = response[0][1]
 
         # set first-read info
@@ -602,26 +534,8 @@ class Database:
         else:
             red = self.bytes_redis  # not implemented for this method
 
-        if self.live:  # read most recent snapshot - don't care about bookmarks in live mode
-            response = red.xrevrange('stream:'+stream, count=1)
-
-        else:  # read snapshot at time since last read
-            info = self.read_bookmarks.get(stream)
-            if info:  # last read spot exists
-                last_read_id = info['last_id']
-                last_read_time = info['last_time']
-                first_read_id = info['first_id']
-                first_read_time = info['first_time']
-                temptime = self.time()
-                time_since_first = self.time() - first_read_time
-                new_id = self.redis_to_time(first_read_id) + time_since_first
-                max_read_id = self.time_to_redis(new_id)
-                response = red.xrevrange('stream:'+stream, min='('+last_read_id, max=max_read_id, count=1)
-                #print("\n[{}] now_time: {}, time_since: {}, \n    last_read_id: {},   max_id: {}".format(stream[:5], h(temptime), h(time_since_first), h(last_read_id), h(max_read_id)))
-
-            else:  # no first read spot exists
-                response = red.xrange('stream:'+stream, count=1)  # get the first one
-
+        # read most recent snapshot - don't care about bookmarks
+        response = red.xrevrange('stream:'+stream, count=1)
         if not response:
             return None
 
@@ -753,18 +667,36 @@ class Database:
 
 class ServerDatabase(Database):
     """
-    Wrapper class to handle a connection to a database on the server where the database is hostred
-    Shouldn't be created directly - created only by DatabaseController.new()
+    Base class to handle a connection to a database on the server where the database is hosted.
+    Shouldn't be used or created directly.
     """
-    def __init__(self, ip, port, password, file, live, live_path, save_path):
+    def __init__(self, ip, port, password, file):
         super().__init__(ip, port, password)
-        self.live = live
-        self.file = file  # main database file to read from
+        self._file = file
+
+    def kill(self):
+        """ Manually kills the redis process by stopping activity on the port it's using """
+        system("sudo fuser -k {}/tcp".format(self.port))
+
+
+class LiveDatabase(ServerDatabase):
+    """
+    Database class used for a live connection on the server.
+    Shares many of the same methods as Database, but adds
+        functionality to control the state of the database.
+    Created only by DatabaseController.new_live()
+    """
+    def __init__(self, ip, port, password, file, live_path, save_path):
+        super().__init__(ip, port, password, file)
         self.live_path = live_path  # path to live directory
         self.save_path = save_path  # path to save directory
 
     def __repr__(self):
-        return "PORT: {}, LIVE: {}, FILE: {}".format(self.port, self.live, self.file)
+        return "Live, {}:{}, {}".format(self.ip, self.port, self._file)
+
+    @property
+    def live(self):
+        return True
 
     @catch_database_errors
     def start(self):
@@ -772,24 +704,20 @@ class ServerDatabase(Database):
         Live mode: Sets "STREAMING" key in database.
         Playback mode: Starts playback.
         """
+        if self.is_streaming():  # already streaming
+            return
+
+        # check database for 'START_TIME'
+
         self.real_start_time = time() * 1000  # mark last playback start time (ms)
-        if self.live:
-            self.redis.set('STREAMING', 1)  # set RUNNING key
-        else:
-            self.playback_active = True
+        self.redis.set('STREAMING', 1)  # set RUNNING key
+        self.redis.set('START_TIME', self.real_start_time)  # set start time to be read by others
 
     @catch_database_errors
     def stop(self):
-        """
-        Live mode:  removes "RUNNING" key in database.
-        Playback mode: Pauses playback.
-        """
-        if self.live:
-            self.read_bookmarks = {}  # clear all bookmarks when live stream is stopped.
-            self.redis.delete('STREAMING')  # unset RUNNING key
-        else:
-            self.relative_stop_time = self.time()  # mark playback pause time relative to playback
-            self.playback_active = False
+        """ Removes "STREAMING" key in database """
+        self.read_bookmarks = {}  # clear all bookmarks when live stream is stopped.
+        self.redis.delete('STREAMING')  # unset STREAMING key
 
     @catch_database_errors
     def _save_to_disk(self):
@@ -807,9 +735,6 @@ class ServerDatabase(Database):
         <save> whether to save the file in the storage directory,
             and returns the full filename used (may not be the same as given)
         """
-        if not self.live:
-            raise DatabaseError("Did not save database file - not a live database")
-
         # Todo: Make this more robust to possible errors.
         #  Check redis's last update time before and after to check if it changed, indicating a successful save
 
@@ -832,7 +757,7 @@ class ServerDatabase(Database):
             except Exception as e:
                 raise DatabaseError("Failed to save database to disk. {}: {}".format(e.__class__.__name__, e))
 
-        if not path.isfile(self.live_path+'/'+self.file):
+        if not path.isfile(self.live_path+'/'+self._file):
             raise DatabaseError("Failed to save database file - no database file was found")
 
         # if file name not given or already exists
@@ -841,7 +766,7 @@ class ServerDatabase(Database):
         if not filename.endswith('.rdb'):
             filename += '.rdb'
 
-        stat = system("cp {}/{} {}/{}".format(self.live_path, self.file, self.save_path, filename))
+        stat = system("cp {}/{} {}/{}".format(self.live_path, self._file, self.save_path, filename))
         if stat < 0:
             raise DatabaseError("Failed to save database file to '{}': Status code: {}".format(filename, stat))
 
@@ -864,29 +789,281 @@ class ServerDatabase(Database):
 
     @catch_database_errors
     def time_since_save(self):
-        """
-        Returns time since last save in integer seconds.
-        If not a live database, returns None.
-        """
-        if not self.live:
-            return
+        """ Returns time since last save in integer seconds """
         last_save = self.redis.execute_command("LASTSAVE")  # returns a datetime object
         return int(time() - last_save.timestamp())
 
     @catch_database_errors
     def shutdown(self):
         """ Shutdown the redis server instance """
-        if self.live:  # if live database
-            self.save(shutdown=True)  # save first
-        else:  # shutdown playback database without saving
-            try:
-                self.redis.shutdown(save=False)
-            except Exception as e:
-                raise DatabaseError("Failed to shutdown database on port: {}. {}: {}".format(self.port, e.__class__.__name__, e))
+        self.save(shutdown=True)
 
-    def kill(self):
-        """ manually kills the redis process by stopping activity on the port it's using """
-        system("sudo fuser -k {}/tcp".format(self.port))
+
+class PlaybackDatabase(ServerDatabase):
+    """
+    Database class used for a playback database connection on the server.
+    Replaces many methods used by Database, and cannot perform writes to the database.
+    Reads database contents relative to self-contained start/stop times.
+    Created only by DatabaseController.new_playback()
+    """
+    def __init__(self, ip, port, password, file):
+        super().__init__(ip, port, password, file)
+        self.playback_speed = 1  # speed multiplier in playback mode (live mode False)
+        self.playback_active = False       # whether this connection is actively playing back
+        self.real_start_time = time()*1000      # absolute time playback was last started (ms)
+        self.relative_stop_time = time()*1000   # time (relative to playback) that playback was last paused (ms)
+
+    def __repr__(self):
+        return "Playback, {}:{}, {}".format(self.ip, self.port, self._file)
+
+    @property
+    def live(self):
+        return False
+
+    def is_streaming(self):
+        """ Check self.playback_active property """
+        return self.playback_active
+
+    def time(self):
+        """ Get current playback time (affected by starting and stopping the playback) """
+        if self.is_streaming():  # playback is active
+            diff = time()*1000-self.real_start_time  # time since started (ms)
+            return self.relative_stop_time + diff  # time difference after last stopped
+        else:  # playback is paused
+            return self.relative_stop_time  # only return the time at which it was paused
+
+    @catch_database_errors
+    def start(self):
+        """
+        Live mode: Sets "STREAMING" key in database.
+        Playback mode: Starts playback.
+        """
+        if self.is_streaming():  # already streaming
+            return
+        self.real_start_time = time() * 1000  # mark last playback start time (ms)
+        self.playback_active = True
+
+    @catch_database_errors
+    def stop(self):
+        """ Pauses playback """
+        self.relative_stop_time = self.time()  # mark playback pause time relative to playback
+        self.playback_active = False
+
+    @catch_database_errors
+    def shutdown(self):
+        """ Shutdown the redis server instance """
+        try:  # shutdown playback database without saving
+            self.redis.shutdown(save=False)
+        except Exception as e:
+            raise DatabaseError("Failed to shutdown database on port: {}. {}: {}".format(self.port, e.__class__.__name__, e))
+
+    @catch_database_errors
+    def get_total_time(self, stream):
+        """ Gets the total length in time of a given stream in seconds """
+        bookmark = self.read_bookmarks.get(stream)
+        if not bookmark:
+            return 0
+        start_id = bookmark.get('first_id')
+        if not start_id:
+            try:
+                self.read_bookmarks[stream]['first_id'] = self.decode(self.redis.xrange('stream:'+stream, count=1)[0][0])
+                start_id = self.read_bookmarks[stream]['first_id']
+            except:
+                return 0
+
+        end_id = bookmark.get('end_id')
+        if not end_id:
+            try:
+                self.read_bookmarks[stream]['end_id'] = self.decode(self.redis.xrevrange('stream:'+stream, count=1)[0][0])
+                end_id = self.read_bookmarks[stream]['end_id']
+            except:
+                return 0
+
+        start_time = self.redis_to_time(start_id)
+        end_time = self.redis_to_time(end_id)
+        diff = end_time - start_time
+        return diff/1000  # ms to s
+
+    def write_data(self, *args, **kwargs):
+        """ Not allowed """
+        raise DatabaseError("Cannot write to read-only playback database")
+
+    def write_snapshot(self, *args, **kwargs):
+        """ Not allowed """
+        raise DatabaseError("Cannot write to read-only playback database")
+
+    @catch_database_errors
+    def read_data(self, stream, count=None, max_time=None, numerical=True, to_json=False, decode=True):
+        """
+        Gets newest data for <reader> from data column <stream>.
+        <stream> is some ID that identifies the stream in the database.
+        <reader> is some ID that will keep track of it's own read head position.
+        <count> Not implemented in playback mode.
+        <max_time> maximum time window (s) to read.
+            - If None, read as much as possible (guarantees all data read)
+        <numerical>  Whether the data needs to be converted python float type
+        <decode> Whether to decode the result into strings.
+            If False, only values will remain as bytes. Keys will still be decoded.
+        <to_json> whether to convert to json string. if False, uses dictionary of lists.
+        """
+        if decode:
+            red = self.redis
+        else:
+            numerical = False
+            red = self.bytes_redis
+
+        if stream is None:
+            return
+
+        info = self.read_bookmarks.get(stream)
+        if info:  # last read spot exists
+            last_read_id = info['last_id']
+            last_read_time = info['last_time']
+            temptime = self.time()
+            time_since_last = self.time()-last_read_time  # time since last read (ms)
+
+            # if time since last read is greater than maximum, increment last read ID by the difference
+            if max_time and time_since_last > max_time*1000:  # max_time is in seconds
+                new_id = self.redis_to_time(last_read_id) + (time_since_last-max_time*1000)
+                last_read_id = self.time_to_redis(new_id)  # convert back to redis timestamp
+
+            # calculate new ID by how much time has passed between now and beginning
+            first_read_id = info['first_id']
+            first_read_time = info['first_time']
+            time_since_first = self.time()-first_read_time
+            new_id = self.redis_to_time(first_read_id) + time_since_first
+            max_read_id = self.time_to_redis(new_id)
+
+            # Redis uses the prefix "(" to represent an exclusive interval for XRANGE
+            response = red.xrange('stream:'+stream, min='('+last_read_id, max=max_read_id)
+            #print("\n[{}] now_time: {}, time_since: {}, \n    last_read_id: {},   max_id: {}".format(stream[:5], h(temptime), h(time_since_first), h(last_read_id), h(max_read_id)))
+
+        else:  # no last read spot
+            response = red.xrange('stream:'+stream, count=1)  # read first data point
+
+        if not response:
+            return None
+
+        # response is a list of tuples. First is the redis timestamp ID, second is the data dict.
+
+        # set first-read info
+        if not self.read_bookmarks.get(stream):
+            self.read_bookmarks[stream] = {}
+            self.read_bookmarks[stream]['first_time'] = self.real_start_time  # get first time
+            self.read_bookmarks[stream]['first_id'] = self.decode(response[-1][0])  # get first ID
+
+        # set last-read info
+        self.read_bookmarks[stream]['last_time'] = self.time()
+        self.read_bookmarks[stream]['last_id'] = self.decode(response[-1][0])  # store last timestamp
+
+        # create final output dict
+        output = {}
+
+        # loop through stream data and convert if necessart
+
+        # I hate this
+        if numerical and decode:
+            for data in response:
+                d = data[1]  # data dict. data[0] is the timestamp ID
+                for key in d.keys():
+                    if output.get(key):
+                        output[key].append(float(d[key]))  # convert to float and append
+                    else:
+                        output[key] = [float(d[key])]
+
+        elif numerical and not decode:
+            for data in response:
+                d = data[1]  # data dict. data[0] is the timestamp ID
+                for key in d.keys():
+                    k = key.decode('utf-8')  # key won't be decoded, but it needs to be
+                    if output.get(k):
+                        output[k].append(float(d[key]))  # convert to float and append
+                    else:
+                        output[k] = [float(d[key])]
+
+        elif not numerical and decode:
+            for data in response:
+                # data[0] is the timestamp ID
+                d = data[1]  # data dict
+                for key in d.keys():
+                    if output.get(key):
+                        output[key].append(d[key])  # append
+                    else:
+                        output[key] = [d[key]]
+
+        elif not numerical and not decode:
+            for data in response:
+                # data[0] is the timestamp ID
+                d = data[1]  # data dict
+                for key in d.keys():
+                    k = self.decode(key)  # key won't be decoded, but it needs to be
+                    if output.get(k):
+                        output[k].append(d[key])  # append
+                    else:
+                        output[k] = [d[key]]
+
+        if to_json:
+            return json.dumps(output)
+        return output
+
+    @catch_database_errors
+    def read_snapshot(self, stream, to_json=False, decode=True):
+        """
+        Gets latest snapshot for <reader> from data column <stream>. Only gets 1 data point.
+        <stream> is some ID that identifies the stream in the database.
+        <to_json> whether to convert to json string. if False, uses dictionary of lists.
+            - Also note that this removes the 'time' data column. This is for
+                plotting purposes - plotting software requires that all columns
+                be of same length, and the time column only has one entry.
+        Since this is a snapshot (not time series), gets last 1 data point from redis.
+        """
+        if decode:
+            red = self.redis
+        else:
+            red = self.bytes_redis  # not implemented for this method
+
+        info = self.read_bookmarks.get(stream)
+        if info:  # last read spot exists
+            last_read_id = info['last_id']
+            last_read_time = info['last_time']
+            first_read_id = info['first_id']
+            first_read_time = info['first_time']
+            temptime = self.time()
+            time_since_first = self.time() - first_read_time
+            new_id = self.redis_to_time(first_read_id) + time_since_first
+            max_read_id = self.time_to_redis(new_id)
+            response = red.xrevrange('stream:'+stream, min='('+last_read_id, max=max_read_id, count=1)
+            #print("\n[{}] now_time: {}, time_since: {}, \n    last_read_id: {},   max_id: {}".format(stream[:5], h(temptime), h(time_since_first), h(last_read_id), h(max_read_id)))
+
+        else:  # no first read spot exists
+            response = red.xrange('stream:'+stream, count=1)  # get the first one
+
+        if not response:
+            return None
+
+        # set first-read info
+        if not self.read_bookmarks.get(stream):
+            self.read_bookmarks[stream] = {}
+            self.read_bookmarks[stream]['first_id'] = response[0][0]
+            self.read_bookmarks[stream]['first_time'] = self.real_start_time
+
+        # set last-read info
+        self.read_bookmarks[stream]['last_time'] = self.time()
+        self.read_bookmarks[stream]['last_id'] = response[0][0]  # store last timestamp
+
+        data = response[0][1]  # data dict (only one data point)
+        keys = data.keys()  # get keys from data dict
+        output = {key: [] for key in keys}
+
+        for key in keys:
+            vals = data[key].split(',')
+            output[key] = [float(val) for val in vals]
+
+        if to_json:
+            del output['time']  # remove time column for json format
+            return json.dumps(output)
+        return output
+
 
 
 
