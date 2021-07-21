@@ -35,7 +35,7 @@ function start_stream(info) {
     var vid = document.getElementById("stream");
     vid.setAttribute("width", width);
     vid.setAttribute("height", height);
-    vid.onplay(skip)  // call skip() on play
+    vid.onplay = skip  // call skip() on play
     vid.playbackRate = 1.1;  // catch up to current position if fall behind
 
     function skip() {  // called onplay to skip to live
