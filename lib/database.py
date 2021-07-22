@@ -1181,7 +1181,7 @@ class Bookmark:
         self.last_id = None   # last read database timestamp ID
         self.first_time = None  # real time when first read
         self.last_time = None   # real time when last read
-        self.end_time = None    # last database timestamp ID in the whole stream
+        self.end_id = None    # last database timestamp ID in the whole stream
         self.write = None  # last written database time in INTEGER MILLISECONDS
         self.seq = None    # last written database SEQUENCE NUMBER
 
