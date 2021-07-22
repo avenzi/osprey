@@ -9,7 +9,7 @@ def create_layout(info):
     source = AjaxDataSource(
         data_url='/stream/update?id={}'.format(info['Raw']['id']),
         method='GET',
-        polling_interval=500,  # in milliseconds
+        polling_interval=1000,  # in milliseconds
         mode='append',  # append to existing data
         max_size=1000,  # Keep last 100 data points
         if_modified=True)  # if_modified ignores responses sent with code 304 and not cached.

@@ -126,7 +126,7 @@ def create_layout(info):
     eeg_source = AjaxDataSource(
         data_url='/stream/update?id={}'.format(filtered_id),
         method='GET',
-        polling_interval=1000,
+        polling_interval=2000,
         mode='append',
         max_size=2000,
         if_modified=True)
@@ -134,7 +134,7 @@ def create_layout(info):
     fourier_source = AjaxDataSource(
         data_url='/stream/update?id=fourier:{}&format=snapshot'.format(fourier_id),
         method='GET',
-        polling_interval=1000,
+        polling_interval=500,
         mode='replace',  # all FFT lines are replaced each update
         if_modified=True)
 
@@ -151,7 +151,7 @@ def create_layout(info):
     headplot_source = AjaxDataSource(
         data_url='/stream/update?id=headplot:{}&format=snapshot'.format(fourier_id),
         method='GET',
-        polling_interval=1000,
+        polling_interval=500,
         mode='replace',
         if_modified=True)
 

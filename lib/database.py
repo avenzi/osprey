@@ -970,7 +970,7 @@ class PlaybackDatabase(ServerDatabase):
             time_since_last = self.time()-last_read_time  # time since last read (ms)
 
             # if time since last read is greater than maximum, increment last read ID by the difference
-            if max_time and time_since_last > max_time*1000:  # max_time is in seconds
+            if max_time and time_since_last > self.playback_speed*max_time*1000:  # max_time is in seconds
                 new_id = self.redis_to_time(last_read_id) + (time_since_last-max_time*1000)
                 last_read_id = self.time_to_redis(new_id)  # convert back to redis timestamp
 
