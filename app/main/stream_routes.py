@@ -99,7 +99,7 @@ def plot_update():
     try:
         database = get_database()
         if not database:
-            return "Database now found for this session", 500
+            return "Database not found for this session", 500
         if not request_format or request_format == 'series':
             start = time()
             data = database.read_data(request_id, to_json=True, max_time=5)
@@ -115,7 +115,6 @@ def plot_update():
         print("TIMEOUT TIME: ", time()-start)
         return "Database query timed out", 503
     except DatabaseConnectionError:
-        print("TIMEOUT TIME: ", time()-start)
         return "Lost connection to database", 500
     except DatabaseError as e:
         return str(e), 500
