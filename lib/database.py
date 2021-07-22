@@ -1054,7 +1054,7 @@ class PlaybackDatabase(ServerDatabase):
         if to_json:
             ret = json.dumps(output)
             t5 = time()
-            print("INFO: {:5}, READ: {:5}, META: {:5}, CONV: {:5}, JSON: {:5}".format(t1-t0, t2-t1, t3-t2, t4-t3, t5-t4))
+            print("INFO: {:5f}, READ: {:5f}, META: {:5f}, CONV: {:5f}, JSON: {:5f}".format(t1-t0, t2-t1, t3-t2, t4-t3, t5-t4))
             return ret
         return output
 
