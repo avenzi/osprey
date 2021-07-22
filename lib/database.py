@@ -867,10 +867,19 @@ class PlaybackDatabase(ServerDatabase):
         self.playback_active = False
 
     @catch_database_errors
+    def _shutdown(self):
+        """
+        Sends a shutdown signal to redis.
+        This is in a separate method so I could add the @catch_database_errors decorator
+            instead of rewriting those try/except clauses.
+        """
+        self.redis.shutdown(save=False)
+
+    @catch_database_errors
     def shutdown(self):
         """ Shutdown the redis server instance """
         try:  # shutdown playback database without saving
-            catch_database_errors(self.redis.shutdown(save=False))
+            self._shutdown()
         except DatabaseTimeoutError:
             sleep(2)  # wait a sec
         except Exception as e:
