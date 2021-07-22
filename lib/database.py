@@ -976,19 +976,19 @@ class PlaybackDatabase(ServerDatabase):
             new_id = self.redis_to_time(first_read_id) + time_since_first
             max_read_id = self.time_to_redis(new_id)
 
-            t1 = time() - t0
+            t1 = time()
             # Redis uses the prefix "(" to represent an exclusive interval for XRANGE
             response = red.xrange('stream:'+stream, min='('+last_read_id, max=max_read_id)
             #print("\n[{}] now_time: {}, time_since: {}, \n    last_read_id: {},   max_id: {}".format(stream[:5], h(temptime), h(time_since_first), h(last_read_id), h(max_read_id)))
 
         else:  # no last read spot
-            t1 = time() - t0
+            t1 = time()
             response = red.xrange('stream:'+stream, count=1)  # read first data point
 
         if not response:
             return None
 
-        t2 = time() - t1
+        t2 = time()
 
         # response is a list of tuples. First is the redis timestamp ID, second is the data dict.
 
@@ -1002,7 +1002,7 @@ class PlaybackDatabase(ServerDatabase):
         self.read_bookmarks[stream]['last_time'] = self.time()
         self.read_bookmarks[stream]['last_id'] = self.decode(response[-1][0])  # store last timestamp
 
-        t3 = time() - t2
+        t3 = time()
         # create final output dict
         output = {}
 
@@ -1049,12 +1049,12 @@ class PlaybackDatabase(ServerDatabase):
                     else:
                         output[k] = [d[key]]
 
-        t4 = time()-t3
+        t4 = time()
 
         if to_json:
             ret = json.dumps(output)
-            t5 = time()-t4
-            print("INFO: {}, READ: {}, META: {}, CONV: {}, JSON: {}".format(t1, t2, t3, t4, t5))
+            t5 = time()
+            print("INFO: {}, READ: {}, META: {}, CONV: {}, JSON: {}".format(t1-t0, t2-t1, t3-t2, t4-t3, t5-t4))
             return ret
         return output
 
