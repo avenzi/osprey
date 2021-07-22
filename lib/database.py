@@ -1187,8 +1187,7 @@ class PlaybackDatabase(ServerDatabase):
             pipe.xrange('stream:'+stream, min=read_id, max=read_id)
 
         response = pipe.execute()
-        print(len(response))
-        print(response[-1])
+        print(len(response), response)
         return response
 
 
