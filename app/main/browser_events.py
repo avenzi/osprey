@@ -160,7 +160,7 @@ def delete(filename):
 
 @socketio.on('info', namespace='/browser')
 @catch_errors
-def delete(data):
+def info(data):
     """ Sends the info dict from the requested data stream """
     database = get_database()
     if not database:
