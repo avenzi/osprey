@@ -829,7 +829,7 @@ class PlaybackDatabase(ServerDatabase):
     """
     def __init__(self, ip, port, password, file):
         super().__init__(ip, port, password, file)
-        self.playback_speed = 10                # speed multiplier
+        self.playback_speed = 5                # speed multiplier
         self.playback_active = False            # whether this connection is actively playing back
         self.start_time = time()*1000           # real time playback was last started (ms)
         self.relative_stop_time = time()*1000   # time (relative to playback) that playback was last paused (ms)
@@ -976,7 +976,7 @@ class PlaybackDatabase(ServerDatabase):
             time_since_last = self.time()-last_read_time  # time since last read (ms)
 
             # if time since last read is greater than maximum, increment last read ID by the difference
-            if max_time and time_since_last > self.playback_speed*max_time*1000:  # max_time is in seconds
+            if max_time and time_since_last > max_time*1000:  # max_time is in seconds
                 new_id = self.redis_to_time(last_read_id) + (time_since_last-max_time*1000)
                 last_read_id = self.time_to_redis(new_id)  # convert back to redis timestamp
 
