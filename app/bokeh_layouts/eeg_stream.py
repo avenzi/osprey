@@ -126,7 +126,7 @@ def create_layout(info):
     eeg_source = AjaxDataSource(
         data_url='/stream/update?id={}'.format(filtered_id),
         method='GET',
-        polling_interval=2000,
+        polling_interval=1000,
         mode='append',
         max_size=2000,
         if_modified=True)
