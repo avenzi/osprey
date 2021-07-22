@@ -48,6 +48,10 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ​	Next I was going to try collecting 20 minutes of data and seeing if it will handle 10x playback speed, but evidently my wifi is intent on being terrible. I still don't understand these periodic slow-upload times. My ISP is a demon company run my demon people.
 
+​	After waiting an hour and finally recording about 20 minutes of video and random data, I tested playback on 10x speed. The 20-minute data file would not play. However, when I tested 10x speed on a shorter data file I exported earlier, it worked as expected. Not sure what is going on. I tried manually querying the redis database and the response was not at all delayed, so I don't think it's a problem with latency on redis's part. Also the browser data polling requests weren't going slow, they were just getting nothing as if the database was returning nothing from the queries. Then I restarted the server and tried again, and it worked fine. It hasn't happened since.
+
+​	Alright NOW I have an issue with high data volume - only with the EEG stream. There is a lot of data here and I can't tell if it's the browser, the server, or redis that can't handle it. When I try to view the EEG stream during playback, all data polling requests hang and don't go through. Note that this is different than the problem in the above paragraph, where the requests were *going through* but the redis queries weren't returning anything. Here, these requests aren't even getting a response, indicating the Flask method handling them is not completing.
+
 ##### July 20th, 2021:
 
 ​	Ok so just quickly before I work on playback, I added a small script reload_flask.sh that sends a HUP signal to Gunicorn which reloads the Flask app. This is just so I can push changes to the server without interrupting the databases or streams. I also fixed a minor bug where Analyzers would target the same stream twice unnecessarily.
