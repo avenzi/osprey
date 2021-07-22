@@ -987,7 +987,7 @@ class PlaybackDatabase(ServerDatabase):
             #print("\n[{}] now_time: {}, time_since: {}, \n    last_read_id: {},   max_id: {}".format(stream[:5], h(temptime), h(time_since_first), h(last_read_id), h(max_read_id)))
 
         else:  # no last read spot
-            self.read_bookmarks[stream]['active'] = True
+            self.read_bookmarks[stream] = {'active': True}
             t1 = time()
             response = red.xrange('stream:'+stream, count=1)  # read first data point
 
@@ -999,10 +999,10 @@ class PlaybackDatabase(ServerDatabase):
         # response is a list of tuples. First is the redis timestamp ID, second is the data dict.
 
         # set first-read info
-        if not self.read_bookmarks.get(stream):
-            self.read_bookmarks[stream] = {}
-            self.read_bookmarks[stream]['first_time'] = self.start_time  # get first time
-            self.read_bookmarks[stream]['first_id'] = self.decode(response[-1][0])  # get first ID
+        if not self.read_bookmarks[stream].get('first_id'):
+            self.read_bookmarks[stream]['first_id'] = response[-1][0]
+        if not self.read_bookmarks[stream].get('first_time'):
+            self.read_bookmarks[stream]['first_time'] = self.start_time
 
         # set last-read info
         self.read_bookmarks[stream]['last_time'] = self.time()
@@ -1102,16 +1102,16 @@ class PlaybackDatabase(ServerDatabase):
             #print("\n[{}] now_time: {}, time_since: {}, \n    last_read_id: {},   max_id: {}".format(stream[:5], h(temptime), h(time_since_first), h(last_read_id), h(max_read_id)))
 
         else:  # no first read spot exists
-            self.read_bookmarks[stream]['active'] = True
+            self.read_bookmarks[stream] = {'active': True}
             response = red.xrange('stream:'+stream, count=1)  # get the first one
 
         if not response:
             return None
 
         # set first-read info
-        if not self.read_bookmarks.get(stream):
-            self.read_bookmarks[stream] = {}
+        if not self.read_bookmarks[stream].get('first_id'):
             self.read_bookmarks[stream]['first_id'] = response[0][0]
+        if not self.read_bookmarks[stream].get('first_time'):
             self.read_bookmarks[stream]['first_time'] = self.start_time
 
         # set last-read info
