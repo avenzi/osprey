@@ -870,7 +870,7 @@ class PlaybackDatabase(ServerDatabase):
     def shutdown(self):
         """ Shutdown the redis server instance """
         try:  # shutdown playback database without saving
-            self.redis.shutdown(save=False)
+            catch_database_errors(self.redis.shutdown(save=False))
         except DatabaseTimeoutError:
             sleep(2)  # wait a sec
         except Exception as e:
