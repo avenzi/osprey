@@ -871,8 +871,21 @@ class PlaybackDatabase(ServerDatabase):
         """ Shutdown the redis server instance """
         try:  # shutdown playback database without saving
             self.redis.shutdown(save=False)
+        except DatabaseTimeoutError:
+            sleep(2)  # wait a sec
         except Exception as e:
             raise DatabaseError("Failed to shutdown database on port: {}. {}: {}".format(self.port, e.__class__.__name__, e))
+
+        while True:
+            try:
+                self.ping()  # should fail with a connection error
+                raise DatabaseError("Failed to shutdown database on port {}: Successful ping after shutdown".format(self.port))
+            except DatabaseConnectionError:
+                return  # successfully shut down
+            except DatabaseTimeoutError:
+                sleep(5)  # wait a bit then check again
+            except Exception as e:
+                raise DatabaseError("Unknown exception occurred when checking to make sure the database was shutdown: {}: {}".format(e.__class__.__name__, e))
 
     @catch_database_errors
     def get_total_time(self, stream):
