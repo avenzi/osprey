@@ -237,6 +237,7 @@ class Database:
         # "last_time":  real time when last read
         # "first_time":  real time when first read
         # "end_id": last database timestamp ID in the stream.
+        # "active": whether a current read for this stream is currently active
         self.read_bookmarks = {}
 
         # Similar to read_bookmarks, but for writes.
@@ -959,6 +960,10 @@ class PlaybackDatabase(ServerDatabase):
 
         info = self.read_bookmarks.get(stream)
         if info:  # last read spot exists
+            if info.get('active'):  # read for this stream is currently happening
+                return
+            info['active'] = True
+
             last_read_id = info['last_id']
             last_read_time = info['last_time']
             temptime = self.time()
@@ -982,6 +987,7 @@ class PlaybackDatabase(ServerDatabase):
             #print("\n[{}] now_time: {}, time_since: {}, \n    last_read_id: {},   max_id: {}".format(stream[:5], h(temptime), h(time_since_first), h(last_read_id), h(max_read_id)))
 
         else:  # no last read spot
+            self.read_bookmarks[stream]['active'] = True
             t1 = time()
             response = red.xrange('stream:'+stream, count=1)  # read first data point
 
@@ -1052,11 +1058,15 @@ class PlaybackDatabase(ServerDatabase):
         t4 = time()
 
         if to_json:
-            ret = json.dumps(output)
+            result = json.dumps(output)
             t5 = time()
             print("INFO: {:5f}, READ: {:5f}, META: {:5f}, CONV: {:5f}, JSON: {:5f}".format(t1-t0, t2-t1, t3-t2, t4-t3, t5-t4))
-            return ret
-        return output
+            return result
+        else:
+            result = output
+
+        self.read_bookmarks[stream]['active'] = False  # mark not active
+        return result
 
     @catch_database_errors
     def read_snapshot(self, stream, to_json=False, decode=True):
@@ -1076,6 +1086,10 @@ class PlaybackDatabase(ServerDatabase):
 
         info = self.read_bookmarks.get(stream)
         if info:  # last read spot exists
+            if info.get('active'):  # read for this stream is currently happening
+                return
+            info['active'] = True
+
             last_read_id = info['last_id']
             last_read_time = info['last_time']
             first_read_id = info['first_id']
@@ -1088,6 +1102,7 @@ class PlaybackDatabase(ServerDatabase):
             #print("\n[{}] now_time: {}, time_since: {}, \n    last_read_id: {},   max_id: {}".format(stream[:5], h(temptime), h(time_since_first), h(last_read_id), h(max_read_id)))
 
         else:  # no first read spot exists
+            self.read_bookmarks[stream]['active'] = True
             response = red.xrange('stream:'+stream, count=1)  # get the first one
 
         if not response:
@@ -1113,8 +1128,11 @@ class PlaybackDatabase(ServerDatabase):
 
         if to_json:
             del output['time']  # remove time column for json format
-            return json.dumps(output)
-        return output
+            result = json.dumps(output)
+        else:
+            result = output
+        self.read_bookmarks[stream]['active'] = False  # mark not active
+        return result
 
 
 
