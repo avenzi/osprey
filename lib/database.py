@@ -1166,9 +1166,11 @@ class PlaybackDatabase(ServerDatabase):
         #  to make that decision.
         bookmark = self.bookmarks[stream]
         if not bookmark.sample_rate:  # if no sample rate, find it
-            bookmark.sample_rate = int(self.get_info(stream, 'sample_rate'))
+            bookmark.sample_rate = self.get_info(stream, 'sample_rate')
             if not bookmark.sample_rate:  # no sample rate given in info data column
                 bookmark.sample_rate = 10  # assume 10 Hz
+            else:
+                bookmark.sample_rate = int(bookmark.sample_rate)
 
         sample_rate = bookmark.sample_rate  # sample rate in samples per second
         pipe = self.redis.pipeline()  # pipeline queues a series of commands at once
