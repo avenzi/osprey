@@ -892,7 +892,7 @@ class PlaybackDatabase(ServerDatabase):
             except DatabaseConnectionError:
                 return  # successfully shut down
             except DatabaseTimeoutError:
-                sleep(5)  # wait a bit then check again
+                sleep(2)  # wait a bit then check again
             except Exception as e:
                 raise DatabaseError("Unknown exception occurred when checking to make sure the database was shutdown: {}: {}".format(e.__class__.__name__, e))
 

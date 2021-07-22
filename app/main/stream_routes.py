@@ -3,8 +3,9 @@ from flask import current_app, session, render_template, request, Response, redi
 from jinja2.exceptions import TemplateNotFound
 from bokeh.embed import json_item
 from json import dumps, loads
+from time import time
 
-from lib.database import DatabaseError
+from lib.database import DatabaseError, DatabaseTimeoutError, DatabaseConnectionError
 from local import server_stream_config
 
 # import blueprint + socket
@@ -100,15 +101,23 @@ def plot_update():
         if not database:
             return "Database now found for this session", 500
         if not request_format or request_format == 'series':
+            start = time()
             data = database.read_data(request_id, to_json=True, max_time=5)
+            print()
+            print("READ TIME: ", time()-start)
         elif request_format == 'snapshot':
             data = database.read_snapshot(request_id, to_json=True)
         else:
             err = 'Bokeh request for data specified an unknown request format: {}'.format(request_format)
             print(err)
             return err, 500
+    except DatabaseTimeoutError:
+        print("TIMEOUT TIME: ", time()-start)
+        return "Database query timed out", 503
+    except DatabaseConnectionError:
+        print("TIMEOUT TIME: ", time()-start)
+        return "Lost connection to database", 500
     except DatabaseError as e:
-        print("Database Error: {}".format(e))
         return str(e), 500
 
     if data:
