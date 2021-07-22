@@ -992,6 +992,7 @@ class PlaybackDatabase(ServerDatabase):
             response = red.xrange('stream:'+stream, count=1)  # read first data point
 
         if not response:
+            self.read_bookmarks[stream]['active'] = False
             return None
 
         t2 = time()
@@ -1061,7 +1062,6 @@ class PlaybackDatabase(ServerDatabase):
             result = json.dumps(output)
             t5 = time()
             print("INFO: {:5f}, READ: {:5f}, META: {:5f}, CONV: {:5f}, JSON: {:5f}".format(t1-t0, t2-t1, t3-t2, t4-t3, t5-t4))
-            return result
         else:
             result = output
 
@@ -1106,6 +1106,7 @@ class PlaybackDatabase(ServerDatabase):
             response = red.xrange('stream:'+stream, count=1)  # get the first one
 
         if not response:
+            self.read_bookmarks[stream]['active'] = False
             return None
 
         # set first-read info
