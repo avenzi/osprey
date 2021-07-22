@@ -1188,6 +1188,7 @@ class PlaybackDatabase(ServerDatabase):
 
         response = pipe.execute()
         print(len(response))
+        print(response[-1])
         return response
 
 
