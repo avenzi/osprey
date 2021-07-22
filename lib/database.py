@@ -363,7 +363,7 @@ class Database:
             self.redis.xadd('stream:'+stream, {key: data[key] for key in data.keys()}, id=redis_id)
 
     @catch_database_errors
-    def read_data(self, stream, count=None, max_time=None, numerical=True, to_json=False, decode=True):
+    def read_data(self, stream, count=None, max_time=None, numerical=True, to_json=False, decode=True, downsample=False):
         """
         Gets newest data for <reader> from data column <stream>.
         <stream> is some ID that identifies the stream in the database.
@@ -378,6 +378,7 @@ class Database:
             If False, only values will remain as bytes. Keys will still be decoded.
         <to_json> whether to convert to json string. if False, uses dictionary of lists.
         """
+        # TODO: downsampling for live data (see downsampling implemented for playback data)
         if stream is None:
             return
 
@@ -940,7 +941,7 @@ class PlaybackDatabase(ServerDatabase):
         raise DatabaseError("Cannot write to read-only playback database")
 
     @catch_database_errors
-    def read_data(self, stream, count=None, max_time=None, numerical=True, to_json=False, decode=True):
+    def read_data(self, stream, count=None, max_time=None, numerical=True, to_json=False, decode=True, downsample=False):
         """
         Gets newest data for <reader> from data column <stream>.
         <stream> is some ID that identifies the stream in the database.
@@ -988,8 +989,12 @@ class PlaybackDatabase(ServerDatabase):
             max_read_id = self.time_to_redis(new_id)
 
             t1 = time()
-            # Redis uses the prefix "(" to represent an exclusive interval for XRANGE
-            response = red.xrange('stream:'+stream, min='('+last_read_id, max=max_read_id)
+
+            if downsample and self.playback_speed > 1:  # get downsampled response if playing at high multiplier
+                response = self._downsample(stream, last_read_id, max_read_id)
+            else:
+                # Redis uses the prefix "(" to represent an exclusive interval for XRANGE
+                response = red.xrange('stream:'+stream, min='('+last_read_id, max=max_read_id)
             #print("\n[{}] now_time: {}, time_since: {}, \n    last_read_id: {},   max_id: {}".format(stream[:5], h(temptime), h(time_since_first), h(last_read_id), h(max_read_id)))
 
         else:  # no last read spot
@@ -1141,6 +1146,48 @@ class PlaybackDatabase(ServerDatabase):
         bookmark.release()  # release lock
         return result
 
+    @catch_database_errors
+    def _downsample(self, stream, last_id, max_id):
+        """
+        Returns the raw redis response from <last_id> to <max_id> (not including last_id),
+            but downsampled according to the current playback speed.
+        Not meant to be called directly. Used by other read_data() methods.
+        Assumes that the bookmark for this stream already exists and it's lock has been acquired.
+        Assumes that normal redis is being used (not bytes_redis).
+        If no 'sample_rate' key is found for this stream, assumes 10Hz.
+            - This will over-downsample streams over 10Hz,
+                under-downsample streams between 10Hz/playback_speed and 10Hz,
+                and streams under 10Hz/playbackspeed will be unaffected.
+        """
+        # TODO: implement downsampling even for live reading. This would require setting some
+        #  kind of frequency cap that downsamples anything above like 10x that cap down to that cap.
+        #  (because downsampling something only 2x the cap is inefficient since I would then be
+        #  manually reading every other data point). This is simple, you just gotta know the sample rate
+        #  to make that decision.
+        bookmark = self.bookmarks[stream]
+        if not bookmark.sample_rate:  # if no sample rate, find it
+            bookmark.sample_rate = int(self.get_info(stream, 'sample_rate'))
+            if not bookmark.sample_rate:  # no sample rate given in info data column
+                bookmark.sample_rate = 10  # assume 10 Hz
+
+        sample_rate = bookmark.sample_rate  # sample rate in samples per second
+        pipe = self.redis.pipeline()  # pipeline queues a series of commands at once
+
+        # integer milliseconds of the given redis IDs
+        last_id_time = self.redis_to_time(last_id)
+        max_id_time = self.redis_to_time(max_id)
+        bucket_size = 1000*self.playback_speed / sample_rate  # time in ms of downsampled data chunk
+
+        while last_id_time < max_id_time:
+            # increment by bucket size and read only that single data point
+            last_id_time += bucket_size
+            read_id = self.time_to_redis(last_id_time)
+            pipe.xrange('stream:'+stream, min=read_id, max=read_id)
+
+        response = pipe.execute()
+        print(len(response))
+        return response
+
 
 class Bookmarks:
     """
@@ -1182,6 +1229,9 @@ class Bookmark:
         self.first_time = None  # real time when first read
         self.last_time = None   # real time when last read
         self.end_id = None    # last database timestamp ID in the whole stream
+
+        self.sample_rate = None  # sample rate of a given stream, if applicable
+
         self.write = None  # last written database time in INTEGER MILLISECONDS
         self.seq = None    # last written database SEQUENCE NUMBER
 
