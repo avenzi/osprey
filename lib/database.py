@@ -976,6 +976,9 @@ class PlaybackDatabase(ServerDatabase):
             temptime = self.time()
             time_since_last = self.time()-last_read_time  # time since last read (ms)
 
+            if downsample and self.playback_speed > 1:
+                max_time = max_time*self.playback_speed
+
             # if time since last read is greater than maximum, increment last read ID by the difference
             if max_time and time_since_last > max_time*1000:  # max_time is in seconds
                 new_time = self.redis_to_time(last_read_id) + (time_since_last-max_time*1000)
