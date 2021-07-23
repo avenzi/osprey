@@ -45,6 +45,7 @@ sudo apt-get -y install libatlas-base-dev
 sudo apt-get install cmake -y
 
 . venv/bin/activate  # actuvate vitualenv
+
 # download and install brainflow from source (otherwise doesn't work on Pi)
 cd ~/ # go to home directory
 if [ -d "./brainflow" ]  # if brainflow directory already exists
@@ -56,6 +57,7 @@ then
       git pull https://github.com/OpenBCI/brainflow.git
       echo "Building Brainflow"
       bash ./tools/build_linux.sh > /dev/null  # build brainflow
+      pip3 install -U ./python-package  # install package to virtual env
   fi
 else
   echo "Brainflow not found"
@@ -63,9 +65,10 @@ else
   cd ./brainflow
   echo "Building Brainflow"
   bash ./tools/build_linux.sh > /dev/null  # build brainflow
+  pip3 install -U ./python-package  # install package to virtual env
 fi
 
-pip3 install -U ./python-package
+
 
 
 
