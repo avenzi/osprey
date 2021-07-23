@@ -980,7 +980,7 @@ class PlaybackDatabase(ServerDatabase):
             # calculate timestamp diff since last read (ms)
             last_read_id = bookmark.last_id  # last read id
             last_read_time = bookmark.last_time  # last read real time
-            time_since_last = max_read_time-self.redis_to_time(last_read_id)
+            time_since_last = max_timestamp-self.redis_to_time(last_read_id)
 
             if max_time and self.playback_speed > 1:
                 max_time = max_time*self.playback_speed
