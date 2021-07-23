@@ -1184,13 +1184,11 @@ class PlaybackDatabase(ServerDatabase):
         max_id_time = self.redis_to_time(max_id)
 
         pipe = self.redis.pipeline()  # pipeline queues a series of commands at once
-        print("MAX: {}".format(h(max_id_time)))
         while last_id_time < max_id_time:
-            # increment by bucket size and read only that single data point
-            last_id_time += bucket_size
-            read_id = self.time_to_redis(last_id_time)
-            print(h(last_id_time))
-            pipe.xrange('stream:'+stream, min=read_id, max=read_id)
+            start_id = self.time_to_redis(last_id_time)  # start of bucket range
+            last_id_time += bucket_size  # increment by bucket size
+            end_id = self.time_to_redis(last_id_time)  # end of bucket range
+            pipe.xrevrange('stream:'+stream, min='('+start_id, max=end_id, count=1)
 
         # list of lists of tuples
         raw_response = pipe.execute()
