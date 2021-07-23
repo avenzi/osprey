@@ -1257,7 +1257,7 @@ class Bookmark:
         If lock is acquired, returns True.
         If already locked, returns False.
         """
-        return True
+        return False
         #return self._lock.acquire(block=block)
 
     def release(self):
