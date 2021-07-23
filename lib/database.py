@@ -970,10 +970,17 @@ class PlaybackDatabase(ServerDatabase):
             red = self.bytes_redis
 
         if bookmark.last_id and bookmark.last_time:  # last read spot exists
-            last_read_id = bookmark.last_id
-            last_read_time = bookmark.last_time
-            # timestamp diff since last read (ms)
-            time_since_last = self.time()-self.redis_to_time(last_read_id)
+            # calculate new max ID by how much real time has passed between now and beginning (ms)
+            first_read_id = bookmark.first_id  # first read ID
+            first_read_time = bookmark.first_time  # first read real time
+            time_since_first = self.time()-first_read_time  # time diff until now
+            max_read_time = self.redis_to_time(first_read_id) + time_since_first  # redis timestamp max time
+            max_read_id = self.time_to_redis(max_read_time)  # redis timestamp max ID
+
+            # calculate timestamp diff since last read (ms)
+            last_read_id = bookmark.last_id  # last read id
+            last_read_time = bookmark.last_time  # last read real time
+            time_since_last = max_read_time-self.redis_to_time(last_read_id)
 
             if max_time and self.playback_speed > 1:
                 max_time = max_time*self.playback_speed
@@ -983,13 +990,6 @@ class PlaybackDatabase(ServerDatabase):
                 new_time = self.redis_to_time(last_read_id) + (time_since_last-max_time*1000)
                 print('adjusted: {} -> {}'.format(h(self.redis_to_time(last_read_id)), h(new_time)))
                 last_read_id = self.time_to_redis(new_time)  # convert back to redis timestamp
-
-            # calculate new ID by how much real time has passed between now and beginning
-            first_read_id = bookmark.first_id
-            first_read_time = bookmark.first_time
-            time_since_first = self.time()-first_read_time
-            new_time = self.redis_to_time(first_read_id) + time_since_first
-            max_read_id = self.time_to_redis(new_time)
 
             t1 = time()
 
