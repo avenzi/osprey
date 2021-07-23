@@ -1193,7 +1193,7 @@ class PlaybackDatabase(ServerDatabase):
             if lst:  # pick out only results with data
                 response.append(lst[0])  # put the single data point into the response list
 
-        print(len(response), response)
+        print(len(response))
         # response is now in same format as if read by a single XRANGE command
         return response
 
