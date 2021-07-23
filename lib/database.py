@@ -963,6 +963,8 @@ class PlaybackDatabase(ServerDatabase):
             print("Blocked from reading")
             return  # return if already locked
 
+        print('acquired lock on {}'.format(stream))
+
         t0 = time()
         if decode:
             red = self.redis
@@ -994,18 +996,17 @@ class PlaybackDatabase(ServerDatabase):
             t1 = time()
 
             if downsample and self.playback_speed > 1:  # get downsampled response if playing at high multiplier
-                print("LAST_ID: {}, LAST_TIME: {}, MAX_ID: {}, MAX_TIME: {}, SINCE: {}".format(last_read_id, h(last_read_time), max_read_id, h(new_time), h(time_since_first)))
                 response = self._downsample(stream, last_read_id, max_read_id)
             else:
                 # Redis uses the prefix "(" to represent an exclusive interval for XRANGE
                 response = red.xrange('stream:'+stream, min='('+last_read_id, max=max_read_id)
-            #print("\n[{}] now_time: {}, time_since: {}, \n    last_read_id: {},   max_id: {}".format(stream[:5], h(temptime), h(time_since_first), h(last_read_id), h(max_read_id)))
 
         else:  # no last read spot
             t1 = time()
             response = red.xrange('stream:'+stream, count=1)  # read first data point
 
         if not response:
+            print('released early {}'.format(stream))
             bookmark.release()
             return None
 
@@ -1078,6 +1079,7 @@ class PlaybackDatabase(ServerDatabase):
         else:
             result = output
 
+        print('released {}'.format(stream))
         bookmark.release()  # release lock
         return result
 
