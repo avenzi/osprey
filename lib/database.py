@@ -975,13 +975,15 @@ class PlaybackDatabase(ServerDatabase):
             temptime = self.time()
             time_since_last = self.time()-last_read_time  # time since last read (ms)
 
-            if max_time and downsample and self.playback_speed > 1:
+            if max_time and self.playback_speed > 1:
                 max_time = max_time*self.playback_speed
 
             # if time since last read is greater than maximum, increment last read ID by the difference
             if max_time and time_since_last > max_time*1000:  # max_time is in seconds
                 new_time = self.redis_to_time(last_read_id) + (time_since_last-max_time*1000)
+                print('adjusted: {} -> {}'.format(h(self.redis_to_time(last_read_id)), h(new_time)))
                 last_read_id = self.time_to_redis(new_time)  # convert back to redis timestamp
+
 
             # calculate new ID by how much time has passed between now and beginning
             first_read_id = bookmark.first_id
@@ -1022,7 +1024,7 @@ class PlaybackDatabase(ServerDatabase):
             #return  # return nothing. first data point was read for reference.
 
         else:
-            print("SINCE: {}, MAX: {}, LAST: {}, END: {}".format(time_since_last, max_time, h(last_read_time), h(new_time)))
+            print("SINCE: {}, MAX: {}, LAST: {}, END: {}".format(time_since_last, max_time, h(self.redis_to_time(last_read_id)), h(new_time)))
 
         t3 = time()
         # create final output dict
