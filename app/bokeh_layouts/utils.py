@@ -8,7 +8,7 @@ def time_format():
         fig = bokeh.plotting.figure()
         fig.xaxis.formatter = time_format()
     """
-    DatetimeTickFormatter(
+    return DatetimeTickFormatter(
         years=["%Y"],
         months=["%b %Y"],
         days=["%b %d"],
