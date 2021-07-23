@@ -974,8 +974,8 @@ class PlaybackDatabase(ServerDatabase):
             first_read_id = bookmark.first_id  # first read ID
             first_read_time = bookmark.first_time  # first read real time
             time_since_first = self.time()-first_read_time  # time diff until now
-            max_read_time = self.redis_to_time(first_read_id) + time_since_first  # redis timestamp max time
-            max_read_id = self.time_to_redis(max_read_time)  # redis timestamp max ID
+            max_timestamp = self.redis_to_time(first_read_id) + time_since_first  # redis timestamp max time
+            max_read_id = self.time_to_redis(max_timestamp)  # redis timestamp max ID
 
             # calculate timestamp diff since last read (ms)
             last_read_id = bookmark.last_id  # last read id
@@ -987,9 +987,9 @@ class PlaybackDatabase(ServerDatabase):
 
             # if timestamp delta since last read is greater than maximum, increment last read ID by the difference
             if max_time and time_since_last > max_time*1000:  # max_time is in seconds
-                new_time = self.redis_to_time(last_read_id) + (time_since_last-max_time*1000)
-                print('adjusted: {} -> {}'.format(h(self.redis_to_time(last_read_id)), h(new_time)))
-                last_read_id = self.time_to_redis(new_time)  # convert back to redis timestamp
+                new_last_time = self.redis_to_time(last_read_id) + (time_since_last-max_time*1000)
+                print('adjusted: {} -> {}'.format(h(self.redis_to_time(last_read_id)), h(new_last_time)))
+                last_read_id = self.time_to_redis(new_last_time)  # convert back to redis timestamp
 
             t1 = time()
 
@@ -1023,7 +1023,7 @@ class PlaybackDatabase(ServerDatabase):
             #return  # return nothing. first data point was read for reference.
 
         else:
-            print("SINCE: {}, MAX: {}, LAST: {}, END: {}".format(time_since_last, max_time, h(self.redis_to_time(last_read_id)), h(new_time)))
+            print("SINCE: {}, MAX: {}, LAST: {}, END: {}".format(time_since_last, max_time, h(self.redis_to_time(last_read_id)), h(max_timestamp)))
 
         t3 = time()
         # create final output dict
