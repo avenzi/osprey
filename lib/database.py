@@ -398,14 +398,20 @@ class Database:
 
         else:
             if bookmark.last_id and bookmark.last_time:  # last read spot exists
-                last_read_id = bookmark.last_id
-                last_read_time = bookmark.last_time
-                time_since_last = self.time()-last_read_time  # time since last read (ms)
+                # predict new max ID by how much real time has passed between now and beginning (ms)
+                first_read_id = bookmark.first_id  # first read ID
+                first_read_time = bookmark.first_time  # first read real time
+                time_since_first = self.time() - first_read_time  # time diff until now
+                max_timestamp = self.redis_to_time(first_read_id) + time_since_first  # redis timestamp max time
+
+                # calculate timestamp diff since last read (ms)
+                last_read_id = bookmark.last_id  # last read id
+                time_since_last = max_timestamp - self.redis_to_time(last_read_id)
 
                 # if time since last read is greater than maximum, increment last read ID by the difference
                 if max_time and time_since_last > max_time*1000:  # max_time is in seconds
-                    new_id = self.redis_to_time(last_read_id) + (time_since_last-max_time*1000)
-                    last_read_id = self.time_to_redis(new_id)  # convert back to redis timestamp
+                    new_last_time = self.redis_to_time(last_read_id) + (time_since_last-max_time*1000)
+                    last_read_id = self.time_to_redis(new_last_time)  # convert back to redis timestamp
 
                 response = red.xread({'stream:' + stream: last_read_id})
             else:  # no last read spot exists.
@@ -427,6 +433,8 @@ class Database:
         if not bookmark.first_time:
             bookmark.first_time = self.start_time  # get first time
             bookmark.first_id = self.decode(response[-1][0])  # get first ID
+            bookmark.release()  # release lock
+            return  # return nothing. first data point was read for reference.
 
         # set last-read info
         bookmark.last_time = self.time()
@@ -979,7 +987,6 @@ class PlaybackDatabase(ServerDatabase):
 
             # calculate timestamp diff since last read (ms)
             last_read_id = bookmark.last_id  # last read id
-            last_read_time = bookmark.last_time  # last read real time
             time_since_last = max_timestamp-self.redis_to_time(last_read_id)
 
             if max_time and self.playback_speed > 1:
@@ -988,7 +995,6 @@ class PlaybackDatabase(ServerDatabase):
             # if timestamp delta since last read is greater than maximum, increment last read ID by the difference
             if max_time and time_since_last > max_time*1000:  # max_time is in seconds
                 new_last_time = self.redis_to_time(last_read_id) + (time_since_last-max_time*1000)
-                print('adjusted: {} -> {}'.format(h(self.redis_to_time(last_read_id)), h(new_last_time)))
                 last_read_id = self.time_to_redis(new_last_time)  # convert back to redis timestamp
 
             t1 = time()
@@ -1022,8 +1028,8 @@ class PlaybackDatabase(ServerDatabase):
             bookmark.release()  # release lock
             return  # return nothing. first data point was read for reference.
 
-        else:
-            print("SINCE: {}, MAX: {}, LAST: {}, END: {}".format(time_since_last, max_time, h(self.redis_to_time(last_read_id)), h(max_timestamp)))
+        #else:
+            #print("SINCE: {}, MAX: {}, LAST: {}, END: {}".format(time_since_last, max_time, h(self.redis_to_time(last_read_id)), h(max_timestamp)))
 
         t3 = time()
         # create final output dict
@@ -1110,15 +1116,12 @@ class PlaybackDatabase(ServerDatabase):
 
         if bookmark.last_id and bookmark.last_time:  # last read spot exists
             last_read_id = bookmark.last_id
-            last_read_time = bookmark.last_time
             first_read_id = bookmark.first_id
             first_read_time = bookmark.first_time
-            temptime = self.time()
             time_since_first = self.time() - first_read_time
             max_time = self.redis_to_time(first_read_id) + time_since_first
             max_read_id = self.time_to_redis(max_time)
             response = red.xrevrange('stream:'+stream, min='('+last_read_id, max=max_read_id, count=1)
-            #print("\n[{}] now_time: {}, time_since: {}, \n    last_read_id: {},   max_id: {}".format(stream[:5], h(temptime), h(time_since_first), h(last_read_id), h(max_read_id)))
 
         else:  # no first read spot exists
             response = red.xrange('stream:'+stream, count=1)  # get the first one
