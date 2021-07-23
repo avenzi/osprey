@@ -1017,8 +1017,8 @@ class PlaybackDatabase(ServerDatabase):
         if not bookmark.first_time:
             bookmark.first_time = self.start_time  # get first time
             bookmark.first_id = self.decode(response[-1][0])  # get first ID
-            bookmark.release()  # release lock
-            return  # return nothing. first data point was read for reference.
+            #bookmark.release()  # release lock
+            #return  # return nothing. first data point was read for reference.
 
         print("TIME SINCE: ", time_since_last)
 
