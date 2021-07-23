@@ -1,4 +1,4 @@
-from threading import Lock
+from multiprocessing import Lock
 from time import time, sleep, strftime, localtime
 import functools
 import json
