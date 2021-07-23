@@ -16,7 +16,7 @@ logs/*
 data/live/*
 data/saved/*
 # keep empty directories with a .keep file
-!data/*/.keep
+!*/.keep
 
 # Ignore .idea
 .idea
