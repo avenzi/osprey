@@ -73,7 +73,8 @@ def run_video_stream(database, stream_id, socket):
         try:
             data_dict = database.read_data(stream_id, numerical=False, decode=False, max_time=10)
             if not data_dict:  # no data is returned
-                socketio.sleep(0.5)
+                print("no data")
+                socketio.sleep(1)
                 continue
         except Exception as e:
             print("Video stream failed to read from database. {}".format(e))
