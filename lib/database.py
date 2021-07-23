@@ -974,8 +974,9 @@ class PlaybackDatabase(ServerDatabase):
             last_read_time = bookmark.last_time
             temptime = self.time()
             time_since_last = self.time()-last_read_time  # time since last read (ms)
+            print("TIME SINCE: ", time_since_last)
 
-            if downsample and self.playback_speed > 1:
+            if downsample and self.playback_speed and max_time > 1:
                 max_time = max_time*self.playback_speed
 
             # if time since last read is greater than maximum, increment last read ID by the difference
