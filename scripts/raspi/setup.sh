@@ -57,6 +57,7 @@ fi
 sudo apt-get install cmake -y  # make sure cmake is installed
 
 # build brainflow
+# TODO: Is there a way to only build brainflow if it needs an update? This take a really long time.
 cd ./brainflow
 bash ./tools/build_linux.sh > /dev/null
 pip3 install -U ./python-package
