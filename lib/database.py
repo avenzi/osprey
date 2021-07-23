@@ -978,19 +978,20 @@ class PlaybackDatabase(ServerDatabase):
 
             # if time since last read is greater than maximum, increment last read ID by the difference
             if max_time and time_since_last > max_time*1000:  # max_time is in seconds
-                new_id = self.redis_to_time(last_read_id) + (time_since_last-max_time*1000)
-                last_read_id = self.time_to_redis(new_id)  # convert back to redis timestamp
+                new_time = self.redis_to_time(last_read_id) + (time_since_last-max_time*1000)
+                last_read_id = self.time_to_redis(new_time)  # convert back to redis timestamp
 
             # calculate new ID by how much time has passed between now and beginning
             first_read_id = bookmark.first_id
             first_read_time = bookmark.first_time
             time_since_first = self.time()-first_read_time
-            new_id = self.redis_to_time(first_read_id) + time_since_first
-            max_read_id = self.time_to_redis(new_id)
+            new_time = self.redis_to_time(first_read_id) + time_since_first
+            max_read_id = self.time_to_redis(new_time)
 
             t1 = time()
 
             if downsample and self.playback_speed > 1:  # get downsampled response if playing at high multiplier
+                print("LAST_ID: {}, LAST_TIME: {}, MAX_ID: {}, MAX_TIME: {}, SINCE: {}".format(last_read_id, h(last_read_time), max_read_id, h(new_time)), h(time_since_first))
                 response = self._downsample(stream, last_read_id, max_read_id)
             else:
                 # Redis uses the prefix "(" to represent an exclusive interval for XRANGE
@@ -1172,18 +1173,20 @@ class PlaybackDatabase(ServerDatabase):
             else:
                 bookmark.sample_rate = int(bookmark.sample_rate)
 
-        sample_rate = bookmark.sample_rate  # sample rate in samples per second
-        bucket_size = (1000/bookmark.sample_rate) * self.playback_speed  # time in ms of downsampled data chunk
+        # time in ms of downsampled data chunk
+        bucket_size = 1000*self.playback_speed / bookmark.sample_rate
 
         # integer milliseconds of the given redis IDs
         last_id_time = self.redis_to_time(last_id)
         max_id_time = self.redis_to_time(max_id)
 
         pipe = self.redis.pipeline()  # pipeline queues a series of commands at once
+        print("MAX: {}".format(h(max_id_time)))
         while last_id_time < max_id_time:
             # increment by bucket size and read only that single data point
             last_id_time += bucket_size
             read_id = self.time_to_redis(last_id_time)
+            print(h(last_id_time))
             pipe.xrange('stream:'+stream, min=read_id, max=read_id)
 
         # list of lists of tuples
