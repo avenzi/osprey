@@ -33,6 +33,16 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### July 23rd, 2021:
+
+​	Started today by fixing a potential issue with the video stream playback (again). I noticed that if I loaded the video stream part way into the streaming session, it would grab *all* the previous video data from the session and send it to the browser, causing it to lag while trying to load 20 minutes of data. Now the max_time is one of the first things that I implemented when writing the read_data methods, so I couldn't figure out why this was happening. After debugging, I finally found out that it was because I was using the real-world time since the last data point was read, and checking if that time exceeded the maximum allowed. However, I also always read the first point of a stream to get a reference point in order to know where in the playback to read to. This means that I was reading the first point, then immediately reading data up to where the stream currently is with very little real-world time passing. In order to fix this, I instead needed to calculate the redis-timestamp difference between the last data point read, not the real-world time difference. Because I'm using the last-read timestamp elsewhere in the code, this was easy to obtain and it completely fixed the issue. Also note that I scaled up the max_time with the playback speed, which is really only possible because of the downsampling I implemented yesterday.
+
+​	I also realized that with the downsampling reducing the amount of data transferred to the browser, I don't even need to lock the database read operations anymore. However they aren't hurting anything, so I left them in incase it became important in the future. I can think of a situation in which the Analyzers are trying to read from the database faster than it can deliver, and this would prevent locking it up in that case.
+
+​	
+
+
+
 ##### July 22nd, 2021:
 
 ​	I started by working on a method to lock database reads to one at a time per stream. I used a threading lock to serialize access to individual streams, and only for the read_data and read_snapshot operations. While this did seem to fix the problem of unanswered data requests, it did not improve the lag of the browser. Data updates became less frequent but took just as long to load into the browser, looking at the timing numbers. 
