@@ -1186,13 +1186,15 @@ class PlaybackDatabase(ServerDatabase):
             read_id = self.time_to_redis(last_id_time)
             pipe.xrange('stream:'+stream, min=read_id, max=read_id)
 
-        raw_response = pipe.execute()  # list of all XRANGE results (lists of tuples), even empty ones
+        # list of lists of tuples
+        raw_response = pipe.execute()
         response = []
         for lst in raw_response:
-            if lst:
-                response.append(lst)  # pick out only results with data
-                
+            if lst:  # pick out only results with data
+                response.append(lst[0])  # put the single data point into the response list
+
         print(len(response), response)
+        # response is now in same format as if read by a single XRANGE command
         return response
 
 
