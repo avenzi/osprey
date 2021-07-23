@@ -959,9 +959,9 @@ class PlaybackDatabase(ServerDatabase):
 
         # get bookmark for this stream, create if not exist
         bookmark = self.bookmarks.get(stream)
-        if bookmark.lock(block=False):  # acquire lock
+        if not bookmark.lock(block=False):  # acquire lock
             print("Blocked from reading")
-            return  # return if already locked
+            return  # return if not acquired
 
         print('acquired lock on {}'.format(stream))
 
@@ -1257,13 +1257,11 @@ class Bookmark:
         If lock is acquired, returns True.
         If already locked, returns False.
         """
-        return False
-        #return self._lock.acquire(block=block)
+        return self._lock.acquire(block=block)
 
     def release(self):
         """ Releases the lock for this bookmark """
-        pass
-        #self._lock.release()
+        self._lock.release()
 
     def clear(self):
         """ Clear all values """
