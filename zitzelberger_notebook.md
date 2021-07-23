@@ -33,6 +33,14 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### July 22nd, 2021:
+
+​	I started by working on a method to lock database reads to one at a time per stream. I used a threading lock to serialize access to individual streams, and only for the read_data and read_snapshot operations. While this did seem to fix the problem of unanswered data requests, it did not improve the lag of the browser. Data updates became less frequent but took just as long to load into the browser, looking at the timing numbers. 
+​	Given that it didn't work as much as I'd hoped, I will attempt to implement the other idea from yesterday that seemed promising - to only read every Nth data point when streaming at N times speed.
+​	After researching a bit, I found that there are some good known algorithms for downsampling data (namely the Largest Triangle Three Bucket algorithm, which is relatively simple). However, none that I saw I had any idea about how to implement in Redis since most requires some sort of aggregate function (which redis doesn't have), which means I would have to manually read the necessary data and that completely defeats the point. So instead I just settled on my original idea of taking every Nth data point when playing back at N-times speed. 
+
+​	That turned out to be a little challenging to implement, but after I did it and debugged it for the remainder of the day, it works really well! As a bonus, the Bokeh plot displays a larger chunk of data at a time because it is less dense. I am VERY happy with how this turned out, but there is one other thing: I am currently just down-sampling everything to a constant frequency, and not based on the actual sample rate of the original stream. This is not ideal, but it *might* just work for the time being. I will have to collect some real EEG data to find out. I'll start that tomorrow.
+
 ##### July 21st, 2021:
 
 ​	Alright so this morning I had the task of testing and debugging the frantic 2am rewrite that I did last night. Surprisingly, there were relatively few issues. The one that I did run into was actually not a result of that - it was something already on my list to fix. The problem was that the total_time wasn't being correctly retrieved for video streams. The problem was that I was trying to read the last redis timestamp ID in the stream, but to do so I was using the redis instance that automatically decodes bytes data. However because it technically also reads the video frame in that data point, it was throwing an error because it couldn't decode it. Using the redis connection instance with decode=False fixed that issue, but I then had to manually decode the timestamp from bytes afterward. 
