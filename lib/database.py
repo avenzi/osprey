@@ -975,7 +975,7 @@ class PlaybackDatabase(ServerDatabase):
             temptime = self.time()
             time_since_last = self.time()-last_read_time  # time since last read (ms)
 
-            if downsample and self.playback_speed and max_time > 1:
+            if max_time and downsample and self.playback_speed > 1:
                 max_time = max_time*self.playback_speed
 
             # if time since last read is greater than maximum, increment last read ID by the difference
@@ -1022,7 +1022,7 @@ class PlaybackDatabase(ServerDatabase):
             #return  # return nothing. first data point was read for reference.
 
         else:
-            print("TIME SINCE: ", time_since_last)
+            print("SINCE: {}, MAX: {}, LAST: {}, END: {}", time_since_last, max_time, h(last_read_time), h(new_time))
 
         t3 = time()
         # create final output dict
