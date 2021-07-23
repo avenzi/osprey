@@ -830,7 +830,7 @@ class PlaybackDatabase(ServerDatabase):
     """
     def __init__(self, ip, port, password, file):
         super().__init__(ip, port, password, file)
-        self.playback_speed = 5                # speed multiplier
+        self.playback_speed = 10                # speed multiplier
         self.playback_active = False            # whether this connection is actively playing back
         self.start_time = time()*1000           # real time playback was last started (ms)
         self.relative_stop_time = time()*1000   # time (relative to playback) that playback was last paused (ms)
@@ -960,10 +960,7 @@ class PlaybackDatabase(ServerDatabase):
         # get bookmark for this stream, create if not exist
         bookmark = self.bookmarks.get(stream)
         if not bookmark.lock(block=False):  # acquire lock
-            print("Blocked from reading")
             return  # return if not acquired
-
-        print('acquired lock on {}'.format(stream))
 
         t0 = time()
         if decode:
@@ -1006,7 +1003,6 @@ class PlaybackDatabase(ServerDatabase):
             response = red.xrange('stream:'+stream, count=1)  # read first data point
 
         if not response:
-            print('released early {}'.format(stream))
             bookmark.release()
             return None
 
@@ -1079,7 +1075,6 @@ class PlaybackDatabase(ServerDatabase):
         else:
             result = output
 
-        print('released {}'.format(stream))
         bookmark.release()  # release lock
         return result
 
@@ -1199,7 +1194,6 @@ class PlaybackDatabase(ServerDatabase):
             if lst:  # pick out only results with data
                 response.append(lst[0])  # put the single data point into the response list
 
-        print(len(response))
         # response is now in same format as if read by a single XRANGE command
         return response
 
