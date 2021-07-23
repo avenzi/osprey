@@ -1020,7 +1020,8 @@ class PlaybackDatabase(ServerDatabase):
             #bookmark.release()  # release lock
             #return  # return nothing. first data point was read for reference.
 
-        print("TIME SINCE: ", time_since_last)
+        else:
+            print("TIME SINCE: ", time_since_last)
 
         t3 = time()
         # create final output dict
