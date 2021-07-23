@@ -38,7 +38,6 @@ then
   echo "dtoverlay=rpi-sense" | sudo tee -a /boot/config.txt
 fi
 
-(
 # for numpy to work properly with brainflow on Raspbian
 sudo apt-get -y install libatlas-base-dev
 
@@ -50,19 +49,23 @@ sudo apt-get install cmake -y
 cd ~/ # go to home directory
 if [ -d "./brainflow" ]  # if brainflow directory already exists
 then
+  echo "Brainflow Repo found"
   cd ./brainflow
   if ! git diff --quiet origin/master; then  # if the git repo needs to update
+      echo "Brainflow Repo needs to update"
       git pull https://github.com/OpenBCI/brainflow.git
+      echo "Building Brainflow"
       bash ./tools/build_linux.sh > /dev/null  # build brainflow
   fi
 else
+  echo "Brainflow not found"
   git clone https://github.com/OpenBCI/brainflow.git
   cd ./brainflow
+  echo "Building Brainflow"
   bash ./tools/build_linux.sh > /dev/null  # build brainflow
 fi
 
 pip3 install -U ./python-package
 
-) > /dev/null &
-loading $! "> Installing and building Brainflow in home directory... (may take a while)"
+
 
