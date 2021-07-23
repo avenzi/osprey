@@ -999,6 +999,7 @@ class PlaybackDatabase(ServerDatabase):
                 response = red.xrange('stream:'+stream, min='('+last_read_id, max=max_read_id)
 
         else:  # no last read spot
+            t1 = time()
             response = red.xrange('stream:'+stream, count=1)  # read first data point
 
         if not response:
