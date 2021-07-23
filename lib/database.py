@@ -1011,14 +1011,16 @@ class PlaybackDatabase(ServerDatabase):
 
         # response is a list of tuples. First is the redis timestamp ID, second is the data dict.
 
+        # set last-read info
+        bookmark.last_time = self.time()
+        bookmark.last_id = self.decode(response[-1][0])  # store last timestamp
+
         # set first-read info if not already set
         if not bookmark.first_time:
             bookmark.first_time = self.start_time  # get first time
             bookmark.first_id = self.decode(response[-1][0])  # get first ID
-
-        # set last-read info
-        bookmark.last_time = self.time()
-        bookmark.last_id = self.decode(response[-1][0])  # store last timestamp
+            bookmark.release()  # release lock
+            return  # don't return. first data point was read for reference.
 
         t3 = time()
         # create final output dict

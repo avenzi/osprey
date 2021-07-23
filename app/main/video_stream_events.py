@@ -81,3 +81,4 @@ def run_video_stream(database, stream_id, socket):
         frames = data_dict['frame']  # get list of unread frames
         data = b''.join(frames)  # concatenate all frames
         socketio.emit('data', data, namespace='/video_stream', room=socket)  # send back to socket
+        socketio.sleep(0.1)
