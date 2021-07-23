@@ -1168,18 +1168,18 @@ class PlaybackDatabase(ServerDatabase):
         if not bookmark.sample_rate:  # if no sample rate, find it
             bookmark.sample_rate = self.get_info(stream, 'sample_rate')
             if not bookmark.sample_rate:  # no sample rate given in info data column
-                bookmark.sample_rate = 10  # assume 10 Hz
+                bookmark.sample_rate = 10*self.playback_speed  # downsample to 10Hz
             else:
                 bookmark.sample_rate = int(bookmark.sample_rate)
 
         sample_rate = bookmark.sample_rate  # sample rate in samples per second
-        pipe = self.redis.pipeline()  # pipeline queues a series of commands at once
+        bucket_size = (1000/bookmark.sample_rate) * self.playback_speed  # time in ms of downsampled data chunk
 
         # integer milliseconds of the given redis IDs
         last_id_time = self.redis_to_time(last_id)
         max_id_time = self.redis_to_time(max_id)
-        bucket_size = 1000*self.playback_speed / sample_rate  # time in ms of downsampled data chunk
 
+        pipe = self.redis.pipeline()  # pipeline queues a series of commands at once
         while last_id_time < max_id_time:
             # increment by bucket size and read only that single data point
             last_id_time += bucket_size
