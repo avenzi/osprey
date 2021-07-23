@@ -1022,7 +1022,7 @@ class PlaybackDatabase(ServerDatabase):
             #return  # return nothing. first data point was read for reference.
 
         else:
-            print("SINCE: {}, MAX: {}, LAST: {}, END: {}", time_since_last, max_time, h(last_read_time), h(new_time))
+            print("SINCE: {}, MAX: {}, LAST: {}, END: {}".format(time_since_last, max_time, h(last_read_time), h(new_time)))
 
         t3 = time()
         # create final output dict
