@@ -102,6 +102,7 @@ def plot_update():
         if not database:
             return "Database not found for this session", 503
         if not request_format or request_format == 'series':
+            print('start')
             data = database.read_data(request_id, to_json=True, max_time=5, downsample=True)
             print("READ TIME: ", time()-start)
             print()
