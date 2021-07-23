@@ -974,7 +974,6 @@ class PlaybackDatabase(ServerDatabase):
             last_read_time = bookmark.last_time
             temptime = self.time()
             time_since_last = self.time()-last_read_time  # time since last read (ms)
-            print("TIME SINCE: ", time_since_last)
 
             if downsample and self.playback_speed and max_time > 1:
                 max_time = max_time*self.playback_speed
@@ -1000,7 +999,6 @@ class PlaybackDatabase(ServerDatabase):
                 response = red.xrange('stream:'+stream, min='('+last_read_id, max=max_read_id)
 
         else:  # no last read spot
-            t1 = time()
             response = red.xrange('stream:'+stream, count=1)  # read first data point
 
         if not response:
@@ -1021,6 +1019,8 @@ class PlaybackDatabase(ServerDatabase):
             bookmark.first_id = self.decode(response[-1][0])  # get first ID
             bookmark.release()  # release lock
             return  # don't return. first data point was read for reference.
+        
+        print("TIME SINCE: ", time_since_last)
 
         t3 = time()
         # create final output dict
