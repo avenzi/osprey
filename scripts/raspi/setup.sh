@@ -42,24 +42,25 @@ fi
 # for numpy to work properly with brainflow on Raspbian
 sudo apt-get -y install libatlas-base-dev
 
+# make sure cmake is installed
+sudo apt-get install cmake -y
+
 . venv/bin/activate  # actuvate vitualenv
 # download and install brainflow from source (otherwise doesn't work on Pi)
 cd ~/ # go to home directory
 if [ -d "./brainflow" ]  # if brainflow directory already exists
 then
   cd ./brainflow
-  git pull https://github.com/OpenBCI/brainflow.git
-  cd ..
+  if ! git diff --quiet origin/master; then  # if the git repo needs to update
+      git pull https://github.com/OpenBCI/brainflow.git
+      bash ./tools/build_linux.sh > /dev/null  # build brainflow
+  fi
 else
   git clone https://github.com/OpenBCI/brainflow.git
+  cd ./brainflow
+  bash ./tools/build_linux.sh > /dev/null  # build brainflow
 fi
 
-sudo apt-get install cmake -y  # make sure cmake is installed
-
-# build brainflow
-# TODO: Is there a way to only build brainflow if it needs an update? This take a really long time.
-cd ./brainflow
-bash ./tools/build_linux.sh > /dev/null
 pip3 install -U ./python-package
 
 ) > /dev/null &

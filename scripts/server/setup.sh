@@ -18,7 +18,8 @@ cd /usr/local/lib/redis-stable/
 sudo make
 sudo make install
 
-# Clone or Update RedisTimeSeriess
+# Clone or Update RedisTimeSeries
+# TODO: don't know if I'll end up using RedisTimeSeries. Remove this if not
 cd ~
 if [ ! -d "RedisTimeSeries" ] ; then
     git clone --recursive https://github.com/RedisTimeSeries/RedisTimeSeries.git
