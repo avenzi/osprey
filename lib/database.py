@@ -972,20 +972,19 @@ class PlaybackDatabase(ServerDatabase):
         if bookmark.last_id and bookmark.last_time:  # last read spot exists
             last_read_id = bookmark.last_id
             last_read_time = bookmark.last_time
-            temptime = self.time()
-            time_since_last = self.time()-last_read_time  # time since last read (ms)
+            # timestamp diff since last read (ms)
+            time_since_last = self.time()-self.redis_to_time(last_read_id)
 
             if max_time and self.playback_speed > 1:
                 max_time = max_time*self.playback_speed
 
-            # if time since last read is greater than maximum, increment last read ID by the difference
+            # if timestamp delta since last read is greater than maximum, increment last read ID by the difference
             if max_time and time_since_last > max_time*1000:  # max_time is in seconds
                 new_time = self.redis_to_time(last_read_id) + (time_since_last-max_time*1000)
                 print('adjusted: {} -> {}'.format(h(self.redis_to_time(last_read_id)), h(new_time)))
                 last_read_id = self.time_to_redis(new_time)  # convert back to redis timestamp
 
-
-            # calculate new ID by how much time has passed between now and beginning
+            # calculate new ID by how much real time has passed between now and beginning
             first_read_id = bookmark.first_id
             first_read_time = bookmark.first_time
             time_since_first = self.time()-first_read_time
