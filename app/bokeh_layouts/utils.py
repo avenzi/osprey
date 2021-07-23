@@ -8,14 +8,14 @@ def time_format():
         fig = bokeh.plotting.figure()
         fig.xaxis.formatter = time_format()
     """
-    return DatetimeTickFormatter(
+    DatetimeTickFormatter(
         years=["%Y"],
-        months=["%m/%d %Y"],
-        days=["%m/%d"],
-        hours=["%m/%d %H:%M"],
+        months=["%b %Y"],
+        days=["%b %d"],
+        hours=["%H:00"],
         hourmin=["%H:%M"],
         minutes=["%H:%M"],
-        minsec=["%H:%M"],
+        minsec=["%H:%M %Ss"],
         seconds=["%Ss"],
         milliseconds=['%S.%3Ns'],
         microseconds=['%S.%fs']
