@@ -39,7 +39,9 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ​	I also realized that with the downsampling reducing the amount of data transferred to the browser, I don't even need to lock the database read operations anymore. However they aren't hurting anything, so I left them in incase it became important in the future. I can think of a situation in which the Analyzers are trying to read from the database faster than it can deliver, and this would prevent locking it up in that case.
 
-​	
+​	My next task is to test this all with real EEG and ECG data. I booted up a Pi and tried to pull the git repo, but found it was corrupted so I deleted the whole thing and re-cloned it. This wiped the virtual env as well, so I had to re-run the setup script. It really annoyed me how long it takes to build Brainflow from source, so I did some digging to see it there was a way to avoid re-building it if the repository was up to date. I may have gotten a little side tracked.
+
+​	I've been trying to wait for a good time to collect some testing EEG data but the upload speed of my internet has refused to go up all night. ugh.
 
 
 
