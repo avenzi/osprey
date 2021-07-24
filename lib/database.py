@@ -400,18 +400,13 @@ class Database:
         else:
             if bookmark.last_id and bookmark.last_time:  # last read spot exists
                 print('last read spot exists')
-                # predict new max ID by how much real time has passed between now and beginning (ms)
-                first_read_id = bookmark.first_id  # first read ID
-                first_read_time = bookmark.first_time  # first read real time
-                time_since_first = self.time() - first_read_time  # time diff until now
-                max_timestamp = self.redis_to_time(first_read_id) + time_since_first  # redis timestamp max time
-
-                # calculate timestamp diff since last read (ms)
                 last_read_id = bookmark.last_id  # last read id
-                time_since_last = max_timestamp - self.redis_to_time(last_read_id)
+
+                # calculate real time diff since last read (ms)
+                time_since_last = self.time() - bookmark.last_time
                 print('[{}] last_id: {}'.format(stream, last_read_id))
 
-                # if time since last read is greater than maximum, increment last read ID by the difference
+                # if time diff since last read is greater than maximum, increment last read ID by the difference
                 if max_time and time_since_last > max_time*1000:  # max_time is in seconds
                     new_last_time = self.redis_to_time(last_read_id) + (time_since_last-max_time*1000)
                     last_read_id = self.time_to_redis(new_last_time)  # convert back to redis timestamp
@@ -452,7 +447,7 @@ class Database:
 
         else:
             print('first time set')
-            print("SINCE: {}, MAX: {}, LAST: {}, END: {} SIZE: {}".format(time_since_last, max_time, h(self.redis_to_time(last_read_id)), h(max_timestamp), len(response)))
+            print("SINCE: {}, MAX: {}, LAST: {}, SIZE: {}".format(time_since_last, max_time, h(self.redis_to_time(last_read_id)), len(response)))
 
         # create final output dict
         output = {}
