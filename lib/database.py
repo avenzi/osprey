@@ -417,7 +417,7 @@ class Database:
 
                 response = red.xread({'stream:' + stream: last_read_id})
             else:  # no last read spot exists.
-                print('no last read')
+                print('no last read. {}, {}'.format(bookmark.last_id, bookmark.last_time))
                 response = red.xread({'stream:' + stream: '$'}, block=1000)  # read new data only
 
         if not response:
@@ -437,7 +437,7 @@ class Database:
         print('setting last read')
         bookmark.last_time = self.time()
         bookmark.last_id = self.decode(response[-1][0])  # store last timestamp
-        print('last read: {}'.format(bookmark.last_id))
+        print('last read: {}, {}'.format(bookmark.last_id, bookmark.last_time))
 
         # set first-read info if not already set
         if not bookmark.first_time:
