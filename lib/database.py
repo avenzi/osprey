@@ -1251,7 +1251,7 @@ class Bookmark:
         self.sample_rate = None  # sample rate of a given stream, if applicable
 
         self.write = None  # last written database time in INTEGER MILLISECONDS
-        self.seq = None    # last written database SEQUENCE NUMBER
+        self.seq = 0    # last written database SEQUENCE NUMBER
 
     def lock(self, block):
         """
