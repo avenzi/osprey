@@ -323,6 +323,7 @@ class EEGFourier(SignalFourier):
 
         fourier_data = self.fourier(filtered_data)  # fourier analysis
         fourier_data['time'] = filtered_data['time'][-1]  # use latest time stamp from filtered data
+        print(len(filtered_data['time'][-1]), filtered_data['time'][-1], filtered_data['time'][0])
 
         headplot_data = self.headplot(fourier_data)  # headplot spectrogram from fourier
         headplot_data['time'] = filtered_data['time'][-1]  # use latest time stamp from filtered data
