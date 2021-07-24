@@ -433,6 +433,11 @@ class Database:
         if not count:
             response = response[0][1]
 
+        # set last-read info
+        print('setting last read')
+        bookmark.last_time = self.time()
+        bookmark.last_id = self.decode(response[-1][0])  # store last timestamp
+
         # set first-read info if not already set
         if not bookmark.first_time:
             print('no first time set, setting')
@@ -444,12 +449,6 @@ class Database:
         else:
             print('first time set')
             print("SINCE: {}, MAX: {}, LAST: {}, END: {} SIZE: {}".format(time_since_last, max_time, h(self.redis_to_time(last_read_id)), h(max_timestamp), len(response)))
-
-
-        # set last-read info
-        print('setting last read')
-        bookmark.last_time = self.time()
-        bookmark.last_id = self.decode(response[-1][0])  # store last timestamp
 
         # create final output dict
         output = {}
