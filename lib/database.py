@@ -255,14 +255,15 @@ class Database:
         """
         bookmark = self.bookmarks.get(stream)
         last_write = bookmark.write  # last write ID
-        bookmark.write = int(redis_id)  # set new last write ID
         if not last_write:  # hasn't written before
+            bookmark.write = int(redis_id)  # set new last write ID
             return redis_id
 
-        if int(redis_id) == last_write:  # same integer millisecond
+        if int(redis_id) <= last_write:  # same (or smaller) integer millisecond
             redis_id = redis_id + '-' + str(bookmark.seq+1)
-            bookmark.seq += 1  # incremenet sequence number
-        else:  # different millisecond
+            bookmark.seq += 1  # increment sequence number
+        else:  # greater integer millisecond
+            bookmark.write = int(redis_id)  # set new last write ID
             bookmark.seq = 0  # reset
         return redis_id
 
@@ -1078,7 +1079,7 @@ class PlaybackDatabase(ServerDatabase):
         if to_json:
             result = json.dumps(output)
             t5 = time()
-            print("INFO: {:5f}, READ: {:5f}, META: {:5f}, CONV: {:5f}, JSON: {:5f}".format(t1-t0, t2-t1, t3-t2, t4-t3, t5-t4))
+            #print("INFO: {:5f}, READ: {:5f}, META: {:5f}, CONV: {:5f}, JSON: {:5f}".format(t1-t0, t2-t1, t3-t2, t4-t3, t5-t4))
         else:
             result = output
 
