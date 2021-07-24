@@ -385,6 +385,7 @@ class Database:
         # get bookmark for this stream, create if not exist
         bookmark = self.bookmarks.get(stream)
         if bookmark.lock(block=False):  # acquire lock
+            print("not allowed")
             return  # return if already locked
 
         if decode:
@@ -398,6 +399,7 @@ class Database:
 
         else:
             if bookmark.last_id and bookmark.last_time:  # last read spot exists
+                print('last read spot exists')
                 # predict new max ID by how much real time has passed between now and beginning (ms)
                 first_read_id = bookmark.first_id  # first read ID
                 first_read_time = bookmark.first_time  # first read real time
@@ -415,10 +417,12 @@ class Database:
 
                 response = red.xread({'stream:' + stream: last_read_id})
             else:  # no last read spot exists.
+                print('no last read')
                 response = red.xread({'stream:' + stream: '$'}, block=1000)  # read new data only
 
         if not response:
             bookmark.release()  # release lock
+            print('no data returned')
             return None
 
         # If count is given XRANGE is used, which gives a list of data points
@@ -431,16 +435,19 @@ class Database:
 
         # set first-read info if not already set
         if not bookmark.first_time:
+            print('no first time set, setting')
             bookmark.first_time = self.start_time  # get first time
             bookmark.first_id = self.decode(response[-1][0])  # get first ID
             bookmark.release()  # release lock
             return  # return nothing. first data point was read for reference.
 
         else:
+            print('first time set')
             print("SINCE: {}, MAX: {}, LAST: {}, END: {} SIZE: {}".format(time_since_last, max_time, h(self.redis_to_time(last_read_id)), h(max_timestamp), len(response)))
 
 
         # set last-read info
+        print('setting last read')
         bookmark.last_time = self.time()
         bookmark.last_id = self.decode(response[-1][0])  # store last timestamp
 
@@ -496,6 +503,7 @@ class Database:
             result = output
 
         bookmark.release()  # release lock
+        print('result!')
         return result
 
     @catch_database_errors
