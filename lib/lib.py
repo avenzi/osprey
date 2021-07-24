@@ -467,7 +467,7 @@ class Streamer(WorkerNode):
             self.streaming.wait()  # block until streaming event is set
             try:
                 self.loop()  # call inherited main execution loop
-            except DatabaseError:
+            except (DatabaseConnectionError, DatabaseTimeoutError, DatabaseBusyLoadingError):
                 self.connect_database()  # ping database, may continue or stop the loop
             except Exception as e:  # non-database related error
                 self.throw("Unhandled Exception in main loop", trace=True)
