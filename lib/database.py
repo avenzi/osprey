@@ -436,6 +436,10 @@ class Database:
             bookmark.release()  # release lock
             return  # return nothing. first data point was read for reference.
 
+        else:
+            print("SINCE: {}, MAX: {}, LAST: {}, END: {} SIZE: {}".format(time_since_last, max_time, h(self.redis_to_time(last_read_id)), h(max_timestamp), len(response)))
+
+
         # set last-read info
         bookmark.last_time = self.time()
         bookmark.last_id = self.decode(response[-1][0])  # store last timestamp
