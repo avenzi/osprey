@@ -318,7 +318,7 @@ class EEGFourier(SignalFourier):
         samples = int(self.widgets['fourier_window'] * self.sample_rate)
         filtered_data = self.database.read_data(self.filtered_id, count=samples)
         if not filtered_data:
-            sleep(0.1)
+            sleep(0.5)
             return
 
         fourier_data = self.fourier(filtered_data)  # fourier analysis
@@ -405,7 +405,7 @@ class PulseAnalyzer(Analyzer):
         samples = int(self.window*self.sample_rate)
         raw = self.database.read_data(self.raw_id, count=samples)
         if not raw:
-            sleep(0.1)
+            sleep(0.5)
             return
 
         pulse_data = raw[self.channels[0]]

@@ -415,9 +415,10 @@ class Database:
                 if max_time and time_since_last > max_time*1000:  # max_time is in seconds
                     new_last_time = self.redis_to_time(last_read_id) + (time_since_last-max_time*1000)
                     last_read_id = self.time_to_redis(new_last_time)  # convert back to redis timestamp
-                
+
                 print('[{}] new_last: {}'.format(stream, last_read_id))
                 response = red.xread({'stream:' + stream: last_read_id})
+                print("[{}] resp: {}".format(stream, response))
             else:  # no last read spot exists.
                 print('no last read. {}, {}'.format(bookmark.last_id, bookmark.last_time))
                 response = red.xread({'stream:' + stream: '$'}, block=1000)  # read new data only
