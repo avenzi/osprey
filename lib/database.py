@@ -409,12 +409,14 @@ class Database:
                 # calculate timestamp diff since last read (ms)
                 last_read_id = bookmark.last_id  # last read id
                 time_since_last = max_timestamp - self.redis_to_time(last_read_id)
+                print('[{}] last_id: {}'.format(stream, last_read_id))
 
                 # if time since last read is greater than maximum, increment last read ID by the difference
                 if max_time and time_since_last > max_time*1000:  # max_time is in seconds
                     new_last_time = self.redis_to_time(last_read_id) + (time_since_last-max_time*1000)
                     last_read_id = self.time_to_redis(new_last_time)  # convert back to redis timestamp
-
+                
+                print('[{}] new_last: {}'.format(stream, last_read_id))
                 response = red.xread({'stream:' + stream: last_read_id})
             else:  # no last read spot exists.
                 print('no last read. {}, {}'.format(bookmark.last_id, bookmark.last_time))
