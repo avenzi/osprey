@@ -254,11 +254,11 @@ class Database:
         to make sure that no two timestamps written are the same
         """
         bookmark = self.bookmarks.get(stream)
-        last_write = bookmark.write
+        last_write = bookmark.write  # last write ID
+        bookmark.write = int(redis_id)  # set new last write ID
         if not last_write:  # hasn't written before
             return redis_id
 
-        bookmark.write = int(redis_id)  # set new last write
         if int(redis_id) == last_write:  # same integer millisecond
             redis_id = redis_id + '-' + str(bookmark.seq+1)
             bookmark.seq += 1  # incremenet sequence number
