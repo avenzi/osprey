@@ -17,14 +17,14 @@ default_filter_widgets = {
     'pass_toggle': True,
     'pass_type': 'bandpass',
     'pass_style': 'Butterworth',
-    'pass_range': (1, 60),
+    'pass_range': (1, 20),
     'pass_order': 3,
     'pass_ripple': (1, 50),
 
     'stop_toggle': True,
     'stop_type': 'bandstop',
     'stop_style': 'Butterworth',
-    'stop_range': (59, 60.5),
+    'stop_range': (58, 61),
     'stop_order': 5,
     'stop_ripple': (1, 50),
 

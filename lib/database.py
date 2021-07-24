@@ -260,12 +260,11 @@ class Database:
             return redis_id
 
         if int(redis_id) <= last_write:  # same (or smaller) integer millisecond
-            redis_id = redis_id + '-' + str(bookmark.seq+1)
             bookmark.seq += 1  # increment sequence number
         else:  # greater integer millisecond
-            bookmark.write = int(redis_id)  # set new last write ID
             bookmark.seq = 0  # reset
-        return redis_id
+            bookmark.write = int(redis_id)  # set new last write ID
+        return redis_id + '-' + str(bookmark.seq)
 
     @catch_database_errors
     def ping(self):
