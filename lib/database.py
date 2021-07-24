@@ -437,6 +437,7 @@ class Database:
         print('setting last read')
         bookmark.last_time = self.time()
         bookmark.last_id = self.decode(response[-1][0])  # store last timestamp
+        print('last read: {}'.format(bookmark.last_id))
 
         # set first-read info if not already set
         if not bookmark.first_time:
