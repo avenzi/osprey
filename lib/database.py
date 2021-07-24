@@ -514,8 +514,11 @@ class Database:
 
         time_id = self.time_to_redis(data['time'])  # redis time stamp in which to insert
         redis_id = self.validate_redis_time(time_id, stream)
-
-        self.redis.xadd('stream:' + stream, new_data, id=redis_id)
+        try:
+            self.redis.xadd('stream:' + stream, new_data, id=redis_id)
+        except Exception as e:
+            print('time_ID: {}, redis_id: {}'.format(time_id, redis_id))
+            raise e
 
     @catch_database_errors
     def read_snapshot(self, stream, to_json=False, decode=True):
