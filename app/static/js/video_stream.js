@@ -36,6 +36,8 @@ function start_stream(info) {
     vid.setAttribute("width", width);
     vid.setAttribute("height", height);
     vid.onplay = skip  // call skip() on play
+
+    info.speed += 0.1  // add 10% to playback speed to keep it updated
     vid.playbackRate = info.speed;  // set playback speed
     vid.defaultPlaybackRate = info.speed  // gotta set this too or it doesn't work
 
