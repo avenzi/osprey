@@ -384,7 +384,7 @@ class Database:
 
         # get bookmark for this stream, create if not exist
         bookmark = self.bookmarks.get(stream)
-        if bookmark.lock(block=False):  # acquire lock
+        if not bookmark.lock(block=False):  # attempt to acquire lock
             print("not allowed")
             return  # return if already locked
 
@@ -549,7 +549,7 @@ class Database:
 
         # get bookmark for this stream. Create a new one if it doesn't exist.
         bookmark = self.bookmarks.get(stream)
-        if bookmark.lock(block=False):  # acquire lock
+        if not bookmark.lock(block=False):  # attempt to acquire lock
             return  # return if already locked
 
         if decode:
@@ -1118,7 +1118,7 @@ class PlaybackDatabase(ServerDatabase):
 
         # get bookmark for this stream. Create a new one if it doesn't exist.
         bookmark = self.bookmarks.get(stream)
-        if bookmark.lock(block=False):  # acquire lock
+        if not bookmark.lock(block=False):  # acquire lock
             return  # return if already locked
 
         if decode:
