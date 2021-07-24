@@ -53,20 +53,24 @@ then
   echo "Brainflow Repo found"
   cd ./brainflow
   if ! git diff --quiet origin/master; then  # if the git repo needs to update
-      echo "Brainflow Repo needs to update"
-      git pull https://github.com/OpenBCI/brainflow.git
-      echo "Building Brainflow"
-      bash ./tools/build_linux.sh > /dev/null  # build brainflow
-      pip3 install -U ./python-package  # install package to virtual env
+    echo "Brainflow repo needs to update."
+    git pull https://github.com/OpenBCI/brainflow.git
+    echo "Building Brainflow."
+    bash ./tools/build_linux.sh > /dev/null  # build brainflow
+    pip3 install -U ./python-package  # install package to virtual env
+  else
+    echo "Brainflow already up-to-date."
   fi
 else
-  echo "Brainflow not found"
+  echo "Brainflow not found."
   git clone https://github.com/OpenBCI/brainflow.git
   cd ./brainflow
-  echo "Building Brainflow"
+  echo "Building Brainflow."
   bash ./tools/build_linux.sh > /dev/null  # build brainflow
   pip3 install -U ./python-package  # install package to virtual env
 fi
+
+echo "Done."
 
 
 
