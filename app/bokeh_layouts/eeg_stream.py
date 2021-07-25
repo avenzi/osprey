@@ -350,7 +350,7 @@ if (low < high) {
         fig = figure(
             title='{}-band Head Plot'.format(band),
             plot_width=300, plot_height=300,
-            toolbar_location=None, tooltip=headplot_tooltips,
+            toolbar_location=None, tooltips=headplot_tooltips,
             output_backend=BACKEND
         )
         fig.toolbar.active_drag = None  # disable drag
