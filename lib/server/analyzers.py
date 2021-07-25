@@ -322,10 +322,10 @@ class EEGFourier(SignalFourier):
             return
 
         fourier_data = self.fourier(filtered_data)  # fourier analysis
-        fourier_data['time'] = filtered_data['time'][-1]  # use latest time stamp from filtered data
+        fourier_data['time'] = filtered_data['time'][0]  # use latest time stamp from filtered data.
 
         headplot_data = self.headplot(fourier_data)  # headplot spectrogram from fourier
-        headplot_data['time'] = filtered_data['time'][-1]  # use latest time stamp from filtered data
+        headplot_data['time'] = filtered_data['time'][0]  # use latest time stamp from filtered data
 
         self.database.write_snapshot('fourier:' + self.id, fourier_data)
         self.database.write_snapshot('headplot:' + self.id, headplot_data)
