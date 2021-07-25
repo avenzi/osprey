@@ -11,7 +11,6 @@ from json import loads
 from app.bokeh_layouts.utils import js_request, time_format
 
 BACKEND = 'canvas'  # 'webgl' appears to be broken - makes page unresponsive.
-ELECTRODES_PATH = 'app/static/electrodes.json'
 
 # default values of all widgets and figure attributes
 default_filter_widgets = {
@@ -126,7 +125,7 @@ def create_layout(info):
     eeg_source = AjaxDataSource(
         data_url='/stream/update?id={}'.format(filtered_id),
         method='GET',
-        polling_interval=1000,
+        polling_interval=500,
         mode='append',
         max_size=2000,
         if_modified=True)
@@ -134,7 +133,7 @@ def create_layout(info):
     fourier_source = AjaxDataSource(
         data_url='/stream/update?id=fourier:{}&format=snapshot'.format(fourier_id),
         method='GET',
-        polling_interval=500,
+        polling_interval=1000,
         mode='replace',  # all FFT lines are replaced each update
         if_modified=True)
 
@@ -151,7 +150,7 @@ def create_layout(info):
     headplot_source = AjaxDataSource(
         data_url='/stream/update?id=headplot:{}&format=snapshot'.format(fourier_id),
         method='GET',
-        polling_interval=500,
+        polling_interval=1000,
         mode='replace',
         if_modified=True)
 
@@ -328,16 +327,6 @@ if (low < high) {
 
     ################
     # Head Plots
-
-    # get 2D positions of all possible headset electrodes
-    with open(ELECTRODES_PATH, 'r') as f:
-        all_names = loads(f.read())
-
-    x, y, channel = [], [], []
-    for name in stream_channels:  # get coordinates of electrodes by name
-        channel.append(name)
-        x.append(all_names[name][0])
-        y.append(all_names[name][1])
 
     headplot_tooltips = [
         ("Channel", "@channel"),
