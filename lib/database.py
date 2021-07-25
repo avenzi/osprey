@@ -254,17 +254,17 @@ class Database:
         to make sure that no two timestamps written are the same
         """
         bookmark = self.bookmarks.get(stream)
-        last_write = bookmark.write  # last write ID
-        if not last_write:  # hasn't written before
+        if not bookmark.write:  # hasn't written before
             bookmark.write = int(redis_id)  # set new last write ID
             return redis_id
 
-        if int(redis_id) <= last_write:  # same (or smaller) integer millisecond
+        if int(redis_id) <= bookmark.write:  # same (or smaller) integer millisecond
             bookmark.seq += 1  # increment sequence number
+            redis_id = str(bookmark.write) + '-' + str(bookmark.seq)
         else:  # greater integer millisecond
             bookmark.seq = 0  # reset
             bookmark.write = int(redis_id)  # set new last write ID
-        return redis_id + '-' + str(bookmark.seq)
+        return redis_id
 
     @catch_database_errors
     def ping(self):
