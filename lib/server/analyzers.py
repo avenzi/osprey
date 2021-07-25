@@ -212,7 +212,7 @@ class SignalFourier(SignalAnalyzer):
             return
 
         fourier_data = self.fourier(filtered_data)  # fourier analysis
-        fourier_data['time'] = filtered_data['time'][-1]  # use latest time stamp from filtered data
+        fourier_data['time'] = filtered_data['time'][0]  # use latest time stamp from filtered data
         self.database.write_snapshot(self.id, fourier_data)
 
         # Slow down rate of performing fourier transforms.
@@ -295,7 +295,7 @@ class EEGFourier(SignalFourier):
     def __init__(self, *args):
         super().__init__(*args)
         self.widgets = EEG_FOURIER_WIDGETS  # all widget parameters for fourier and filtering
-        self.head_x, self.head_y = [], []
+        self.head_x, self.head_y, self.head_names = [], [], []
 
     def get_info(self):
         raw = self.targets[self.group]['Raw']
@@ -309,6 +309,7 @@ class EEGFourier(SignalFourier):
         with open('app/static/electrodes.json', 'r') as f:
             all_names = json.loads(f.read())
         for name in self.channels:  # get coordinates of electrodes by name
+            self.head_names.append(name)
             self.head_x.append(all_names[name][0])
             self.head_y.append(all_names[name][1])
 
@@ -340,7 +341,7 @@ class EEGFourier(SignalFourier):
         """ Calculates headplot values, then dumps it to a new stream """
         # data to send will be a dictionary of band names with amplitude data
         # The order is the same as self.channels
-        headplot = {'x': self.head_x, 'y': self.head_y}
+        headplot = {'x': self.head_x, 'y': self.head_y, 'channel': self.head_names}
 
         for band in self.widgets['bands'].keys():  # for each band type
             headplot[band] = []
