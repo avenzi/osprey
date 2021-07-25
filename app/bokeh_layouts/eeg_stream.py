@@ -333,10 +333,15 @@ if (low < high) {
     with open(ELECTRODES_PATH, 'r') as f:
         all_names = loads(f.read())
 
-    x, y = [], []
+    x, y, channel = [], [], []
     for name in stream_channels:  # get coordinates of electrodes by name
+        channel.append(name)
         x.append(all_names[name][0])
         y.append(all_names[name][1])
+
+    headplot_tooltips = [
+        ("Channel", "@channel"),
+    ]
 
     # Separate head figure for each band
     head_figures = []  # list of headplot figures
@@ -345,10 +350,11 @@ if (low < high) {
         fig = figure(
             title='{}-band Head Plot'.format(band),
             plot_width=300, plot_height=300,
-            toolbar_location=None, active_drag='auto', active_scroll='auto',
+            toolbar_location=None, tooltip=headplot_tooltips,
             output_backend=BACKEND
         )
         fig.toolbar.active_drag = None  # disable drag
+        fig.toolbar.active_scroll = None
         # Even though x and y of each point don't change, they have to be gotten from the data source.
         # Each figure gets its own color mapper and takes data from the
         #   column with it's band name, which contains the color data.
