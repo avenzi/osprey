@@ -394,7 +394,8 @@ class Database:
             red = self.bytes_redis
 
         if count:  # get COUNT data regardless of last read
-            response = red.xrevrange('stream:'+stream, count=count)
+            response = red.xrevrange('stream:'+stream, count=count)  # revrange gives reversed list
+            response = response.reverse()
 
         else:
             if bookmark.last_id and bookmark.last_time:  # last read spot exists
@@ -1026,7 +1027,6 @@ class PlaybackDatabase(ServerDatabase):
             bookmark.release()  # release lock
             return  # return nothing. first data point was read for reference.
 
-        print("{} {} {} .....  {} {} {}".format(response[0][0], response[1][0], response[2][0], response[-3][0], response[-2][0], response[-1][0]))
         #else:
             #print("SINCE: {}, MAX: {}, LAST: {}, END: {}".format(time_since_last, max_time, h(self.redis_to_time(last_read_id)), h(max_timestamp)))
 
