@@ -395,6 +395,7 @@ class Database:
 
         if count:  # get COUNT data regardless of last read
             response = red.xrevrange('stream:'+stream, count=count)  # revrange gives reversed list
+            print(response)
             response = response.reverse()
             print(response)
 
