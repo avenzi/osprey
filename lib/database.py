@@ -397,7 +397,7 @@ class Database:
             response = red.xrevrange('stream:'+stream, count=count)  # revrange gives reversed list
             if response:
                 print('B: {}'.format(len(response)))
-            response = response.reverse()
+            response.reverse()
             print(type(response))
 
         else:
