@@ -77,7 +77,7 @@ def run_video_stream(database, stream_id, room_id):
     event = room_events[room_id]
     while event.is_set():  # while event is set (while socket is connected)
         try:
-            data_dict = database.read_data(stream_id, numerical=False, decode=False)
+            data_dict = database.read_data(stream_id, decode=False)
             if not data_dict:  # no data is returned
                 socketio.sleep(0.5)
                 continue

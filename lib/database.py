@@ -446,7 +446,7 @@ class Database:
         # create final output dict
         output = {}
 
-        # loop through stream data and convert if necessart
+        # loop through stream data and convert if necessary
 
         # I hate this
         if decode:
@@ -934,7 +934,7 @@ class PlaybackDatabase(ServerDatabase):
         raise DatabaseError("Cannot write to read-only playback database")
 
     @catch_database_errors
-    def read_data(self, stream, count=None, max_time=None, numerical=True, to_json=False, decode=True, downsample=False):
+    def read_data(self, stream, count=None, max_time=None, to_json=False, decode=True, downsample=False):
         """
         Gets newest data for <reader> from data column <stream>.
         <stream> is some ID that identifies the stream in the database.
@@ -1020,48 +1020,26 @@ class PlaybackDatabase(ServerDatabase):
         # create final output dict
         output = {}
 
-        # loop through stream data and convert if necessart
+        # loop through stream data and convert if necessary
 
         # I hate this
-        if numerical and decode:
+        if decode:
             for data in response:
                 d = data[1]  # data dict. data[0] is the timestamp ID
                 for key in d.keys():
                     if output.get(key):
-                        output[key].append(float(d[key]))  # convert to float and append
+                        output[key].append(self.to_float(d[key]))  # convert to float and append
                     else:
-                        output[key] = [float(d[key])]
-
-        elif numerical and not decode:
+                        output[key] = [self.to_float(d[key])]
+        else:
             for data in response:
                 d = data[1]  # data dict. data[0] is the timestamp ID
-                for key in d.keys():
-                    k = key.decode('utf-8')  # key won't be decoded, but it needs to be
-                    if output.get(k):
-                        output[k].append(float(d[key]))  # convert to float and append
-                    else:
-                        output[k] = [float(d[key])]
-
-        elif not numerical and decode:
-            for data in response:
-                # data[0] is the timestamp ID
-                d = data[1]  # data dict
-                for key in d.keys():
-                    if output.get(key):
-                        output[key].append(d[key])  # append
-                    else:
-                        output[key] = [d[key]]
-
-        elif not numerical and not decode:
-            for data in response:
-                # data[0] is the timestamp ID
-                d = data[1]  # data dict
                 for key in d.keys():
                     k = self.decode(key)  # key won't be decoded, but it needs to be
                     if output.get(k):
-                        output[k].append(d[key])  # append
+                        output[k].append(self.to_float(d[key]))  # convert to float and append
                     else:
-                        output[k] = [d[key]]
+                        output[k] = [self.to_float(d[key])]
 
         t4 = time()
 
@@ -1131,7 +1109,7 @@ class PlaybackDatabase(ServerDatabase):
 
         for key in keys:
             vals = data[key].split(',')
-            output[key] = [float(val) for val in vals]
+            output[key] = [self.to_float(val) for val in vals]
 
         if to_json:
             del output['time']  # remove time column for json format
