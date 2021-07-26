@@ -194,11 +194,11 @@ var diff = end - current
 if (diff > 0 && diff < end-start) {
     var slide = setInterval(function(){
         if (figure.x_range.end < end) {
-            figure.x_range.start += diff/5
-            figure.x_range.end += diff/5
+            figure.x_range.start += diff/20
+            figure.x_range.end += diff/20
         }
 
-    }, duration/5);
+    }, duration/20);
 
     setTimeout(function(){
         clearInterval(slide)
