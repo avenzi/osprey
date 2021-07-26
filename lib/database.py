@@ -425,9 +425,6 @@ class Database:
         #   we are only reading from one stream, the data is stored in response[0][1].
         if not count:
             response = response[0][1]
-        else:
-            print('RESPONSE: {}'.format(len(response)))
-            print("COUNT. LAST POINT: {}".format(response[-1]))
 
         # set last-read info
         bookmark.last_time = self.time()
