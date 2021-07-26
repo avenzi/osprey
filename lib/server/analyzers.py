@@ -361,8 +361,6 @@ class EEGFourier(SignalFourier):
             for name in self.channels:  # for each channel
                 # TODO experiment with avg/median. Compute in browser?
                 val = np.mean(fourier_data[name][low:high])  # band power RMS
-                if name == 'Gamma':
-                    print("GAMMA VAL: ", val)
                 headplot[band].append(val)  # append value to list of channels in this band
 
         return headplot

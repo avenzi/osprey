@@ -396,6 +396,7 @@ class Database:
         if count:  # get COUNT data regardless of last read
             response = red.xrevrange('stream:'+stream, count=count)  # revrange gives reversed list
             response = response.reverse()
+            print('RESPONSE: {}'.format(len(response)))
 
         else:
             if bookmark.last_id and bookmark.last_time:  # last read spot exists
@@ -424,6 +425,8 @@ class Database:
         #   we are only reading from one stream, the data is stored in response[0][1].
         if not count:
             response = response[0][1]
+        else:
+            print("COUNT. LAST POINT: {}".format(response[-1]))
 
         # set last-read info
         bookmark.last_time = self.time()
