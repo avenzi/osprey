@@ -328,6 +328,7 @@ if (low < high) {
     ################
     # Head Plots
 
+    # tooltip to display channel name on headplot
     headplot_tooltips = [
         ("Channel", "@channel"),
     ]
