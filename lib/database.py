@@ -394,11 +394,9 @@ class Database:
             red = self.bytes_redis
 
         if count:  # get COUNT data regardless of last read
-            response = red.xrevrange('stream:'+stream, count=count)  # revrange gives reversed list
+            response = red.xrevrange('stream:'+stream, count=count)
             if response:
-                print('B: {}'.format(len(response)))
-            response.reverse()
-            print(type(response))
+                response.reverse()  # revrange gives a reversed list
 
         else:
             if bookmark.last_id and bookmark.last_time:  # last read spot exists
