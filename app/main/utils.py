@@ -63,6 +63,7 @@ def set_database(file=None):
     ctrl.remove(sid)  # remove current database
     if file:
         ctrl.new_playback(file=file, ID=session.sid)
+        log("")
     else:
         ctrl.new_live(ID=session.sid)
 

@@ -167,4 +167,8 @@ $(document).ready(function() {
     $('div.file_commands button.delete').on('click', function(event) {
         delete_dialog.dialog("open");
     });
+
+    $('div.stream_commands button.wipe').on('click', function(event) {
+        delete_dialog.dialog("open");
+    });
 });
