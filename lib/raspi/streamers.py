@@ -35,11 +35,15 @@ class TestStreamer(Streamer):
 class SenseStreamer(Streamer):
     def __init__(self, *args):
         super().__init__(*args)
-        from sense_hat import SenseHat
+        from sense_hat import SenseHat, ACTION_RELEASED
         self.sense = SenseHat()   # sense hat object
         self.frames = 10           # how many frames are in each request
 
-        self.frames_sent = 0    # number of frames sent
+        self.sense.stick.direciton_up = self.pushed_up
+        self.sense.stick.direciton_down = self.pushed_down
+        self.sense.stick.direciton_left = self.pushed_left
+        self.sense.stick.direciton_right = self.pushed_right
+        self.sense.stick.direciton_any = self.refresh
 
     def loop(self):
         """ Maine execution loop """
@@ -60,6 +64,27 @@ class SenseStreamer(Streamer):
         """ Extended from base class in pi_lib.py """
         # enable compass, gyro, and accelerometer to calculate orientation
         self.sense.set_imu_config(True, True, True)
+
+    def pushed_up(self, event):
+        print(event.action)
+        if event.action != ACTION_RELEASED:
+            print('UP')
+
+    def pushed_down(self, event):
+        if event.action != ACTION_RELEASED:
+            print('DOWN')
+
+    def pushed_left(self, event):
+        if event.action != ACTION_RELEASED:
+            print('LEFT')
+
+    def pushed_right(self, event):
+        if event.action != ACTION_RELEASED:
+            print('RIGHT')
+
+    def refresh(self, event):
+        if event.action != ACTION_RELEASED:
+            print("ANY")
 
 
 class LogStreamer(Streamer):
