@@ -330,6 +330,7 @@ class EEGFourier(SignalFourier):
 
         self.database.write_snapshot('fourier:' + self.id, fourier_data)
         self.database.write_snapshot('headplot:' + self.id, headplot_data)
+        print('headplot data: ', headplot_data)
 
         # Slow down rate of performing fourier transforms.
         # They appear to be having a significant impact on CPU usage.
@@ -355,8 +356,6 @@ class EEGFourier(SignalFourier):
             # This would happen if the sampling rate is too low to measure this frequency.
             if high > len(fourier_data[self.channels[0]]):
                 high = len(fourier_data[self.channels[0]])
-
-            # self.debug("{}: {}-{}".format(band, low, high))
 
             for name in self.channels:  # for each channel
                 # TODO experiment with avg/median. Compute in browser?
