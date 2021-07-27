@@ -87,11 +87,11 @@ def refresh():
 @catch_errors
 def live():
     """ Switches back to current live database  """
-    log('Switching to live database')
-    set_button('live', hidden=True)
+    log('Switching to live database...')
     set_button('start', text='Start Streaming')
     set_button('stop', text='Stop all streams and save the file to disk')
     set_database()  # set database to live
+    log('Live database loaded.')
     refresh()
 
 
@@ -116,7 +116,7 @@ def load(filename):
             error("Failed to load database (ping failed): {}".format(e.__class__.__name__, e))
             return
 
-    set_button('live', hidden=False, disabled=False, text='Back to live session')
+    set_button('live', text='Back to live session')
     set_button('start', text='Start playback')
     set_button('stop', text='Stop playback')
     log('Loaded "{}" for playback'.format(filename))
