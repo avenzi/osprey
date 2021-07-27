@@ -37,6 +37,25 @@ function get_button(name) {
     }
 }
 
+function confirm_dialog(description, trigger) {
+    // creates a general-purpose confirmation dialog.
+    // trigger is a function to execute when the confirmation is accepted.
+    var delete_dialog = $('.confirm_dialog').dialog({
+        autoOpen: false,
+        modal: true,
+        'title': description,
+        buttons: {
+            "Ok": function() {
+                trigger()  // activate given trigger function
+                $(this).dialog("close");
+            },
+            "Cancel": function() {
+                $(this).dialog("close");
+            }
+        }
+    });
+}
+
 $(document).ready(function() {
     var namespace = '/browser';  // namespace for talking with server
     var socket = io(namespace);
@@ -135,24 +154,18 @@ $(document).ready(function() {
         }
     });
 
-    var delete_dialog = $('.confirm_dialog').dialog({
-        autoOpen: false,
-        modal: true,
-        'title': 'Delete saved database file?',
-        buttons: {
-            "Ok": function() {
-                socket.emit('delete', selected_file)
-                $(this).dialog("close");
-            },
-            "Cancel": function() {
-                $(this).dialog("close");
-            }
-        }
-    });
+    var delete_dialog = confirm_dialog('Delete saved database file?', function() {
+        socket.emit('delete', selected_file)
+    })
+
+    var wipe_dialog = confirm_dialog('Wipe contents of currently loaded database?', function() {
+        socket.emit('wipe')
+    })
 
 
     // each command button emits an event to the server
     $('div.stream_commands button.command').on('click', function(event) {
+        console.log("EMIT")
         socket.emit(event.target.value);
     });
 
@@ -169,6 +182,7 @@ $(document).ready(function() {
     });
 
     $('div.stream_commands button.wipe').on('click', function(event) {
+        console.log("DIALOG")
         delete_dialog.dialog("open");
     });
 });
