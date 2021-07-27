@@ -253,6 +253,7 @@ def database_status(database):
     except DatabaseConnectionError:
         return "Disconnected"
     except Exception as e:
+        print("Database Status Error: {}: {}".format(e.__class__.__name__, e))
         return "---"
 
     if database.is_streaming():
