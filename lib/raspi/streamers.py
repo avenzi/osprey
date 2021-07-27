@@ -71,14 +71,17 @@ class SenseStreamer(Streamer):
             print('UP')
 
     def pushed_down(self, event):
+        print(event.action)
         if event.action != ACTION_RELEASED:
             print('DOWN')
 
     def pushed_left(self, event):
+        print(event.action)
         if event.action != ACTION_RELEASED:
             print('LEFT')
 
     def pushed_right(self, event):
+        print(event.action)
         if event.action != ACTION_RELEASED:
             print('RIGHT')
 

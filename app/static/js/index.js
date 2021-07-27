@@ -40,7 +40,7 @@ function get_button(name) {
 function confirm_dialog(description, trigger) {
     // creates a general-purpose confirmation dialog.
     // trigger is a function to execute when the confirmation is accepted.
-    var delete_dialog = $('.confirm_dialog').dialog({
+    var dialog = $('.confirm_dialog').dialog({
         autoOpen: false,
         modal: true,
         'title': description,
@@ -54,6 +54,7 @@ function confirm_dialog(description, trigger) {
             }
         }
     });
+    return dialog
 }
 
 $(document).ready(function() {
