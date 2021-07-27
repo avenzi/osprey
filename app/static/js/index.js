@@ -40,8 +40,8 @@ function get_button(name) {
 function create_confirm_dialog(description, trigger) {
     // creates a general-purpose confirmation dialog.
     // trigger is a function to execute when the confirmation is accepted.
-    dialog_div = $('#dialogs').append(`<div class="confirm_dialog"><p>${description}</p></div>`);
-    var dialog = dialog_div.dialog({
+    dialog_div = $(`<div class="confirm_dialog"><p>${description}</p></div>`).appendTo('#dialogs');
+    dialog = dialog_div.dialog({
         autoOpen: false,
         modal: true,
         'title': "Are you sure?",
