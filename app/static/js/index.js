@@ -37,13 +37,14 @@ function get_button(name) {
     }
 }
 
-function confirm_dialog(description, trigger) {
+function create_confirm_dialog(description, trigger) {
     // creates a general-purpose confirmation dialog.
     // trigger is a function to execute when the confirmation is accepted.
-    var dialog = $('.confirm_dialog').dialog({
+    dialog_div = $('#dialogs').append(`<div class="confirm_dialog"><p>${description}</p>/div>`);
+    var dialog = dialog_div.dialog({
         autoOpen: false,
         modal: true,
-        'title': description,
+        'title': "Are you sure?",
         buttons: {
             "Ok": function() {
                 trigger()  // activate given trigger function
@@ -155,11 +156,11 @@ $(document).ready(function() {
         }
     });
 
-    var delete_dialog = confirm_dialog('Delete saved database file?', function() {
+    var delete_dialog = create_confirm_dialog('Delete saved database file?', function() {
         socket.emit('delete', selected_file)
     })
 
-    var wipe_dialog = confirm_dialog('Wipe contents of currently loaded database?', function() {
+    var wipe_dialog = create_confirm_dialog('Wipe contents of currently loaded database?', function() {
         socket.emit('wipe')
     })
 
