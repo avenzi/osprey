@@ -727,6 +727,11 @@ class LiveDatabase(ServerDatabase):
         self.redis.delete('STREAMING')  # unset STREAMING key
 
     @catch_database_errors
+    def wipe(self):
+        """ Wipe database contents """
+        self.redis.flushdb()
+
+    @catch_database_errors
     def _save_to_disk(self):
         """
         Saves current database in memory to disk.
@@ -782,7 +787,7 @@ class LiveDatabase(ServerDatabase):
             raise DatabaseError("Failed to save database file to '{}'. Aborting database wipe.".format(filename))
 
         try:  # clear contents of live dump file
-            self.redis.flushdb()
+            self.wipe()
         except Exception as e:
             raise DatabaseError("Failed to flush database file '{}': {}".format(filename, e))
 

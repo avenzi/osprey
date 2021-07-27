@@ -158,6 +158,22 @@ def delete(filename):
     refresh()
 
 
+@socketio.on('wipe', namespace='/browser')
+@catch_errors
+def wipe():
+    """ Wipes the contents of the database, if live """
+    database = get_database()
+    if not database:
+        error("No database found")
+        return
+    if not database.live:
+        error("Cannot wipe contents of playback file - use the 'Delete' button instead to remove the file.")
+        return
+    print("WIPE")
+    database.wipe()
+    
+
+
 @socketio.on('info', namespace='/browser')
 @catch_errors
 def info(data):
