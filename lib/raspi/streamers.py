@@ -60,12 +60,11 @@ class SenseStreamer(Streamer):
 
         # get joystick data
         data = {'time': [], 'button': []}
-        for event in self.sense.get_events():
+        for event in self.sense.stick.get_events():
             if event.action == 'pressed':
                 data['time'].append(event.timestamp*1000)
                 data['button'].append(event.direction)
                 data['color'].append(self.color_map[event.direction])
-
 
         self.database.write_data('button:'+self.id, data)
         sleep(0.1)
