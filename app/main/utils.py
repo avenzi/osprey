@@ -24,10 +24,8 @@ def log(msg, level=0, everywhere=False):
     else:
         socketio.emit('log', data, namespace='/browser', room=request.sid)
 
-    if level == 0:
-        pre = "[LOG]"
-    elif level == 1:
-        pre = "[INFO]"
+    if level in [0, 1]:
+        return
     elif level == 2:
         pre = "[WARN]"
     else:
