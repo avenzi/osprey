@@ -11,24 +11,43 @@ from app.main import socketio
 from lib.database import DatabaseError, DatabaseTimeoutError, DatabaseBusyLoadingError, DatabaseConnectionError
 
 
-def log(msg, everywhere=False):
+def log(msg, level=0, everywhere=False):
     """
     Log a message in the browser.
+    Level: 0=log, 1=info, 2=warn, 3=error
     If everywhere is True, broadcast to ALL browsers, even in different sessions.
     """
+    msg = str(msg)  # if an exception, convert to string
+    data = {'level': level, 'message': msg}
     if everywhere:
-        socketio.emit('log', msg, namespace='/browser')
+        socketio.emit('log', data, namespace='/browser')
     else:
-        socketio.emit('log', msg, namespace='/browser', room=request.sid)
+        socketio.emit('log', data, namespace='/browser', room=request.sid)
+
+    if level == 0:
+        pre = "[LOG]"
+    elif level == 1:
+        pre = "[INFO]"
+    elif level == 2:
+        pre = "[WARN]"
+    else:
+        pre = "[ERROR]"
+    print("{}: {}".format(pre, msg))
+
+
+def info(msg, everywhere=False):
+    """ Log an info message in the browser """
+    log(msg, level=1, everywhere=everywhere)  # log level 1
+
+
+def warn(msg, everywhere=False):
+    """ Log a warning message in the browser """
+    log(msg, level=2, everywhere=everywhere)  # log level 2
 
 
 def error(msg, everywhere=False):
     """ Log an error message in the browser """
-    if everywhere:
-        socketio.emit('error', str(msg), namespace='/browser')
-    else:
-        socketio.emit('error', str(msg), namespace='/browser', room=request.sid)
-    print("ERROR: {}".format(str(msg)))
+    log(msg, level=3, everywhere=everywhere)  # log level 3
 
 
 def catch_errors(handler):

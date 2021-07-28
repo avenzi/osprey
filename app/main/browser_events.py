@@ -9,7 +9,7 @@ from lib.database import DatabaseError, DatabaseBusyLoadingError, DatabaseTimeou
 from app.main import socketio
 
 from app.main.utils import (
-    log, error, catch_errors,
+    log, info, warn, error, catch_errors,
     set_database, get_database, set_button,
     update_pages, update_files, update_buttons,
     check_filename
@@ -46,10 +46,10 @@ def start():
         return
     database.ping()
     if database.live:  # live mode
-        log("Sending Start command to streamers")
+        info("Sending Start command to streamers")
         socketio.emit('start', namespace='/streamers')  # send start command to streamers
     else:  # playback mode
-        log("Started playback")
+        info("Started playback")
     database.start()
 
 
@@ -62,7 +62,7 @@ def stop():
     if database.live:
         socketio.emit('stop', namespace='/streamers')  # send stop command to streamers
         filename = database.save()  # save database file (if live) and wipe contents.
-        log('Session Exported to file: {}'.format(filename))
+        info('Session Exported to file: {}'.format(filename))
     else:  # playback
         log('Paused Playback')
 
@@ -91,7 +91,7 @@ def live():
     set_button('start', text='Start Streaming')
     set_button('stop', text='Stop all streams and save the file to disk')
     set_database()  # set database to live
-    log('Live database loaded.')
+    info('Live database loaded.')
     refresh()
 
 
@@ -110,7 +110,7 @@ def load(filename):
             get_database().ping()
             break
         except DatabaseBusyLoadingError as e:  # still loading
-            error("Still loading file... ({})".format(n))
+            warn("Still loading file... ({})".format(n))
             sleep(5)
         except DatabaseError as e:  # lost connection (might have been aborted)
             error("Failed to load database (ping failed): {}".format(e.__class__.__name__, e))
@@ -119,7 +119,7 @@ def load(filename):
     set_button('live', text='Back to live session')
     set_button('start', text='Start playback')
     set_button('stop', text='Stop playback')
-    log('Loaded "{}" for playback'.format(filename))
+    info('Loaded "{}" for playback'.format(filename))
     refresh()
 
 
@@ -129,10 +129,10 @@ def abort():
     """ Aborts loading a database file """
     get_database().kill()  # force kill currently loaded database
     if get_database().live:
-        error("Force killing live database - some data may be lost")
+        warn("Force killing live database - some data may be lost")
         refresh()
     else:
-        error("Force killing playback database")
+        warn("Force killing playback database")
         live()  # switch back to live
 
 
@@ -145,7 +145,7 @@ def rename(data):
     check_filename(old)
     check_filename(new)
     current_app.database_controller.rename_save(old, new)
-    log('Renamed "{}" to "{}"'.format(old, new))
+    info('Renamed "{}" to "{}"'.format(old, new))
     refresh()
 
 
@@ -154,7 +154,7 @@ def rename(data):
 def delete(filename):
     """ Deletes the selected file """
     current_app.database_controller.delete_save(filename)
-    log('Deleted file "{}"'.format(filename))
+    warn('Deleted file "{}"'.format(filename))
     refresh()
 
 
@@ -169,9 +169,9 @@ def wipe():
     if not database.live:
         error("Cannot wipe contents of playback file - use the 'Delete' button instead to remove the file.")
         return
-    print("WIPE")
     database.wipe()
-    error("Wiped contents of database.")
+    warn("Wiped contents of database.")
+    refresh()
 
 
 @socketio.on('info', namespace='/browser')
