@@ -304,14 +304,17 @@ class EEGFourier(SignalFourier):
         self.filtered_id = filtered['id']
         self.sample_rate = raw['sample_rate']
         self.channels = raw['channels'].split(',')  # its a comma separated string
+        print("CHANNELS: ", self.channels)
 
         # x/y positions for electrodes in head plots
         with open('app/static/electrodes.json', 'r') as f:
             all_names = json.loads(f.read())
+            print("ALL NAMES: ", all_names)
         for name in self.channels:  # get coordinates of electrodes by name
             self.head_names.append(name)
             self.head_x.append(all_names[name][0])
             self.head_y.append(all_names[name][1])
+        print("GHEAD NAMES: ", self.head_names)
 
     def loop(self):
         """ Maine execution loop (Overriding SignalFourier) """
