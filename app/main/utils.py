@@ -163,7 +163,6 @@ def set_button(name, hidden=None, disabled=None, text=None):
         session['buttons'] = {}
     session['buttons'][name] = {'hidden': hidden, 'disabled': disabled, 'text': text}
     session.modified = True
-    print("BUTTON UPDAET: ", session['buttons'])
 
 
 @catch_errors
@@ -179,4 +178,5 @@ def update_buttons(room=None):
     if not room:  # if room not given, send to room ID of current request
         room = request.sid
     socketio.emit('update_buttons', session['buttons'], namespace='/browser', room=room)
+    print("SENT BUTTONS: ", session['buttons'])
 
