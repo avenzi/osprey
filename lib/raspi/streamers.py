@@ -59,7 +59,7 @@ class SenseStreamer(Streamer):
         self.database.write_data(self.id, data)
 
         # get joystick data
-        data = {'time': [], 'button': []}
+        data = {'time': [], 'button': [], 'color':[]}
         for event in self.sense.stick.get_events():
             if event.action == 'pressed':
                 data['time'].append(event.timestamp*1000)
