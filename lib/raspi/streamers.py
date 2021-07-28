@@ -73,6 +73,7 @@ class SenseStreamer(Streamer):
         """ Extended from base class in pi_lib.py """
         # enable compass, gyro, and accelerometer to calculate orientation
         self.sense.set_imu_config(True, True, True)
+        self.sense.stick.get_events()  # first call to get_events() to start recording
 
 
 class LogStreamer(Streamer):
