@@ -319,8 +319,10 @@ class Database:
     def data_to_redis(self, data):
         """ Converts a data dictionary of floats to ints to be stored in redis """
         for key in data.keys():
-            for i in range(len(data[key])):
-                data[key][i] = self.float_to_redis(data[key][i])
+            converted = []
+            for val in data[key]:
+                converted.append(self.float_to_redis(val))
+            data[key] = converted
 
     def redis_to_float(self, string, decompress=True):
         """ Converts an integer string from redis to a float IF POSSIBLE otherwise no change """
