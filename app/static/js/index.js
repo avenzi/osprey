@@ -1,15 +1,3 @@
-function log(msg) {
-    // logs a message to console and to the log div
-    console.log(msg)
-    $('.logs p').prepend(`> ${msg}<br>`);
-}
-
-function error(msg) {
-    // logs an error message to console and to the log div
-    console.log(msg)
-    $('.logs p').prepend(`> <span style="color:red;font-weight:bold;">${msg}</span><br>`);
-}
-
 function set_button(name, props) {
     // props is an object that contains properties for the command button named <name>
     if (props.hidden !== undefined) {
@@ -85,12 +73,20 @@ $(document).ready(function() {
         clearInterval(status_loop);  // stop status polling
     });
 
-    socket.on('log', function(msg) {
-        log(msg);
-    });
+    socket.on('log', function(data) {
+        color = 'black'  // any number or 0
+        weight = 'normal'
+        msg = data.message
+        if (data.level == 1) {
+            color = 'blue';
+        } else if (data.level == 2) {
+            color = 'orange';
+        } else if (data.level == 3) {
+            color = 'red';
+            weight = 'bold'
+        }
 
-    socket.on('error', function(msg) {
-        error(msg)
+        $('.logs p').prepend(`> <span style="color:${color};font-weight:${weight};">${msg}</span><br>`);
     });
 
 
