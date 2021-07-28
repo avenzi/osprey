@@ -44,11 +44,14 @@ def create_layout(info):
     orient.line(x='time', y='roll', legend_label='Roll', color='green', source=source)
     orient.line(x='time', y='yaw', legend_label='Yaw', color='red', source=source)
 
-    button = figure(title='Button Presses', x_axis_label='time', y_axis_label='', toolbar_location=None, plot_width=1200, plot_height=100)
-    button.xaxis.formatter = time_format()
-    button.toolbar.active_drag = None
-    button.circle(x='time', y=0, source=button_source, size=30, fill_color='color', line_width=0)
-    button.line(x='time', y=0, source=source, color='black')
+    buttons = figure(title='Button Presses', x_axis_label='time', y_axis_label='', y_range=(0,1), toolbar_location=None, plot_width=1200, plot_height=100)
+    buttons.xaxis.formatter = time_format()
+    buttons.yaxis.major_tick_line_color = None  # turn off y-axis major ticks
+    buttons.yaxis.minor_tick_line_color = None  # turn off y-axis minor ticks
+    buttons.yaxis.major_label_text_font_size = '0pt'  # turn off y-axis tick labels
+    buttons.toolbar.active_drag = None
+    buttons.segment(x0='time', x1='time', y0=-1, y1=1, source=button_source, line_color='color', line_width=10)
+    buttons.line(x='time', y=0, source=source, color='black', visible=False)
 
     # create layout
-    return layout([[humid, temp], [press, orient], [button]])
+    return layout([[humid, temp], [press, orient], [buttons]])
