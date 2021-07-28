@@ -13,37 +13,35 @@ def clamp(value, min_value=0, max_value=7):
 
 def pushed_up(event):
     global y
-    print(event.action)
     if event.action != ACTION_RELEASED:
         y = clamp(y - 1)
 
 def pushed_down(event):
     global y
-    print(event.action)
     if event.action != ACTION_RELEASED:
         y = clamp(y + 1)
 
 def pushed_left(event):
     global x
-    print(event.action)
     if event.action != ACTION_RELEASED:
         x = clamp(x - 1)
 
 def pushed_right(event):
     global x
-    print(event.action)
     if event.action != ACTION_RELEASED:
         x = clamp(x + 1)
 
-def refresh(event=None):
+def refresh():
     sense.clear()
     print('setting: x: {}, y: {}'.format(x, y))
     sense.set_pixel(x, y, 255, 255, 255)
 
-sense.stick.direction_up = pushed_up
-sense.stick.direction_down = pushed_down
-sense.stick.direction_left = pushed_left
-sense.stick.direction_right = pushed_right
-sense.stick.direction_any = refresh
-refresh()
+#sense.stick.direction_up = pushed_up
+#sense.stick.direction_down = pushed_down
+#sense.stick.direction_left = pushed_left
+#sense.stick.direction_right = pushed_right
+#sense.stick.direction_any = refresh
+sense.set_pixel(0, 0, 255, 0, 0)
+sense.set_pixel(2, 2, 0, 255, 0)
+sense.set_pixel(4, 4, 0, 0, 255)
 pause()
