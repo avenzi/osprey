@@ -33,7 +33,8 @@ def pushed_right(event):
 
 def refresh(event=None):
     sense.clear()
-    print(event.action)
+    if event is not None:
+        print(event.action)
     print('setting: x: {}, y: {}'.format(x, y))
     sense.set_pixel(x, y, 255, 255, 255)
 
