@@ -163,6 +163,7 @@ def set_button(name, hidden=None, disabled=None, text=None):
         session['buttons'] = {}
     session['buttons'][name] = {'hidden': hidden, 'disabled': disabled, 'text': text}
     session.modified = True
+    print("BUTTON UPDAET: ", session['buttons'])
 
 
 @catch_errors
