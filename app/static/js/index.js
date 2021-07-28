@@ -142,7 +142,6 @@ $(document).ready(function() {
 
     // each command button emits an event to the server (except for buttons which require confirmation)
     $('div.stream_commands button.command').not(".confirm").on('click', function(event) {
-        console.log("EMIT")
         socket.emit(event.target.value);
     });
 
