@@ -152,7 +152,10 @@ class DatabaseController:
 
             # if a no more databases using this port
             elif info['file'] and info['count'] <= 1:
-                db.shutdown()  # shut down this redis server
+                try:
+                    db.shutdown()  # shut down this redis server
+                except DatabaseError as e:
+                    raise DatabaseError("Failed to shutdown current database. {}: {}".format(e.__class__.__name__, e))
                 self.playback_ports[db.port]['count'] = 0
                 self.playback_ports[db.port]['file'] = None  # un-associate file from port
 
