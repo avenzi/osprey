@@ -45,7 +45,7 @@ class SenseStreamer(Streamer):
     def loop(self):
         """ Maine execution loop """
         data = {'time': [], 'humidity': [], 'pressure': [], 'temperature': [], 'pitch': [], 'roll': [], 'yaw': []}
-        for i in range(10):
+        for i in range(5):
             roll, pitch, yaw = self.sense.get_orientation_degrees().values()
             data['humidity'].append(self.sense.get_humidity())
             data['pressure'].append(self.sense.get_pressure())
@@ -54,16 +54,19 @@ class SenseStreamer(Streamer):
             data['pitch'].append(pitch)
             data['yaw'].append(yaw)
             data['time'].append(time()*1000)
+            sleep(0.1)
 
         self.database.write_data(self.id, data)
 
         # get joystick data
         data = {'time': [], 'button': []}
         for event in self.sense.get_events():
-            if event.action != 'pressed':
-                continue
-            data['time'].append(event.timestamp*1000)
-            data['button'].append(event.direction)
+            if event.action == 'pressed':
+                data['time'].append(event.timestamp*1000)
+                data['button'].append(event.direction)
+
+        self.database.write_data('button:'+self.id, data)
+        sleep(0.1)
 
     def start(self):
         """ Extended from base class in pi_lib.py """
