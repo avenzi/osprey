@@ -47,7 +47,7 @@ def create_layout(info):
     button = figure(title='Button Presses', x_axis_label='time', y_axis_label='', toolbar_location=None, plot_width=600, plot_height=100)
     humid.xaxis.formatter = time_format()
     humid.toolbar.active_drag = None
-    humid.circle(x='time', y=0, source=source, size=30, fill_color='color', line_width=0)
+    humid.circle(x='time', y=0, source=button_source, size=30, fill_color='color', line_width=0)
 
     # create layout
     return layout([[humid, temp], [press, orient], [button]])
