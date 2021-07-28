@@ -35,6 +35,8 @@ def disconnect():
 ####################################
 # Handlers for browser socketIO messages and buttons
 
+# Todo: make sure that no leftover data from a previous stream is in the database.
+#  It messes up the plots when reviewing the data.
 
 @socketio.on('start', namespace='/browser')
 @catch_errors

@@ -45,7 +45,7 @@ def create_layout(info):
     orient.line(x='time', y='yaw', legend_label='Yaw', color='red', source=source)
 
     tooltips = [
-        ('Label', '@label'),
+        ('Button', '@button'),
         ('Time', '@time')
     ]
 
