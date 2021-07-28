@@ -30,6 +30,7 @@ def pushed_right(event):
 
 def refresh():
     sense.clear()
+    print('setting: x: {}, y: {}'.format(x, y))
     sense.set_pixel(x, y, 255, 255, 255)
 
 sense.stick.direction_up = pushed_up
