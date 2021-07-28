@@ -308,11 +308,11 @@ class EEGFourier(SignalFourier):
         # x/y positions for electrodes in head plots
         with open('app/static/electrodes.json', 'r') as f:
             all_names = json.loads(f.read())
+        self.head_x, self.head_y, self.head_names = [], [], []  # needs to be reset incase the stream is stopped and started again
         for name in self.channels:  # get coordinates of electrodes by name
             self.head_names.append(name)
             self.head_x.append(all_names[name][0])
             self.head_y.append(all_names[name][1])
-        print("HEAD NAMES: ", self.head_names)
 
     def loop(self):
         """ Maine execution loop (Overriding SignalFourier) """
@@ -331,7 +331,6 @@ class EEGFourier(SignalFourier):
 
         self.database.write_snapshot('fourier:' + self.id, fourier_data)
         self.database.write_snapshot('headplot:' + self.id, headplot_data)
-        print('headplot data: ', headplot_data)
 
         # Slow down rate of performing fourier transforms.
         # They appear to be having a significant impact on CPU usage.
@@ -363,7 +362,6 @@ class EEGFourier(SignalFourier):
                 val = np.mean(fourier_data[name][low:high])  # band power RMS
                 headplot[band].append(val)  # append value to list of channels in this band
 
-        print("END: ", headplot)
         return headplot
 
 
