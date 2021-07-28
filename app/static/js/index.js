@@ -1,3 +1,19 @@
+function log(msg, level=0) {
+    color = 'black'  // any number or 0
+    weight = 'normal'
+    if (level == 1) {
+        color = 'blue';
+    } else if (level == 2) {
+        color = 'orange';
+    } else if (level == 3) {
+        color = 'red';
+        weight = 'bold'
+    }
+
+    $('.logs p').prepend(`> <span style="color:${color};font-weight:${weight};">${msg}</span><br>`);
+}
+
+
 function set_button(name, props) {
     // props is an object that contains properties for the command button named <name>
     if (props.hidden !== undefined) {
@@ -74,21 +90,8 @@ $(document).ready(function() {
     });
 
     socket.on('log', function(data) {
-        color = 'black'  // any number or 0
-        weight = 'normal'
-        msg = data.message
-        if (data.level == 1) {
-            color = 'blue';
-        } else if (data.level == 2) {
-            color = 'orange';
-        } else if (data.level == 3) {
-            color = 'red';
-            weight = 'bold'
-        }
-
-        $('.logs p').prepend(`> <span style="color:${color};font-weight:${weight};">${msg}</span><br>`);
+        log(data.message, data.level);
     });
-
 
     socket.on('update_pages', function(data) {
         // data is a list of objects with info on each stream
