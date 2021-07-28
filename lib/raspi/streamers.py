@@ -35,30 +35,32 @@ class TestStreamer(Streamer):
 class SenseStreamer(Streamer):
     def __init__(self, *args):
         super().__init__(*args)
-        from sense_hat import SenseHat, ACTION_RELEASED
+        from sense_hat import SenseHat, ACTION_PRESSED
         self.sense = SenseHat()   # sense hat object
-        self.frames = 10           # how many frames are in each request
 
         self.sense.stick.direciton_up = self.pushed_up
         self.sense.stick.direciton_down = self.pushed_down
         self.sense.stick.direciton_left = self.pushed_left
         self.sense.stick.direciton_right = self.pushed_right
         self.sense.stick.direciton_any = self.refresh
+        self.button = 0
 
     def loop(self):
         """ Maine execution loop """
         data = {'time': [], 'humidity': [], 'pressure': [], 'temperature': [], 'pitch': [], 'roll': [], 'yaw': []}
-        for i in range(self.frames):
-            roll, pitch, yaw = self.sense.get_orientation_degrees().values()
-            data['humidity'].append(self.sense.get_humidity())
-            data['pressure'].append(self.sense.get_pressure())
-            data['temperature'].append((self.sense.get_temperature_from_humidity() + self.sense.get_temperature_from_pressure()) / 2)
-            data['roll'].append(roll)
-            data['pitch'].append(pitch)
-            data['yaw'].append(yaw)
-            data['time'].append(time()*1000)
+        roll, pitch, yaw = self.sense.get_orientation_degrees().values()
+        data['humidity'] = self.sense.get_humidity()
+        data['pressure'] = self.sense.get_pressure()
+        data['temperature'] = ((self.sense.get_temperature_from_humidity() + self.sense.get_temperature_from_pressure()) / 2)
+        data['roll'] = roll
+        data['pitch'] = pitch
+        data['yaw'] = yaw
+        data['button'] = self.button
+        data['time'].append(time()*1000)
 
         self.database.write_data(self.id, data)
+        sleep(0.1)
+        print(self.button)
 
     def start(self):
         """ Extended from base class in pi_lib.py """
@@ -67,26 +69,26 @@ class SenseStreamer(Streamer):
 
     def pushed_up(self, event):
         print(event.action)
-        if event.action != ACTION_RELEASED:
-            print('UP')
+        if event.action == ACTION_PRESSED:
+            self.button = 1
 
     def pushed_down(self, event):
         print(event.action)
-        if event.action != ACTION_RELEASED:
-            print('DOWN')
+        if event.action == ACTION_PRESSED:
+            self.button = 2
 
     def pushed_left(self, event):
         print(event.action)
-        if event.action != ACTION_RELEASED:
-            print('LEFT')
+        if event.action == ACTION_PRESSED:
+            self.button = 3
 
     def pushed_right(self, event):
         print(event.action)
-        if event.action != ACTION_RELEASED:
-            print('RIGHT')
+        if event.action == ACTION_PRESSED:
+            self.button = 4
 
     def refresh(self, event):
-        if event.action != ACTION_RELEASED:
+        if event.action == ACTION_PRESSED:
             print("ANY")
 
 
