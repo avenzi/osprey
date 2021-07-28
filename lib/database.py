@@ -997,7 +997,6 @@ class PlaybackDatabase(ServerDatabase):
 
             if downsample and self.playback_speed > 1:  # get downsampled response if playing at high multiplier
                 response = self._downsample(stream, last_read_id, max_read_id)
-                print("[{}] LAST: {}, SINCE: {}, MAX: {}".format(stream, last_read_id, h(time_since_last), max_read_id))
             else:
                 # Redis uses the prefix "(" to represent an exclusive interval for XRANGE
                 response = red.xrange('stream:'+stream, min='('+last_read_id, max=max_read_id)
