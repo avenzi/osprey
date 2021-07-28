@@ -77,12 +77,14 @@ def set_database(file=None):
     sid = session.sid  # current session ID
     ctrl = current_app.database_controller
 
+    print('here1')
     ctrl.remove(sid)  # remove current database
+    print('here2')
     if file:
         ctrl.new_playback(file=file, ID=session.sid)
-        log("")
     else:
         ctrl.new_live(ID=session.sid)
+    print('here3')
 
     database = ctrl.get(session.sid)
     print("SET DATABASE:", database)
@@ -178,5 +180,4 @@ def update_buttons(room=None):
     if not room:  # if room not given, send to room ID of current request
         room = request.sid
     socketio.emit('update_buttons', session['buttons'], namespace='/browser', room=room)
-    print("SENT BUTTONS: ", session['buttons'])
 

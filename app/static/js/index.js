@@ -17,7 +17,6 @@ function set_button(name, props) {
     // props is an object that contains properties for the command button named <name>
     if (props.hidden !== undefined) {
         $('button.command.'+name).prop('hidden', props.hidden);
-        console.log("SET HIDDEN: " + name);
     }
     if (props.disabled !== undefined) {
         $('button.command.'+name).prop('disabled', props.disabled);
