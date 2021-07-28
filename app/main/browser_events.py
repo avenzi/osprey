@@ -171,7 +171,7 @@ def wipe():
         return
     print("WIPE")
     database.wipe()
-
+    error("Wiped contents of database.")
 
 
 @socketio.on('info', namespace='/browser')
