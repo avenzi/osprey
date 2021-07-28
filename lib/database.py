@@ -316,14 +316,6 @@ class Database:
         """ Converts a float into an int to be stored in Redis. Convert back with redis_to_float"""
         return int(num * (10**self.decimal_cap))
 
-    def data_to_redis(self, data):
-        """ Converts a data dictionary of floats to ints to be stored in redis """
-        for key in data.keys():
-            converted = []
-            for val in data[key]:
-                converted.append(self.float_to_redis(val))
-            data[key] = converted
-
     def redis_to_float(self, string, decompress=True):
         """ Converts an integer string from redis to a float IF POSSIBLE otherwise no change """
         try:
@@ -334,7 +326,7 @@ class Database:
         except:
             return string
 
-    def redis_to_data(self, response):
+    def convert_response(self, response):
         """ Converts a response from Redis to a python dictionary of lists of floats """
         output = {}
         for data in response:
@@ -394,20 +386,19 @@ class Database:
 
             # add data to the Redis database one data point at a time
             #  because there isn't a mass-insert-to-stream command
-            ids = []
             for i in range(length):
                 d = {}
                 for key in data.keys():
-                    d[key] = data[key][i]
+                    d[key] = self.float_to_redis(data[key][i])
                 time_id = self.time_to_redis(data['time'][i])  # redis time stamp in which to insert
                 redis_id = self.validate_redis_time(time_id, stream)
-                pipe.xadd('stream:'+stream, self.data_to_redis(d), id=redis_id)
+                pipe.xadd('stream:'+stream, d, id=redis_id)
 
             pipe.execute()
         else:  # assume this is a single data point
             time_id = self.time_to_redis(data['time'])  # redis time stamp in which to insert
             redis_id = self.validate_redis_time(time_id, stream)
-            self.redis.xadd('stream:'+stream, {key: data[key] for key in data.keys()}, id=redis_id)
+            self.redis.xadd('stream:'+stream, {key: self.float_to_redis(data[key]) for key in data.keys()}, id=redis_id)
 
     @catch_database_errors
     def read_data(self, stream, count=None, max_time=None, to_json=False, decode=True, downsample=False):
@@ -484,7 +475,7 @@ class Database:
             return  # return nothing. first data point was read for reference.
 
         # convert redis response to python dict
-        output = self.redis_to_data(response)
+        output = self.convert_response(response)
 
         if to_json:
             result = json.dumps(output)
@@ -1043,7 +1034,7 @@ class PlaybackDatabase(ServerDatabase):
         output = {}
 
         # convert redis response to python dict
-        output = self.redis_to_data(response)
+        output = self.convert_response(response)
 
         t4 = time()
 
