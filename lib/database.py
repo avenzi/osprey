@@ -92,6 +92,7 @@ class DatabaseController:
         """ Creates and returns a new liveDatabase instance for the given ID key """
         if self.sessions.get(ID):  # Database already associated
             self.remove(ID)  # remove and disconnect
+        self.start_live_server()  # start a new redis instance if necessary
         self.sessions[ID] = LiveDatabase(
             ip=self.live_ip, port=self.live_port, password=self.live_pass,
             file=self.live_file, live_path=self.live_path, save_path=self.save_path
@@ -188,6 +189,10 @@ class DatabaseController:
             system('rm {}/{}'.format(self.save_path, filename))
         except Exception as e:
             raise DatabaseError("Failed to delete file: {}".format(e))
+
+    def start_live_server(self):
+        """ Start a new Redis server instance initialized from the live database file """
+        system("redis-server config/live_redis.conf")
 
     def start_playback_server(self, file, port):
         """ Start a new local Redis server instance initialized from <file> on port <port> """
