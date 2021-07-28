@@ -220,7 +220,6 @@ class Database:
             'socket_timeout': 2,
             'socket_connect_timeout': 5
         }
-        print('before')
         # Separate redis pools for reading decoded data or reading raw bytes data.
         pool = redis.ConnectionPool(decode_responses=True, **options)
         bytes_pool = redis.ConnectionPool(decode_responses=False, **options)
@@ -228,7 +227,6 @@ class Database:
         # Redis connection client
         self.redis = redis.Redis(connection_pool=pool)
         self.bytes_redis = redis.Redis(connection_pool=bytes_pool)
-        print('after')
 
         # Create RedisTimeSeries Client instances as well
         # (wrapper around Redis instance to implement RedisTimeSeries commands)

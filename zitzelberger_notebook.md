@@ -33,7 +33,11 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
-##### July 25th, 2021:
+##### July 27th, 2021:
+
+​	To begin, I added another button to the control center: "Wipe." This manually wipes the contents of the current database file, if live. I need this to clear the current database in the event that the automatic wipe fails, as was the case for the large database file I created yesterday. I also added some clarity to the log messages on the browser, differentiating between the 4 different log levels: log, info, warn, and error. Each has a different color and font weight.
+
+##### July 26th, 2021:
 
 ​	I added a hover tool to the EEG headplots that shows which channel each coordinate corresponds to - will be helpful in determining how to correctly rewire the electrode cap. 
 
