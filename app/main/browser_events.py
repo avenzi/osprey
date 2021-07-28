@@ -181,6 +181,7 @@ def info(data):
     database = get_database()
     if not database:
         return
+    print('INFO DATA: ', data)
     group_name = data['group']
     stream_name = data['stream']
 
