@@ -31,7 +31,7 @@ def pushed_right(event):
     if event.action != ACTION_RELEASED:
         x = clamp(x + 1)
 
-def refresh(event):
+def refresh(event=None):
     sense.clear()
     print(event.action)
     print('setting: x: {}, y: {}'.format(x, y))
