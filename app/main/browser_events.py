@@ -176,26 +176,25 @@ def wipe():
 
 @socketio.on('info', namespace='/browser')
 @catch_errors
-def info(data):
+def database_info(data):
     """ Sends the info dict from the requested data stream """
     database = get_database()
     if not database:
         return
-    print('INFO DATA: ', data)
     group_name = data['group']
     stream_name = data['stream']
 
     # get info dict for this stream
-    info = database.get_group(group_name, stream_name)
+    group_info = database.get_group(group_name, stream_name)
 
     # Send playback speed (multiplier).
     # Note that right now, only the video stream needs this information to set the HTML5 MediaElement playback speed.
     if not database.live:
-        info['speed'] = database.playback_speed
+        group_info['speed'] = database.playback_speed
     else:
-        info['speed'] = 1
+        group_info['speed'] = 1
 
-    socketio.emit('info', info, namespace='/browser', room=request.sid)
+    socketio.emit('info', group_info, namespace='/browser', room=request.sid)
 
 
 ######################################
