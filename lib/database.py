@@ -4,7 +4,7 @@ import functools
 import json
 from os import system, path
 from traceback import print_exc, print_stack
-from numpy import ndarray
+from numpy import ndarray, float64
 
 import redis
 #from redistimeseries.client import Client as RedisTS
@@ -312,11 +312,13 @@ class Database:
             return data.decode('utf-8')
         return data
 
-    def float_to_redis(self, num, compress=True):
-        """ Converts a float into an int to be stored in Redis. Convert back with redis_to_float"""
-        return int(num * (10**self.decimal_cap))
+    def data_to_redis(self, num, compress=True):
+        """ Converts a float into an int to be stored in Redis. Convert back with redis_to_data"""
+        if type(num) in [int, float, float64]:
+            return int(num * (10**self.decimal_cap))
+        return num
 
-    def redis_to_float(self, string, decompress=True):
+    def redis_to_data(self, string, decompress=True):
         """ Converts an integer string from redis to a float IF POSSIBLE otherwise no change """
         try:
             if decompress:
@@ -334,9 +336,9 @@ class Database:
             for key in d.keys():
                 k = self.decode(key)  # key might not be decoded (if using bytes_redis), but it needs to be regardless
                 if output.get(k):
-                    output[k].append(self.redis_to_float(d[key]))  # convert to float and append
+                    output[k].append(self.redis_to_data(d[key]))  # convert to float and append
                 else:
-                    output[k] = [self.redis_to_float(d[key])]
+                    output[k] = [self.redis_to_data(d[key])]
         return output
 
     @catch_database_errors
@@ -389,7 +391,7 @@ class Database:
             for i in range(length):
                 d = {}
                 for key in data.keys():
-                    d[key] = self.float_to_redis(data[key][i])
+                    d[key] = self.data_to_redis(data[key][i])
                 time_id = self.time_to_redis(data['time'][i])  # redis time stamp in which to insert
                 redis_id = self.validate_redis_time(time_id, stream)
                 pipe.xadd('stream:'+stream, d, id=redis_id)
@@ -398,7 +400,7 @@ class Database:
         else:  # assume this is a single data point
             time_id = self.time_to_redis(data['time'])  # redis time stamp in which to insert
             redis_id = self.validate_redis_time(time_id, stream)
-            self.redis.xadd('stream:'+stream, {key: self.float_to_redis(data[key]) for key in data.keys()}, id=redis_id)
+            self.redis.xadd('stream:' + stream, {key: self.data_to_redis(data[key]) for key in data.keys()}, id=redis_id)
 
     @catch_database_errors
     def read_data(self, stream, count=None, max_time=None, to_json=False, decode=True, downsample=False):
@@ -561,7 +563,7 @@ class Database:
 
         for key in keys:
             vals = data[key].split(',')
-            output[key] = [self.redis_to_float(val, False) for val in vals]
+            output[key] = [self.redis_to_data(val, False) for val in vals]
 
         if to_json:
             del output['time']  # remove time column for json format
@@ -1104,7 +1106,7 @@ class PlaybackDatabase(ServerDatabase):
 
         for key in keys:
             vals = data[key].split(',')
-            output[key] = [self.redis_to_float(val, False) for val in vals]
+            output[key] = [self.redis_to_data(val, False) for val in vals]
 
         if to_json:
             del output['time']  # remove time column for json format
