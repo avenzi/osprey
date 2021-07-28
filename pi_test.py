@@ -1,5 +1,6 @@
 from sense_hat import SenseHat, ACTION_PRESSED, ACTION_HELD, ACTION_RELEASED
 from signal import pause
+from time import sleep
 
 x = 3
 y = 3
@@ -45,5 +46,26 @@ sense.clear()
 sense.set_pixel(0, 0, 255, 0, 0)
 sense.set_pixel(2, 2, 0, 255, 0)
 sense.set_pixel(4, 4, 0, 0, 255)
-print(sense.get_pixels)
+print(sense.get_pixels())
+sleep(2)
+
+sense.clear()
+
+X = [255, 0, 0]  # Red
+O = [255, 255, 255]  # White
+
+question_mark = [
+O, O, O, X, X, O, O, O,
+O, O, X, O, O, X, O, O,
+O, O, O, O, O, X, O, O,
+O, O, O, O, X, O, O, O,
+O, O, O, X, O, O, O, O,
+O, O, O, X, O, O, O, O,
+O, O, O, O, O, O, O, O,
+O, O, O, X, O, O, O, O
+]
+
+sense.set_pixels(question_mark)
+print(sense.get_pixels())
+
 pause()
