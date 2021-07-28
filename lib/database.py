@@ -507,7 +507,7 @@ class Database:
             if key == 'time':
                 new_data['time'] = data['time']
             else:
-                new_data[key] = ','.join(str(round(val, 6)) for val in data[key])
+                new_data[key] = ','.join(str(val) for val in data[key])
 
         time_id = self.time_to_redis(data['time'])  # redis time stamp in which to insert
         redis_id = self.validate_redis_time(time_id, stream)
