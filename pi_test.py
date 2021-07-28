@@ -52,7 +52,7 @@ sleep(2)
 sense.clear()
 
 X = [255, 0, 0]  # Red
-O = [255, 255, 255]  # White
+O = [0, 0, 0]  # off
 
 question_mark = [
 O, O, O, X, X, O, O, O,
