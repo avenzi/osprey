@@ -14,6 +14,14 @@ def create_layout(info):
         max_size=1000,  # Keep last 100 data points
         if_modified=True)  # if_modified ignores responses sent with code 304 and not cached.
 
+    button_source = AjaxDataSource(
+        data_url='/stream/update?id=button:{}'.format(info['Raw']['id']),
+        method='GET',
+        polling_interval=1000,  # in milliseconds
+        mode='append',  # append to existing data
+        max_size=10,  # Keep last 10 data points
+        if_modified=True)  # if_modified ignores responses sent with code 304 and not cached.
+
     humid = figure(title='Humidity', x_axis_label='time', y_axis_label='Percent', toolbar_location=None, plot_width=600, plot_height=300)
     humid.xaxis.formatter = time_format()
     humid.toolbar.active_drag = None
@@ -36,5 +44,10 @@ def create_layout(info):
     orient.line(x='time', y='roll', legend_label='Roll', color='green', source=source)
     orient.line(x='time', y='yaw', legend_label='Yaw', color='red', source=source)
 
+    button = figure(title='Button Presses', x_axis_label='time', y_axis_label='', toolbar_location=None, plot_width=600, plot_height=100)
+    humid.xaxis.formatter = time_format()
+    humid.toolbar.active_drag = None
+    humid.circle(x='time', y=0, source=source, size=30, fill_color='color', line_width=0)
+
     # create layout
-    return layout([[humid, temp], [press, orient]])
+    return layout([[humid, temp], [press, orient], [button]])
