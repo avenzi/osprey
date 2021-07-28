@@ -39,7 +39,7 @@ class SenseStreamer(Streamer):
         from sense_hat import SenseHat
         self.sense = SenseHat()   # sense hat object
 
-        self.sense.stick.direciton_any = sense_joystick_event
+        self.color_map = {'left': 'blue', 'right': 'green', 'up': 'red', 'down': 'yellow', 'middle': 'black'}
         self.button = 0
 
     def loop(self):
@@ -64,6 +64,8 @@ class SenseStreamer(Streamer):
             if event.action == 'pressed':
                 data['time'].append(event.timestamp*1000)
                 data['button'].append(event.direction)
+                data['color'].append(self.color_map[event.direction])
+
 
         self.database.write_data('button:'+self.id, data)
         sleep(0.1)
