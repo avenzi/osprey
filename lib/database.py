@@ -92,14 +92,11 @@ class DatabaseController:
         """ Creates and returns a new liveDatabase instance for the given ID key """
         if self.sessions.get(ID):  # Database already associated
             self.remove(ID)  # remove and disconnect
-        print('before start live')
         self.start_live_server()  # start a new redis instance if necessary
-        print('after start live')
         self.sessions[ID] = LiveDatabase(
             ip=self.live_ip, port=self.live_port, password=self.live_pass,
             file=self.live_file, live_path=self.live_path, save_path=self.save_path
         )
-        print('after creating connection')
 
     def new_playback(self, file, ID):
         """ Creates and returns a new PlaybackDatabase instance for the given ID key """
@@ -223,7 +220,7 @@ class Database:
             'socket_timeout': 2,
             'socket_connect_timeout': 5
         }
-
+        print('before')
         # Separate redis pools for reading decoded data or reading raw bytes data.
         pool = redis.ConnectionPool(decode_responses=True, **options)
         bytes_pool = redis.ConnectionPool(decode_responses=False, **options)
@@ -231,6 +228,7 @@ class Database:
         # Redis connection client
         self.redis = redis.Redis(connection_pool=pool)
         self.bytes_redis = redis.Redis(connection_pool=bytes_pool)
+        print('after')
 
         # Create RedisTimeSeries Client instances as well
         # (wrapper around Redis instance to implement RedisTimeSeries commands)
