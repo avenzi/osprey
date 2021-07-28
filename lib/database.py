@@ -92,11 +92,14 @@ class DatabaseController:
         """ Creates and returns a new liveDatabase instance for the given ID key """
         if self.sessions.get(ID):  # Database already associated
             self.remove(ID)  # remove and disconnect
+        print('before start live')
         self.start_live_server()  # start a new redis instance if necessary
+        print('after start live')
         self.sessions[ID] = LiveDatabase(
             ip=self.live_ip, port=self.live_port, password=self.live_pass,
             file=self.live_file, live_path=self.live_path, save_path=self.save_path
         )
+        print('after creating connection')
 
     def new_playback(self, file, ID):
         """ Creates and returns a new PlaybackDatabase instance for the given ID key """
