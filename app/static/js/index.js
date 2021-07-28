@@ -140,6 +140,17 @@ $(document).ready(function() {
     });
 
 
+    // each command button emits an event to the server (except for buttons which require confirmation)
+    $('div.stream_commands button.command').not(".confirm").on('click', function(event) {
+        console.log("EMIT")
+        socket.emit(event.target.value);
+    });
+
+    $('div.file_commands button.load').on('click', function(event) {
+        socket.emit(event.target.value, selected_file);
+    });
+
+    // Open a dialog to input a new file name
     var rename_dialog = $('.rename_dialog').dialog({
         autoOpen: false,
         modal: true,
@@ -157,6 +168,13 @@ $(document).ready(function() {
         }
     });
 
+    $('div.file_commands button.rename').on("click", function() {
+        rename_dialog.dialog("open");
+    });
+
+
+    // buttons that require a confirmation dialog
+
     var delete_dialog = create_confirm_dialog('Delete saved database file?', function() {
         socket.emit('delete', selected_file)
     })
@@ -165,27 +183,19 @@ $(document).ready(function() {
         socket.emit('wipe')
     })
 
-
-    // each command button emits an event to the server
-    $('div.stream_commands button.command').on('click', function(event) {
-        console.log("EMIT")
-        socket.emit(event.target.value);
-    });
-
-    $('div.file_commands button.load').on('click', function(event) {
-        socket.emit(event.target.value, selected_file);
-    });
-
-    $('div.file_commands button.rename').on("click", function() {
-        rename_dialog.dialog("open");
-    });
+    var abort_dialog = create_confirm_dialog('Force kill the current database?', function() {
+        socket.emit('abort')
+    })
 
     $('div.file_commands button.delete').on('click', function(event) {
         delete_dialog.dialog("open");
     });
 
     $('div.stream_commands button.wipe').on('click', function(event) {
-        console.log("DIALOG")
-        delete_dialog.dialog("open");
+        wipe_dialog.dialog("open");
+    });
+
+    $('div.stream_commands button.abort').on('click', function(event) {
+        abort_dialog.dialog("open");
     });
 });
