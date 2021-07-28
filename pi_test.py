@@ -41,6 +41,7 @@ def refresh():
 #sense.stick.direction_left = pushed_left
 #sense.stick.direction_right = pushed_right
 #sense.stick.direction_any = refresh
+sense.clear()
 sense.set_pixel(0, 0, 255, 0, 0)
 sense.set_pixel(2, 2, 0, 255, 0)
 sense.set_pixel(4, 4, 0, 0, 255)
