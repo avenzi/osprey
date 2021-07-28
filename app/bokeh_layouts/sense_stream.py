@@ -48,7 +48,7 @@ def create_layout(info):
     button.xaxis.formatter = time_format()
     button.toolbar.active_drag = None
     button.circle(x='time', y=0, source=button_source, size=30, fill_color='color', line_width=0)
-    button.line(x='time', y=0, sourc=source, color='black')
+    button.line(x='time', y=0, source=source, color='black')
 
     # create layout
     return layout([[humid, temp], [press, orient], [button]])
