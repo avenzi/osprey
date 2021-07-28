@@ -44,7 +44,12 @@ def create_layout(info):
     orient.line(x='time', y='roll', legend_label='Roll', color='green', source=source)
     orient.line(x='time', y='yaw', legend_label='Yaw', color='red', source=source)
 
-    buttons = figure(title='Button Presses', x_axis_label='time', y_axis_label='', y_range=(0,1), toolbar_location=None, plot_width=1200, plot_height=100)
+    tooltips = [
+        ('Label', '@label'),
+        ('Time', '@time')
+    ]
+
+    buttons = figure(title='Button Presses', tooltips=tooltips, x_axis_label='time', y_axis_label='', y_range=(0,1), toolbar_location=None, plot_width=1200, plot_height=100)
     buttons.xaxis.formatter = time_format()
     buttons.yaxis.major_tick_line_color = None  # turn off y-axis major ticks
     buttons.yaxis.minor_tick_line_color = None  # turn off y-axis minor ticks
