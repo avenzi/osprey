@@ -47,7 +47,8 @@ class SenseStreamer(Streamer):
 
     def loop(self):
         """ Maine execution loop """
-        data = {'time': [], 'humidity': [], 'pressure': [], 'temperature': [], 'pitch': [], 'roll': [], 'yaw': []}
+        #data = {'time': [], 'humidity': [], 'pressure': [], 'temperature': [], 'pitch': [], 'roll': [], 'yaw': []}
+        data = {}
         roll, pitch, yaw = self.sense.get_orientation_degrees().values()
         data['humidity'] = self.sense.get_humidity()
         data['pressure'] = self.sense.get_pressure()
@@ -56,7 +57,7 @@ class SenseStreamer(Streamer):
         data['pitch'] = pitch
         data['yaw'] = yaw
         data['button'] = self.button
-        data['time'].append(time()*1000)
+        data['time'] = time()*1000
 
         self.database.write_data(self.id, data)
         sleep(0.1)
