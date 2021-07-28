@@ -971,7 +971,6 @@ class PlaybackDatabase(ServerDatabase):
         if decode:
             red = self.redis
         else:
-            numerical = False
             red = self.bytes_redis
 
         if bookmark.last_id and bookmark.last_time:  # last read spot exists
@@ -1001,6 +1000,7 @@ class PlaybackDatabase(ServerDatabase):
             else:
                 # Redis uses the prefix "(" to represent an exclusive interval for XRANGE
                 response = red.xrange('stream:'+stream, min='('+last_read_id, max=max_read_id)
+                print("[{}] LAST: {}, SINCE: {}, MAX: {}".format(stream, last_read_id, h(time_since_last), max_read_id))
 
         else:  # no last read spot
             t1 = time()
