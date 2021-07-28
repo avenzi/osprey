@@ -4,7 +4,7 @@ function log(msg, level=0) {
     if (level == 1) {
         color = 'blue';
     } else if (level == 2) {
-        color = 'orange';
+        color = 'orangered';
     } else if (level == 3) {
         color = 'red';
         weight = 'bold'
