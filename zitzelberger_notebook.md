@@ -37,6 +37,8 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ​	To begin, I added another button to the control center: "Wipe." This manually wipes the contents of the current database file, if live. I need this to clear the current database in the event that the automatic wipe fails, as was the case for the large database file I created yesterday. I also added some clarity to the log messages on the browser, differentiating between the 4 different log levels: log, info, warn, and error. Each has a different color and font weight.
 
+​	I then went to try and configure the Raspberry Pi's Sense Hat to transmit the data from its joystick as a method of categorization, but I'm having a lot of trouble getting it to work with my multithreaded and multiprocessed system. For some reason the event triggers just don't go through to the separate process that the SenseStreamer is running on
+
 ##### July 26th, 2021:
 
 ​	I added a hover tool to the EEG headplots that shows which channel each coordinate corresponds to - will be helpful in determining how to correctly rewire the electrode cap. 
