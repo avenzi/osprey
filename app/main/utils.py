@@ -77,14 +77,11 @@ def set_database(file=None):
     sid = session.sid  # current session ID
     ctrl = current_app.database_controller
 
-    print('here1')
     ctrl.remove(sid)  # remove current database
-    print('here2')
     if file:
         ctrl.new_playback(file=file, ID=session.sid)
     else:
         ctrl.new_live(ID=session.sid)
-    print('here3')
 
     database = ctrl.get(session.sid)
     print("SET DATABASE:", database)
