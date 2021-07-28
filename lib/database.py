@@ -237,6 +237,11 @@ class Database:
         self.exit = False  # flag to determine when to stop running if looping
         self.start_time = time()*1000  # real time that streaming is started (ms)
 
+        # Decimal place multiplication factor for all floats in data set.
+        # Redis's INT type maxes out at 2^63, which is has 19 digits.
+        # This allows 12 decimal places for the integer portion before exceeding the smallest int size
+        self.decimal_cap = 6
+
         # Index to track last read/write position in the database for each data column
         self.bookmarks = Bookmarks()
 
@@ -307,12 +312,38 @@ class Database:
             return data.decode('utf-8')
         return data
 
-    def to_float(self, string):
-        """ Converts a string to a float IF POSSIBLE otherwise no change """
+    def float_to_redis(self, num, compress=True):
+        """ Converts a float into an int to be stored in Redis. Convert back with redis_to_float"""
+        return int(num * (10**self.decimal_cap))
+
+    def data_to_redis(self, data):
+        """ Converts a data dictionary of floats to ints to be stored in redis """
+        for key in data.keys():
+            for i in range(len(data[key])):
+                data[key][i] = self.float_to_redis(data[key][i])
+
+    def redis_to_float(self, string, decompress=True):
+        """ Converts an integer string from redis to a float IF POSSIBLE otherwise no change """
         try:
-            return float(string)
+            if decompress:
+                return float(int(string) / (10**self.decimal_cap))
+            else:
+                return float(string)
         except:
             return string
+
+    def redis_to_data(self, response):
+        """ Converts a response from Redis to a python dictionary of lists of floats """
+        output = {}
+        for data in response:
+            d = data[1]  # data dict. data[0] is the timestamp ID
+            for key in d.keys():
+                k = self.decode(key)  # key might not be decoded (if using bytes_redis), but it needs to be regardless
+                if output.get(k):
+                    output[k].append(self.redis_to_float(d[key]))  # convert to float and append
+                else:
+                    output[k] = [self.redis_to_float(d[key])]
+        return output
 
     @catch_database_errors
     def get_elapsed_time(self, stream):
@@ -368,7 +399,7 @@ class Database:
                     d[key] = data[key][i]
                 time_id = self.time_to_redis(data['time'][i])  # redis time stamp in which to insert
                 redis_id = self.validate_redis_time(time_id, stream)
-                pipe.xadd('stream:'+stream, d, id=redis_id)
+                pipe.xadd('stream:'+stream, self.data_to_redis(d), id=redis_id)
 
             pipe.execute()
         else:  # assume this is a single data point
@@ -450,30 +481,8 @@ class Database:
             bookmark.release()  # release lock
             return  # return nothing. first data point was read for reference.
 
-        # create final output dict
-        output = {}
-
-        # loop through stream data and convert if necessary
-
-        # I hate this
-        if decode:
-            for data in response:
-                d = data[1]  # data dict. data[0] is the timestamp ID
-                for key in d.keys():
-                    if output.get(key):
-                        output[key].append(self.to_float(d[key]))  # convert to float and append
-                    else:
-                        output[key] = [self.to_float(d[key])]
-
-        else:
-            for data in response:
-                d = data[1]  # data dict. data[0] is the timestamp ID
-                for key in d.keys():
-                    k = self.decode(key)  # key won't be decoded, but it needs to be
-                    if output.get(k):
-                        output[k].append(self.to_float(d[key]))  # convert to float and append
-                    else:
-                        output[k] = [self.to_float(d[key])]
+        # convert redis response to python dict
+        output = self.redis_to_data(response)
 
         if to_json:
             result = json.dumps(output)
@@ -503,7 +512,7 @@ class Database:
             if key == 'time':
                 new_data['time'] = data['time']
             else:
-                new_data[key] = ','.join(str(val) for val in data[key])
+                new_data[key] = ','.join(str(round(val, 6)) for val in data[key])
 
         time_id = self.time_to_redis(data['time'])  # redis time stamp in which to insert
         redis_id = self.validate_redis_time(time_id, stream)
@@ -559,7 +568,7 @@ class Database:
 
         for key in keys:
             vals = data[key].split(',')
-            output[key] = [self.to_float(val) for val in vals]
+            output[key] = [self.redis_to_float(val, False) for val in vals]
 
         if to_json:
             del output['time']  # remove time column for json format
@@ -1031,26 +1040,8 @@ class PlaybackDatabase(ServerDatabase):
         # create final output dict
         output = {}
 
-        # loop through stream data and convert if necessary
-
-        # I hate this
-        if decode:
-            for data in response:
-                d = data[1]  # data dict. data[0] is the timestamp ID
-                for key in d.keys():
-                    if output.get(key):
-                        output[key].append(self.to_float(d[key]))  # convert to float and append
-                    else:
-                        output[key] = [self.to_float(d[key])]
-        else:
-            for data in response:
-                d = data[1]  # data dict. data[0] is the timestamp ID
-                for key in d.keys():
-                    k = self.decode(key)  # key won't be decoded, but it needs to be
-                    if output.get(k):
-                        output[k].append(self.to_float(d[key]))  # convert to float and append
-                    else:
-                        output[k] = [self.to_float(d[key])]
+        # convert redis response to python dict
+        output = self.redis_to_data(response)
 
         t4 = time()
 
@@ -1120,7 +1111,7 @@ class PlaybackDatabase(ServerDatabase):
 
         for key in keys:
             vals = data[key].split(',')
-            output[key] = [self.to_float(val) for val in vals]
+            output[key] = [self.redis_to_float(val, False) for val in vals]
 
         if to_json:
             del output['time']  # remove time column for json format
