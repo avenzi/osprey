@@ -4,6 +4,9 @@ from signal import pause
 x = 3
 y = 3
 sense = SenseHat()
+print('released: ', ACTION_RELEASED)
+print('held: ', ACTION_HELD)
+print('pressed: ', ACTION_PRESSED)
 
 def clamp(value, min_value=0, max_value=7):
     return min(max_value, max(min_value, value))
@@ -28,8 +31,9 @@ def pushed_right(event):
     if event.action != ACTION_RELEASED:
         x = clamp(x + 1)
 
-def refresh():
+def refresh(event):
     sense.clear()
+    print(event.action)
     print('setting: x: {}, y: {}'.format(x, y))
     sense.set_pixel(x, y, 255, 255, 255)
 
