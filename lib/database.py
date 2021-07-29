@@ -696,6 +696,15 @@ class ServerDatabase(Database):
         """ Manually kills the redis process by stopping activity on the port it's using """
         system("sudo fuser -k {}/tcp".format(self.port))
 
+    @catch_database_errors
+    def memory_usage(self, stream=None):
+        """ Gets the total memory usage of the given stream, or the whole database if None """
+        if stream:  # get memory of this stream
+            size = self.redis.memory_usage('stream:'+stream)
+        else:  # get total memory
+            size = self.redis.info('memory')['used_memory']
+        return int(size)
+
 
 class LiveDatabase(ServerDatabase):
     """
@@ -818,15 +827,6 @@ class LiveDatabase(ServerDatabase):
         """ Returns time since last save in integer seconds """
         last_save = self.redis.execute_command("LASTSAVE")  # returns a datetime object
         return int(time() - last_save.timestamp())
-
-    @catch_database_errors
-    def memory_usage(self, stream=None):
-        """ Gets the total memory usage of the given stream, or the whole database if None """
-        if stream:  # get memory of this stream
-            size = self.redis.memory_usage('stream:'+stream)
-        else:  # get total memory
-            size = self.redis.info('memory')['used_memory']
-        return int(size)
 
     @catch_database_errors
     def get_start_time(self):
