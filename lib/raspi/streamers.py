@@ -32,7 +32,6 @@ class TestStreamer(Streamer):
         self.database.write_data(self.id, data)
 
 
-
 class SenseStreamer(Streamer):
     def __init__(self, *args):
         super().__init__(*args)
@@ -59,7 +58,7 @@ class SenseStreamer(Streamer):
         self.database.write_data(self.id, data)
 
         # get joystick data
-        data = {'time': [], 'button': [], 'color':[]}
+        data = {'time': [], 'button': [], 'color': []}
         for event in self.sense.stick.get_events():
             if event.action == 'pressed':
                 data['time'].append(event.timestamp*1000)

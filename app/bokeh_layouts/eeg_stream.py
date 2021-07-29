@@ -189,7 +189,6 @@ var current = figure.x_range.end
 
 var end = source.data['time'][source.data['time'].length-1]
 var start = source.data['time'][0]
-
 var diff = end - current
 if (diff > 0 && diff < end-start) {
     var slide = setInterval(function(){
@@ -202,7 +201,7 @@ if (diff > 0 && diff < end-start) {
 
     setTimeout(function(){
         clearInterval(slide)
-        figure.x_range.start = start + diff
+        figure.x_range.start = start
         figure.x_range.end = end
     }, duration)
 } else {

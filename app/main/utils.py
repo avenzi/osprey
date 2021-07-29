@@ -12,6 +12,8 @@ from os.path import isfile, join
 from app.main import socketio
 from lib.database import DatabaseError, DatabaseTimeoutError, DatabaseBusyLoadingError, DatabaseConnectionError
 
+# todo: make the logs in the browser reflect an actual log file on the server, and add the ability to download it.
+
 
 def log(msg, level=0, everywhere=False):
     """
