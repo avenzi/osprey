@@ -96,7 +96,7 @@ $(document).ready(function() {
         // data is a list of objects with info on each stream
         $('.streams ul').empty()
         data.forEach(function(info) {
-            $('.streams ul').append(`<li><a href='/stream?group=${info['name']}'>${info['name']}</a></li>`);
+            $('.streams ul').append(`<li><a href='/stream?group=${info.name]}'>${info.name}</a></li>`);
         });
     });
 
