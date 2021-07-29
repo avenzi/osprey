@@ -12,7 +12,7 @@ from app.main.utils import (
     log, info, warn, error, catch_errors,
     set_database, get_database, set_button,
     update_pages, update_files, update_buttons, request_update,
-    check_filename
+    check_filename, bytes_to_human
 )
 
 
@@ -170,7 +170,7 @@ def wipe():
         error("Cannot wipe contents of playback file - use the 'Delete' button instead to remove the file.")
         return
     database.wipe()
-    warn("Wiped contents of database.")
+    warn("Wiped all data from streams.")
     refresh()
 
 
@@ -240,7 +240,8 @@ def status():
     data = {
         'source': database_source(db),
         'streaming': database_status(db),
-        'save': database_save_time(db)
+        'save': database_save_time(db),
+        'memory': database_memory_usage(db)
     }
     socketio.emit('update_status', data, namespace='/browser', room=request.sid)
 
@@ -297,5 +298,19 @@ def database_save_time(database):
             return blank
     except:
         return blank
+
+
+def database_memory_usage(database):
+    """ Total memory usage of the database """
+    blank = "---"
+    if not database:
+        return blank
+    try:
+        size = database.memory_usage()
+        return bytes_to_human(size)
+
+    except:
+        return blank
+
 
 

@@ -135,6 +135,7 @@ $(document).ready(function() {
         $("#source").html(data.source);
         $("#streaming").html(data.streaming);
         $("#save").html(data.save);
+        $("#memory").html(data.memory);
     });
 
 

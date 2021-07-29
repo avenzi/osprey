@@ -1,6 +1,7 @@
 from flask import current_app, session, request
 
 from re import match
+from math import log
 from functools import wraps
 from traceback import print_exc
 from time import sleep
@@ -105,6 +106,29 @@ def check_filename(file):
     """ validated syntax of file name """
     if not match(r"^[0-9a-zA-Z_:\-.]+$", file):
         raise Exception("Invalid file name. May only contain digits, letters, underscore, hyphen, and period.")
+
+
+def bytes_to_human(size):
+    """
+    <size> A size in number of bytes.
+    Returns human readable string representation.
+    """
+    units = ['bytes', 'KB', 'MB', 'GB', 'TB', 'PB']
+    if size <= 0:
+        order = 0
+    else:
+        order = int(log(size, 1000))
+
+    if order > 5:  # more than 1000 PB lol
+        order = 5
+
+    quotient = size / 1000 ** order
+    unit = units[order]
+
+    if order == 0:
+        return "{:.0f} {}".format(quotient, unit)
+    else:
+        return "{:.1f} {}".format(quotient, unit)
 
 
 def request_update():
