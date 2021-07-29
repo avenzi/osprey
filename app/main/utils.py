@@ -1,7 +1,7 @@
 from flask import current_app, session, request
 
 from re import match
-from math import log
+import math
 from functools import wraps
 from traceback import print_exc
 from time import sleep
@@ -117,7 +117,7 @@ def bytes_to_human(size):
     if size <= 0:
         order = 0
     else:
-        order = int(log(size, 1000))
+        order = int(math.log(size, 1000))
 
     if order > 5:  # more than 1000 PB lol
         order = 5
