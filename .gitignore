@@ -2,24 +2,21 @@
 __pycache__
 *.pyc
 
+# Ignore .idea
+.idea
+
 # Ignore virtual environment
 venv/*
 
 # ignore local files
 local/*
 
-# Ignore Log file
-logs/*
-*.log
-
 # Ignore data
 data/live/*
 data/saved/*
+
 # keep empty directories with a .keep file
 !*/.keep
-
-# Ignore .idea
-.idea
 
 # Ignore deploy script
 deploy.sh
