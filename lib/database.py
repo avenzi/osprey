@@ -820,6 +820,15 @@ class LiveDatabase(ServerDatabase):
         return int(time() - last_save.timestamp())
 
     @catch_database_errors
+    def memory_usage(self, stream=None):
+        """ Gets the total memory usage of the given stream, or the whole database if None """
+        if stream:  # get memory of this stream
+            size = self.redis.memory_usage('stream:'+stream)
+        else:  # get total memory
+            size = self.redis.info('memory')['used_memory']
+        return size
+
+    @catch_database_errors
     def get_start_time(self):
         """ Get the time that streaming started form the database """
         response = self.redis.get("START_TIME")  # get START_TIME key
