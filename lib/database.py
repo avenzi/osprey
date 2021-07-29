@@ -302,9 +302,11 @@ class Database:
         # todo: can this be more robust? Other possible formats?
         #  I tried to use "hasattr(type(data), '__iter__')" but that
         #     returns True for strings and byte arrays.
-        if isinstance(data, (list, ndarray, tuple)):
-            return True
-        return False
+        return isinstance(data, (list, ndarray, tuple))
+
+    def valid_numerical(self, data):
+        """ Checks if the given data list is all a valid numerical data type """
+        return all(isinstance(val, (int, float, float64)) for val in data)
 
     def decode(self, data):
         """ Decodes data if necessary """
@@ -312,8 +314,11 @@ class Database:
             return data.decode('utf-8')
         return data
 
-    def data_to_redis(self, num, compress=True):
-        """ Converts a float into an int to be stored in Redis. Convert back with redis_to_data"""
+    def data_to_redis(self, num):
+        """
+        Converts a float into an int to be stored in Redis.
+        Convert back with redis_to_data using decompress=True
+        """
         if type(num) in [int, float, float64]:
             return int(num * (10**self.decimal_cap))
         return num
@@ -321,7 +326,7 @@ class Database:
     def redis_to_data(self, string, decompress=True):
         """ Converts an integer string from redis to a float IF POSSIBLE otherwise no change """
         try:
-            if decompress:
+            if decompress:  # decompress from truncated integer format to float
                 return float(int(string) / (10**self.decimal_cap))
             else:
                 return float(string)
@@ -505,17 +510,15 @@ class Database:
         new_data = {}
         for key in data.keys():
             if key == 'time':
-                new_data['time'] = data['time']
+                new_data['time'] = round(data['time'], self.decimal_cap)
+            elif self.valid_numerical(data[key]):  # all can be rounded
+                new_data[key] = ','.join(str(round(val, self.decimal_cap)) for val in data[key])
             else:
                 new_data[key] = ','.join(str(val) for val in data[key])
 
         time_id = self.time_to_redis(data['time'])  # redis time stamp in which to insert
         redis_id = self.validate_redis_time(time_id, stream)
-        try:
-            self.redis.xadd('stream:' + stream, new_data, id=redis_id)
-        except Exception as e:
-            print('time_ID: {}, redis_id: {}'.format(time_id, redis_id))
-            raise e
+        self.redis.xadd('stream:' + stream, new_data, id=redis_id)
 
     @catch_database_errors
     def read_snapshot(self, stream, to_json=False, decode=True):
