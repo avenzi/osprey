@@ -115,7 +115,6 @@ def update_pages(room=None):
     """
     database = get_database()
     if not database:
-        print("NO DATABASE FOUND FOR PAGE UPDATE")
         return  # no database connection - do nothing
 
     try:  # attempt to read list of group names
