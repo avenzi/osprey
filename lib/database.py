@@ -826,7 +826,7 @@ class LiveDatabase(ServerDatabase):
             size = self.redis.memory_usage('stream:'+stream)
         else:  # get total memory
             size = self.redis.info('memory')['used_memory']
-        return size
+        return int(size)
 
     @catch_database_errors
     def get_start_time(self):
