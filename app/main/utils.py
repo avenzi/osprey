@@ -51,8 +51,6 @@ def log(msg, level=0, everywhere=False):
         socketio.emit('log', data, namespace='/browser', room=request.sid)
 
 
-
-
 def info(msg, everywhere=False):
     """ Log an info message in the browser """
     log(msg, level=1, everywhere=everywhere)  # log level 1

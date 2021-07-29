@@ -457,7 +457,6 @@ class Streamer(WorkerNode):
         """ Runs main execution loop """
         self.init()  # initialize all connections
         self.update()  # send info to database
-        self.socket.emit('init', self.id, namespace='/streamers')  # notify server
 
         # start immediately if database is already streaming
         if self.database.is_streaming():
@@ -552,7 +551,7 @@ class Streamer(WorkerNode):
         """ Initialize connections """
         # register each namespace
         for namespace in self.namespaces:
-            self.register_namespace(StreamerNamespace, namespace)
+            self.register_namespace(Namespace, namespace)
 
         # get connection to server socketIO
         self.connect_socket()
@@ -671,6 +670,12 @@ class Analyzer(Streamer):
         Check if given stream is one of the targeted streams. If it is, copy it's info.
         If no stream ID is given, look through all info dicts currently on the database.
         """
+        # todo: Idea for reorganizing the system by which analyzers are updated about their targets.
+        #  Instead of having streamers emit a message to all analyzers, have each streamer (and analyzer)
+        #  join a room unique to them, uniquely identified by the group and name.
+        #  Any Analyzer that targets this stream (or analyzer) should join that same room.
+        #  When the target updates, a message is sent to all other analyzers in that room.
+        print("GETTING TARGETS")
         if not self.database:
             self.debug("Attempted to get target from database, but database connection has not been initialized.".format(self))
             return
@@ -754,8 +759,6 @@ class Namespace(socketio.ClientNamespace):
         #self.streamer.log("{} disconnected from socketIO server".format(self.streamer.name))
         pass
 
-
-class StreamerNamespace(Namespace):
     def on_update(self):
         """ Update message from server """
         self.streamer.update()
