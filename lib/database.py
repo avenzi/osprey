@@ -638,7 +638,7 @@ class Database:
 
     @catch_database_errors
     def get_all_groups(self):
-        """ Gets a list of dictionaries containing name and ID info for all connected streams """
+        """ Gets a list of dictionaries containing name and ID info for all groups in the database """
         info = []
         for key in self.redis.execute_command('keys group:*'):
             info.append(self.redis.hgetall(key))
