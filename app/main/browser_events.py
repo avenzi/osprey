@@ -63,7 +63,11 @@ def stop():
     database.stop()
     if database.live:
         socketio.emit('stop', namespace='/streamers')  # send stop command to streamers
-        filename = database.save()  # save database file (if live) and wipe contents.
+        try:
+            filename = database.save()  # save database file (if live) and wipe contents
+        except Exception as e:
+            error("Failed automatic database export.")
+            raise e
         info('Session Exported to file: {}'.format(filename))
     else:  # playback
         log('Paused Playback')
