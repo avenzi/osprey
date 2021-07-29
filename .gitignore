@@ -10,6 +10,7 @@ venv/*
 
 # ignore local files
 local/*
+!local/logs/.keep
 
 # Ignore data
 data/live/*
