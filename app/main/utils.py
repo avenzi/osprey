@@ -115,6 +115,7 @@ def update_pages(room=None):
     """
     database = get_database()
     if not database:
+        print("NO DATABASE FOUND FOR PAGE UPDATE")
         return  # no database connection - do nothing
 
     try:  # attempt to read list of group names
@@ -129,6 +130,7 @@ def update_pages(room=None):
     if not room:  # if room not given, send to room ID of current request
         room = request.sid
     socketio.emit('update_pages', groups, namespace='/browser', room=room)
+    print("UPDATED PAGES")
 
 
 @catch_errors
