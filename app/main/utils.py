@@ -14,6 +14,8 @@ from lib.database import DatabaseError, DatabaseTimeoutError, DatabaseBusyLoadin
 
 # todo: make the logs in the browser reflect an actual log file on the server, and add the ability to download it.
 
+LOG_FILE = 'local/logs/server.log'
+
 
 def log(msg, level=0, everywhere=False):
     """
@@ -22,19 +24,32 @@ def log(msg, level=0, everywhere=False):
     If everywhere is True, broadcast to ALL browsers, even in different sessions.
     """
     msg = str(msg)  # if an exception, convert to string
+
+    if level == 0:
+        pre = ""
+    elif level == 1:
+        pre = "[INFO]"
+    elif level == 2:
+        pre = "[WARN]"
+    else:
+        pre = "[ERROR]"
+
+    # print warnings and errors to stdout
+    if level >= 2:
+        print("{}: {}".format(pre, msg))
+
+    # write to log file
+    with open(LOG_FILE, 'a') as file:
+        file.write("{}: {}\n".format(pre, msg))
+
+    # package log message and level to send to browser
     data = {'level': level, 'message': msg}
     if everywhere:
         socketio.emit('log', data, namespace='/browser')
     else:
         socketio.emit('log', data, namespace='/browser', room=request.sid)
 
-    if level in [0, 1]:
-        return
-    elif level == 2:
-        pre = "[WARN]"
-    else:
-        pre = "[ERROR]"
-    print("{}: {}".format(pre, msg))
+
 
 
 def info(msg, everywhere=False):
