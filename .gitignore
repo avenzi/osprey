@@ -8,8 +8,11 @@ __pycache__
 # Ignore virtual environment
 venv/*
 
-# ignore local files
+# ignore local files, but keep the empty logs directory
 local/*
+!local/logs/
+
+local/logs/*
 !local/logs/.keep
 
 # Ignore data
