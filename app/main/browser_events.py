@@ -306,9 +306,9 @@ def database_memory_usage(database):
         return "---"
     try:
         size = database.memory_usage()
-        return bytes_to_human(size)
-    except Exception as e:
-        print("ERR MEM: ", e.__class__.__name__, e)
+        available = database.memory_available()
+        return "{} / {}".format(bytes_to_human(size), bytes_to_human(available))
+    except:
         return 'err'
 
 

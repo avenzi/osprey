@@ -705,6 +705,11 @@ class ServerDatabase(Database):
             size = self.redis.info('memory')['used_memory']
         return int(size)
 
+    @catch_database_errors
+    def memory_available(self):
+        """ Gets the total memory available on the server """
+        return int(self.redis.info('memory')['total_system_memory'])
+
 
 class LiveDatabase(ServerDatabase):
     """
