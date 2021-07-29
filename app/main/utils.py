@@ -4,7 +4,7 @@ from re import match
 import math
 from functools import wraps
 from traceback import print_exc
-from time import sleep
+from time import sleep, time, strftime, localtime
 
 from os import listdir, system
 from os.path import isfile, join
@@ -25,6 +25,7 @@ def log(msg, level=0, everywhere=False):
     """
     msg = str(msg)  # if an exception, convert to string
 
+    t = strftime("[%a %b %m %H:%M:%S]", localtime())
     if level == 0:
         pre = ""
     elif level == 1:
@@ -36,11 +37,11 @@ def log(msg, level=0, everywhere=False):
 
     # print warnings and errors to stdout
     if level >= 2:
-        print("{}: {}".format(pre, msg))
+        print("{}{}: {}".format(t, pre, msg))
 
     # write to log file
     with open(LOG_FILE, 'a') as file:
-        file.write("{}: {}\n".format(pre, msg))
+        file.write("{}{}: {}\n".format(t, pre, msg))
 
     # package log message and level to send to browser
     data = {'level': level, 'message': msg}
