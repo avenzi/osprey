@@ -33,6 +33,14 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### July 29th, 2021: 
+
+​	I added a method to round the floats in write_snapshot() to the same precision as the other write methods. I don't think this will have as much of an impact since those value will still be stored as a comma-separated string, but it will at the very least reduce the string size. 
+
+​	I am now collecting another 20-minute data set to test the changed I've made on the real EEG and ECG streams. One thing I'm noticing is that the float truncating has actually eliminated the small-value noise that occurs when a signal is railed, and the data comes through as just all 0, which is an unexpected bonus. 
+
+​	I went ahead and added another status display on the control page to show the total memory used by the database. This will be useful in making sure that we can manually stop the stream when it gets too big.
+
 ##### July 28th, 2021:
 
 ​	Alright I finally got the Sense Hat button working. The trick was to use the sense.stick.get_events() method rather than setting trigger methods like I was trying to do yesterday. get_events() just gets a list of all events taken since the method was last called, which I can then parse and write to the database. The joystick can be pressed in 5 different ways: Up, Down, Left, Right, and Middle (just pressed head-on). This data along with timestamps of when the button was pressed and a color-code is sent to the server and stored. In the browser, I wrote a quick Bokeh plot that displays the times of each button press and the color associated with that button press. Seems to work well enough, though the hover tooltip is annoying to use because the data keeps shifting as time moves forward. Also the total size of the time-window that the Bokeh plot uses is based on the number of data points, not a fixed length of time. This isn't a problem for consistently sampled data, but for the button presses it looks a little wonky. There doesn't seem to be a way to use an AjaxDataSource to fix the x-range to a specific time window without updating it constantly in the browser, so I just decided not to mess with it. Instead I just added a constant invisible line which takes data from the other Sense Hat sensor data to keep the spacing consistent.
