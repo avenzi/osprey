@@ -3,6 +3,7 @@ from flask import current_app, session, request
 from re import match
 from functools import wraps
 from traceback import print_exc
+from time import sleep
 
 from os import listdir, system
 from os.path import isfile, join
@@ -106,6 +107,23 @@ def check_filename(file):
         raise Exception("Invalid file name. May only contain digits, letters, underscore, hyphen, and period.")
 
 
+def request_update():
+    """ Sends an update request to all streamers """
+    database = get_database()
+    if not database:
+        return  # no database connection - do nothing
+    if not database.live:
+        return  # database is in playback mode.
+
+    socketio.emit('update', namespace='/streamers')
+
+    # hopefully give enough time to let the streamers send their update to the database
+    # todo: if we want to have confirmation of an update, we must check the info:updated column in redis and check the timestamp.
+    #  Streamers can't send a message through socketIO because they will be received with no way
+    #  to know what session to send that info to, and we don't want that info to get sent to a session with a non-live database.
+    sleep(0.5)
+
+
 @catch_errors
 def update_pages(room=None):
     """
@@ -129,7 +147,6 @@ def update_pages(room=None):
     if not room:  # if room not given, send to room ID of current request
         room = request.sid
     socketio.emit('update_pages', groups, namespace='/browser', room=room)
-    print("UPDATED PAGES")
 
 
 @catch_errors

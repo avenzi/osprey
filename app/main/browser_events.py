@@ -11,7 +11,7 @@ from app.main import socketio
 from app.main.utils import (
     log, info, warn, error, catch_errors,
     set_database, get_database, set_button,
-    update_pages, update_files, update_buttons,
+    update_pages, update_files, update_buttons, request_update,
     check_filename
 )
 
@@ -67,12 +67,6 @@ def stop():
         info('Session Exported to file: {}'.format(filename))
     else:  # playback
         log('Paused Playback')
-
-    socketio.emit('update', namespace='/streamers')  # request info update from streamers
-    sleep(0.1)  # hopefully give time for database to get updates from streamers
-    # todo: if we want to have confirmation of an update, we must check the info:updated column in redis and check the timestamp
-    #  we can't sent a message through socketIO because they will be received in a different session with no way
-    #  to know what session to send that info to.
     refresh()
 
 
@@ -80,6 +74,7 @@ def stop():
 @catch_errors
 def refresh():
     """ Refresh all data displayed in browser index """
+    request_update()
     update_pages()
     update_files()
     update_buttons()
@@ -163,7 +158,10 @@ def delete(filename):
 @socketio.on('wipe', namespace='/browser')
 @catch_errors
 def wipe():
-    """ Wipes the contents of the database, if live """
+    """
+    Wipes the data contents of the database, if live.
+    Then requests an update from the streamers.
+    """
     database = get_database()
     if not database:
         error("No database found")
