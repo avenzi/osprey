@@ -271,7 +271,7 @@ def database_status(database):
         return "Disconnected"
     except Exception as e:
         print("Database Status Error: {}: {}".format(e.__class__.__name__, e))
-        return "---"
+        return "err"
 
     if database.is_streaming():
         if database.live:
@@ -297,20 +297,19 @@ def database_save_time(database):
         else:
             return blank
     except:
-        return blank
+        return "err"
 
 
 def database_memory_usage(database):
     """ Total memory usage of the database """
-    blank = "---"
     if not database:
-        return blank
+        return "---"
     try:
         size = database.memory_usage()
         return bytes_to_human(size)
-
-    except:
-        return blank
+    except Exception as e:
+        print("ERR MEM: ", e.__class__.__name__, e)
+        return 'err'
 
 
 
