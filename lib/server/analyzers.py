@@ -336,7 +336,7 @@ class EEGFourier(SignalFourier):
         # They appear to be having a significant impact on CPU usage.
         # The process of writing the data to the database still takes longer, but
         # it looks like the FFT is the CPU intensive part, especially with high FFT time windows.
-        sleep(0.5)
+        sleep(1)
 
     def headplot(self, fourier_data):
         """ Calculates headplot values, then dumps it to a new stream """
