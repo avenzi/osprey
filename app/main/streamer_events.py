@@ -28,7 +28,6 @@ def disconnect():
 def streamer_update(stream_id):
     """ notified that the streamer's info has updated """
     socketio.emit('check_database', stream_id, namespace='/analyzers')
-    print("[Sent check_database message]")
     # todo: at the moment this doesn't do anything because there is no specific room for the live stream,
     #  and this handler doesn't know what sessions are viewing the live stream.
     #  This will only work once these rooms have been implemented, see the comment in video_stream_events.py

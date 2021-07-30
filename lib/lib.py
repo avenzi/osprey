@@ -675,7 +675,6 @@ class Analyzer(Streamer):
         #  join a room unique to them, uniquely identified by the group and name.
         #  Any Analyzer that targets this stream (or analyzer) should join that same room.
         #  When the target updates, a message is sent to all other analyzers in that room.
-        print("GETTING TARGETS")
         if not self.database:
             self.debug("Attempted to get target from database, but database connection has not been initialized.".format(self))
             return
