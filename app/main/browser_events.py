@@ -306,6 +306,12 @@ def database_save_time(database):
 
 def database_memory_usage(database):
     """ Total memory usage of the database """
+    # todo: This metric is slightly disingenuous, as it displays the total memory usage of Redis
+    #  alone out of the total memory available in the system. Importantly the memory used does not
+    #  include that of any other processes, like the many python processes running alongside.
+    #  This means that the total memory "available for the Redis server" is less than that displayed.
+    #  To fix this, should we display the total memory used on the system as a whole, not just by Redis?
+    #  Or maybe display Redis's memory usage, but only display the memory not being used by other processes?
     if not database:
         return "---"
     try:
