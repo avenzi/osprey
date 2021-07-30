@@ -1141,10 +1141,10 @@ class PlaybackDatabase(ServerDatabase):
         Not meant to be called directly. Used by other read_data() methods.
         Assumes that the bookmark for this stream already exists and it's lock has been acquired.
         Assumes that normal redis is being used (not bytes_redis).
-        If no 'sample_rate' key is found for this stream, assumes 10Hz.
-            - This will over-downsample streams over 10Hz,
-                under-downsample streams between 10Hz/playback_speed and 10Hz,
-                and streams under 10Hz/playbackspeed will be unaffected.
+        If no 'sample_rate' key is found for this stream, assumes 100Hz.
+            - This will over-downsample streams over 100Hz,
+                under-downsample streams between 100Hz/playback_speed and 100Hz,
+                and streams under 100Hz/playbackspeed will be unaffected.
         """
         # TODO: implement downsampling even for live reading. This would require setting some
         #  kind of frequency cap that downsamples anything above like 10x that cap down to that cap.
@@ -1155,7 +1155,7 @@ class PlaybackDatabase(ServerDatabase):
         if not bookmark.sample_rate:  # if no sample rate, find it
             bookmark.sample_rate = self.get_info(stream, 'sample_rate')
             if not bookmark.sample_rate:  # no sample rate given in info data column
-                bookmark.sample_rate = 10*self.playback_speed  # downsample to 10Hz
+                bookmark.sample_rate = 100*self.playback_speed  # downsample to 100Hz
             else:
                 bookmark.sample_rate = int(bookmark.sample_rate)
 
