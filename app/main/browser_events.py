@@ -313,7 +313,7 @@ def database_memory_usage(database):
     #  To fix this, should we display the total memory used on the system as a whole, not just by Redis?
     #  Or maybe display Redis's memory usage, but only display the memory not being used by other processes?
 
-    # Todo: implement a fail-safe to automaticlaly stop the streams if memory usage gets to high?
+    # Todo: implement a fail-safe to automatically stop the streams if memory usage gets to high?
 
     if not database:
         return "---"

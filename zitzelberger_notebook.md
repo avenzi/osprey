@@ -33,6 +33,14 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### July 31st, 2021:
+
+​	Today I started collecting real data with EEG and ECG - I've decided not to do video for this first data set. I had my grandma inject the electrode gel into the head cap, but it took a bit of work to get the amount of gel right so that the connections were solid. 
+​	Most of the problems that I see are just related to noise in the signals - when I use my computer mouse I see intermittent high voltage spikes in the EEG data. I believe this is most likely electrical signals from the mouse, not anything that my brain is doing. Although, turning my head does not produce any discernable noise, probably due to the fact that the electrode cap is very well secured. It is also quite comfortable too, which is great. I see no problem with wearing it for a number of hours, though I suppose we will have to see.
+​	Another anomaly I saw was that at one point the Cyton board started transmitting a square wave through all channels, and I had to restart it. This happened once independently for each board - I have no idea what is causing it.
+
+​	I got finally got about 45 minutes into the stream when my family decided that it would be a great time to start a family zoom call and completely saturate the upload bandwidth of the network. Great. I guess this was just a preliminary test stream.
+
 ##### July 30th, 2021
 
 ​	Finally was able to fix the downsampling issue. I still haven't yet implemented a way for the database to know the exact sample rate of a dataset and downsample accordingly because I think there is too much to analyze - for example, the EKG data cannot be downsampled as much or risk losing the waveform as I just discovered. But the EEG data, on the other hand, while using the same sample rate, can be downsampled further because the visual inspection of the data does not require high resolution of the high frequencies in the FFT. I think the best way to handle this might be to add an interactive choice of how much downsampling to apply, though maybe with a global cap to prevent overwhelming the database and browser. Maybe further down the line, a better solution might be to allow zooming in on portions of the dataset, which could then be retrieved at higher resolutions. Implementing this would be tricky, because it requires information from the Bokeh plot to be transmitted back to the server, which (at the moment) I don't believe is even possible. It remains to be seen, however, if that is something I could do with a Bokeh server, though I suspect not. If it turns out not to be possible in either case, the only thing I can think of would be to add some buttons that interact with the SocketIO in the browser to transmit different sets of data at different resolutions when paused, but I have a gut feeling that that would be super jank and not very stable.
