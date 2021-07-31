@@ -33,6 +33,12 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### July 30th, 2021
+
+​	Finally was able to fix the downsampling issue. I still haven't yet implemented a way for the database to know the exact sample rate of a dataset and downsample accordingly because I think there is too much to analyze - for example, the EKG data cannot be downsampled as much or risk losing the waveform as I just discovered. But the EEG data, on the other hand, while using the same sample rate, can be downsampled further because the visual inspection of the data does not require high resolution of the high frequencies in the FFT. I think the best way to handle this might be to add an interactive choice of how much downsampling to apply, though maybe with a global cap to prevent overwhelming the database and browser. Maybe further down the line, a better solution might be to allow zooming in on portions of the dataset, which could then be retrieved at higher resolutions. Implementing this would be tricky, because it requires information from the Bokeh plot to be transmitted back to the server, which (at the moment) I don't believe is even possible. It remains to be seen, however, if that is something I could do with a Bokeh server, though I suspect not. If it turns out not to be possible in either case, the only thing I can think of would be to add some buttons that interact with the SocketIO in the browser to transmit different sets of data at different resolutions when paused, but I have a gut feeling that that would be super jank and not very stable.
+
+​	Now I'm just sitting back and passively collecting data. I've thought about doing a sample where I look at different colors and press the appropriate button on the Pi, though I don't know how well that will turn out. I suppose we shall see.
+
 ##### July 29th, 2021: 
 
 ​	I added a method to round the floats in write_snapshot() to the same precision as the other write methods. I don't think this will have as much of an impact since those value will still be stored as a comma-separated string, but it will at the very least reduce the string size. 
@@ -47,7 +53,7 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ​	While recording another data set, I noticed the total-memory-used metric is slightly disingenuous, as it displays the total memory usage of Redis alone out of the total memory available in the system. Importantly the memory used does not include that of any other processes, like the many python processes running alongside. This means that the total memory "available for the Redis server" is less than that displayed. To fix this, should we display the total memory used on the system as a whole, not just by Redis? Or maybe display Redis's memory usage, but only display the memory not being used by other processes? Not a big deal, but something to tweak in the future.
 
-​	I was able to record about an hour of data before my internet connection did the thing again. Looks like I'm done for the night. 
+​	I was able to record about an hour of data before my internet connection did the thing again. Looks like I'm done for the night. The hour of playback only took about 1.4GB, so I think the optimizations I've implemented have heavily payed off. Not quite as much as I'd like, though.
 ​	While reviewing the data, I noticed in playback that the waveform if the ECG was not discernable due to the downsampling I implemented. I may need to revisit that and adjust how much downsampling is performed. I'll start working on that tomorrow.
 
 ##### July 28th, 2021:
@@ -876,7 +882,7 @@ Did more research to answer my questions from yesterday:
 1) Yes. 
 	On UNIX:  os.sched_setaffinity(pid, mask). 
 	On Windows: ctypes.windll.kernel32.SetProcessAffinityMask(pid, cpu_mask)
-I'm not sure if the pid on the Windows version is actually the pid or something else. Doesn't matter, though, since this is going to be run on Ubuntu. I have also noticed that not manually setting the cpu affinity results in everything being run on one core. Apparently this is because some modules like numpy mess with cpu affinity. I will have to be sure to watch out for this.
+	I'm not sure if the pid on the Windows version is actually the pid or something else. Doesn't matter, though, since this is going to be run on Ubuntu. I have also noticed that not manually setting the cpu affinity results in everything being run on one core. Apparently this is because some modules like numpy mess with cpu affinity. I will have to be sure to watch out for this.
 
 2) I can run more processes than CPU cores available, and it looks like the extra processed are just scheduled as if they were threads, but on the machine level rather than on the Python level. I couldn't find a complete answer, but from what I have read I believe that running threads on each process would be less costly that running extra processes.
 
