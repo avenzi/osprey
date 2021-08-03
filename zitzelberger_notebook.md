@@ -33,6 +33,26 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### August 3rd, 2021:
+
+​	Today and yesterday I've just been collecting data. I've had a few hiccups here and there, and they seem to be related to sudden disconnections to the server or Raspis. I don't think it's an issue with the app itself because every time it's happened, I have also lost my ssh connection at the same time, so it's likely a network thing. What I still need to figure out, though, is how to recover from it automatically. The problem is that I still don't know what's going on. I checked the logs afterward and there were no errors, just a sudden disconnect. 
+
+​	However, since I am only streaming EKG, EEG, and Sense Hat data, the resulting memory used is much smaller than before. I am currently at 90 minutes of data and using 800MB. 
+
+​	At about the 100 minute mark I checked the EEG, and it was doing the square wave thing again. I don't know how long it had been doing it - maximum 20 minutes. I restarted the streams, and that seemed to fix it. Still don't know the cause of this, but I do not think it has anything to do with the signal analysis. I would like to verify this behavior with the OpenBCI GUI, but then I can't do both EEG and EKG at once.
+
+​	Another thing I noticed is that I sorely need the ability to load the set Filter settings between sessions into the browser. The analyzer keeps the settings as long as the python process remains active, but the Bokeh layout doesn't load the widget values.
+
+​	Roughly 45 minutes into the next dataset, I noticed that the FP1 EEG channel went dark. I figured maybe the gel had dried out, so I added some more but it didn't help. It also wasn't getting any noise so I'm not sure what the deal was. I'm going to leave it for now and see if it comes back when I restart the Cyton for the next data set. After 90 minutes in this second dataset, more channels went dark: T7, C4, P3, O1. I will stop at 2 hours and restart the stream.
+
+​	After restarting the stream (which cycles the Cyton board's streaming states), the channels all came back. This is another thing I would like to check using the OpenBCI GUI to see if it is a problem related to my particular setup.
+
+​	After 40 mins into the 3rd dataset, the square waves came back, this time on the ECG. Ugh. I restarted again, and after 15 minutes the mysterious sudden-stop thing happened. Again, nothing in the logs and the ssh sessions were terminated at the same time. This is very frustrating.
+
+​	Overall, I have collected about 6 hours of data today. I think I'll call it for now and continue tomorrow. I want to try to add some better logging to maybe catch what is happening with these sudden stops, so we will see how that goes.
+
+
+
 ##### July 31st, 2021:
 
 ​	Today I started collecting real data with EEG and ECG - I've decided not to do video for this first data set. I had my grandma inject the electrode gel into the head cap, but it took a bit of work to get the amount of gel right so that the connections were solid. 
