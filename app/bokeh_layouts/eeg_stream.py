@@ -349,7 +349,7 @@ if (low < high) {
         #   column with it's band name, which contains the color data.
         mapper = log_cmap(field_name=band, palette=mapper_palette, low=mapper_low, high=mapper_high)
         circle = fig.circle(x='x', y='y', source=headplot_source, color=mapper, size=20)
-        fig.xaxis.ticker, fig.xaxis.ticker = [], []  # disable axes
+        fig.xaxis.ticker, fig.yaxis.ticker = [], []  # disable axes
         head_figures.append(fig)
         circles.append(circle)
 
