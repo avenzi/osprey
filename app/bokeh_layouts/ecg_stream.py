@@ -161,12 +161,12 @@ var duration = source.polling_interval
 
 var start = source.data['time'][0]+1000
 var current_start = figure.x_range.start
+var start_diff = start - current_start
 
 var end = source.data['time'][source.data['time'].length-1]
 var current_end = figure.x_range.end
-
-var start_diff = start - current_start
 var end_diff = end - current_end
+
 if (end_diff > 0 && end_diff < end-start) {
     var slide = setInterval(function(){
         if (figure.x_range.start < start) {
