@@ -60,6 +60,7 @@ def create_layout(info):
 
     # get channel names
     stream_channels = info['Raw']['channels'].split(',')  # it's a comma separated string
+    sample_rate = float(info['Raw']['sample_rate'])
 
     # get stream IDs
     filtered_id = info['Filtered']['id']  # Filter Analyzer ID
@@ -127,7 +128,7 @@ def create_layout(info):
         method='GET',
         polling_interval=1000,
         mode='append',
-        max_size=2000,
+        max_size=int(sample_rate*10),
         if_modified=True)
 
     fourier_source = AjaxDataSource(
@@ -185,24 +186,28 @@ def create_layout(info):
         ),
             code="""
 var duration = source.polling_interval
-var current = figure.x_range.end
+
+var start = source.data['time'][0]+1000
+var current_start = figure.x_range.start
+var start_diff = start - current_start
 
 var end = source.data['time'][source.data['time'].length-1]
-var start = source.data['time'][0]
-var diff = end - current
-if (diff > 0 && diff < end-start) {
+var current_end = figure.x_range.end
+var end_diff = end - current_end
+
+if (end_diff > 0 && end_diff < end-start) {
     var slide = setInterval(function(){
+        if (figure.x_range.start < start) {
+            figure.x_range.start += start_diff/30
+        }
         if (figure.x_range.end < end) {
-            figure.x_range.start += diff/20
-            figure.x_range.end += diff/20
+            figure.x_range.end += end_diff/30
         }
 
-    }, duration/20);
+    }, duration/30);
 
     setTimeout(function(){
         clearInterval(slide)
-        figure.x_range.start = start
-        figure.x_range.end = end
     }, duration)
 } else {
     figure.x_range.start = start
