@@ -115,7 +115,7 @@ def create_layout(info):
     ecg_source = AjaxDataSource(
         data_url='/stream/update?id={}'.format(filtered_id),
         method='GET',
-        polling_interval=500,
+        polling_interval=1000,
         mode='append',
         max_size=int(sample_rate*5),
         if_modified=True)
@@ -158,18 +158,23 @@ def create_layout(info):
         ),
             code="""
 var duration = source.polling_interval
-var current = figure.x_range.end
+
+var start = source.data['time'][0]
+var current_start = figure.x_range.start
 
 var end = source.data['time'][source.data['time'].length-1]
-var start = source.data['time'][0]
+var current_end = figure.x_range.end
 
-var diff = end - current
-if (diff > 0 && diff < end-start) {
+var start_diff = start - current_start
+var end_diff = end - current_end
+if (end_diff > 0 && end_diff < end-start) {
     console.log('slide');
     var slide = setInterval(function(){
+        if (figure.x_range.start < start) {
+            figure.x_range.start += start_diff/20
+        }
         if (figure.x_range.end < end) {
-            figure.x_range.start += diff/20
-            figure.x_range.end += diff/20
+            figure.x_range.end += end_diff/20
         }
 
     }, duration/20);
@@ -181,6 +186,7 @@ if (diff > 0 && diff < end-start) {
         figure.x_range.end = end
     }, diff)
 } else {
+    console.log('skip');
     figure.x_range.start = start
     figure.x_range.end = end
 }
