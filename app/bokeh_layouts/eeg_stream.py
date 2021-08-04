@@ -128,7 +128,7 @@ def create_layout(info):
         method='GET',
         polling_interval=1000,
         mode='append',
-        max_size=int(sample_rate*20),
+        max_size=int(sample_rate*10),
         if_modified=True)
 
     fourier_source = AjaxDataSource(
