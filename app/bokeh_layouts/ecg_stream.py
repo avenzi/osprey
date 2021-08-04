@@ -182,8 +182,8 @@ if (end_diff > 0 && end_diff < end-start) {
     setTimeout(function(){
         console.log('done');
         clearInterval(slide)
-        figure.x_range.start = start
-        figure.x_range.end = end
+        //figure.x_range.start = start
+        //figure.x_range.end = end
     }, duration)
 } else {
     console.log('skip');
