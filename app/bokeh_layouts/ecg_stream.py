@@ -184,7 +184,7 @@ if (end_diff > 0 && end_diff < end-start) {
         clearInterval(slide)
         figure.x_range.start = start
         figure.x_range.end = end
-    }, diff)
+    }, duration)
 } else {
     console.log('skip');
     figure.x_range.start = start
