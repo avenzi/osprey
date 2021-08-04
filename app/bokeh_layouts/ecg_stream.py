@@ -165,9 +165,9 @@ var start = source.data['time'][0]
 
 var diff = end - current
 if (diff > 0 && diff < end-start) {
+    console.log('slide');
     var slide = setInterval(function(){
         if (figure.x_range.end < end) {
-            console.log('slide');
             figure.x_range.start += diff/20
             figure.x_range.end += diff/20
         }
