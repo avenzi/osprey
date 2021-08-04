@@ -159,7 +159,7 @@ def create_layout(info):
             code="""
 var duration = source.polling_interval
 
-var start = source.data['time'][0]
+var start = source.data['time'][0]+1000
 var current_start = figure.x_range.start
 
 var end = source.data['time'][source.data['time'].length-1]
