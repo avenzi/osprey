@@ -33,6 +33,14 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### August 4th, 2021:
+
+​	Today I am testing a long streaming session with just the ECG with the OpenBCI GUI to see if the square wave appears. I am doing this to try to see what the origin of the issue is - whether it's a bug in the Cyton or my app.
+
+​	Also Dr. Ghassemi asked me to make some PPT slides for him to present to showcase the app, including a video demo. This motivated me to refine the smoothing feature on the EEG and ECG streams. I was able to make the data from each channel scroll much smoother, but at the cost of seeing when chunks of data are replaced. I didn't want to spend too much time on it as it will become obsolete once I switch to a Bokeh server.
+
+
+
 ##### August 3rd, 2021:
 
 ​	Today and yesterday I've just been collecting data. I've had a few hiccups here and there, and they seem to be related to sudden disconnections to the server or Raspis. I don't think it's an issue with the app itself because every time it's happened, I have also lost my ssh connection at the same time, so it's likely a network thing. What I still need to figure out, though, is how to recover from it automatically. The problem is that I still don't know what's going on. I checked the logs afterward and there were no errors, just a sudden disconnect. 
