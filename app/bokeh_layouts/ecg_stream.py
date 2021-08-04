@@ -175,9 +175,9 @@ if (diff > 0 && diff < end-start) {
 
     setTimeout(function(){
         clearInterval(slide)
-        figure.x_range.start = start
-        figure.x_range.end = end
-    }, duration)
+        //figure.x_range.start = start
+        //figure.x_range.end = end
+    }, diff)
 } else {
     figure.x_range.start = start
     figure.x_range.end = end
