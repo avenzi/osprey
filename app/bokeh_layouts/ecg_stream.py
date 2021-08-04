@@ -117,7 +117,7 @@ def create_layout(info):
         method='GET',
         polling_interval=1000,
         mode='append',
-        max_size=int(sample_rate*5),
+        max_size=int(sample_rate*7),
         if_modified=True)
 
     fourier_source = AjaxDataSource(
@@ -168,25 +168,20 @@ var current_end = figure.x_range.end
 var start_diff = start - current_start
 var end_diff = end - current_end
 if (end_diff > 0 && end_diff < end-start) {
-    console.log('slide');
     var slide = setInterval(function(){
         if (figure.x_range.start < start) {
-            figure.x_range.start += start_diff/20
+            figure.x_range.start += start_diff/30
         }
         if (figure.x_range.end < end) {
-            figure.x_range.end += end_diff/20
+            figure.x_range.end += end_diff/30
         }
 
-    }, duration/20);
+    }, duration/30);
 
     setTimeout(function(){
-        console.log('done');
         clearInterval(slide)
-        //figure.x_range.start = start
-        //figure.x_range.end = end
     }, duration)
 } else {
-    console.log('skip');
     figure.x_range.start = start
     figure.x_range.end = end
 }
