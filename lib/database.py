@@ -995,6 +995,8 @@ class PlaybackDatabase(ServerDatabase):
 
         if not bookmark.last_id or not bookmark.last_time:  # no last read spot exists
             first_read = red.xrange('stream:' + stream, count=1)  # read first data point
+            if not first_read:
+                return
             # set first-read info
             bookmark.first_time = self.start_time  # set first time to start of stream
             bookmark.last_time_id = bookmark.first_time
@@ -1137,6 +1139,8 @@ class PlaybackDatabase(ServerDatabase):
 
         if not bookmark.last_id:  # no last read point
             first_read = red.xrange('stream:' + stream, count=1)  # read first data point
+            if not first_read:
+                return
             bookmark.last_id = self.decode(first_read[-1][0])  # store timestamp
 
         # calculate new max ID by adding the time length given
