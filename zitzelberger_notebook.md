@@ -33,6 +33,11 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### August 5th, 2021:
+
+​	The goal for today will be to make a new feature for the app that reads data from a given Redis database and feeds the whole thing into a black box algorithm (will eventually be ML training). There are a lot of things that would be useful for this - for example, the ability to trim datasets to get rid of unhelpful stuff at the beginning or end. However given the time constraint I think those may have to wait, and I can trim the data manually through the redis CLI. 
+​	I am also struggling to figure out how I want to implement this feature - should it be activated by a button in the control center? Eventually, yes, but right now I think that might require too many different options, like which data column to target, what algorithm to feed it though, a mechanism to prevent further action while running, etc... Maybe it's just better to make it a standalone script for now? I think that might be the quickest way for the time being. I'll get started on that first.
+
 ##### August 4th, 2021:
 
 ​	Today I am testing a long streaming session with just the ECG with the OpenBCI GUI to see if the square wave appears. I am doing this to try to see what the origin of the issue is - whether it's a bug in the Cyton or my app.
