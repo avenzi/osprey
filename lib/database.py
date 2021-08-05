@@ -1037,9 +1037,6 @@ class PlaybackDatabase(ServerDatabase):
         bookmark.last_time = self.time()
         bookmark.last_id = self.decode(response[-1][0])  # store last timestamp
 
-        # create final output dict
-        output = {}
-
         # convert redis response to python dict
         output = self.convert_response(response)
 
@@ -1160,11 +1157,7 @@ class PlaybackDatabase(ServerDatabase):
         # set last-read info
         bookmark.last_id = self.decode(response[-1][0])  # store last timestamp
 
-        #else:
-            #print("SINCE: {}, MAX: {}, LAST: {}, END: {}".format(time_since_last, max_time, h(self.redis_to_time(last_read_id)), h(max_timestamp)))
-
-        # create final output dict
-        output = {}
+        print("LAST: {}, END: {}, DIFF: {}".format(h(self.redis_to_time(last_read_id)), h(max_timestamp), h(self.redis_to_time(max_read_id)-self.redis_to_time(last_read_id))))
 
         # convert redis response to python dict
         output = self.convert_response(response)
