@@ -159,6 +159,37 @@ def delete(filename):
     refresh()
 
 
+@socketio.on('train', namespace='/browser')
+@catch_errors
+def train(filename):
+    """ Reads EEG and ECG data from database into an algorithm chunks at a time, and can write back to the database file """
+    database = get_database()
+    if not database:
+        return
+    if database.is_streaming():
+        error("Cannot train while streaming")
+
+    eeg_raw = database.get_group('EEG', 'Raw')
+    eeg_filtered = database.get_group('EEG', 'Filtered')
+    eeg_fourier = database.get_group('EEG', 'Fourier')
+
+    ecg_raw = database.get_group('ECG', 'Raw')
+    ecg_filtered = database.get_group('ECG', 'Filtered')
+    ecg_fourier = database.get_group('ECG', 'Fourier')
+
+    eeg_sample_rate = eeg_raw['sample_rate']
+    eeg_samples = eeg_sample_rate * 60  # 60 seconds
+
+    ecg_sample_rate = ecg_raw['sample_rate']
+    ecg_samples = ecg_sample_rate * 60
+
+    while True:
+        eeg_data = database.read_data(eeg_filtered, count=eeg_samples)
+        ecg_data = database.read_data(ecg_filtered, count=ecg_samples)
+
+        # run through some training algorithm
+
+
 @socketio.on('wipe', namespace='/browser')
 @catch_errors
 def wipe():

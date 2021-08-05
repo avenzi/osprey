@@ -988,79 +988,61 @@ class PlaybackDatabase(ServerDatabase):
         if not bookmark.lock(block=False):  # acquire lock
             return  # return if not acquired
 
-        t0 = time()
         if decode:
             red = self.redis
         else:
             red = self.bytes_redis
 
-        if bookmark.last_id and bookmark.last_time:  # last read spot exists
-            # calculate new max ID by how much real time has passed between now and beginning (ms)
-            first_read_id = bookmark.first_id  # first read ID
-            first_read_time = bookmark.first_time  # first read real time
-            time_since_first = self.time()-first_read_time  # time diff until now
-            max_timestamp = self.redis_to_time(first_read_id) + time_since_first  # redis timestamp max time
-            max_read_id = self.time_to_redis(max_timestamp)  # redis timestamp max ID
+        if not bookmark.last_id or not bookmark.last_time:  # no last read spot exists
+            first_read = red.xrange('stream:' + stream, count=1)  # read first data point
+            # set first-read info
+            bookmark.first_time = self.start_time  # set first time to start of stream
+            bookmark.last_time_id = bookmark.first_time
+            bookmark.first_id = self.decode(first_read[-1][0])  # set first ID
+            bookmark.last_id = bookmark.first_id
 
-            # calculate timestamp diff since last read (ms)
-            last_read_id = bookmark.last_id  # last read id
-            time_since_last = max_timestamp-self.redis_to_time(last_read_id)
+        # calculate new max ID by how much real time has passed between now and beginning (ms)
+        first_read_id = bookmark.first_id  # first read ID
+        first_read_time = bookmark.first_time  # first read real time
+        time_since_first = self.time()-first_read_time  # time diff until now
+        max_timestamp = self.redis_to_time(first_read_id) + time_since_first  # redis timestamp max time
+        max_read_id = self.time_to_redis(max_timestamp)  # redis timestamp max ID
 
-            if max_time and self.playback_speed > 1:
-                max_time = max_time*self.playback_speed
+        # calculate timestamp diff since last read (ms)
+        last_read_id = bookmark.last_id  # last read id
+        time_since_last = max_timestamp-self.redis_to_time(last_read_id)
 
-            # if timestamp delta since last read is greater than maximum, increment last read ID by the difference
-            if max_time and time_since_last > max_time*1000:  # max_time is in seconds
-                new_last_time = self.redis_to_time(last_read_id) + (time_since_last-max_time*1000)
-                last_read_id = self.time_to_redis(new_last_time)  # convert back to redis timestamp
+        if max_time and self.playback_speed > 1:
+            max_time = max_time*self.playback_speed
 
-            t1 = time()
+        # if timestamp delta since last read is greater than maximum, increment last read ID by the difference
+        if max_time and time_since_last > max_time*1000:  # max_time is in seconds
+            new_last_time = self.redis_to_time(last_read_id) + (time_since_last-max_time*1000)
+            last_read_id = self.time_to_redis(new_last_time)  # convert back to redis timestamp
 
-            if downsample and self.playback_speed > 1:  # get downsampled response if playing at high multiplier
-                response = self._downsample(stream, last_read_id, max_read_id)
-            else:
-                # Redis uses the prefix "(" to represent an exclusive interval for XRANGE
-                response = red.xrange('stream:'+stream, min='('+last_read_id, max=max_read_id)
-
-        else:  # no last read spot
-            t1 = time()
-            response = red.xrange('stream:'+stream, count=1)  # read first data point
+        if downsample and self.playback_speed > 1:  # get downsampled response if playing at high multiplier
+            response = self._downsample(stream, last_read_id, max_read_id)
+        else:
+            # Redis uses the prefix "(" to represent an exclusive interval for XRANGE
+            response = red.xrange('stream:'+stream, min='('+last_read_id, max=max_read_id)
 
         if not response:
             bookmark.release()
             return None
 
-        t2 = time()
-
         # response is a list of tuples. First is the redis timestamp ID, second is the data dict.
-
         # set last-read info
         bookmark.last_time = self.time()
         bookmark.last_id = self.decode(response[-1][0])  # store last timestamp
 
-        # set first-read info if not already set
-        if not bookmark.first_time:
-            bookmark.first_time = self.start_time  # get first time
-            bookmark.first_id = self.decode(response[-1][0])  # get first ID
-            bookmark.release()  # release lock
-            return  # return nothing. first data point was read for reference.
-
-        #else:
-            #print("SINCE: {}, MAX: {}, LAST: {}, END: {}".format(time_since_last, max_time, h(self.redis_to_time(last_read_id)), h(max_timestamp)))
-
-        t3 = time()
         # create final output dict
         output = {}
 
         # convert redis response to python dict
         output = self.convert_response(response)
 
-        t4 = time()
-
         if to_json:
             result = json.dumps(output)
-            t5 = time()
-            #print("INFO: {:5f}, READ: {:5f}, META: {:5f}, CONV: {:5f}, JSON: {:5f}".format(t1-t0, t2-t1, t3-t2, t4-t3, t5-t4))
         else:
             result = output
 
@@ -1134,6 +1116,59 @@ class PlaybackDatabase(ServerDatabase):
         return result
 
     @catch_database_errors
+    def read_time_segment(self, stream, time_length, decode=True):
+        """
+        Reads a given length of time (in seconds) from the database
+        """
+        if not stream:
+            return
+
+        # get bookmark for this stream, create if not exist
+        bookmark = self.bookmarks.get(stream)
+        if not bookmark.lock(block=False):  # acquire lock
+            return  # return if not acquired
+
+        if decode:
+            red = self.redis
+        else:
+            red = self.bytes_redis
+
+        time_length = time_length * 1000  # convert to ms
+
+        if not bookmark.last_id:  # no last read point
+            first_read = red.xrange('stream:' + stream, count=1)  # read first data point
+            bookmark.last_id = self.decode(first_read[-1][0])  # store timestamp
+
+        # calculate new max ID by adding the time length given
+        last_read_id = bookmark.last_id  # first read ID
+        max_timestamp = self.redis_to_time(last_read_id) + time_length  # redis timestamp max time
+        max_read_id = self.time_to_redis(max_timestamp)  # redis timestamp max ID
+
+        # Redis uses the prefix "(" to represent an exclusive interval for XRANGE
+        response = red.xrange('stream:'+stream, min='('+last_read_id, max=max_read_id)
+
+        if not response:
+            bookmark.release()
+            return None
+
+        # response is a list of tuples. First is the redis timestamp ID, second is the data dict.
+
+        # set last-read info
+        bookmark.last_id = self.decode(response[-1][0])  # store last timestamp
+
+        #else:
+            #print("SINCE: {}, MAX: {}, LAST: {}, END: {}".format(time_since_last, max_time, h(self.redis_to_time(last_read_id)), h(max_timestamp)))
+
+        # create final output dict
+        output = {}
+
+        # convert redis response to python dict
+        output = self.convert_response(response)
+
+        bookmark.release()  # release lock
+        return output
+
+    @catch_database_errors
     def _downsample(self, stream, last_id, max_id):
         """
         Returns the raw redis response from <last_id> to <max_id> (not including last_id),
@@ -1204,8 +1239,6 @@ class Bookmarks:
             bookmark = Bookmark()  # create new Bookmark if not found
             self.bookmarks[ID] = bookmark
         return bookmark
-
-
 
     def clear(self):
         """ Clear all bookmarks """
