@@ -161,11 +161,13 @@ def delete(filename):
 
 @socketio.on('train', namespace='/browser')
 @catch_errors
-def train(filename):
+def train():
     """ Reads EEG and ECG data from database into an algorithm chunks at a time, and can write back to the database file """
     database = get_database()
     if not database:
         return
+    if database.live:
+        error('Cannot train live database')
     if database.is_streaming():
         error("Cannot train while streaming")
 
@@ -177,17 +179,35 @@ def train(filename):
     ecg_filtered = database.get_group('ECG', 'Filtered')
     ecg_fourier = database.get_group('ECG', 'Fourier')
 
-    eeg_sample_rate = eeg_raw['sample_rate']
-    eeg_samples = eeg_sample_rate * 60  # 60 seconds
-
-    ecg_sample_rate = ecg_raw['sample_rate']
-    ecg_samples = ecg_sample_rate * 60
-
+    log('started reading')
+    chunks = 60  # read 60 seconds
     while True:
-        eeg_data = database.read_data(eeg_filtered, count=eeg_samples)
-        ecg_data = database.read_data(ecg_filtered, count=ecg_samples)
-
+        eeg_data = database.read_time_segment(eeg_filtered, chunks)
+        ecg_data = database.read_data(ecg_filtered, chunks)
+        if not eeg_data or not ecg_data:
+            break
         # run through some training algorithm
+    log('done reading')
+
+
+@socketio.on('test', namespace='/browser')
+@catch_errors
+def test():
+    database = get_database()
+    if not database:
+        return
+    if database.live:
+        error('Cannot test live database')
+    if database.is_streaming():
+        error("Cannot test while streaming")
+
+    # run through prediction algorithm
+    # output new ecg data
+    # this is just a test that adds 1000 to all values
+    for column in ecg_data.keys():
+        if column == 'time':
+            continue
+        ecg_data[column] = [val + 1000 for val in ecg_data[column]]
 
 
 @socketio.on('wipe', namespace='/browser')

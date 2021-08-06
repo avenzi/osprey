@@ -493,6 +493,57 @@ class Database:
         return result
 
     @catch_database_errors
+    def read_time_segment(self, stream, time_length, decode=True):
+        """
+        Reads a given length of time (in seconds) from the database
+        """
+        if not stream:
+            return
+
+        # get bookmark for this stream, create if not exist
+        bookmark = self.bookmarks.get(stream)
+        if not bookmark.lock(block=False):  # acquire lock
+            return  # return if not acquired
+
+        if decode:
+            red = self.redis
+        else:
+            red = self.bytes_redis
+
+        time_length = time_length * 1000  # convert to ms
+
+        if not bookmark.last_id:  # no last read point
+            first_read = red.xrange('stream:' + stream, count=1)  # read first data point
+            if not first_read:
+                return
+            bookmark.last_id = self.decode(first_read[-1][0])  # store timestamp
+
+        # calculate new max ID by adding the time length given
+        last_read_id = bookmark.last_id  # first read ID
+        max_timestamp = self.redis_to_time(last_read_id) + time_length  # redis timestamp max time
+        max_read_id = self.time_to_redis(max_timestamp)  # redis timestamp max ID
+
+        # Redis uses the prefix "(" to represent an exclusive interval for XRANGE
+        response = red.xrange('stream:'+stream, min='('+last_read_id, max=max_read_id)
+
+        if not response:
+            bookmark.release()
+            return None
+
+        # response is a list of tuples. First is the redis timestamp ID, second is the data dict.
+
+        # set last-read info
+        bookmark.last_id = self.decode(response[-1][0])  # store last timestamp
+
+        print("LAST: {}, END: {}, DIFF: {}".format(h(self.redis_to_time(last_read_id)), h(max_timestamp), h(self.redis_to_time(max_read_id)-self.redis_to_time(last_read_id))))
+
+        # convert redis response to python dict
+        output = self.convert_response(response)
+
+        bookmark.release()  # release lock
+        return output
+
+    @catch_database_errors
     def write_snapshot(self, stream, data):
         """
         Writes a snapshot of data <data> to stream:<stream>.
@@ -1113,57 +1164,6 @@ class PlaybackDatabase(ServerDatabase):
             result = output
         bookmark.release()  # release lock
         return result
-
-    @catch_database_errors
-    def read_time_segment(self, stream, time_length, decode=True):
-        """
-        Reads a given length of time (in seconds) from the database
-        """
-        if not stream:
-            return
-
-        # get bookmark for this stream, create if not exist
-        bookmark = self.bookmarks.get(stream)
-        if not bookmark.lock(block=False):  # acquire lock
-            return  # return if not acquired
-
-        if decode:
-            red = self.redis
-        else:
-            red = self.bytes_redis
-
-        time_length = time_length * 1000  # convert to ms
-
-        if not bookmark.last_id:  # no last read point
-            first_read = red.xrange('stream:' + stream, count=1)  # read first data point
-            if not first_read:
-                return
-            bookmark.last_id = self.decode(first_read[-1][0])  # store timestamp
-
-        # calculate new max ID by adding the time length given
-        last_read_id = bookmark.last_id  # first read ID
-        max_timestamp = self.redis_to_time(last_read_id) + time_length  # redis timestamp max time
-        max_read_id = self.time_to_redis(max_timestamp)  # redis timestamp max ID
-
-        # Redis uses the prefix "(" to represent an exclusive interval for XRANGE
-        response = red.xrange('stream:'+stream, min='('+last_read_id, max=max_read_id)
-
-        if not response:
-            bookmark.release()
-            return None
-
-        # response is a list of tuples. First is the redis timestamp ID, second is the data dict.
-
-        # set last-read info
-        bookmark.last_id = self.decode(response[-1][0])  # store last timestamp
-
-        print("LAST: {}, END: {}, DIFF: {}".format(h(self.redis_to_time(last_read_id)), h(max_timestamp), h(self.redis_to_time(max_read_id)-self.redis_to_time(last_read_id))))
-
-        # convert redis response to python dict
-        output = self.convert_response(response)
-
-        bookmark.release()  # release lock
-        return output
 
     @catch_database_errors
     def _downsample(self, stream, last_id, max_id):
