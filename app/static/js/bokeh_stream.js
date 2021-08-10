@@ -99,13 +99,9 @@ function function_select_change(select) {
     socket.emit('update_pipeline', {group: id, pipeline: pipeline})
 }
 
-var namespace = '/browser';  // namespace for talking with server
-
-var functions;  // list of function names available
-var pipeline;   // list of function names in the current pipeline
 
 $(document).ready(function() {
-
+    var namespace = '/browser';  // namespace for talking with server
     var socket = io(namespace);
     var id = get_id()  // group ID for this page
     console.log("ID: "+id)
@@ -139,7 +135,10 @@ $(document).ready(function() {
         $("div.stream_time").html(data);
     });
 
-    // Custom function interface:
+    // Custom function interface
+    var functions = [];  // list of function names available
+    var pipeline = [];   // list of function names in the current pipeline
+
     // request a list of the available function names and
     //  a list of the currently selected functions for this page
     socket.emit('custom_functions', id);
