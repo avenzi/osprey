@@ -342,6 +342,9 @@ def custom_functions(group):
 
     # read JSON encoded dictionary from database
     json_string = database.get_info(ID, 'pipeline')
+    if not json_string:
+        print("NO JSON FOUND")
+        return
     data = json.loads(json_string)
     print("READING PIPELINE FROM DATABASE")
     print(data)
