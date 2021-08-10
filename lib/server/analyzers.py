@@ -82,9 +82,10 @@ class FunctionAnalyzer(Analyzer):
             sleep(0.5)
             return
 
-        for function in self.functions:  # for each pipeline function
+        for func in self.functions:  # for each pipeline function
+            transform = func[1]  # [0] is the file name containing the function
             try:  # attempt to run data through custom method
-                data = function(data)
+                data = transform(data)
             except Exception as e:
                 print("Error running custom method '{}': {}: {}".format(function.__name__, e.__class__.__name__, e))
 
