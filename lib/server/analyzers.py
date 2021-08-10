@@ -64,7 +64,11 @@ class FunctionAnalyzer(Analyzer):
     def start(self):
         """ streamer start method before loop is executed """
         try:  # grab the ID of the target stream
-            self.target_id = self.targets[self.group]['Filtered']['id']
+            targets = self.targets[self.group].values()
+            if len(list(targets)) > 1:
+                raise Exception("FunctionAnalyzer can only target 1 stream")
+
+            self.target_id = targets[0]['id']
         except:
             raise Exception("Missing info.".format(self))
 
