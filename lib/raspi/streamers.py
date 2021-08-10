@@ -10,7 +10,6 @@ class TestStreamer(Streamer):
     def __init__(self, *args):
         super().__init__(*args)
         self.frames = 10           # how many frames are in each request
-        self.frames_sent = 0       # number of frames sent
 
         self.val_1 = 0
         self.val_2 = 1
@@ -30,6 +29,11 @@ class TestStreamer(Streamer):
             sleep(0.05)
 
         self.database.write_data(self.id, data)
+
+    def start(self):
+        self.val_1 = 0
+        self.val_2 = 1
+        self.val_3 = 2
 
 
 class SenseStreamer(Streamer):
