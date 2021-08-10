@@ -91,10 +91,16 @@ class FunctionAnalyzer(Analyzer):
         transform = None  # make the editor happy because "transform" technically isn't defined
         self.functions = []
         for filename in lst:  # for each file in the received list of file names
-            exec("from local.pipelines.{} import transform".format(filename))  # import a function named transform from this file
-            # todo: just check to make sure there is one method defined in the file, then use that one regardless of
-            #  what is is technically defined as. Avoids the requirement of a specific name.
-            self.functions.append(transform)  # associate that function with this file name
+            try:  # attempt to import file
+                exec("from local.pipelines.{} import transform".format(filename))  # import a function named transform from this file
+                # todo: just check to make sure there is one method defined in the file, then use that one regardless of
+                #  what is is technically defined as. Avoids the requirement of a specific name.
+            except Exception as e:
+                print("Error importing file: {}: {}".format(e.__class__.__name__, e))
+            try:  # attempt to run custom function
+                self.functions.append(transform)  # associate that function with this file name
+            except Exception as e:
+                print("Error running custom method from '{}': {}: {}".format(filename, e.__class__.__name__, e))
         self.database.set_info(self.id, json.dumps(self.functions))  # save in database
 
 
