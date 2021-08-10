@@ -83,7 +83,7 @@ function add_method(current_value) {
     }
 
     // assign an order number to the select menu
-    select.data('order', pipeline.length));
+    select.data('order', pipeline.length);
 
     console.log("NEW MENU: "+order+"  "+select.value);
 }
