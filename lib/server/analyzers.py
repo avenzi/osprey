@@ -97,11 +97,10 @@ class FunctionAnalyzer(Analyzer):
         for filename in lst:  # for each file in the received list of file names
             try:  # attempt to import file
                 import_name = "local.pipelines.{}".format(filename.strip('.py'))
+                print(import_name)
                 exec("import {} as custom".format(import_name))  # import custom py file
                 members = inspect.getmembers(custom, inspect.isfunction)  # all functions [(name, func), ]
                 print(members)
-                import local.pipelines.scale_100 as custom
-                print(inspect.getmembers(custom, inspect.isfunction))
                 print('func: ', custom.test_func)
                 if len(members) > 1:
                     print("More than 1 function exists in custom algorithm file '{}'".format(filename))
