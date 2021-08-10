@@ -383,7 +383,7 @@ def update_pipeline(data):
 
     # id of Transform analyzer in this group
     ID = database.get_group(group, 'Transformed')['id']
-    print("ID OF TRANSFORM ANALYZER: ", ID)
+    print("UPDATED PIPELINE: ", pipeline)
     socketio.emit('json', pipeline, namespace='/'+ID)
 
 
