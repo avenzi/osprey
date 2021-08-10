@@ -139,9 +139,7 @@ $(document).ready(function() {
         $("div.stream_time").html(data);
     });
 
-    // Custom function interface
-
-
+    // Custom function interface:
     // request a list of the available function names and
     //  a list of the currently selected functions for this page
     socket.emit('custom_functions', id);
