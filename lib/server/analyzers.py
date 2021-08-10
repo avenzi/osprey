@@ -97,8 +97,9 @@ class FunctionAnalyzer(Analyzer):
         for filename in lst:  # for each file in the received list of file names
             try:  # attempt to import file
                 import_name = "local.pipelines.{}".format(filename.strip('.py'))
-                print('['+import_name+']')
-                exec("import {} as custom\nprint('here')\nprint(custom)".format(import_name))  # import custom py file
+                old_locals = locals()  # keep old copy of local variables
+                exec("import {} as custom".format(import_name))  # import custom py file
+                custom = old_locals['custom']  # get modified copy of local variables
                 print(custom)
                 members = inspect.getmembers(custom, inspect.isfunction)  # all functions [(name, func), ]
                 print(members)
