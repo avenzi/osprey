@@ -100,12 +100,12 @@ class FunctionAnalyzer(Analyzer):
                 exec("import {} as custom".format(import_name))  # import custom py file
                 members = inspect.getmembers(custom, inspect.isfunction)  # all functions [(name, func), ]
                 print(members)
-                exec("import local.pipelines as custom")  # import custom py file
-                print(inspect.getmembers(custom, inspect.isfunction))
+                import local.pipelines.flip as custom
+                print('func: ', custom.func)
                 if len(members) > 1:
-                    raise Exception("More than 1 function exists in custom algorithm file '{}'".format(filename))
+                    print("More than 1 function exists in custom algorithm file '{}'".format(filename))
                 elif not members:
-                    raise Exception("No functions defined in custom algorithm file '{}'".format(filename))
+                    print("No functions defined in custom algorithm file '{}'".format(filename))
                 self.functions.append(members[0][1])  # add that function to the list of available functions
             except Exception as e:
                 print("Error importing from file '{}': {}: {}".format(filename, e.__class__.__name__, e))
