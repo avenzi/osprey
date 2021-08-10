@@ -10,10 +10,14 @@ venv/*
 
 # ignore local files, but keep the empty logs directory
 local/*
-!local/logs/
 
 local/logs/*
+!local/logs/
 !local/logs/.keep
+
+local/pipelines/*
+!local/pipelines/
+!local/pipelines/.keep
 
 # Ignore data
 data/live/*
