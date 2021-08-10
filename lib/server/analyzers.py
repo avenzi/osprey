@@ -97,6 +97,7 @@ class FunctionAnalyzer(Analyzer):
         for filename in lst:  # for each file in the received list of file names
             try:  # attempt to import file
                 exec("import local.pipelines.{} as custom".format(filename.strip('.py')))  # import custom py file
+                print(inspect.getmembers(custom))
                 members = inspect.getmembers(custom, inspect.isfunction)  # all functions [(name, func), ]
                 print(members)
                 if len(members) > 1:
