@@ -68,7 +68,7 @@ class FunctionAnalyzer(Analyzer):
             if len(list(targets)) > 1:
                 raise Exception("FunctionAnalyzer can only target 1 stream")
 
-            self.target_id = targets[0]['id']
+            self.target_id = list(targets)[0]['id']
         except Exception as e:
             print(e)
             raise Exception("Missing info.".format(self))
