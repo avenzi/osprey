@@ -99,6 +99,7 @@ class FunctionAnalyzer(Analyzer):
                 import_name = "local.pipelines.{}".format(filename.strip('.py'))
                 print(import_name)
                 exec("import {} as custom".format(import_name))  # import custom py file
+                print(custom)
                 members = inspect.getmembers(custom, inspect.isfunction)  # all functions [(name, func), ]
                 print(members)
                 print('func: ', custom.test_func)
