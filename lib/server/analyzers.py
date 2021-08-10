@@ -87,7 +87,7 @@ class FunctionAnalyzer(Analyzer):
             try:  # attempt to run data through custom method
                 data = transform(data)
             except Exception as e:
-                print("Error running custom method '{}': {}: {}".format(function.__name__, e.__class__.__name__, e))
+                print("Error running custom method '{}': {}: {}".format(transform.__name__, e.__class__.__name__, e))
 
         # after data has been put through all transforms, write it back to the database
         self.database.write_data(self.id, data)

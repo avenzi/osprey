@@ -33,6 +33,15 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### August 10th, 2021:
+
+​	So I ran across a really annoying problem with python today. It started when I was working on a way to import the arbitrary functions stored in files. I'm using an exec() statement to dynamically import the functions from the different python files given by the user. However, there seems to be some VERY inconsistent behavior with the exec function, though it took me awhile to figure out that it was unrelated to the import statement itself. The behavior I am expecting is that variables created and modified inside the exec statement are available outside the exec statement. In fact, this is exactly the intended behavior, and it does work that way IF the exec statement is in the global scope. However, it does not work that way if the exec statement is in a local scope, for some unknown reason. In this case, there seems to be a problem where the index of local variables is not updated properly, and one must manually update it by hand in order to capture the changes made from inside the exec statement. Moreover, this behavior changes depending on whether a call to locals() happens before or after it is accessed outside the exec function, and even changes depending on whether the code is being run in debug mode.
+​	I have indeed been searching online about this, and there are many answers regarding how the exec function can be passed global and local variables, but none explain the behavior that I am seeing. I am completely baffled.
+
+​	All in all, I've managed to get the transfer of information about which pipelined functions have been activated and in what order organized on the server and the browser, and the information is stored in the database under it's associated group. My task for tomorrow will be to make the Bokeh plot transition from reading the raw data to the transformed data after a transformation has been applied. This is different from my EEG and ECG plots because they never actually read the raw data, only the filtered data from the FilterAnalyzer. This, however, should be applicable to any data stream regardless of where the input data is coming from, so the plot should be able to switch between the original input and the transformed data.
+
+​	An additional idea I had was to have the original data AND the transformed data plotted on the same graph, with the original data less visible. I think this would be really good to showcase the transformations in action. In order to do this, I will need to change the Bokeh layout code to include this IF the appropriate data column contains data - the problem is that this makes creating Bokeh layout more complicated for someone else who might want to do something similar. However with the current deadline for the IEEE paper I think it's best to make it function first, then work on organization afterward.
+
 ##### August 9th, 2021:
 
 ​	After talking with Dr. Ghassemi today, we've decided that the best use of time for the next two weeks is to implement the following feature:
@@ -43,7 +52,9 @@ By working on this project you are agreeing to abide by the following expectatio
 - Add the ability to upload arbitrary files to this directory from the browser.
 - Make absolutely certain that these files don't have sudo privileges. That would be bad.
 
-Immediately a couple things came up. First, what if import statements are used in this arbitrary file? Do those need to be confined to the inside of the function? If that is the case, then the module would need to be loaded in every single time a data chunk needs to be fed through it. What would be best is to load all modules in beforehand to skip this, though I'll worry about that later.
+Immediately a couple things came up. First, what if import statements are used in this arbitrary file? Do those need to be confined to the inside of the function? If that is the case, then the module would need to be loaded in every single time a data chunk needs to be fed through it. What would be best is to load all modules in beforehand to skip this, though I'll worry about that later. 
+
+​	For the rest of the day I worked on the interface to work with this structure. I wanted a way to add as many pipelined functions as needed, but in order to do that I had to keep track of the order in which they appear on the screen. This is then saved to the database which will be loaded back to the browser window every time after (I'll work on the backend for that tomorrow).
 
 ##### August 5th, 2021:
 
