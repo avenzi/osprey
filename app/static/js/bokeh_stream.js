@@ -67,7 +67,7 @@ function add_method(current_value) {
     // add a new dropdown menu to the top of the page with a given list of methods
     // to select another custom function to add to the pipeline.
     // If current_value is given, set that as the selected option.
-    select = $(`<select class="function_select" onchange="function_select_change(this);">\
+    select = $(`<select class="function_select" onchange="function_select_change($(this));">\
                    <option value="">--Select a function--</option>\
                 </select>
     `).appendTo("div.custom_functions div.menus");
@@ -94,8 +94,6 @@ function add_method(current_value) {
 function function_select_change(select) {
     // called when a method is selected in a dropdown menu.
     // adds selected value to pipeline in the right spot
-    console.log(select)
-    console.log($(select))
     order = select.data('order');
     name = select.value;
     pipeline[order] = name
