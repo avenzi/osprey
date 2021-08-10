@@ -63,15 +63,10 @@ class FunctionAnalyzer(Analyzer):
 
     def start(self):
         """ streamer start method before loop is executed """
-        try:
-            self.get_info()
+        try:  # grab the ID of the target stream
+            self.target_id = self.targets[self.group]['Filtered']['id']
         except:
             raise Exception("Missing info.".format(self))
-
-    def get_info(self):
-        """ Gets the target stream from the same group"""
-        # Get info from database
-        self.target_id = self.targets[self.group]['Filtered']['id']
 
     def loop(self):
         """ Maine execution loop """
@@ -88,12 +83,15 @@ class FunctionAnalyzer(Analyzer):
 
     def json(self, lst):
         """ Gets list of updated file names from which to retrieve pipeline functions from """
+        print("GOT PIPELINE: ", lst)
         transform = None  # make the editor happy because "transform" technically isn't defined
+        self.functions = []
         for filename in lst:  # for each file in the received list of file names
             exec("from {} import transform".format(filename))  # import a function named transform from this file
             # todo: just check to make sure there is one method defined in the file, then use that one regardless of
             #  what is is technically defined as. Avoids the requirement of a specific name.
             self.functions.append(transform)  # associate that function with this file name
+        self.database.set_info(self.id, json.dumps(self.functions))  # save in database
 
 
 ########################

@@ -138,7 +138,7 @@ def widget_update():
     request_id = request.args.get('id')
     widget_dict = request.json
 
-    # use the ID as the socket namespace on which to send this info
+    # The id specifies which streamer/analyzer to send this info to.
     # JSON is automatically converted to python types
     socketio.emit('json', widget_dict, namespace='/'+request_id)
     return "", 200

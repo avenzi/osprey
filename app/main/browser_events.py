@@ -1,8 +1,9 @@
 from flask import current_app, session, request
-from threading import Thread, Event
-
+import json
 from datetime import timedelta
 from time import sleep, time
+
+
 
 from lib.database import DatabaseError, DatabaseBusyLoadingError, DatabaseTimeoutError, DatabaseConnectionError
 
@@ -204,36 +205,6 @@ def database_info(data):
 ######################################
 # Handler for status polling messages
 
-@socketio.on('stream_time', namespace='/browser')
-@catch_errors
-def stream_time(group):
-    """ Return a human-readable string with current time information to display for the given stream """
-    database = get_database()
-    if not database:
-        print("Database not found")
-        return ""
-
-    if not group:
-        raise Exception("Stream time was requested, but no group ID was given")
-
-    # all streams in this group
-    streams = database.get_streams(group)
-    if not streams:
-        return
-
-    display = ""
-    for name, ID in streams.items():
-        elapsed = database.get_elapsed_time(ID)  # time elapsed to far in seconds
-        display += "{}: {}".format(name, str(timedelta(seconds=int(elapsed))))
-
-        if not database.live:  # add total time of stream
-            total = database.get_total_time(ID)
-            display += " / {}".format(str(timedelta(seconds=int(total))))
-        display += '<br>'
-
-    socketio.emit('stream_time', display, namespace='/browser', room=request.sid)
-
-
 @socketio.on('status', namespace='/browser')
 @catch_errors
 def status():
@@ -323,6 +294,84 @@ def database_memory_usage(database):
         return "{} / {}".format(bytes_to_human(size), bytes_to_human(available))
     except:
         return 'err'
+
+
+######################################
+# Handler for events used in stream pages
+@socketio.on('stream_time', namespace='/browser')
+@catch_errors
+def stream_time(group):
+    """ Return a human-readable string with current time information to display for the given stream """
+    database = get_database()
+    if not database:
+        print("Database not found")
+        return ""
+
+    if not group:
+        raise Exception("Stream time was requested, but no group ID was given")
+
+    # all streams in this group
+    streams = database.get_streams(group)
+    if not streams:
+        return
+
+    display = ""
+    for name, ID in streams.items():
+        elapsed = database.get_elapsed_time(ID)  # time elapsed to far in seconds
+        display += "{}: {}".format(name, str(timedelta(seconds=int(elapsed))))
+
+        if not database.live:  # add total time of stream
+            total = database.get_total_time(ID)
+            display += " / {}".format(str(timedelta(seconds=int(total))))
+        display += '<br>'
+
+    socketio.emit('stream_time', display, namespace='/browser', room=request.sid)
+
+
+@socketio.on('custom_functions', namespace='/browser')
+@catch_errors
+def custom_functions(group):
+    """ Request for a list of available custom functions and the currently selected functions for this stream """
+    database = get_database()
+    if not database:
+        print("Database not found")
+        return
+
+    # id of Transform analyzer in this group
+    ID = database.get_group(group, 'Transformed')['id']
+
+    # read JSON encoded dictionary from database
+    json_string = database.get_info(ID, 'pipeline')
+    data = json.loads(json_string)
+    print("READING PIPELINE FROM DATABASE")
+    print(data)
+
+    # emit back to browser
+    socketio.emit('custom_functions', data, namespace='/browser', room=request.sid)
+
+
+@socketio.on('update_pipeline', namespace='/browser')
+@catch_errors
+def update_pipeline(data):
+    """
+    Browser updated the functions in the pipeline for this page.
+    Updates this information in the database which can then be retrieved by custom_functions().
+    """
+    database = get_database()
+    if not database:
+        print("Database not found")
+        return
+
+    group = data['group']
+    pipeline = data['pipeline']
+
+    # id of Transform analyzer in this group
+    ID = database.get_group(group, 'Transformed')['id']
+    print("ID OF TRANSFORM ANALYZER: ", ID)
+    socketio.emit('json', pipeline, namespace='/'+ID)
+
+
+
 
 
 
