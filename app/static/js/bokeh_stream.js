@@ -72,12 +72,9 @@ function add_method(current_value) {
                 </select>
     `).appendTo("div.custom_functions div.menus");
 
-    console.log(select)
-    console.log($("select.function_select"))
-
     // set current value, if given
     if (current_value != undefined) {
-        select.value = current_value
+        select.val(current_value)
     }
 
     // add an option for each method in the new select menu
@@ -98,6 +95,8 @@ function function_select_change(select) {
     // called when a method is selected in a dropdown menu.
     // adds selected value to pipeline in the right spot
     console.log(select)
+    console.log($select)
+    console.log($(select))
     order = select.data('order');
     name = select.value;
     pipeline[order] = name
