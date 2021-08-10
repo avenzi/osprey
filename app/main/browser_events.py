@@ -3,7 +3,7 @@ import json
 from datetime import timedelta
 from time import sleep, time
 
-
+import os
 
 from lib.database import DatabaseError, DatabaseBusyLoadingError, DatabaseTimeoutError, DatabaseConnectionError
 
@@ -340,12 +340,22 @@ def custom_functions(group):
     # id of Transform analyzer in this group
     ID = database.get_group(group, 'Transformed')['id']
 
-    # read JSON encoded dictionary from database
+    data = {}
+
+    # read JSON encoded list of current selections from database
     json_string = database.get_info(ID, 'pipeline')
-    if not json_string:
-        print("NO JSON FOUND")
-        return
-    data = json.loads(json_string)
+    if json_string:
+        data['pipeline'] = json.loads(json_string)
+    else:
+        data['pipeline'] = []
+
+    # get list of all files in this path
+    funcs_path = 'local/pipelines'
+    data['functions'] = []
+    for file in os.listdir(funcs_path):
+        if os.path.isfile(os.path.join(funcs_path, file)):
+            data['functions'].append(file)
+
     print("READING PIPELINE FROM DATABASE")
     print(data)
 
