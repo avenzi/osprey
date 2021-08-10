@@ -59,7 +59,9 @@ class FunctionAnalyzer(Analyzer):
         super().__init__(*args)
         self.target_id = None  # stream ID of the target data stream
 
-        # List of python functions for data to be run through before written back to the database
+        # List of tuples:
+        # [0] file name containing the function
+        # [1] python function for data to be run through before written back to the database
         self.functions = []
 
     def start(self):
@@ -100,20 +102,19 @@ class FunctionAnalyzer(Analyzer):
                 old_locals = locals()  # keep old copy of local variables
                 exec("import {} as custom".format(import_name))  # import custom py file
                 custom = old_locals['custom']  # get modified copy of local variables
-                print(custom)
                 members = inspect.getmembers(custom, inspect.isfunction)  # all functions [(name, func), ]
-                print(members)
-                print('func: ', custom.test_func)
                 if len(members) > 1:
                     print("More than 1 function exists in custom algorithm file '{}'".format(filename))
                     continue
                 elif not members:
                     print("No functions defined in custom algorithm file '{}'".format(filename))
                     continue
-                self.functions.append(members[0][1])  # add that function to the list of available functions
+                self.functions.append((filename, members[0][1]))  # add that function to the list of available functions
             except Exception as e:
                 print("Error importing from file '{}': {}: {}".format(filename, e.__class__.__name__, e))
-        self.database.set_info(self.id, {'pipeline': json.dumps(self.functions)})  # save in database
+
+        function_names = [func[0] for func in self.functions]
+        self.database.set_info(self.id, {'pipeline': json.dumps(function_names)})  # save in database
 
 
 ########################
