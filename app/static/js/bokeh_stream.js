@@ -67,6 +67,7 @@ function add_method(current_value) {
     // add a new dropdown menu to the top of the page with a given list of methods
     // to select another custom function to add to the pipeline.
     // If current_value is given, set that as the selected option.
+    // When an option is selected, call function_select_change and pass in the jQuery rep of the select menu
     select = $(`<select class="function_select" onchange="function_select_change($(this));">\
                    <option value="">--Select a function--</option>\
                 </select>
@@ -88,7 +89,6 @@ function add_method(current_value) {
     select.data('order', order);
 
     console.log("NEW MENU: "+order+"  "+select.value);
-    console.log(select)
 }
 
 function function_select_change(select) {
@@ -102,16 +102,17 @@ function function_select_change(select) {
     socket.emit('update_pipeline', {group: id, pipeline: pipeline})
 }
 
+var namespace = '/browser';  // namespace for talking with server
+var socket = io(namespace);
+
+var id = get_id()  // group ID for this page
+console.log("ID: "+id)
+
 var functions = [];  // list of function names available
 var pipeline = [];   // list of function names in the current pipeline
 
 
 $(document).ready(function() {
-    var namespace = '/browser';  // namespace for talking with server
-    var socket = io(namespace);
-    var id = get_id()  // group ID for this page
-    console.log("ID: "+id)
-
     socket.on('connect', function() {
         log("SocketIO connected to server");
     });
