@@ -33,6 +33,18 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### August 9th, 2021:
+
+​	After talking with Dr. Ghassemi today, we've decided that the best use of time for the next two weeks is to implement the following feature:
+​	We want the ability to upload an arbitrary file containing python code to the browser. The files should then be able to be selected during a stream and act as a black box through which data is sent through with an Analyzer. This would allow any arbitrary algorithm (for example a trained ML network) to act on the incoming data. In order to accomplish this, I've laid out some goals for myself this week:
+
+- Create an analyzer that reads functions from files in a particular directory which it passes the data through.
+- Add the ability to select these files in any order from the browser.
+- Add the ability to upload arbitrary files to this directory from the browser.
+- Make absolutely certain that these files don't have sudo privileges. That would be bad.
+
+Immediately a couple things came up. First, what if import statements are used in this arbitrary file? Do those need to be confined to the inside of the function? If that is the case, then the module would need to be loaded in every single time a data chunk needs to be fed through it. What would be best is to load all modules in beforehand to skip this, though I'll worry about that later.
+
 ##### August 5th, 2021:
 
 ​	The goal for today will be to make a new feature for the app that reads data from a given Redis database and feeds the whole thing into a black box algorithm (will eventually be ML training). There are a lot of things that would be useful for this - for example, the ability to trim datasets to get rid of unhelpful stuff at the beginning or end. However given the time constraint I think those may have to wait, and I can trim the data manually through the redis CLI. 

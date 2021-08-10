@@ -52,8 +52,53 @@ class TestAnalyzer(Analyzer):
         sleep(0.5)
 
 
+class FunctionAnalyzer(Analyzer):
+    """ Analyzer for running data through arbitrary python functions stored in local/pipelines/ """
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.target_id = None  # stream ID of the target data stream
+
+        # List of python functions for data to be run through before written back to the database
+        self.functions = []
+
+    def start(self):
+        """ streamer start method before loop is executed """
+        try:
+            self.get_info()
+        except:
+            raise Exception("Missing info.".format(self))
+
+    def get_info(self):
+        """ Gets the target stream from the same group"""
+        # Get info from database
+        self.target_id = self.targets[self.group]['Filtered']['id']
+
+    def loop(self):
+        """ Maine execution loop """
+        data = self.database.read_data(self.target_id)
+        if not data:  # if no data read, wait half a sec to loop again
+            sleep(0.5)
+            return
+
+        for function in self.functions:  # for each pipeline function
+            data = function(data)
+
+        # after data has been put through all transforms, write it back to the database
+        self.database.write_data(self.id, data)
+
+    def json(self, lst):
+        """ Gets list of updated file names from which to retrieve pipeline functions from """
+        transform = None  # make the editor happy because "transform" technically isn't defined
+        for filename in lst:  # for each file in the received list of file names
+            exec("from {} import transform".format(filename))  # import a function named transform from this file
+            # todo: just check to make sure there is one method defined in the file, then use that one regardless of
+            #  what is is technically defined as. Avoids the requirement of a specific name.
+            self.functions.append(transform)  # associate that function with this file name
+
+
 ########################
-# OpenBCI Raw Data Analyzers
+# EEG and ECG Raw Data Analyzers
+
 
 class SignalAnalyzer(Analyzer):
     """ Base class for the other two EEG analyzer streams"""
@@ -66,7 +111,7 @@ class SignalAnalyzer(Analyzer):
         self.widgets = {}
 
     def start(self):
-        """ extends streamer start method before loop """
+        """ streamer start method before loop is executed """
         try:
             self.get_info()
         except:
@@ -428,6 +473,7 @@ class PulseAnalyzer(Analyzer):
 
         #self.debug("Window: {}, peaks: {}".format(window, len(peaks)))
         return heart_rate
+
 
 
 
