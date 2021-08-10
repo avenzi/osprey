@@ -353,8 +353,11 @@ def custom_functions(group):
     funcs_path = 'local/pipelines'
     data['functions'] = []
     for file in os.listdir(funcs_path):
-        if os.path.isfile(os.path.join(funcs_path, file)):
-            data['functions'].append(file)
+        if not os.path.isfile(os.path.join(funcs_path, file)):
+            continue
+        if not file.endswith('.py'):
+            continue
+        data['functions'].append(file)
 
     print("READING PIPELINE FROM DATABASE")
     print(data)

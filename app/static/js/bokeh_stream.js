@@ -87,6 +87,7 @@ function add_method(current_value) {
     select.data('order', order);
 
     console.log("NEW MENU: "+order+"  "+select.value);
+    console.log(select)
 }
 
 function function_select_change(select) {
@@ -95,7 +96,7 @@ function function_select_change(select) {
     order = select.data('order');
     name = select.value;
     pipeline[order] = name
-    console.log(`order: ${order}, val: ${value}`)
+    console.log(`order: ${order}, val: ${name}`)
     console.log(pipeline)
     socket.emit('update_pipeline', {group: id, pipeline: pipeline})
 }
