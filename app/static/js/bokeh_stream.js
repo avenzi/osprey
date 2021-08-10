@@ -84,6 +84,7 @@ function add_method(current_value) {
 
     // assign an order number to the select menu
     order = pipeline.length
+    pipeline.push('')  // add an empty spot to the pipeline array
     select.data('order', order);
 
     console.log("NEW MENU: "+order+"  "+select.value);
@@ -93,6 +94,7 @@ function add_method(current_value) {
 function function_select_change(select) {
     // called when a method is selected in a dropdown menu.
     // adds selected value to pipeline in the right spot
+    console.log(select)
     order = select.data('order');
     name = select.value;
     pipeline[order] = name
