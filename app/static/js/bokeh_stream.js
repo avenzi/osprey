@@ -147,8 +147,8 @@ $(document).ready(function() {
         functions = data.functions;
         console.log("new funcs: " + functions)
         $("div.custom_functions div.menus").empty()  // clear current selections
-        for (selected of data.selected) {  // for each selected function
-            add_method(selected)
+        for (func of data.pipeline) {  // for each selected function
+            add_method(func)
         }
     });
 
