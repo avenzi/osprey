@@ -101,7 +101,7 @@ class FunctionAnalyzer(Analyzer):
                 members = inspect.getmembers(custom, inspect.isfunction)  # all functions [(name, func), ]
                 print(members)
                 import local.pipelines.flip as custom
-                print('func: ', custom.func)
+                print('func: ', custom.test_func)
                 if len(members) > 1:
                     print("More than 1 function exists in custom algorithm file '{}'".format(filename))
                 elif not members:
