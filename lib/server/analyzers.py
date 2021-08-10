@@ -91,6 +91,9 @@ class FunctionAnalyzer(Analyzer):
 
         # after data has been put through all transforms, write it back to the database
         self.database.write_data(self.id, data)
+        # todo: THis is being written to a different data column than the one being read.
+        #  need to read from this data column automatically instead of the raw stream from the Streamer.
+        #  How do I know which data column to begin with? Only if this Analyzer is active???
 
     def json(self, lst):
         """ Gets list of updated file names from which to retrieve pipeline functions from """
@@ -99,7 +102,7 @@ class FunctionAnalyzer(Analyzer):
         self.functions = []
         for filename in lst:  # for each file in the received list of file names
             try:  # attempt to import file
-                import_name = "local.pipelines.{}".format(filename.strip('.py'))
+                import_name = "local.pipelines.{}".format(filename[:-3])  # cut off ".py"
                 old_locals = locals()  # keep old copy of local variables
                 exec("import {} as custom".format(import_name))  # import custom py file
                 custom = old_locals['custom']  # get modified copy of local variables
