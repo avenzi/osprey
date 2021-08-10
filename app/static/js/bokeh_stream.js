@@ -72,6 +72,9 @@ function add_method(current_value) {
                 </select>
     `).appendTo("div.custom_functions div.menus");
 
+    console.log(select)
+    console.log($("select.function_select"))
+
     // set current value, if given
     if (current_value != undefined) {
         select.value = current_value
