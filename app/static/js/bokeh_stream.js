@@ -95,7 +95,6 @@ function function_select_change(select) {
     // called when a method is selected in a dropdown menu.
     // adds selected value to pipeline in the right spot
     console.log(select)
-    console.log($select)
     console.log($(select))
     order = select.data('order');
     name = select.value;
