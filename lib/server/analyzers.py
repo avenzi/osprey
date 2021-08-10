@@ -2,6 +2,7 @@ import numpy as np
 from scipy import signal
 from time import sleep, time
 import json
+import inspect
 
 from lib.lib import Analyzer
 from lib.server.analysis_lib import MovingAverage
@@ -91,17 +92,18 @@ class FunctionAnalyzer(Analyzer):
     def json(self, lst):
         """ Gets list of updated file names from which to retrieve pipeline functions from """
         print("GOT PIPELINE: ", lst)
-        transform = None  # make the editor happy because "transform" technically isn't defined
+        custom = None  # make the editor happy because "custom" technically isn't defined
         self.functions = []
         for filename in lst:  # for each file in the received list of file names
             try:  # attempt to import file
-                exec("from local.pipelines.{} import transform".format(filename))  # import a function named transform from this file
-                # todo: just check to make sure there is one method defined in the file, then use that one regardless of
-                #  what is is technically defined as. Avoids the requirement of a specific name.
+                exec("import local.pipelines.{} as custom".format(filename))  # import custom py file
+                members = inspect.getmembers(custom, inspect.isfunction)  # all functions [(name, func), ]
+                print(members)
+                if len(members) > 1:
+                    raise Exception("More than 1 function exists in custom algorithm file '{}'".format(filename))
+                self.functions.append(members[0][1])  # associate that function with this file name
             except Exception as e:
                 print("Error importing from file '{}': {}: {}".format(filename, e.__class__.__name__, e))
-
-            self.functions.append(transform)  # associate that function with this file name
         self.database.set_info(self.id, {'pipeline': json.dumps(self.functions)})  # save in database
 
 
