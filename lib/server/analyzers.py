@@ -96,7 +96,7 @@ class FunctionAnalyzer(Analyzer):
                 # todo: just check to make sure there is one method defined in the file, then use that one regardless of
                 #  what is is technically defined as. Avoids the requirement of a specific name.
             except Exception as e:
-                print("Error importing file: {}: {}".format(e.__class__.__name__, e))
+                print("Error importing from file '{}': {}: {}".format(filename, e.__class__.__name__, e))
             try:  # attempt to run custom function
                 self.functions.append(transform)  # associate that function with this file name
             except Exception as e:
