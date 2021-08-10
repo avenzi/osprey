@@ -80,7 +80,10 @@ class FunctionAnalyzer(Analyzer):
             return
 
         for function in self.functions:  # for each pipeline function
-            data = function(data)
+            try:  # attempt to run data through custom method
+                data = function(data)
+            except Exception as e:
+                print("Error running custom method '{}': {}: {}".format(function.__name__, e.__class__.__name__, e))
 
         # after data has been put through all transforms, write it back to the database
         self.database.write_data(self.id, data)
@@ -96,12 +99,10 @@ class FunctionAnalyzer(Analyzer):
                 # todo: just check to make sure there is one method defined in the file, then use that one regardless of
                 #  what is is technically defined as. Avoids the requirement of a specific name.
             except Exception as e:
-                print("Error importing file: {}: {}".format(e.__class__.__name__, e))
-            try:  # attempt to run custom function
-                self.functions.append(transform)  # associate that function with this file name
-            except Exception as e:
-                print("Error running custom method from '{}': {}: {}".format(filename, e.__class__.__name__, e))
-        self.database.set_info(self.id, json.dumps(self.functions))  # save in database
+                print("Error importing from file '{}': {}: {}".format(filename, e.__class__.__name__, e))
+
+            self.functions.append(transform)  # associate that function with this file name
+        self.database.set_info(self.id, {'pipeline': json.dumps(self.functions)})  # save in database
 
 
 ########################
