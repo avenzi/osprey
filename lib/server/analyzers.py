@@ -96,13 +96,17 @@ class FunctionAnalyzer(Analyzer):
         self.functions = []
         for filename in lst:  # for each file in the received list of file names
             try:  # attempt to import file
-                exec("import local.pipelines.{} as custom".format(filename.strip('.py')))  # import custom py file
-                print(inspect.getmembers(custom))
+                import_name = "local.pipelines.{}".format(filename.strip('.py'))
+                exec("import {} as custom".format(import_name))  # import custom py file
                 members = inspect.getmembers(custom, inspect.isfunction)  # all functions [(name, func), ]
                 print(members)
+                exec("import local.pipelines as custom")  # import custom py file
+                print(inspect.getmembers(custom, inspect.isfunction))
                 if len(members) > 1:
                     raise Exception("More than 1 function exists in custom algorithm file '{}'".format(filename))
-                self.functions.append(members[0][1])  # associate that function with this file name
+                elif not members:
+                    raise Exception("No functions defined in custom algorithm file '{}'".format(filename))
+                self.functions.append(members[0][1])  # add that function to the list of available functions
             except Exception as e:
                 print("Error importing from file '{}': {}: {}".format(filename, e.__class__.__name__, e))
         self.database.set_info(self.id, {'pipeline': json.dumps(self.functions)})  # save in database
