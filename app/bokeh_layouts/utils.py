@@ -52,6 +52,11 @@ def plot_sliding_js(figure, source):
         new incoming data to give smooth appearance.
     Incoming data must have a 'time' data column.
     """
+    # Todo: The trailing end of the data can be seen disappearing in chunks as new data arrives in chunks.
+    #  this can possibly be fixed by offsetting the start variable by some amount, but that amount needs
+    #  to be greater than the average time between data chunks. That time, however is much greater during
+    #  playback than normal streaming, though the browser doesn't know whether or not the data is from a playback
+    #  or live database. Maybe update the offset dynamically based on a moving average of previous time differences?
     figure.x_range = Range1d(0, 1)  # set arbitrary range to disable auto-adjusting to new data
     source.js_on_change('data',
         CustomJS(
@@ -68,8 +73,6 @@ var current_end = figure.x_range.end
 var end_diff = end - current_end
 
 if (end_diff > 0 && end_diff < end-start) {
-    console.log("figstart: "+figure.x_range.start+"  datastart: "+start+"   figend: "+figure.x_range.end+"  dataend: "+end)
-    console.log("startdiff: "+start_diff+"   enddiff: "+end_diff)
     var slide = setInterval(function(){
         if (figure.x_range.start < start) {
             figure.x_range.start += start_diff/30
@@ -83,7 +86,6 @@ if (end_diff > 0 && end_diff < end-start) {
         clearInterval(slide)
     }, duration)
 } else {
-    console.log('caught up')
     figure.x_range.start = start
     figure.x_range.end = end
 }
