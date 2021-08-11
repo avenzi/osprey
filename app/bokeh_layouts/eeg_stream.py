@@ -75,7 +75,7 @@ def create_layout(info):
 
     # get fourier widget values
     fourier_widgets = info['Fourier'].get('widgets')
-    if fourier_widgets:  # config present, it's a JSON string.
+    if fourier_widgets:  # if config present, it's a JSON string.
         fourier_widgets = loads(fourier_widgets)
     else:  # no config present, use default
         fourier_widgets = default_fourier_widgets

@@ -85,9 +85,6 @@ function add_method() {
 
 function set_method(dropdown, name) {
     // set the currently selected option for a given jQuery select element
-    console.log("Set Current Value")
-    console.log(name)
-
     order = dropdown.data('order');
     dropdown.val(name)
     selected[order] = name  // store value in right spot
