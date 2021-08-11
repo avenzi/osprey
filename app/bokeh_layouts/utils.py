@@ -76,7 +76,6 @@ if (end_diff > 0 && end_diff < end-start) {
         if (figure.x_range.end < end) {
             figure.x_range.end += end_diff/30
         }
-
     }, duration/30);
 
     setTimeout(function(){
