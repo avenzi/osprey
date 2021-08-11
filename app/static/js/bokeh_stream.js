@@ -80,7 +80,7 @@ function add_method() {
     order = selected.length
     selected.push('')  // add an empty spot to the storage array
     dropdown.data('order', order);  // assign order number to this dropdown menu
-    return dropwdown  // return this element
+    return dropdown  // return this element
 }
 
 function set_method(dropdown, name) {
