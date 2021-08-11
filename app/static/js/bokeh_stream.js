@@ -150,6 +150,7 @@ $(document).ready(function() {
         // data.available is a list of function names that are available to select
         // data.selected is a list of function names that are currently selected
         console.log("available funcs: " + data.available)
+        functions = data.available
         $("div.custom_functions div.menus").empty()  // clear current selections
         for (name of data.selected) {  // iterate over selected functions
             dropdown = add_method()  // add a new select menu
