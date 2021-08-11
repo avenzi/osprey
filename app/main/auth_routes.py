@@ -3,12 +3,10 @@ from flask import (
     Blueprint, flash, g, current_app, redirect, render_template, request, session, url_for
 )
 from werkzeug.security import check_password_hash, generate_password_hash
+from time import time
 
 # import blueprint
 from app.main import auth
-from app.main.utils import (
-    log, info, warn, error, catch_errors
-)
 
 
 @auth.route('/', methods=['GET', 'POST'])
@@ -18,9 +16,14 @@ def login():
     if request.method == 'POST':
         submit_password = request.form['password']
 
+        last_time = session.get('last_auth_attempt')
+        if last_time and last_time < time()+1:  # before cooldown done
+            error = 'Tried too quickly after last attempt'
+
         error = None
         if submit_password != current_app.config['SECRET_KEY']:
             error = 'Incorrect Authentication Key'
+            session['last_auth_attempt'] = time()
 
         #if pass_hash is None:
             #error = 'Username does not exist.'
@@ -33,6 +36,7 @@ def login():
             return redirect(url_for('index'))
 
         flash(error)
+        print("Authentication Attempt:")
     return render_template('auth/login.html')
 
 
