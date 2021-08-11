@@ -338,7 +338,10 @@ def custom_functions(group):
         return
 
     # id of Transform analyzer in this group
-    ID = database.get_group(group, 'Transformed')['id']
+    info = database.get_group(group, 'Transformed')
+    if not info:
+        return
+    ID = info['id']
 
     data = {}
 
