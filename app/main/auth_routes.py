@@ -14,13 +14,13 @@ from app.main import auth
 def login():
     """ Uses the Flask App SECRET_KEY to act as an authentication key """
     if request.method == 'POST':
+        error = None
         submit_password = request.form['password']
 
         last_time = session.get('last_auth_attempt')
         if last_time and time() < last_time+5:  # before cooldown done
             error = 'Tried too quickly after last attempt'
 
-        error = None
         if submit_password != current_app.config['SECRET_KEY']:
             error = 'Incorrect Authentication Key'
             session['last_auth_attempt'] = time()
