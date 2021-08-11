@@ -347,11 +347,6 @@ def custom_functions(group):
     # 'selected' is a list of function names that are currently selected
     data = {'available': [], 'selected': []}
 
-    # read JSON encoded list of current selections from database
-    json_string = database.get_info(ID, 'pipeline')
-    if json_string:
-        data['selected'] = json.loads(json_string)
-
     # get list of all files in this path
     funcs_path = 'local/pipelines'
     for file in os.listdir(funcs_path):
@@ -359,7 +354,12 @@ def custom_functions(group):
             continue
         if not file.endswith('.py'):
             continue
-        data['functions'].append(file)
+        data['available'].append(file)
+
+    # read JSON encoded list of current selections from database
+    json_string = database.get_info(ID, 'pipeline')
+    if json_string:
+        data['selected'] = json.loads(json_string)
 
     print("READING PIPELINE FROM DATABASE")
     print(data)
