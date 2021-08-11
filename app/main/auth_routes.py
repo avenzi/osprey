@@ -36,7 +36,7 @@ def login():
             return redirect(url_for('index'))
 
         flash(error)
-        print("Authentication Attempt:")
+        print("Authentication Attempt:\nAttempted Key: {}\nIP: {}".format(submit_password, request.remote_addr))
     return render_template('auth/login.html')
 
 
