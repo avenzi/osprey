@@ -19,11 +19,10 @@ def login():
         last_time = session.get('last_auth_attempt')
         submit_password = request.form['password']
 
-        if last_time and time() < last_time+5:  # before cooldown done
+        if last_time and time() < last_time+3:  # before cooldown done
             error = 'Tried too quickly after last attempt'
         elif submit_password != current_app.config['SECRET_KEY']:
             error = 'Incorrect Authentication Key'
-            session['last_auth_attempt'] = time()
 
         #if pass_hash is None:
             #error = 'Username does not exist.'
@@ -34,6 +33,8 @@ def login():
             session.clear()
             session['authenticated'] = True
             return redirect(url_for('index'))
+        else:  # error
+            session['last_auth_attempt'] = time()
 
         flash(error)
         print("Authentication Attempt:\nAttempted Key: {}\nIP: {}".format(submit_password, request.remote_addr))
