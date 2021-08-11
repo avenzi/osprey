@@ -94,7 +94,6 @@ class FunctionAnalyzer(Analyzer):
 
     def json(self, lst):
         """ Gets list of updated file names from which to retrieve pipeline functions from """
-        print("GOT PIPELINE: ", lst)
         custom = None  # make the editor happy because "custom" technically isn't defined
         self.functions = []
         for filename in lst:  # for each file in the received list of file names

@@ -44,7 +44,7 @@ def js_request(ID, key, attribute='value'):
     return code.format(ID=ID, key=key, attribute=attribute)
 
 
-def plot_sliding_js(source, figure):
+def plot_sliding_js(figure, source):
     """
     Configures a JS callback for the given AjaxDataSource and Figure
         to make the incoming data appear to slide into the viewing window instead of in large chunks.
@@ -54,7 +54,7 @@ def plot_sliding_js(source, figure):
     """
     source.js_on_change('data',
         CustomJS(
-            args=dict(source=source, figure=figure),
+            args=dict(figure=figure, source=source),
             code="""
 var duration = source.polling_interval
 

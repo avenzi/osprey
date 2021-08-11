@@ -37,7 +37,7 @@ def create_stream_layout(info):
     data1.line(x='time', y='val_1', legend_label='Val 1', color='blue', source=source1)
     data1.line(x='time', y='val_2', legend_label='Val 2', color='green', source=source1)
     data1.line(x='time', y='val_3', legend_label='Val 3', color='red', source=source1)
-    plot_sliding_js(source1, data1)  # incoming data smoothing
+    plot_sliding_js(data1, source1)  # incoming data smoothing
 
     data2 = figure(title='Sample Data 2', x_axis_label='time', y_axis_label='Data', toolbar_location=None, plot_width=600, plot_height=300)
     data2.xaxis.formatter = time_format()

@@ -8,7 +8,7 @@ from bokeh.palettes import viridis, magma
 
 from json import loads
 
-from app.bokeh_layouts.utils import js_request, time_format
+from app.bokeh_layouts.utils import js_request, time_format, plot_sliding_js
 
 BACKEND = 'canvas'  # 'webgl' appears to be broken - makes page unresponsive.
 
@@ -148,45 +148,7 @@ def create_layout(info):
         visible = True if i == 0 else False  # first channel visible
         ecg.line(x='time', y=channels[i], name=channels[i], color=colors[i], source=ecg_source, visible=visible)
 
-    # Whenever the DataSource data changes, incrementally slide x_range over the length of the
-    # new incoming data to give smooth appearance.
-    # TODO: can it be made less choppy?
-    ecg_source.js_on_change('data',
-        CustomJS(args=dict(  # arguments to be passed into the JS function
-            source=ecg_source,
-            figure=ecg
-        ),
-            code="""
-var duration = source.polling_interval
-
-var start = source.data['time'][0]+1000
-var current_start = figure.x_range.start
-var start_diff = start - current_start
-
-var end = source.data['time'][source.data['time'].length-1]
-var current_end = figure.x_range.end
-var end_diff = end - current_end
-
-if (end_diff > 0 && end_diff < end-start) {
-    var slide = setInterval(function(){
-        if (figure.x_range.start < start) {
-            figure.x_range.start += start_diff/30
-        }
-        if (figure.x_range.end < end) {
-            figure.x_range.end += end_diff/30
-        }
-
-    }, duration/30);
-
-    setTimeout(function(){
-        clearInterval(slide)
-    }, duration)
-} else {
-    figure.x_range.start = start
-    figure.x_range.end = end
-}
-"""
-    ))
+    plot_sliding_js(ecg, ecg_source)  # incoming data smoothing
 
     # fourier figure with a line for each EEG channel
     fourier = figure(
