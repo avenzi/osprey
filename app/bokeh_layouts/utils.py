@@ -107,7 +107,8 @@ if (front_source.data['time'].length == 0) {  // no data in source
 
 for (let renderer of figure.renderers) {
     // from the low-priority source
-    if (renderer.data_source == back_source) {  
+    if (renderer.data_source == back_source) {
+        console.log("from front source. " + alpha)
         renderer.glyph.fill_alpha = alpha
     }
 }
