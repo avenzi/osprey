@@ -83,6 +83,7 @@ if (end_diff > 0 && end_diff < end-start) {
         clearInterval(slide)
     }, duration)
 } else {
+console.log('reset')
     figure.x_range.start = start
     figure.x_range.end = end
 }
@@ -110,7 +111,7 @@ if (front_source.data['time'].length == 0) {  // no data in source
 for (let renderer of figure.renderers) {
     // from the low-priority source
     if (renderer.data_source == back_source) {
-        console.log("from front source. " + alpha)
+        renderer.glyph.line_alpha = alpha
         renderer.glyph.fill_alpha = alpha
     }
 }

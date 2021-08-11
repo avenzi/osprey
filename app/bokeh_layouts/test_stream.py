@@ -11,7 +11,7 @@ def create_stream_layout(info):
         method='GET',
         polling_interval=500,  # in milliseconds
         mode='append',  # append to existing data
-        max_size=1000,  # Keep last 1000 data points
+        max_size=200,  # Keep last 1000 data points
         if_modified=True)  # if_modified ignores responses sent with code 304 and not cached.
 
     source2 = AjaxDataSource(
@@ -19,7 +19,7 @@ def create_stream_layout(info):
         method='GET',
         polling_interval=500,  # in milliseconds
         mode='append',  # append to existing data
-        max_size=1000,  # Keep last 1000 data points
+        max_size=200,  # Keep last 1000 data points
         if_modified=True)  # if_modified ignores responses sent with code 304 and not cached.
 
     # at the moment, the transform source only modifies the data in Random 2
@@ -28,7 +28,7 @@ def create_stream_layout(info):
         method='GET',
         polling_interval=500,  # in milliseconds
         mode='append',  # append to existing data
-        max_size=1000,  # Keep last 1000 data points
+        max_size=200,  # Keep last 1000 data points
         if_modified=True)  # if_modified ignores responses sent with code 304 and not cached.
 
     data1 = figure(title='Sample Data 1', x_axis_label='time', y_axis_label='Data', toolbar_location=None, plot_width=600, plot_height=300)
