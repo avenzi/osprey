@@ -50,7 +50,6 @@ def create_stream_layout(info):
     data2.line(x='time', y='val_2', legend_label='Val 2', color='green', source=transform_source)
     data2.line(x='time', y='val_3', legend_label='Val 3', color='red', source=transform_source)
     plot_sliding_js(data2, source2)  # incoming data smoothing
-    plot_sliding_js(data2, transform_source)  # incoming data smoothing
     plot_priority_js(data2, back_source=source2, front_source=transform_source)  # give transformed data priority
 
     # create layout
