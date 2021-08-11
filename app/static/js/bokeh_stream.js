@@ -80,14 +80,16 @@ function add_method(current_value) {
 
     // set current value, if given.
     if (current_value != undefined) {
-        console.log("Set Current Value: "+current_value)
-        console.log(select)
+        console.log("Set Current Value: ")
+        console.log(current_value)
         select.val(current_value)
+        pipeline.push(current_value)  // add current value to pipeline array
+    } else {
+        pipeline.push('')  // add an empty spot to the pipeline array
     }
 
     // assign an order number to the select menu
     order = pipeline.length
-    pipeline.push('')  // add an empty spot to the pipeline array
     select.data('order', order);
 }
 
