@@ -1,4 +1,4 @@
-from bokeh.models import DatetimeTickFormatter, CustomJS
+from bokeh.models import DatetimeTickFormatter, CustomJS, Range1d
 
 
 def time_format():
@@ -52,7 +52,7 @@ def plot_sliding_js(figure, source):
         new incoming data to give smooth appearance.
     Incoming data must have a 'time' data column.
     """
-    figure.x_range = [0, 1]
+    figure.x_range = Range1d(0, 1)  # set arbitrary range to disable auto-adjusting to new data
     source.js_on_change('data',
         CustomJS(
             args=dict(figure=figure, source=source),
