@@ -80,7 +80,7 @@ function add_method(current_value) {
 
     // set current value, if given.
     if (current_value != undefined) {
-        console.log("Set Current Value: ")
+        console.log("Set Current Value")
         console.log(current_value)
         select.val(current_value)
         pipeline.push(current_value)  // add current value to pipeline array
@@ -149,7 +149,7 @@ $(document).ready(function() {
     socket.emit('custom_functions', id);
     socket.on('custom_functions', function(data) {  // receive this info
         functions = data.functions;
-        console.log("new funcs: " + functions)
+        console.log("available funcs: " + functions)
         $("div.custom_functions div.menus").empty()  // clear current selections
         for (func of data.pipeline) {  // for each selected function
             add_method(func)
@@ -157,5 +157,5 @@ $(document).ready(function() {
     });
 
     // add functionality to the + button, adds another dropdown menu
-    $("div.custom_functions button.add").on('click', add_method)
+    $("div.custom_functions button.add").on('click', add_method())
 });
