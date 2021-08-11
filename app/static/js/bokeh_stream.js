@@ -66,41 +66,40 @@ function attempt_load(attempts) {
 function add_method() {
     // add a new dropdown menu to the top of the page with a given list of methods
     // to select another custom function to add to the pipeline.
-    // When an option is selected, call function_select_change and pass in the jQuery rep of the select menu
-    select = $(`<select class="function_select" onchange="function_select_change($(this));">\
+    // When an option is selected, call update_selection and pass in the jQuery rep of the select menu
+    dropdown = $(`<select class="function_select" onchange="update_selection($(this));">\
                    <option value="">--Select a function--</option>\
                 </select>
     `).appendTo("div.custom_functions div.menus");
 
     // add an option for each method in the new select menu
     for (func of functions) {
-        select.append(`<option value="${func}">${func}</option>`)
+        dropdown.append(`<option value="${func}">${func}</option>`)
     }
 
-    // assign an order number to the select menu
-    order = pipeline.length
-    pipeline.push('')  // add an empty spot to the pipeline array
-    select.data('order', order);
-    return select  // return this select element
+    order = selected.length
+    selected.push('')  // add an empty spot to the storage array
+    dropdown.data('order', order);  // assign order number to this dropdown menu
+    return dropwdown  // return this element
 }
 
-function set_method(select, name) {
+function set_method(dropdown, name) {
     // set the currently selected option for a given jQuery select element
     console.log("Set Current Value")
     console.log(name)
 
-    order = select.data('order');
-    select.val(name)
-    pipeline[order] = name  // store value in pipeline array
+    order = dropdown.data('order');
+    dropdown.val(name)
+    selected[order] = name  // store value in right spot
 }
 
-function function_select_change(select) {
+function update_selection(dropdown) {
     // called when a method is selected in a dropdown menu.
     // adds selected value to pipeline in the right spot
-    order = select.data('order');
-    name = select.val();
-    pipeline[order] = name  // store value in pipeline array
-    socket.emit('update_pipeline', {group: id, pipeline: pipeline})  // send info to server
+    order = dropdown.data('order');
+    name = dropdown.val();
+    selected[order] = name  // store value in right spot
+    socket.emit('update_pipeline', {group: id, selected: selected})  // send info to server
 }
 
 var namespace = '/browser';  // namespace for talking with server
@@ -110,7 +109,7 @@ var id = get_id()  // group ID for this page
 console.log("ID: "+id)
 
 var functions = [];  // list of function names available
-var pipeline = [];   // list of function names in the current pipeline
+var selected = [];   // list of function names currently selected for this page
 
 
 $(document).ready(function() {
@@ -153,8 +152,8 @@ $(document).ready(function() {
         console.log("available funcs: " + data.available)
         $("div.custom_functions div.menus").empty()  // clear current selections
         for (name of data.selected) {  // iterate over selected functions
-            select = add_method()  // add a new select menu
-            set_method(select, name)  // set it's value
+            dropdown = add_method()  // add a new select menu
+            set_method(dropdown, name)  // set it's value
         }
     });
 
