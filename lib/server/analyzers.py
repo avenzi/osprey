@@ -98,6 +98,8 @@ class FunctionAnalyzer(Analyzer):
         custom = None  # make the editor happy because "custom" technically isn't defined
         self.functions = []
         for filename in lst:  # for each file in the received list of file names
+            if not filename:
+                continue
             try:  # attempt to import file
                 import_name = "local.pipelines.{}".format(filename[:-3])  # cut off ".py"
                 old_locals = locals()  # keep old copy of local variables
