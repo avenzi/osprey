@@ -3,3 +3,8 @@ div.stream_time {
     height: auto;
     width: auto;
 }
+
+/* make sure button appears in the same line */
+div.custom_functions div.menus {
+    display: inline-block;
+}
