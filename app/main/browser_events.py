@@ -343,18 +343,17 @@ def custom_functions(group):
         return
     ID = info['id']
 
-    data = {}
+    # 'available' is a list of function names that are available to be selected
+    # 'selected' is a list of function names that are currently selected
+    data = {'available': [], 'selected': []}
 
     # read JSON encoded list of current selections from database
     json_string = database.get_info(ID, 'pipeline')
     if json_string:
-        data['pipeline'] = json.loads(json_string)
-    else:
-        data['pipeline'] = []
+        data['selected'] = json.loads(json_string)
 
     # get list of all files in this path
     funcs_path = 'local/pipelines'
-    data['functions'] = []
     for file in os.listdir(funcs_path):
         if not os.path.isfile(os.path.join(funcs_path, file)):
             continue
