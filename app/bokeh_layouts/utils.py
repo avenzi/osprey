@@ -82,9 +82,9 @@ if (end_diff > 0 && end_diff < end-start) {
         clearInterval(slide)
     }, duration)
 } else {
-console.log('reset')
-    figure.x_range.start = start
-    figure.x_range.end = end
+    //console.log('caught up')
+    //figure.x_range.start = start
+    //figure.x_range.end = end
 }
 """
     ))
