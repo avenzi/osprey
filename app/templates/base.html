@@ -15,7 +15,7 @@
     <ul>
       <li>{% block back %}{% endblock %}
       {% if session.get('username') %}
-        <li><span>{{ session.get('username') }}</span>
+        <li><span>{{ session.get('authenticated') }}</span>
         <li><a href="{{ url_for('auth.logout') }}">Log Out</a>
       {% else %}
         <li><a href="{{ url_for('auth.login') }}">Log In</a>
