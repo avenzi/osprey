@@ -17,7 +17,7 @@ def login():
         submit_password = request.form['password']
 
         last_time = session.get('last_auth_attempt')
-        if last_time and last_time < time()+5:  # before cooldown done
+        if last_time and time() < last_time+5:  # before cooldown done
             error = 'Tried too quickly after last attempt'
 
         error = None
