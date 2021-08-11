@@ -43,7 +43,8 @@ def auth_required(view):
     """ Decorator to validate user login before accessing a route """
     @wraps(view)
     def wrapped_view(**kwargs):
-        if session.get('authenticated') is None:
+        print("AUTH: ", session.get('authenticated'))
+        if not session.get('authenticated'):
             return redirect(url_for('auth.login'))
         return view(**kwargs)
     return wrapped_view
