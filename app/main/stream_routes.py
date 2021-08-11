@@ -12,7 +12,7 @@ from local import server_stream_config
 from app.main import streams, socketio
 
 from app.main.utils import get_database
-from app.main.auth_routes import login_required
+from app.main.auth_routes import auth_required
 
 # todo: how to emit socketIO messages in a Flask route? The socketIO messages need to know what
 #  room to emit to, which will be the room with the SID of the socket. However the Flask routes
@@ -20,14 +20,14 @@ from app.main.auth_routes import login_required
 #  in a custom header with every request??
 
 
-@login_required
+@auth_required
 @streams.route('/', methods=['GET', 'POST'])
 @streams.route('/index', methods=('GET', 'POST'))
 def index():
     return render_template('/index.html')
 
 
-@login_required
+@auth_required
 @streams.route('/stream', methods=('GET', 'POST'))
 def stream():
     group_name = request.args.get('group')
@@ -56,7 +56,7 @@ def stream():
         return redirect(url_for('index'))
 
 
-@login_required
+@auth_required
 @streams.route('/stream/plot_layout', methods=('GET', 'POST'))
 def plot_layout():
     """ Returns the layout JSON for the bokeh plot """
@@ -89,7 +89,7 @@ def plot_layout():
     return resp
 
 
-@login_required
+@auth_required
 @streams.route('/stream/update', methods=('GET', 'POST'))
 def plot_update():
     """ Returns the json to update a bokeh plot """
@@ -128,7 +128,7 @@ def plot_update():
         return "", 304  # not modified (no new data)
 
 
-@login_required
+@auth_required
 @streams.route('/stream/widgets', methods=('GET', 'POST'))
 def widget_update():
     """

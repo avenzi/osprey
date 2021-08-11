@@ -8,40 +8,16 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from app.main import auth
 
 
-@auth.route('/register', methods=('GET', 'POST'))
-def register():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        red = current_app.redis
-
-        error = None
-        if not username:
-            error = 'Username is required.'
-        elif not password:
-            error = 'Password is required.'
-        elif red.get(username):
-            error = 'User {} is already registered.'.format(username)
-
-        if error is None:
-            red.set(username, generate_password_hash(password))
-            return redirect(url_for('auth.login'))
-
-        flash(error)
-
-    return render_template('auth/register.html')
-
-
 @auth.route('/', methods=['GET', 'POST'])
 @auth.route('/login', methods=('GET', 'POST'))
 def login():
+    """ Uses the Flask App SECRET_KEY to act as an authentication key """
     if request.method == 'POST':
-        submit_username = request.form['username']
         submit_password = request.form['password']
 
         error = None
-        if submit_password != 'password':
-            error = 'Incorrect Password'
+        if submit_password != current_app.config['SECRET_KEY']:
+            error = 'Incorrect Authentication Key'
 
         #if pass_hash is None:
             #error = 'Username does not exist.'
@@ -50,7 +26,7 @@ def login():
 
         if error is None:
             session.clear()
-            session['username'] = submit_username
+            session['authenticated'] = True
             return redirect(url_for('index'))
 
         flash(error)
@@ -63,11 +39,11 @@ def logout():
     return render_template('auth/logged_out.html')
 
 
-def login_required(view):
+def auth_required(view):
     """ Decorator to validate user login before accessing a route """
     @wraps(view)
     def wrapped_view(**kwargs):
-        if session.get('username') is None:
+        if session.get('authenticated') is None:
             return redirect(url_for('auth.login'))
         return view(**kwargs)
     return wrapped_view
