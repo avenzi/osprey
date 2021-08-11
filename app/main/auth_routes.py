@@ -33,7 +33,6 @@ def login():
             return redirect(url_for('index'))
 
         flash(error)
-        info("Authentication attempt")
     return render_template('auth/login.html')
 
 
