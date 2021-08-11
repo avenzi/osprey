@@ -161,7 +161,7 @@ def create_layout(info):
     # initial y_ranges should not be set to enable auto-scaling
     eeg = figure(
         title='EEG Channels',
-        x_axis_label='Time (s)', y_axis_label='Voltage (uV)', x_range=[0, 0],
+        x_axis_label='Time (s)', y_axis_label='Voltage (uV)',
         plot_width=1200, plot_height=200,
         toolbar_location=None,
         output_backend=BACKEND
