@@ -63,10 +63,9 @@ function attempt_load(attempts) {
     }
 }
 
-function add_method(current_value) {
+function add_method() {
     // add a new dropdown menu to the top of the page with a given list of methods
     // to select another custom function to add to the pipeline.
-    // If current_value is given, set that as the selected option.
     // When an option is selected, call function_select_change and pass in the jQuery rep of the select menu
     select = $(`<select class="function_select" onchange="function_select_change($(this));">\
                    <option value="">--Select a function--</option>\
@@ -78,19 +77,21 @@ function add_method(current_value) {
         select.append(`<option value="${func}">${func}</option>`)
     }
 
-    // set current value, if given.
-    if (current_value != undefined) {
-        console.log("Set Current Value")
-        console.log(current_value)
-        select.val(current_value)
-        pipeline.push(current_value)  // add current value to pipeline array
-    } else {
-        pipeline.push('')  // add an empty spot to the pipeline array
-    }
-
     // assign an order number to the select menu
     order = pipeline.length
+    pipeline.push('')  // add an empty spot to the pipeline array
     select.data('order', order);
+    return select  // return this select element
+}
+
+function set_method(select, name) {
+    // set the currently selected option for a given jQuery select element
+    console.log("Set Current Value")
+    console.log(name)
+
+    order = select.data('order');
+    select.val(name)
+    pipeline[order] = name  // store value in pipeline array
 }
 
 function function_select_change(select) {
@@ -98,9 +99,8 @@ function function_select_change(select) {
     // adds selected value to pipeline in the right spot
     order = select.data('order');
     name = select.val();
-    pipeline[order] = name
-    console.log(pipeline)
-    socket.emit('update_pipeline', {group: id, pipeline: pipeline})
+    pipeline[order] = name  // store value in pipeline array
+    socket.emit('update_pipeline', {group: id, pipeline: pipeline})  // send info to server
 }
 
 var namespace = '/browser';  // namespace for talking with server
@@ -148,14 +148,16 @@ $(document).ready(function() {
     //  a list of the currently selected functions for this page
     socket.emit('custom_functions', id);
     socket.on('custom_functions', function(data) {  // receive this info
-        functions = data.functions;
-        console.log("available funcs: " + functions)
+        // data.available is a list of function names that are available to select
+        // data.selected is a list of function names that are currently selected
+        console.log("available funcs: " + data.available)
         $("div.custom_functions div.menus").empty()  // clear current selections
-        for (func of data.pipeline) {  // for each selected function
-            add_method(func)
+        for (name of data.selected) {  // iterate over selected functions
+            select = add_method()  // add a new select menu
+            set_method(select, name)  // set it's value
         }
     });
 
     // add functionality to the + button, adds another dropdown menu
-    $("div.custom_functions button.add").on('click', add_method())
+    $("div.custom_functions button.add").on('click', add_method)
 });
