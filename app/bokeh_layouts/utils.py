@@ -107,7 +107,7 @@ def plot_priority_js(figure, back_source, front_source):
 if (front_source.data['time'].length == 0) {  // no data in source
     var alpha = 1.0
 } else {  // data in source
-    var alpha = 0.1
+    var alpha = 0.2
 }
 
 for (let renderer of figure.renderers) {
