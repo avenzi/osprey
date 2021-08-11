@@ -75,6 +75,7 @@ function add_method(current_value) {
 
     // set current value, if given
     if (current_value != undefined) {
+        console.log("Set Current Value: "+current_value)
         select.val(current_value)
     }
 
