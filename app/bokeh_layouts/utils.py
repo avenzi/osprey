@@ -67,6 +67,8 @@ var current_end = figure.x_range.end
 var end_diff = end - current_end
 
 if (end_diff > 0 && end_diff < end-start) {
+    console.log("figstart: "+figure.x_range.start+"  datastart: "+start+"   figend: "+figure.x_range.end+"  dataend: "+end)
+    console.log("startdiff: "+start_diff+"   enddiff: "+end_diff)
     var slide = setInterval(function(){
         if (figure.x_range.start < start) {
             figure.x_range.start += start_diff/30

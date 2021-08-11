@@ -339,6 +339,8 @@ def custom_functions(group):
 
     # id of Transform analyzer in this group
     ID = database.get_group(group, 'Transformed')['id']
+    if not ID:  # no transform analyzer found
+        return
 
     data = {}
 
