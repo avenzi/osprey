@@ -19,7 +19,7 @@ def login():
         last_time = session.get('last_auth_attempt')
         submit_password = request.form['password']
 
-        if last_time and time() < last_time+3:  # before cooldown done
+        if last_time and time() < last_time+2:  # before cooldown done
             error = 'Tried too quickly after last attempt'
         elif submit_password != current_app.config['SECRET_KEY']:
             error = 'Incorrect Authentication Key'
@@ -32,6 +32,7 @@ def login():
         if error is None:
             session.clear()
             session['authenticated'] = True
+            print("Authentication Attempt:\nIP: {}")
             return redirect(url_for('index'))
         else:  # error
             session['last_auth_attempt'] = time()
