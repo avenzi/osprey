@@ -58,7 +58,7 @@ def plot_sliding_js(figure, source):
             code="""
 var duration = source.polling_interval
 
-var start = source.data['time'][0]+1000
+var start = source.data['time'][0]
 var current_start = figure.x_range.start
 var start_diff = start - current_start
 
