@@ -6,6 +6,9 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 # import blueprint
 from app.main import auth
+from app.main.utils import (
+    log, info, warn, error, catch_errors
+)
 
 
 @auth.route('/', methods=['GET', 'POST'])
@@ -30,6 +33,7 @@ def login():
             return redirect(url_for('index'))
 
         flash(error)
+        info("Authentication attempt")
     return render_template('auth/login.html')
 
 
