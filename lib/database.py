@@ -676,7 +676,8 @@ class Database:
         """
         if stream is not None:  # stream name specified
             stream_id = self.redis.hget('group:'+name, stream)  # get stream ID from group dict
-            return self.get_info(stream_id)  # return dict for that stream
+            if stream_id:
+                return self.get_info(stream_id)  # return dict for that stream
 
         else:  # no stream name specified - get whole group
             data = {}  # name: {stream info dict}
