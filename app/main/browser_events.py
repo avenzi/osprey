@@ -361,9 +361,6 @@ def custom_functions(group):
     if json_string:
         data['selected'] = json.loads(json_string)
 
-    print("READING PIPELINE FROM DATABASE")
-    print(data)
-
     # emit back to browser
     socketio.emit('custom_functions', data, namespace='/browser', room=request.sid)
 
@@ -385,7 +382,6 @@ def update_pipeline(data):
 
     # id of Transform analyzer in this group
     ID = database.get_group(group, 'Transformed')['id']
-    print("UPDATED PIPELINE: ", selected)
     socketio.emit('json', selected, namespace='/'+ID)
 
 
