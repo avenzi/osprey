@@ -75,6 +75,12 @@ class FunctionAnalyzer(Analyzer):
         except:
             raise Exception("Missing info.".format(self))
 
+        try:  # write current custom function info to database
+            function_names = [func[0] for func in self.functions]
+            self.database.set_info(self.id, {'pipeline': json.dumps(function_names)})  # save in database
+        except Exception as e:
+            print("Failed to save custom function info to database: {}: {}".format(e.__class__.__name__, e))
+
     def loop(self):
         """ Maine execution loop """
         data = self.database.read_data(self.target_id)
