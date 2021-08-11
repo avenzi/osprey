@@ -20,7 +20,6 @@ from app.main.auth_routes import auth_required
 #  in a custom header with every request??
 
 
-
 @streams.route('/', methods=['GET', 'POST'])
 @streams.route('/index', methods=('GET', 'POST'))
 @auth_required
