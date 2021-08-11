@@ -52,6 +52,7 @@ def plot_sliding_js(figure, source):
         new incoming data to give smooth appearance.
     Incoming data must have a 'time' data column.
     """
+    figure.x_range = [0, 1]
     source.js_on_change('data',
         CustomJS(
             args=dict(figure=figure, source=source),
