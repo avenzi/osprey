@@ -73,15 +73,16 @@ function add_method(current_value) {
                 </select>
     `).appendTo("div.custom_functions div.menus");
 
-    // set current value, if given
-    if (current_value != undefined) {
-        console.log("Set Current Value: "+current_value)
-        select.val(current_value)
-    }
-
     // add an option for each method in the new select menu
     for (func of functions) {
         select.append(`<option value="${func}">${func}</option>`)
+    }
+
+    // set current value, if given.
+    if (current_value != undefined) {
+        console.log("Set Current Value: "+current_value)
+        console.log(select)
+        select.val(current_value)
     }
 
     // assign an order number to the select menu
