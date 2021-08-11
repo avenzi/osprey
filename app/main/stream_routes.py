@@ -20,9 +20,10 @@ from app.main.auth_routes import auth_required
 #  in a custom header with every request??
 
 
-@auth_required
+
 @streams.route('/', methods=['GET', 'POST'])
 @streams.route('/index', methods=('GET', 'POST'))
+@auth_required
 def index():
     return render_template('/index.html')
 
