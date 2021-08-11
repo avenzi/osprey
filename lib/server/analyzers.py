@@ -91,9 +91,6 @@ class FunctionAnalyzer(Analyzer):
 
         # after data has been put through all transforms, write it back to the database
         self.database.write_data(self.id, data)
-        # todo: THis is being written to a different data column than the one being read.
-        #  need to read from this data column automatically instead of the raw stream from the Streamer.
-        #  How do I know which data column to begin with? Only if this Analyzer is active???
 
     def json(self, lst):
         """ Gets list of updated file names from which to retrieve pipeline functions from """
