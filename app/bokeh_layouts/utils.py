@@ -1,4 +1,4 @@
-from bokeh.models import DatetimeTickFormatter
+from bokeh.models import DatetimeTickFormatter, CustomJS
 
 
 def time_format():
@@ -42,3 +42,74 @@ def js_request(ID, key, attribute='value'):
         console.log('{key}: ' + this.{attribute});
     """
     return code.format(ID=ID, key=key, attribute=attribute)
+
+
+def plot_sliding_js(source, figure):
+    """
+    Configures a JS callback for the given AjaxDataSource and Figure
+        to make the incoming data appear to slide into the viewing window instead of in large chunks.
+    Whenever the AjaxDataSource data changes, incrementally slide x_range over the length of the
+        new incoming data to give smooth appearance.
+    Incoming data must have a 'time' data column.
+    """
+    source.js_on_change('data',
+        CustomJS(
+            args=dict(source=source, figure=figure),
+            code="""
+var duration = source.polling_interval
+
+var start = source.data['time'][0]+1000
+var current_start = figure.x_range.start
+var start_diff = start - current_start
+
+var end = source.data['time'][source.data['time'].length-1]
+var current_end = figure.x_range.end
+var end_diff = end - current_end
+
+if (end_diff > 0 && end_diff < end-start) {
+    var slide = setInterval(function(){
+        if (figure.x_range.start < start) {
+            figure.x_range.start += start_diff/30
+        }
+        if (figure.x_range.end < end) {
+            figure.x_range.end += end_diff/30
+        }
+
+    }, duration/30);
+
+    setTimeout(function(){
+        clearInterval(slide)
+    }, duration)
+} else {
+    figure.x_range.start = start
+    figure.x_range.end = end
+}
+"""
+    ))
+    return
+
+
+def plot_priority_js(figure, back_source, front_source):
+    """
+    Configures a JS callback for the given AjaxDataSource and Figure
+        to make one AjaxDataSource have visual priority over the other.
+    Whenever the front_source receives data and is plotted, back_source becomes more transparent.
+    """
+    front_source.js_on_change('data',
+        CustomJS(
+            args=dict(figure=figure, back_source=back_source, front_source=front_source),
+            code="""
+if (front_source.data['time'].length == 0) {  // no data in source
+    var alpha = 1.0
+} else {  // data in source
+    var alpha = 0.1
+}
+
+for (let renderer of figure.renderers) {
+    // from the low-priority source
+    if (renderer.data_source == back_source) {  
+        renderer.glyph.fill_alpha = alpha
+    }
+}
+"""))
+    return
