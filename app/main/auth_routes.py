@@ -8,6 +8,10 @@ from time import time
 # import blueprint
 from app.main import auth
 
+from app.main.utils import (
+    log, info, warn
+)
+
 
 @auth.route('/', methods=['GET', 'POST'])
 @auth.route('/login', methods=('GET', 'POST'))
@@ -32,13 +36,13 @@ def login():
         if error is None:
             session.clear()
             session['authenticated'] = True
-            print("Authentication Attempt:\nIP: {}")
+            info("Authentication Attempt:\n    IP: {}")
             return redirect(url_for('index'))
         else:  # error
             session['last_auth_attempt'] = time()
 
         flash(error)
-        print("Authentication Attempt:\nAttempted Key: {}\nIP: {}".format(submit_password, request.remote_addr))
+        info("Authentication Attempt:\n    Attempted Key: {}\n    IP: {}".format(submit_password, request.remote_addr))
     return render_template('auth/login.html')
 
 

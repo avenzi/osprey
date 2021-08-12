@@ -43,12 +43,15 @@ def log(msg, level=0, everywhere=False):
     with open(LOG_FILE, 'a') as file:
         file.write("{}{}: {}\n".format(t, pre, msg))
 
-    # package log message and level to send to browser
-    data = {'level': level, 'message': msg}
-    if everywhere:
-        socketio.emit('log', data, namespace='/browser')
-    else:
-        socketio.emit('log', data, namespace='/browser', room=request.sid)
+    try:
+        # package log message and level to send to browser
+        data = {'level': level, 'message': msg}
+        if everywhere:
+            socketio.emit('log', data, namespace='/browser')
+        else:
+            socketio.emit('log', data, namespace='/browser', room=request.sid)
+    except:
+        pass
 
 
 def info(msg, everywhere=False):
