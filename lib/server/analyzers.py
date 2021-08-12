@@ -80,7 +80,7 @@ class FunctionAnalyzer(Analyzer):
 
     def loop(self):
         """ Maine execution loop """
-        for name, target in self.targets[self.group].itmes():
+        for name, target in self.targets[self.group].itmems():
             data = self.database.read_data(target['id'])
             if not data:  # if no data read, wait half a sec to loop again
                 return

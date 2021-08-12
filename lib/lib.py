@@ -700,8 +700,8 @@ class Analyzer(Streamer):
             group = info.get('group')
             name = info.get('name')
             if not group or not name:
-                print(stream_id, info_list, info)
-                self.debug("Stream group or name not found in stream info")
+                #print(stream_id, info_list, info)
+                #self.debug("Stream group or name not found in stream info")
                 continue
 
             if not self.targets.get(group):  # group not found
