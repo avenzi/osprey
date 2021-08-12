@@ -22,9 +22,16 @@ def create_stream_layout(info):
         max_size=500,  # Keep last 1000 data points
         if_modified=True)  # if_modified ignores responses sent with code 304 and not cached.
 
-    # at the moment, the transform source only modifies the data in Random 2
-    transform_source = AjaxDataSource(
-        data_url='/stream/update?id={}'.format(info['Transformed']['id']),
+    transform_source1 = AjaxDataSource(
+        data_url='/stream/update?id={}'.format('random1:'+info['Transformed']['id']),
+        method='GET',
+        polling_interval=1000,  # in milliseconds
+        mode='append',  # append to existing data
+        max_size=500,  # Keep last 1000 data points
+        if_modified=True)  # if_modified ignores responses sent with code 304 and not cached.
+
+    transform_source2 = AjaxDataSource(
+        data_url='/stream/update?id={}'.format('random2:'+info['Transformed']['id']),
         method='GET',
         polling_interval=1000,  # in milliseconds
         mode='append',  # append to existing data
@@ -37,7 +44,12 @@ def create_stream_layout(info):
     data1.line(x='time', y='val_1', legend_label='Val 1', color='blue', source=source1)
     data1.line(x='time', y='val_2', legend_label='Val 2', color='green', source=source1)
     data1.line(x='time', y='val_3', legend_label='Val 3', color='red', source=source1)
+    # same lines but from the transformed source
+    data1.line(x='time', y='val_1', legend_label='Val 1', color='blue', source=transform_source1)
+    data1.line(x='time', y='val_2', legend_label='Val 2', color='green', source=transform_source1)
+    data1.line(x='time', y='val_3', legend_label='Val 3', color='red', source=transform_source1)
     plot_sliding_js(data1, source1)  # incoming data smoothing
+    plot_priority_js(data1, back_source=source1, front_source=transform_source1)  # give transformed data priority
 
     data2 = figure(title='Sample Data 2', x_axis_label='time', y_axis_label='Data', toolbar_location=None, plot_width=600, plot_height=300)
     data2.xaxis.formatter = time_format()
@@ -46,11 +58,11 @@ def create_stream_layout(info):
     data2.line(x='time', y='val_2', legend_label='Val 2', color='green', source=source2)
     data2.line(x='time', y='val_3', legend_label='Val 3', color='red', source=source2)
     # same lines but from the transformed source
-    data2.line(x='time', y='val_1', legend_label='Val 1', color='blue', source=transform_source)
-    data2.line(x='time', y='val_2', legend_label='Val 2', color='green', source=transform_source)
-    data2.line(x='time', y='val_3', legend_label='Val 3', color='red', source=transform_source)
+    data2.line(x='time', y='val_1', legend_label='Val 1', color='blue', source=transform_source2)
+    data2.line(x='time', y='val_2', legend_label='Val 2', color='green', source=transform_source2)
+    data2.line(x='time', y='val_3', legend_label='Val 3', color='red', source=transform_source2)
     plot_sliding_js(data2, source2)  # incoming data smoothing
-    plot_priority_js(data2, back_source=source2, front_source=transform_source)  # give transformed data priority
+    plot_priority_js(data2, back_source=source2, front_source=transform_source2)  # give transformed data priority
 
     # create layout
     return layout([[data1, data2]])  # format into layout object

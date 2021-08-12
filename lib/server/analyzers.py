@@ -57,7 +57,7 @@ class FunctionAnalyzer(Analyzer):
     """ Analyzer for running data through arbitrary python functions stored in local/pipelines/ """
     def __init__(self, *args):
         super().__init__(*args)
-        self.target_id = None  # stream ID of the target data stream
+        self.target_ids = []  # stream IDs of the target data streams
 
         # List of tuples:
         # [0] file name containing the function
@@ -68,12 +68,9 @@ class FunctionAnalyzer(Analyzer):
         """ streamer start method before loop is executed """
         try:  # grab the ID of the target stream
             targets = self.targets[self.group].values()
-            if len(list(targets)) > 1:
-                raise Exception("FunctionAnalyzer can only target 1 stream")
-
-            self.target_id = list(targets)[0]['id']
-        except:
-            raise Exception("Missing info.".format(self))
+            self.target_ids = [target['id'] for target in list(targets)]
+        except Exception as e:
+            print("Failed to start Function Analyzer: {}:{}".format(e.__class__.__name__, e))
 
         try:  # write current custom function info to database
             function_names = [func[0] for func in self.functions]
@@ -83,20 +80,21 @@ class FunctionAnalyzer(Analyzer):
 
     def loop(self):
         """ Maine execution loop """
-        data = self.database.read_data(self.target_id)
-        if not data:  # if no data read, wait half a sec to loop again
-            sleep(0.5)
-            return
+        for target_id in self.target_ids:
+            data = self.database.read_data(target_id)
+            if not data:  # if no data read, wait half a sec to loop again
+                return
 
-        for func in self.functions:  # for each pipeline function
-            transform = func[1]  # [0] is the file name containing the function
-            try:  # attempt to run data through custom method
-                data = transform(data)
-            except Exception as e:
-                print("Error running custom method '{}': {}: {}".format(transform.__name__, e.__class__.__name__, e))
+            for func in self.functions:  # for each pipeline function
+                transform = func[1]  # [0] is the file name containing the function
+                try:  # attempt to run data through custom method
+                    data = transform(data)
+                except Exception as e:
+                    print("Error running custom method '{}': {}: {}".format(transform.__name__, e.__class__.__name__, e))
 
-        # after data has been put through all transforms, write it back to the database
-        self.database.write_data(self.id, data)
+            # after data has been put through all transforms, write it back to the database
+            self.database.write_data(self.id, data)
+        sleep(0.1)  # just to slow it down a bit
 
     def json(self, lst):
         """ Gets list of updated file names from which to retrieve pipeline functions from """
