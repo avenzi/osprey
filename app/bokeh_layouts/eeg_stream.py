@@ -133,7 +133,7 @@ def create_layout(info):
         if_modified=True)
 
     eeg_transformed_source = AjaxDataSource(
-        data_url='/stream/update?id={}'.format(transformed_id),
+        data_url='/stream/update?id={}'.format('Filtered:'+transformed_id),
         method='GET',
         polling_interval=1000,
         mode='append',

@@ -515,9 +515,7 @@ class Streamer(WorkerNode):
         start = time.time()
         while True:
             try:
-                print("Pinging Database")
                 self.database.ping()  # attempt database ping
-                print("After database ping")
                 self.debug("Connected to Database")
                 return
 
