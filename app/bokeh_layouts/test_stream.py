@@ -6,6 +6,7 @@ from app.bokeh_layouts.utils import time_format, plot_sliding_js, plot_priority_
 
 
 def create_stream_layout(info):
+    print("INFO:", info)
     source1 = AjaxDataSource(
         data_url='/stream/update?id={}'.format(info['Random 1']['id']),
         method='GET',
