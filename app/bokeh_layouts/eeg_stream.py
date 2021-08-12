@@ -57,7 +57,7 @@ def create_layout(info):
     #  spec images, the spectrogram Tab creation, and the code adding/sending data to the browser in
     #  the EEGHandler class. It's a good example of how to do a spectrogram in Bokeh, though, so
     #  I may want to keep it somewhere as a reference for later.
-
+    print(info)
     # get channel names
     stream_channels = info['Raw']['channels'].split(',')  # it's a comma separated string
     sample_rate = float(info['Raw']['sample_rate'])
