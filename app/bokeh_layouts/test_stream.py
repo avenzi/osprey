@@ -24,7 +24,7 @@ def create_stream_layout(info):
         if_modified=True)  # if_modified ignores responses sent with code 304 and not cached.
 
     transform_source1 = AjaxDataSource(
-        data_url='/stream/update?id={}'.format('random1:'+info['Transformed']['id']),
+        data_url='/stream/update?id={}'.format('Random 1:'+info['Transformed']['id']),
         method='GET',
         polling_interval=1000,  # in milliseconds
         mode='append',  # append to existing data
@@ -32,7 +32,7 @@ def create_stream_layout(info):
         if_modified=True)  # if_modified ignores responses sent with code 304 and not cached.
 
     transform_source2 = AjaxDataSource(
-        data_url='/stream/update?id={}'.format('random2:'+info['Transformed']['id']),
+        data_url='/stream/update?id={}'.format('Random 2:'+info['Transformed']['id']),
         method='GET',
         polling_interval=1000,  # in milliseconds
         mode='append',  # append to existing data
