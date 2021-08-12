@@ -36,7 +36,7 @@ def login():
         if error is None:
             session.clear()
             session['authenticated'] = True
-            info("Authentication Attempt:\n    IP: {}")
+            info("Authentication Successful:\n    IP: {}")
             return redirect(url_for('index'))
         else:  # error
             session['last_auth_attempt'] = time()
@@ -56,7 +56,6 @@ def auth_required(view):
     """ Decorator to validate user login before accessing a route """
     @wraps(view)
     def wrapped_view(**kwargs):
-        print("AUTH: ", session.get('authenticated'))
         if not session.get('authenticated'):
             return redirect(url_for('auth.login'))
         return view(**kwargs)
