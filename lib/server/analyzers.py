@@ -80,8 +80,8 @@ class FunctionAnalyzer(Analyzer):
 
     def loop(self):
         """ Maine execution loop """
-        for target_id in self.target_ids:
-            data = self.database.read_data(target_id)
+        for name, target in self.targets[self.group].itmes():
+            data = self.database.read_data(target['id'])
             if not data:  # if no data read, wait half a sec to loop again
                 return
 
@@ -93,7 +93,7 @@ class FunctionAnalyzer(Analyzer):
                     print("Error running custom method '{}': {}: {}".format(transform.__name__, e.__class__.__name__, e))
 
             # after data has been put through all transforms, write it back to the database
-            self.database.write_data(self.id, data)
+            self.database.write_data(name+':'+self.id, data)
         sleep(0.1)  # just to slow it down a bit
 
     def json(self, lst):
