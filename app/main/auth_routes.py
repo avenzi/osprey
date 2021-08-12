@@ -42,7 +42,7 @@ def login():
             session['last_auth_attempt'] = time()
 
         flash(error)
-        info("Authentication Attempt:\n    Attempted Key: {}\n    IP: {}".format(submit_password, request.remote_addr))
+        warn("Authentication Attempt:\n    Attempted Key: {}\n    IP: {}".format(submit_password, request.remote_addr))
     return render_template('auth/login.html')
 
 
