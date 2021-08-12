@@ -8,7 +8,7 @@ from bokeh.palettes import viridis, magma
 
 from json import loads
 
-from app.bokeh_layouts.utils import js_request, time_format, plot_sliding_js
+from app.bokeh_layouts.utils import js_request, time_format, plot_sliding_js, plot_priority_js
 
 BACKEND = 'canvas'  # 'webgl' appears to be broken - makes page unresponsive.
 
@@ -65,6 +65,7 @@ def create_layout(info):
     # get stream IDs
     filtered_id = info['Filtered']['id']  # Filter Analyzer ID
     fourier_id = info['Fourier']['id']  # Fourier Analyzer ID
+    transformed_id = info['Transformed']['id']  # Transform Analyzer ID
 
     # get filter widget values
     filter_widgets = info['Filtered'].get('widgets')
@@ -131,6 +132,14 @@ def create_layout(info):
         max_size=int(sample_rate*10),
         if_modified=True)
 
+    eeg_transformed_source = AjaxDataSource(
+        data_url='/stream/update?id={}'.format(transformed_id),
+        method='GET',
+        polling_interval=1000,
+        mode='append',
+        max_size=int(sample_rate*10),
+        if_modified=True)
+
     fourier_source = AjaxDataSource(
         data_url='/stream/update?id=fourier:{}&format=snapshot'.format(fourier_id),
         method='GET',
@@ -175,8 +184,11 @@ def create_layout(info):
     for i in range(len(stream_channels)):  # plot each line
         visible = True if i == 0 else False  # first channel visible
         eeg.line(x='time', y=stream_channels[i], name=stream_channels[i], color=colors[i], source=eeg_source, visible=visible)
+        # transformed line
+        eeg.line(x='time', y=stream_channels[i], name=stream_channels[i]+'_transformed', color=colors[i], source=eeg_transformed_source, visible=visible)
 
     plot_sliding_js(eeg, eeg_source)  # incoming data smoothing
+    plot_priority_js(eeg, back_source=eeg_source, front_source=eeg_transformed_source)  # give transformed data priority
 
     # fourier figure with a line for each EEG channel
     fourier = figure(
@@ -273,7 +285,7 @@ if (low < high) {
         ))
     '''
 
-    # Radio buttons to select channels on the EEG figure and Spectrogram figure
+    # Radio buttons to select channels on the EEG figure figure
     channel_radios = RadioButtonGroup(labels=stream_channels, active=0)
     channel_radios.js_on_click(CustomJS(
         args=dict(
@@ -282,10 +294,12 @@ if (low < high) {
         ),
         code="""
     eeg_fig.select_one(this.labels[this.active]).visible = true
+    eeg_fig.select_one(this.labels[this.active]+'_transformed').visible = true  // transformed
     // spec_fig.select_one(this.labels[this.active]).visible = true (to remove)
     for (var label of labels) {
         if (label != this.labels[this.active]){
             eeg_fig.select_one(label).visible = false
+            eeg_fig.select_one(label+'_transformed').visible = false
             // spec_fig.select_one(label).visible = false (to remove)
         }
     }
