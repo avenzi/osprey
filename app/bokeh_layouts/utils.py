@@ -57,6 +57,8 @@ def plot_sliding_js(figure, source):
     #  to be greater than the average time between data chunks. That time, however is much greater during
     #  playback than normal streaming, though the browser doesn't know whether or not the data is from a playback
     #  or live database. Maybe update the offset dynamically based on a moving average of previous time differences?
+
+    # todo: smooth out y-axis as well
     figure.x_range = Range1d(0, 1)  # set arbitrary range to disable auto-adjusting to new data
     source.js_on_change('data',
         CustomJS(
