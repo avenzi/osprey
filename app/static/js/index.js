@@ -180,13 +180,8 @@ $(document).ready(function() {
                 var formData = new FormData($('div.upload_dialog form')[0]);
                 // send file contents through SocketIO
                 // 'file' is the name attribute of the form input tag
-                for (let key of formData.keys()) {
-                    console.log(key)
-                }
-                for (let val of formData.values()) {
-                    console.log(val)
-                }
-                socket.emit('upload', {name: formData.get('filename'), content: formData.get('file')})
+                file = formData.get('file')
+                socket.emit('upload', {name: file.name, content: file})
                 $(this).dialog("close");
             },
             "Cancel": function() {
