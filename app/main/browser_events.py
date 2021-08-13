@@ -97,21 +97,21 @@ def upload(data):
     # If the user does not select a file, the browser submits an
     # empty file without a filename.
     if not name:
-        print("No file selected for upload")
+        error("No file selected for upload")
         return
 
     if not content:
-        print("Uploaded file '{}' has no content".format(name))
+        error("Uploaded file '{}' has no content".format(name))
         return
 
     check_filename(name)
     if not name.endswith('.py'):
-        print("Input file was not a python file (no '.py' extension found)")
+        error("Input file was not a python file (no '.py' extension found)")
         return
 
     with open(current_app.config['UPLOAD_FOLDER']+'/'+name, 'wb') as file:
         file.write(content)
-        print("Successfully uploaded '{}'".format(name))
+        info("Successfully uploaded '{}'".format(name))
 
 
 @socketio.on('live', namespace='/browser')
