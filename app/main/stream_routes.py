@@ -31,10 +31,12 @@ def index():
 @streams.route('/upload', methods=['GET', 'POST'])
 @auth_required
 def upload_file():
+    # todo: why does the form submissin also send a GET request??
     if request.method != 'POST':
         return "", 200
     print("UPLOAD FILE ROUTE")
     # check if the post request has the file part
+    print(request.files)
     if 'file' not in request.files:
         print("File not in request")
         flash('No file sent')
