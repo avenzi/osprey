@@ -33,7 +33,7 @@ def index():
 def upload_file():
     # todo: why does the form submissin also send a GET request??
     if request.method != 'POST':
-        return "", 200
+        return url_for('index')
     print("UPLOAD FILE ROUTE")
     # check if the post request has the file part
     # 'file' is the name attribute of the input tag in the form
