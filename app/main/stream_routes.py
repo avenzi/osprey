@@ -35,7 +35,7 @@ def upload_file():
     # todo: when use of SocketIO message is implemented in HTTP requests,
     #  (or if file is sent through SocketIO),
     #  emit errors/logs to browser log
-    #return "", 204  # temporarily disabled until I'm sure it's safe
+    return "", 204  # temporarily disabled until I'm sure it's safe
 
     if request.method != 'POST':
         return "", 204
