@@ -176,11 +176,13 @@ $(document).ready(function() {
         modal: true,
         buttons: {
             "Upload": function() {
+                console.log("pressed")
                 $("div.upload_dialog form").submit(function(event) {
-                    event.preventDefault();
-                    var formData = new FormData(this);
                     console.log(event)
                     console.log(formData)
+                    event.preventDefault();
+                    var formData = new FormData(this);
+
                 });
                 //socket.emit('upload', {value: $('#upload_file').val()})
                 //$("div.upload_dialog form").submit()  // submit form
