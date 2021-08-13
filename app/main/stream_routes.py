@@ -32,11 +32,13 @@ def index():
 @auth_required
 def upload_file():
     # todo: why does the form submissin also send a GET request??
+    # todo: when use of SocketIO message is implemented in HTTP requests,
+    #  (or if file is sent through SocketIO),
+    #  emit errors/logs to browser log
+    return "", 204  # temporarily disabled until I'm sure it's safe
 
-    # todo: when use of SocketIO message is implemented in HTTP requests, emit errors/logs to browser log
     if request.method != 'POST':
         return "", 204
-    print("UPLOAD FILE ROUTE")
     # check if the post request has the file part
     # 'file' is the name attribute of the input tag in the form
     if 'file' not in request.files:
@@ -60,8 +62,7 @@ def upload_file():
         return "", 204
 
     file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
-    print("Success")
-    flash("Successfully uploaded {}".format(filename))
+    print("Successfully uploaded '{}'".format(filename))
     return "", 204
 
 
