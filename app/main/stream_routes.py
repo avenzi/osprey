@@ -32,6 +32,8 @@ def index():
 @auth_required
 def upload_file():
     # todo: why does the form submissin also send a GET request??
+
+    # todo: when use of SocketIO message is implemented in HTTP requests, emit errors/logs to browser log
     if request.method != 'POST':
         return url_for('index')
     print("UPLOAD FILE ROUTE")
@@ -39,7 +41,6 @@ def upload_file():
     # 'file' is the name attribute of the input tag in the form
     if 'file' not in request.files:
         print("File not in request")
-        flash('No file sent')
         return redirect(request.url)
     file = request.files['file']  # FileStorage object
     filename = file.filename
@@ -49,16 +50,14 @@ def upload_file():
     # If the user does not select a file, the browser submits an
     # empty file without a filename.
     if file.filename == '':
-        flash('No selected file')
         print("No selected file?")
         return redirect(request.url)
 
     check_filename(filename)
     if not filename.endswith('.py'):
         err = "Input file was not a python file (no '.py' extension found)"
-        flash(err)
         print(err)
-        return redirect(url_for('index'))
+        return
 
     file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
     print("Success")
