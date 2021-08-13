@@ -32,7 +32,7 @@ def index():
 @auth_required
 def upload_file():
     if request.method != 'POST':
-        return 200
+        return "", 200
     print("UPLOAD FILE ROUTE")
     # check if the post request has the file part
     if 'file' not in request.files:
