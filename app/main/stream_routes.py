@@ -28,7 +28,7 @@ def index():
     return render_template('/index.html')
 
 
-@streams.route('/index', methods='POST')
+@streams.route('/index', methods=['POST'])
 @auth_required
 def upload_file():
     print("UPLOAD FILE ROUTE")
