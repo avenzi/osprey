@@ -177,13 +177,6 @@ $(document).ready(function() {
         buttons: {
             "Upload": function() {
                 console.log("pressed")
-                $("div.upload_dialog form").submit(function(event) {
-                    console.log(event)
-                    console.log(formData)
-                    event.preventDefault();
-                    var formData = new FormData(this);
-
-                });
                 //socket.emit('upload', {value: $('#upload_file').val()})
                 //$("div.upload_dialog form").submit()  // submit form
                 $(this).dialog("close");
@@ -195,6 +188,13 @@ $(document).ready(function() {
         close: function() {
             $('.upload_dialog > form')[0].reset();
         }
+    });
+
+    $("div.upload_dialog form").submit(function(event) {
+        console.log(event)
+        event.preventDefault();
+        var formData = new FormData(this);
+        console.log(formData)
     });
 
     $('div.stream_commands button.upload').on("click", function() {
