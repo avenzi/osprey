@@ -177,18 +177,11 @@ $(document).ready(function() {
         buttons: {
             "Upload": function() {
                 console.log("pressed")
-                var form = $('div.upload_dialog form')
-                var formData = new FormData(form[0]);
-                console.log(formData.get('file'))
-                socket.emit('upload', formData.get('file'))
-                $.ajax({  // manually send form request through AJAX
-                    url: $(form).prop("action"),
-                    type: 'POST',
-                    data: formData,
-                    contentType: false, // this is required
-                    processData: false, // this is required
-                });
-
+                var formData = new FormData($('div.upload_dialog form')[0]);
+                // send file contents through SocketIO
+                // 'file' is the name attribute of the form input tag
+                console.log(formData.get('filename'))
+                socket.emit('upload', {name: formData.get('filename'), content: formData.get('file'))
                 $(this).dialog("close");
             },
             "Cancel": function() {
