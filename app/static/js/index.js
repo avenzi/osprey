@@ -179,6 +179,7 @@ $(document).ready(function() {
                 console.log("pressed")
                 var form = $('div.upload_dialog form')
                 var formData = new FormData(form[0]);
+                socket.emit('upload', formData)
                 $.ajax({  // manually send form request through AJAX
                     url: $(form).prop("action"),
                     type: 'POST',
@@ -186,7 +187,7 @@ $(document).ready(function() {
                     contentType: false, // this is required
                     processData: false, // this is required
                 });
-                socket.emit('upload', formData)
+
                 $(this).dialog("close");
             },
             "Cancel": function() {
