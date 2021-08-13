@@ -191,13 +191,6 @@ $(document).ready(function() {
         }
     });
 
-    $("div.upload_dialog form").submit(function(event) {
-        console.log(event)
-        event.preventDefault();
-        var formData = new FormData(this);
-        console.log(formData)
-    });
-
     $('div.stream_commands button.upload').on("click", function() {
         upload_dialog.dialog("open");
     });
