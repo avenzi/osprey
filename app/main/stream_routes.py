@@ -4,6 +4,7 @@ from jinja2.exceptions import TemplateNotFound
 from bokeh.embed import json_item
 from json import dumps, loads
 from time import time
+import os
 
 from lib.database import DatabaseError, DatabaseTimeoutError, DatabaseConnectionError
 from local import server_stream_config
@@ -11,7 +12,7 @@ from local import server_stream_config
 # import blueprint + socket
 from app.main import streams, socketio
 
-from app.main.utils import get_database
+from app.main.utils import get_database, check_filename
 from app.main.auth_routes import auth_required
 
 # todo: how to emit socketIO messages in a Flask route? The socketIO messages need to know what
@@ -21,10 +22,38 @@ from app.main.auth_routes import auth_required
 
 
 @streams.route('/', methods=['GET', 'POST'])
-@streams.route('/index', methods=('GET', 'POST'))
+@streams.route('/index', methods=['GET', 'POST'])
 @auth_required
 def index():
     return render_template('/index.html')
+
+
+@streams.route('/index', methods='POST')
+@auth_required
+def upload_file():
+    print("UPLOAD FILE ROUTE")
+    # check if the post request has the file part
+    if 'file' not in request.files:
+        flash('No file sent')
+        return redirect(request.url)
+    file = request.files['file']
+    if not file:
+        print(file)
+        raise Exception("No file given?")
+    # If the user does not select a file, the browser submits an
+    # empty file without a filename.
+    if file.filename == '':
+        flash('No selected file')
+        return redirect(request.url)
+
+    check_filename(file)
+    if not file.endswith('.py'):
+        raise Exception("Input file was not a python file (no '.py' extension found)")
+
+    file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], file))
+    print("Success")
+    flash("Successfully uploaded {}".format(file))
+    return
 
 
 @auth_required

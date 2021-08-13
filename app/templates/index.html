@@ -18,6 +18,7 @@
 <div class="container">
     <div class="commands stream_commands">
         <button class="command refresh"          value="refresh"  title="Force refresh page items">Refresh</button>
+        <button class="command confirm upload"   value="upload"   title="Upload custom data transformation function">Upload</button>
         <button class="command live"             value="live"     title="Switch back to current live streams">Live</button>
         <button class="command confirm abort"    value="abort"    title="Force kill current database">Abort</button>
         <button class="command confirm wipe"     value="wipe"     title="Wipe all data from currently loaded database">Wipe</button>
@@ -56,10 +57,17 @@
 
 <div id="dialogs">
     <div class="rename_dialog" title="Rename the file">
-      <form>
-        <label for="file_name">New Name</label>
-        <input type="text" name="name" id="file_name">
-      </form>
+        <form>
+            <label for="new_file_name">New Name</label>
+            <input type="text" name="name" id="new_file_name">
+        </form>
+    </div>
+    <div class="upload_dialog" title="Upload a file">
+        <form method=post enctype=multipart/form-data>
+            <label for="upload_file">Upload File</label>
+            <input type=file name=name, id="upload_file">
+            <input type=submit value=FormUpload>
+        </form>
     </div>
 </div>
 {% endblock %}
