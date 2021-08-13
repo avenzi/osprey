@@ -55,7 +55,9 @@ def upload_file():
 
     check_filename(filename)
     if not filename.endswith('.py'):
-        raise Exception("Input file was not a python file (no '.py' extension found)")
+        err = "Input file was not a python file (no '.py' extension found)"
+        flash(err)
+        raise Exception(err)
 
     file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
     print("Success")
