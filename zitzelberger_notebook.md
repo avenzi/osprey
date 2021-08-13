@@ -33,6 +33,12 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### August 12th, 13th, 2021:
+
+​	I have now implemented a file upload, however I am not yet convinced it is safe. I have disabled it for now until I can consult Dr. Ghassemi on Monday about it. I added a button on the index page that opens a dialogue with a file submission form. A file can be selected from the computer and uploaded to the server. Basic filename verification is in place.
+​	I initially implemented the file upload via a regular HTTP form submission, but I was having trouble preventing the form from reloading the page every time. Using preventDefault() didn't help because that prevented the entire form form submitting at all. After looking around for a bit, the consensus online seems to be just to do it manually with Ajax. I redid it using Ajax and a JS FormData object, and that seemed to do the trick, though I had a bunch more problems to deal with. It turns out that when making the AJax request, the contentType and processData headers MUST be false in order for a file upload to work. Took me forever to figure out that this is the case, and I still don't know why - only that I get errors if they aren't there.
+​	After implementing it this way, I decided that I wasn't happy with it because I have been trying to move various server functions to SocketIO instead of HTTP requests because then it makes logging errors and other messages much much easier on the server end. I was able to figure out how to extract the file contents from the FormData object, and was able to send that along with the file name through a socketIO request. This works great and is a lot cleaner on the server side.
+
 ##### August 11th, 2021:
 
 ​	I went ahead and implemented that idea I had yesterday about plotting both the original and transformed data in the same plot. I think the result is really cool, and it also got me to so some organizing regarding the CustomJS callback functions that I use for the other streams. 
@@ -1317,4 +1323,3 @@ Preliminary OpenBCI Purchase List:
 * EMG/ECG Foam Solid Gel Electrodes (30/pack) (2x): $13 x2
 * EMG/ECG Snap Electrode Cables: (x2) $40 x2
 * Total cost: ~$1,811
-
