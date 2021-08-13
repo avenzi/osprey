@@ -188,7 +188,7 @@ $(document).ready(function() {
         }
     });
 
-    $('div.file_commands button.upload').on("click", function() {
+    $('div.stream_commands button.upload').on("click", function() {
         upload_dialog.dialog("open");
     });
 
