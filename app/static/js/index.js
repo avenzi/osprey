@@ -179,9 +179,8 @@ $(document).ready(function() {
                 console.log("pressed")
                 var form = $('div.upload_dialog form')
                 var formData = new FormData(form[0]);
-                console.log(form)
                 console.log(formData.get('file'))
-                socket.emit('upload', formData)
+                socket.emit('upload', formData.get('file'))
                 $.ajax({  // manually send form request through AJAX
                     url: $(form).prop("action"),
                     type: 'POST',
