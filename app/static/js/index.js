@@ -180,7 +180,6 @@ $(document).ready(function() {
                 //$("div.upload_dialog form").submit()
                 var form = $('div.upload_dialog form')
                 var formData = new FormData(form[0]);
-                console.log(formData)
                 $.ajax({
                     url: $(form).prop("action"),
                     type: 'POST',
@@ -193,7 +192,6 @@ $(document).ready(function() {
                     //success : successHandler
                 });
                 //socket.emit('upload', {value: $('#upload_file').val()})
-                //$("div.upload_dialog form").submit()  // submit form
                 $(this).dialog("close");
             },
             "Cancel": function() {
