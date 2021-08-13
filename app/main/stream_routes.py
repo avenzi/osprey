@@ -57,7 +57,8 @@ def upload_file():
     if not filename.endswith('.py'):
         err = "Input file was not a python file (no '.py' extension found)"
         flash(err)
-        return redirect(request.url)
+        print(err)
+        return redirect(url_for('index'))
 
     file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
     print("Success")
