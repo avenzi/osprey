@@ -178,7 +178,8 @@ $(document).ready(function() {
             "Upload": function() {
                 console.log("pressed")
                 //$("div.upload_dialog form").submit()
-                var formData = new FormData($('div.upload_dialog form')[0]);
+                var form = $('div.upload_dialog form')
+                var formData = new FormData(form[0]);
                 console.log(formData)
                 $.ajax({
                     url: $(form).prop("action"),
