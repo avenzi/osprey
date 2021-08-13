@@ -89,7 +89,7 @@ def refresh():
 @catch_errors
 def upload(data):
     """  """
-    print("SOCKETIO EVENT: {}".format(data['value']))
+    print("SOCKETIO EVENT: {}".format(data))
 
 
 @socketio.on('live', namespace='/browser')
