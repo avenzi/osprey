@@ -34,16 +34,18 @@ def upload_file():
     print("UPLOAD FILE ROUTE")
     # check if the post request has the file part
     if 'file' not in request.files:
+        print("File not in request")
         flash('No file sent')
         return redirect(request.url)
     file = request.files['file']
     if not file:
-        print(file)
-        raise Exception("No file given?")
+        print("NOT FILE: ", file)
+        raise Exception("No file sent?")
     # If the user does not select a file, the browser submits an
     # empty file without a filename.
     if file.filename == '':
         flash('No selected file')
+        print("No selected file?")
         return redirect(request.url)
 
     check_filename(file)
