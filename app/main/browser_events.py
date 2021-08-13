@@ -89,7 +89,7 @@ def refresh():
 @catch_errors
 def upload(data):
     """ Received an uploaded python file as a string of bytes"""
-    #return  # temporarily disabled until I'm sure it's safe
+    return  # temporarily disabled until I'm sure it's safe
 
     name = data['name']  # string
     content = data['content']  # bytes
@@ -101,12 +101,12 @@ def upload(data):
         return
 
     if not content:
-        error("Uploaded file '{}' has no content".format(name))
+        error("Uploaded file '{}' has no content - aborted".format(name))
         return
 
     check_filename(name)
     if not name.endswith('.py'):
-        error("Input file was not a python file (no '.py' extension found)")
+        error("Input file was not a python file (no '.py' extension found) - aborted")
         return
 
     with open(current_app.config['UPLOAD_FOLDER']+'/'+name, 'wb') as file:
