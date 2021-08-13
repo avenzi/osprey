@@ -181,6 +181,8 @@ $(document).ready(function() {
                 // send file contents through SocketIO
                 // 'file' is the name attribute of the form input tag
                 console.log(formData.has())
+                console.log(formData.keys())
+                console.log(formData.values())
                 socket.emit('upload', {name: formData.get('filename'), content: formData.get('file')})
                 $(this).dialog("close");
             },
