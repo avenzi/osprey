@@ -37,13 +37,14 @@ def upload_file():
     print("UPLOAD FILE ROUTE")
     # check if the post request has the file part
     # 'file' is the name attribute of the input tag in the form
-    if 'file' not in request.files:  
+    if 'file' not in request.files:
         print("File not in request")
         flash('No file sent')
         return redirect(request.url)
-    file = request.files['file']
+    file = request.files['file']  # FileStorage object
+    filename = file.filename
     if not file:
-        print("NOT FILE: ", file)
+        print("NOT FILE: ", filename)
         raise Exception("No file sent?")
     # If the user does not select a file, the browser submits an
     # empty file without a filename.
@@ -52,13 +53,13 @@ def upload_file():
         print("No selected file?")
         return redirect(request.url)
 
-    check_filename(file)
-    if not file.endswith('.py'):
+    check_filename(filename)
+    if not filename.endswith('.py'):
         raise Exception("Input file was not a python file (no '.py' extension found)")
 
-    file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], file))
+    file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
     print("Success")
-    flash("Successfully uploaded {}".format(file))
+    flash("Successfully uploaded {}".format(filename))
     return
 
 

@@ -124,7 +124,7 @@ def remove_database():
 
 def check_filename(file):
     """ validates syntax of a file name """
-    file = secure_filename(file)
+    #file = secure_filename(file)
     if not match(r"^[0-9a-zA-Z_:\-.]+$", file):
         raise Exception("Invalid file name. May only contain digits, letters, underscore, hyphen, and period.")
 
