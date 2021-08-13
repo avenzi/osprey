@@ -17,6 +17,8 @@ def create_app():
     app.config['SECRET_KEY'] = 'thisisthesecretkeyfortheflaskserver'
     app.config['SESSION_TYPE'] = 'redis'
     app.config['SESSION_REDIS'] = from_url('redis://localhost:6379')
+    app.config['UPLOAD_FOLDER'] = 'local/pipelines'
+    app.config['MAX_CONTENT_LENGTH'] = 16 * 1000 * 1000  # 16 MB
     Session(app)  # initialize server side session
 
     # interface to database connections

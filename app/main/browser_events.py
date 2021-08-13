@@ -85,6 +85,13 @@ def refresh():
     update_buttons()
 
 
+@socketio.on('upload', namespace='/browser')
+@catch_errors
+def upload(data):
+    """  """
+    print("SOCKETIO EVENT: {}".format(data['value']))
+
+
 @socketio.on('live', namespace='/browser')
 @catch_errors
 def live():
@@ -348,7 +355,7 @@ def custom_functions(group):
     data = {'available': [], 'selected': []}
 
     # get list of all files in this path
-    funcs_path = 'local/pipelines'
+    funcs_path = current_app.config['UPLOAD_FOLDER']
     for file in os.listdir(funcs_path):
         if not os.path.isfile(os.path.join(funcs_path, file)):
             continue

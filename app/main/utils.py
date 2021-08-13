@@ -1,4 +1,5 @@
 from flask import current_app, session, request
+from werkzeug.utils import secure_filename
 
 from re import match
 import math
@@ -122,7 +123,8 @@ def remove_database():
 
 
 def check_filename(file):
-    """ validated syntax of file name """
+    """ validates syntax of a file name """
+    file = secure_filename(file)
     if not match(r"^[0-9a-zA-Z_:\-.]+$", file):
         raise Exception("Invalid file name. May only contain digits, letters, underscore, hyphen, and period.")
 

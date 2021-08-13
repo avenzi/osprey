@@ -154,7 +154,7 @@ $(document).ready(function() {
         modal: true,
         buttons: {
             "Ok": function() {
-                socket.emit('rename', {filename: selected_file, newname: $('#file_name').val()})
+                socket.emit('rename', {filename: selected_file, newname: $('#new_file_name').val()})
                 $(this).dialog("close");
             },
             "Cancel": function() {
@@ -170,8 +170,30 @@ $(document).ready(function() {
         rename_dialog.dialog("open");
     });
 
+    // Open a dialog to upload a file
+    var upload_dialog = $('.upload_dialog').dialog({
+        autoOpen: false,
+        modal: true,
+        buttons: {
+            "Upload": function() {
+                socket.emit('upload', {value: $('#upload_file').val()})
+                $(this).dialog("close");
+            },
+            "Cancel": function() {
+                $(this).dialog("close");
+            }
+        },
+        close: function() {
+            $('.upload_dialog > form')[0].reset();
+        }
+    });
 
-    // buttons that require a confirmation dialog
+    $('div.file_commands button.upload').on("click", function() {
+        upload_dialog.dialog("open");
+    });
+
+
+    // buttons that require a simple confirmation dialog
 
     var delete_dialog = create_confirm_dialog('Delete saved database file?', function() {
         socket.emit('delete', selected_file)
