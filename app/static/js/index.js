@@ -177,7 +177,20 @@ $(document).ready(function() {
         buttons: {
             "Upload": function() {
                 console.log("pressed")
-                $("div.upload_dialog form").submit()
+                //$("div.upload_dialog form").submit()
+                var formData = new FormData($('div.upload_dialog form'));
+                console.log(formData)
+                console.log(formData[0])
+                $.ajax({
+                    url: $(form).prop("action"),
+                    //dataType: 'json', //not sure but works for me without this
+                    data: formData,
+                    //contentType: false, //this is requireded please see answers above
+                    //processData: false, //this is requireded please see answers above
+                    //cache: false, //not sure but works for me without this
+                    //error   : ErrorHandler,
+                    //success : successHandler
+                });
                 //socket.emit('upload', {value: $('#upload_file').val()})
                 //$("div.upload_dialog form").submit()  // submit form
                 $(this).dialog("close");
