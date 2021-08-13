@@ -35,34 +35,34 @@ def upload_file():
 
     # todo: when use of SocketIO message is implemented in HTTP requests, emit errors/logs to browser log
     if request.method != 'POST':
-        return url_for('index')
+        return "", 204
     print("UPLOAD FILE ROUTE")
     # check if the post request has the file part
     # 'file' is the name attribute of the input tag in the form
     if 'file' not in request.files:
         print("File not in request")
-        return redirect(request.url)
+        return "", 204
     file = request.files['file']  # FileStorage object
     filename = file.filename
     if not file:
         print("NOT FILE: ", filename)
-        return redirect(request.url)
+        return "", 204
     # If the user does not select a file, the browser submits an
     # empty file without a filename.
     if file.filename == '':
         print("No selected file?")
-        return redirect(request.url)
+        return "", 204
 
     check_filename(filename)
     if not filename.endswith('.py'):
         err = "Input file was not a python file (no '.py' extension found)"
         print(err)
-        return
+        return "", 204
 
     file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
     print("Success")
     flash("Successfully uploaded {}".format(filename))
-    return
+    return "", 204
 
 
 @auth_required
