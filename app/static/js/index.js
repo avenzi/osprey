@@ -183,6 +183,7 @@ $(document).ready(function() {
                 console.log(formData)
                 $.ajax({
                     url: $(form).prop("action"),
+                    type: 'POST',
                     //dataType: 'json', //not sure but works for me without this
                     data: formData,
                     contentType: false, //this is requireded please see answers above
