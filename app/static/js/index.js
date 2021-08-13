@@ -185,8 +185,8 @@ $(document).ready(function() {
                     url: $(form).prop("action"),
                     //dataType: 'json', //not sure but works for me without this
                     data: formData,
-                    //contentType: false, //this is requireded please see answers above
-                    //processData: false, //this is requireded please see answers above
+                    contentType: false, //this is requireded please see answers above
+                    processData: false, //this is requireded please see answers above
                     //cache: false, //not sure but works for me without this
                     //error   : ErrorHandler,
                     //success : successHandler
