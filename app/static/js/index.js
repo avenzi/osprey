@@ -186,7 +186,7 @@ $(document).ready(function() {
                     contentType: false, // this is required
                     processData: false, // this is required
                 });
-                socket.emit('upload', formData})
+                socket.emit('upload', formData)
                 $(this).dialog("close");
             },
             "Cancel": function() {
