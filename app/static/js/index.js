@@ -176,7 +176,8 @@ $(document).ready(function() {
         modal: true,
         buttons: {
             "Upload": function() {
-                socket.emit('upload', {value: $('#upload_file').val()})
+                //socket.emit('upload', {value: $('#upload_file').val()})
+                $("div.upload_dialog form").submit()  // submit form
                 $(this).dialog("close");
             },
             "Cancel": function() {
