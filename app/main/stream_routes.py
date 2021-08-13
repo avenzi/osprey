@@ -45,7 +45,7 @@ def upload_file():
     filename = file.filename
     if not file:
         print("NOT FILE: ", filename)
-        raise Exception("No file sent?")
+        return redirect(request.url)
     # If the user does not select a file, the browser submits an
     # empty file without a filename.
     if file.filename == '':
@@ -57,7 +57,7 @@ def upload_file():
     if not filename.endswith('.py'):
         err = "Input file was not a python file (no '.py' extension found)"
         flash(err)
-        raise Exception(err)
+        return redirect(request.url)
 
     file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
     print("Success")
