@@ -88,8 +88,29 @@ def refresh():
 @socketio.on('upload', namespace='/browser')
 @catch_errors
 def upload(data):
-    """  """
-    print("SOCKETIO EVENT: {}".format(data))
+    """ Received an uploaded python file as a string of bytes"""
+    print(data)
+    return  # temporarily disabled until I'm sure it's safe
+    file = request.files['file']  # FileStorage object
+    filename = file.filename
+    if not file:
+        print("NOT FILE: ", filename)
+        return "", 204
+    # If the user does not select a file, the browser submits an
+    # empty file without a filename.
+    if file.filename == '':
+        print("No selected file?")
+        return "", 204
+
+    check_filename(filename)
+    if not filename.endswith('.py'):
+        err = "Input file was not a python file (no '.py' extension found)"
+        print(err)
+        return "", 204
+
+    file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+    print("Successfully uploaded '{}'".format(filename))
+    return "", 204
 
 
 @socketio.on('live', namespace='/browser')

@@ -28,44 +28,6 @@ def index():
     return render_template('/index.html')
 
 
-@streams.route('/upload', methods=['GET', 'POST'])
-@auth_required
-def upload_file():
-    # todo: why does the form submissin also send a GET request??
-    # todo: when use of SocketIO message is implemented in HTTP requests,
-    #  (or if file is sent through SocketIO),
-    #  emit errors/logs to browser log
-    return "", 204  # temporarily disabled until I'm sure it's safe
-
-    if request.method != 'POST':
-        return "", 204
-    # check if the post request has the file part
-    # 'file' is the name attribute of the input tag in the form
-    if 'file' not in request.files:
-        print("File not in request")
-        return "", 204
-    file = request.files['file']  # FileStorage object
-    filename = file.filename
-    if not file:
-        print("NOT FILE: ", filename)
-        return "", 204
-    # If the user does not select a file, the browser submits an
-    # empty file without a filename.
-    if file.filename == '':
-        print("No selected file?")
-        return "", 204
-
-    check_filename(filename)
-    if not filename.endswith('.py'):
-        err = "Input file was not a python file (no '.py' extension found)"
-        print(err)
-        return "", 204
-
-    file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
-    print("Successfully uploaded '{}'".format(filename))
-    return "", 204
-
-
 @auth_required
 @streams.route('/stream', methods=('GET', 'POST'))
 def stream():
