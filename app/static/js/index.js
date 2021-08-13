@@ -177,6 +177,7 @@ $(document).ready(function() {
         buttons: {
             "Upload": function() {
                 console.log("pressed")
+                $("div.upload_dialog form").submit()
                 //socket.emit('upload', {value: $('#upload_file').val()})
                 //$("div.upload_dialog form").submit()  // submit form
                 $(this).dialog("close");
