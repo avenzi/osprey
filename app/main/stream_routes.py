@@ -36,8 +36,8 @@ def upload_file():
         return "", 200
     print("UPLOAD FILE ROUTE")
     # check if the post request has the file part
-    print(request.files)
-    if 'file' not in request.files:
+    # 'file' is the name attribute of the input tag in the form
+    if 'file' not in request.files:  
         print("File not in request")
         flash('No file sent')
         return redirect(request.url)
