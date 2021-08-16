@@ -20,6 +20,7 @@ def create_app():
         return send_from_directory(os.path.join(app.root_path, 'static', 'js'), filename)
     """
 
+    @app.route('/')
     @app.route('/index', methods=['GET', 'POST'])
     def index():
         return """<!doctype html><body><p>Hello World</p></body>"""
