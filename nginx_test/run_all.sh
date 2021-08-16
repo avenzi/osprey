@@ -9,6 +9,8 @@ cd ../
 # kill any remaining processed
 bash scripts/server/quit.sh
 
+
+
 # activate virtual environment
 . venv/bin/activate
 
