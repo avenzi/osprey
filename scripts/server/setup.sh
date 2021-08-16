@@ -47,4 +47,9 @@ pip3 install -r scripts/server/python_requirements.txt  # install requirements (
 #loading $! "Installing Python3 and dependent requirements.... \n\
 #Please wait until this is finished to provide configuration information\n"
 
+# Get PPA for CertBot
+sudo add-apt-repository ppa:certbot/certbot
+sudo apt-get update
+sudo apt-get install python-certbot-nginx
+
 exit
