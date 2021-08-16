@@ -1,11 +1,12 @@
-#from eventlet import monkey_patch as monkey_patch
+import os
+import json
+
+#from eventlet import monkey_patch
 #monkey_patch()
 
 from flask import Flask, send_from_directory
 from flask_session import Session
 from redis import from_url
-import os
-import json
 
 from lib.database import DatabaseController
 
