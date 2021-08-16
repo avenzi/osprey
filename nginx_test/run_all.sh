@@ -5,7 +5,6 @@ script_dir="$(dirname $(realpath $0))"
 cd $script_dir
 # navigate to top level dir
 cd ../
-pwd
 
 # kill any remaining processed
 bash scripts/server/quit.sh
