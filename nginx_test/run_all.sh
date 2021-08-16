@@ -5,7 +5,7 @@ script_dir="$(dirname $(realpath $0))"
 cd $script_dir
 # navigate to top level dir
 cd ../
-echo pwd
+pwd
 
 # kill any remaining processed
 bash scripts/server/quit.sh
@@ -14,5 +14,5 @@ bash scripts/server/quit.sh
 . venv/bin/activate
 
 # call gunicorn with appropriate config file
-gunicorn -c nbinx_test/gunicorn.conf.py "nginx_test:create_app()"
+gunicorn -c nginx_test/gunicorn.conf.py "nginx_test:create_app()"
 
