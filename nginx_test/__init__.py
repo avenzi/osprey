@@ -1,4 +1,5 @@
 from flask import Flask
+from flask_socketio import SocketIO
 
 
 def create_app():
@@ -23,7 +24,7 @@ def create_app():
     def index():
         return """<!doctype html><body><p>Hello World</p></body>"""
 
-    from app.main import socketio
+    socketio = SocketIO()
     socketio.init_app(app, async_mode='eventlet')
     return app
 
