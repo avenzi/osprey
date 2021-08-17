@@ -7,7 +7,14 @@ cd $script_dir
 cd ../
 
 # kill any remaining processed
-bash scripts/server/quit.sh
+sudo pkill python
+sudo pkill python3
+sudo pkill gunicorn
+sudo fuser -k 5000/tcp  # clear activity on port 5000
+sudo fuser -k 80/tcp  # clear activity on port 80
+
+# start nginx with custom config file
+sudo nginx -c nginx_test/nginx.conf
 
 # activate virtual environment
 . venv/bin/activate
