@@ -1,4 +1,4 @@
-from flask import Flask, send_from_directory
+from flask import Flask, render_template
 from flask_socketio import SocketIO
 
 
@@ -8,7 +8,7 @@ def create_app():
 
     @app.route('/index', methods=['GET', 'POST'])
     def index():
-        return send_from_directory('index.html')
+        return render_template('index.html')
 
     @app.route('/flask_page', methods=['GET', 'POST'])
     def flask_page():
