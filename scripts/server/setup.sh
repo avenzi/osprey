@@ -33,13 +33,13 @@ fi
 sudo make setup
 sudo make build
 
-
 # navigate back to top level dir (where venv will go)
 cd $script_dir/../../
 (
+
 #ensure python is installed
-#sudo apt-get -y install python3
-#sudo apt-get -y install python3-pip
+sudo apt-get -y install python3
+sudo apt-get -y install python3-pip
 python3 -m venv venv
 . venv/bin/activate
 pip3 install -r scripts/server/python_requirements.txt  # install requirements (don't use sudo in venv!)
@@ -47,9 +47,11 @@ pip3 install -r scripts/server/python_requirements.txt  # install requirements (
 #loading $! "Installing Python3 and dependent requirements.... \n\
 #Please wait until this is finished to provide configuration information\n"
 
+# install nginx
+sudo apt-get -y install nginx
 # Get PPA for CertBot
-#sudo add-apt-repository ppa:certbot/certbot
-#sudo apt-get update
-#sudo apt-get install python-certbot-nginx
+sudo add-apt-repository ppa:certbot/certbot -y
+sudo apt-get update
+sudo apt-get install python-certbot-nginx -y
 
 exit
