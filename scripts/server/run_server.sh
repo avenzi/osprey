@@ -24,7 +24,7 @@ redis-server config/live_redis.conf
 redis-server config/session_redis.conf
 
 # Run Nginx with custom config
-sudo nginx -c ${script_dir}/config/nginx.conf
+sudo nginx -c ${script_dir}/../../config/nginx.conf
 
 # activate virtual environment
 . venv/bin/activate

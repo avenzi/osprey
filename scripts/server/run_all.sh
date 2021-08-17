@@ -13,21 +13,7 @@ cd ../../
 # kill any remaining processed
 bash scripts/server/quit.sh
 
-# activate virtual environment
-. venv/bin/activate
+bash run_stream.sh
 
-# run python in background
-python3 -m local.run_analysis &
-
-# start redis server for streaming
-redis-server config/live_redis.conf
-
-# start redis server for Flask session store
-redis-server config/session_redis.conf
-
-# Run Nginx with custom config
-sudo nginx -c ${script_dir}/config/nginx.conf
-
-# call gunicorn with appropriate config file
-gunicorn -c config/gunicorn.conf.py "app:create_app()"
+bash run_server.sh
 
