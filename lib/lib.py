@@ -500,7 +500,7 @@ class Streamer(WorkerNode):
                 self.debug("Connected to server socketIO")
                 return True
             except Exception as e:
-                self.debug("Failed to connect to server socketIO: {}".format(self, e), 3)
+                self.debug("Failed to connect to server socketIO: {}".format(self, e), 1)
                 pass
             time.sleep(5)
 
