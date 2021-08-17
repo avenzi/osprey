@@ -11,7 +11,7 @@ cd $script_dir
 # kill any remaining processed
 bash quit.sh
 
-bash run_stream.sh
+bash run_stream.sh &
 
 bash run_server.sh
 
