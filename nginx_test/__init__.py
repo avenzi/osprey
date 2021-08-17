@@ -1,5 +1,5 @@
-from flask import Flask
-from flask_socketio import SocketIO, send_from_directory
+from flask import Flask, send_from_directory
+from flask_socketio import SocketIO
 
 
 def create_app():
