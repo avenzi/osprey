@@ -14,7 +14,7 @@ sudo fuser -k 5000/tcp  # clear activity on port 5000
 sudo fuser -k 80/tcp  # clear activity on port 80
 
 # start nginx with custom config file
-sudo nginx -c "${script_dir}/nginx.conf"
+sudo nginx -c ${script_dir}/nginx.conf
 
 # activate virtual environment
 . venv/bin/activate
