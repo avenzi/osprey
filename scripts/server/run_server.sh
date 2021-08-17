@@ -9,16 +9,22 @@ cd ../../
 # kill any remaining processed
 sudo pkill gunicorn
 sudo pkill redis-server
-sudo fuser -k 5000/tcp  # clear activity on port 5000
-sudo fuser -k 5001/tcp  # clear activity on port 5001
-sudo fuser -k 5002/tcp  # clear activity on port 5002
-sudo fuser -k 6379/tcp  # clear activity on port 6379
+
+# clear port activity
+sudo fuser -k 80/tcp  # Nginx
+sudo fuser -k 5000/tcp  # flask app
+sudo fuser -k 5001/tcp  # redis database
+sudo fuser -k 5002/tcp
+sudo fuser -k 6379/tcp  # Redis session server
 
 # start redis server for streaming
 redis-server config/live_redis.conf
 
 # start redis server for Flask session store
 redis-server config/session_redis.conf
+
+# Run Nginx with custom config
+sudo nginx -c ${script_dir}/config/nginx.conf
 
 # activate virtual environment
 . venv/bin/activate
