@@ -7,7 +7,7 @@ def create_app():
     app = Flask(__name__)
 
     @app.route('/index', methods=['GET', 'POST'])
-    def flask_page():
+    def index():
         return send_from_directory('index.html')
 
     @app.route('/flask_page', methods=['GET', 'POST'])
