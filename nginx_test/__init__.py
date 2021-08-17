@@ -8,7 +8,7 @@ def create_app():
 
     @app.route('/index', methods=['GET', 'POST'])
     def index():
-        return render_template('index.html')
+        return render_template('nginx_test.index.html')
 
     @app.route('/flask_page', methods=['GET', 'POST'])
     def flask_page():
