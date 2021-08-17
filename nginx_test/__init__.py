@@ -21,8 +21,8 @@ def create_app():
     """
 
     @app.route('/flask_page', methods=['GET', 'POST'])
-    def index():
-        return """<!doctype html><body><p>Hello World</p></body>"""
+    def flask_page():
+        return """<!doctype html><body><p>This page is being served by flask</p></body>"""
 
     socketio = SocketIO()
     socketio.init_app(app, async_mode='eventlet')
