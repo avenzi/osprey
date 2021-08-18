@@ -4,10 +4,8 @@ from jinja2.exceptions import TemplateNotFound
 from bokeh.embed import json_item
 from json import dumps, loads
 from time import time
-import os
 
 from lib.database import DatabaseError, DatabaseTimeoutError, DatabaseConnectionError
-from local import server_stream_config
 
 # import blueprint + socket
 from app.main import streams, socketio
@@ -34,9 +32,11 @@ def stream():
     group_name = request.args.get('group')
 
     # get stream page template
-    file = server_stream_config.pages.get(group_name)
+    page = current_app.interface.pages[group_name]
+
+    file = page.html
     if not file:
-        err = "No stream page configured for: {}".format(group_name)
+        err = "No html stream page configured for: {}".format(group_name)
         print(err)
         flash(err)
         return redirect(url_for('index'))
@@ -48,8 +48,7 @@ def stream():
         if not database:  # no database found for this session
             print("Database not found for session: {}".format(session.sid))
             return redirect(url_for('index'))
-        info = database.get_group(group_name)
-        return render_template(template_path, info=info, title=group_name)
+        return render_template(template_path, page=page, title=group_name)
     except TemplateNotFound as e:
         return render_template('/error.html', error="Template Not Found: \"{}\"".format(template_path))
     except DatabaseError as e:
@@ -71,7 +70,7 @@ def plot_layout():
         return
 
     # get bokeh layout function associated with this group
-    create_layout = server_stream_config.bokeh_layouts.get(group_name)
+    create_layout = current_app.interface.pages[group_name].layout
     if not create_layout:
         err = "No layout function specified for group '{}'".format(group_name)
         flash(err)

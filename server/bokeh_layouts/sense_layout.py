@@ -1,8 +1,8 @@
 from bokeh.plotting import figure
-from bokeh.models import AjaxDataSource, CustomJS
+from bokeh.models import AjaxDataSource
 from bokeh.layouts import layout
 
-from app.bokeh_layouts.utils import time_format, plot_sliding_js
+from server.bokeh_layouts import time_format, plot_sliding_js
 
 
 def create_layout(info):

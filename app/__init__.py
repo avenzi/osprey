@@ -1,5 +1,4 @@
 import os
-import json
 
 #from eventlet import monkey_patch
 #monkey_patch()
@@ -9,6 +8,7 @@ from flask_session import Session
 from redis import from_url
 
 from lib.database import DatabaseController
+from server.interface import interface  # import the customized interface object
 
 
 def create_app():
@@ -24,6 +24,7 @@ def create_app():
 
     # interface to database connections
     app.database_controller = DatabaseController(live_path='data/live', saved_path='data/saved')
+    app.interface = interface  # allow the app to access to the customized interface object
 
     # add basic favicon
     @app.route('/favicon.ico')
