@@ -6,7 +6,7 @@ from bokeh.palettes import viridis
 
 from json import loads
 
-from server.bokeh_layouts import js_request, time_format, plot_sliding_js
+from server.bokeh_layouts.utils import js_request, time_format, plot_sliding_js
 
 BACKEND = 'canvas'  # 'webgl' appears to be broken - makes page unresponsive.
 
