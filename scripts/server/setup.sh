@@ -36,7 +36,6 @@ sudo make build
 # navigate back to top level dir (where venv will go)
 cd $script_dir/../../
 (
-
 #ensure python is installed
 sudo apt-get -y install python3
 sudo apt-get -y install python3-pip
@@ -54,4 +53,10 @@ sudo add-apt-repository ppa:certbot/certbot -y
 sudo apt-get update
 sudo apt-get install python-certbot-nginx -y
 
+echo "Writing Crontab line to renew SSl certification..."
+webroot="$(pwd -P)/app"  # get absolute path to website root
+echo ${webroot}
+(sudo crontab -l ; echo "0 12 * * * sudo certbot renew --webroot -w ${webroot}") 2>/dev/null | sort | uniq | sudo crontab -
+
+echo "Done!"
 exit
