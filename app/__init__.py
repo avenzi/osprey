@@ -54,7 +54,7 @@ def create_app():
     app.add_url_rule('/', endpoint='index')
 
     from app.main import socketio
-    socketio.init_app(app, async_mode='eventlet', manage_session=False, debug=True)
+    socketio.init_app(app, async_mode='eventlet', manage_session=False, debug=True, cors_allowed_origins='https://signalstream.org')
     # manage_sessions=False means that the socketIO and HTTP sessions will be the same
 
     return app
