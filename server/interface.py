@@ -1,4 +1,4 @@
-from lib.lib import Interface, Page
+from lib.server.server_lib import Interface, Page
 
 from server.bokeh_layouts import eeg_layout, test_layout
 
