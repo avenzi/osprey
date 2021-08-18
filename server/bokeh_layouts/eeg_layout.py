@@ -64,7 +64,9 @@ def create_layout(info):
     # get stream IDs
     filtered_id = info['Filtered']['id']  # Filter Analyzer ID
     fourier_id = info['Fourier']['id']  # Fourier Analyzer ID
-    transformed_id = info['Transformed']['id']  # Transform Analyzer ID
+
+    # Transform Analyzer ID (if present)
+    transformed_id = info['Transformed']['id'] if info.get('Transformed') else 'id_not_found'
 
     # get filter widget values
     filter_widgets = info['Filtered'].get('widgets')
