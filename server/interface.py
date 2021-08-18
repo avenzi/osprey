@@ -1,38 +1,36 @@
 from lib.server.server_lib import Interface, Page
 
-from server.bokeh_layouts import eeg_layout, test_layout
+from server.bokeh_layouts import eeg_layout, ecg_layout, test_layout, sense_layout
 
 # instantiate an interface object to be used by the Flask app
 interface = Interface()
 
-# todo: ability to add more pipelines for the other expected data streams
+# Sense Hat pages
+for name in ['Sense Hat 1', 'Sense Hat 2']:
+    page = Page(name, ['Raw'], layout=sense_layout.create_layout)
+    interface.add_pages(page)
 
-# todo: make the names given to these pages a "type" instead of an identifying name.
-#  That way, multiple groups of the same type can be streamed in with different names
-#  without having to create a new Page() object for each
+# testing pages with random data
+for name in ['Test Group 0', 'Test Group 1', 'Test Group 2']:
+    expected = ['Random 1', 'Random 2']
+    page = Page(name, expected, layout=test_layout.create_stream_layout)
+    interface.add_pages(page)
 
-# testing page with random data
-test_0 = Page('Test Group 0',
-              expected=['Random 1', 'Random 2'],
-              layout=test_layout.create_stream_layout)
+# EEG stream pages
+for name in ['EEG', 'Synth EEG 1', 'Synth EEG 2']:
+    expected = ['Raw', 'Filtered', 'Fourier', 'Headplot']
+    page = Page(name, expected, layout=eeg_layout.create_layout)
+    interface.add_pages(page)
 
-# live eeg stream page
-eeg = Page('EEG',
-           expected=['Raw', 'Filtered', 'Fourier', 'Headplot'],
-           layout=eeg_layout.create_layout)
-
-# synthetic eeg stream page
-synth_eeg_1 = Page('Synth EEG 1',
-                   expected=['Raw', 'Filtered', 'Fourier', 'Headplot'],
-                   layout=eeg_layout.create_layout)
-
-
+# ECG stream page
+expected = ['Raw', 'Filtered', 'Fourier']
+page = Page('ECG', expected, layout=ecg_layout.create_layout)
+interface.add_pages(page)
 
 # video stream page
-video = Page('Video 1', expected=['Raw'], html='video.html')
-
-interface.add_pages(test_0, eeg, synth_eeg_1, video)
-
+for name in ['Video 1', 'Video 2']:
+    page = Page(name, ['Raw'], html='video.html')
+    interface.add_pages(page)
 
 
 
