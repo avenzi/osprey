@@ -1,6 +1,4 @@
 from lib.lib import Base
-from server.analyzers import FunctionAnalyzer
-from server.bokeh_layouts import unknown_layout
 
 
 class Interface(Base):
@@ -28,9 +26,9 @@ class Page(Base):
         self.pipeline = []  # list of streams in the pipeline
 
         if layout and html:
-            raise Exception("Specify only a bokeh Layout object or an html filename, not both")
+            raise Exception("Specify only a function to create a bokeh layout or an html filename, not both")
         elif not (layout or html):  # assumes default bokeh layout
-            self.layout = unknown_layout.create_layout
+            raise Exception("Specify either a function to create a bokeh layout or an html filename.")
         elif layout:
             self.layout = layout
             self.html = 'bokeh.html'
