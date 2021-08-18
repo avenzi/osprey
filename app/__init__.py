@@ -26,6 +26,7 @@ def create_app():
     app.database_controller = DatabaseController(live_path='data/live', saved_path='data/saved')
     app.interface = interface  # allow the app to access to the customized interface object
 
+    '''
     # add basic favicon
     @app.route('/favicon.ico')
     def favicon():
@@ -35,6 +36,7 @@ def create_app():
     @app.route('/js/<filename>')
     def serve_js(filename):
         return send_from_directory(os.path.join(app.root_path, 'static', 'js'), filename)
+    '''
 
     # register blueprints and sockets
     from app.main import auth
