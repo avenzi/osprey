@@ -8,7 +8,8 @@ class Interface(Base):
 
     def add_pages(self, *args):
         """ Add the given pages to this interface """
-        self.pages += list(args)
+        for page in args:
+            self.pages[page.name] = page
 
 
 class Page(Base):
