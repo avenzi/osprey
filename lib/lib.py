@@ -774,5 +774,3 @@ class Namespace(socketio.ClientNamespace):
 
     def on_json(self, dic):
         self.streamer.json(dic)
-
-

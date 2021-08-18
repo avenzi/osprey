@@ -1,14 +1,14 @@
-from bokeh.models import CustomJS, AjaxDataSource, DataRange1d
-from bokeh.models import Panel, Tabs, ColorBar, LogColorMapper, LogTicker, PrintfTickFormatter, DatetimeTickFormatter
-from bokeh.models import Slider, RangeSlider, Select, Spinner, Toggle, RadioButtonGroup
-from bokeh.layouts import layout, Row, Column
+from bokeh.models import CustomJS, AjaxDataSource
+from bokeh.models import Panel, Tabs, ColorBar, LogColorMapper, LogTicker, PrintfTickFormatter
+from bokeh.models import RangeSlider, Select, Spinner, Toggle, RadioButtonGroup
+from bokeh.layouts import layout, Row
 from bokeh.transform import log_cmap
 from bokeh.plotting import figure
 from bokeh.palettes import viridis, magma
 
 from json import loads
 
-from app.bokeh_layouts.utils import js_request, time_format, plot_sliding_js, plot_priority_js
+from server.bokeh_layouts import js_request, time_format, plot_sliding_js, plot_priority_js
 
 BACKEND = 'canvas'  # 'webgl' appears to be broken - makes page unresponsive.
 
