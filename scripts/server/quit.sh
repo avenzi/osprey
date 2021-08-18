@@ -4,7 +4,8 @@ sudo pkill python
 sudo pkill python3
 sudo pkill gunicorn
 sudo pkill redis-server
-sudo fuser -k 5000/tcp  # clear activity on port 5000
-sudo fuser -k 5001/tcp  # clear activity on port 5001
-sudo fuser -k 5002/tcp  # clear activity on port 5002
-sudo fuser -k 6379/tcp  # clear activity on port 6379
+sudo fuser -k 80/tcp    # Nginx
+sudo fuser -k 5000/tcp  # Flask server
+sudo fuser -k 5001/tcp  # Redis database server
+sudo fuser -k 5002/tcp
+sudo fuser -k 6379/tcp  # Redis session server
