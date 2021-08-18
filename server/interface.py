@@ -23,8 +23,8 @@ eeg = Page('EEG',
 
 # synthetic eeg stream page
 synth_eeg_1 = Page('Synth EEG 1',
-                 expected=['Raw', 'Filtered', 'Fourier', 'Headplot'],
-                 layout=eeg_layout.create_layout)
+                   expected=['Raw', 'Filtered', 'Fourier', 'Headplot'],
+                   layout=eeg_layout.create_layout)
 
 
 

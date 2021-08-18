@@ -32,14 +32,15 @@ def stream():
     group_name = request.args.get('group')
 
     # get stream page template
-    page = current_app.interface.pages[group_name]
+    page = current_app.interface.pages.get(group_name)
+    if not page:
+        err = "The requested stream page '{}' has not been configured.".format(group_name)
+        return render_template('/error.html', error=err)
 
     file = page.html
     if not file:
-        err = "No html stream page configured for: {}".format(group_name)
-        print(err)
-        flash(err)
-        return redirect(url_for('index'))
+        err = "The requested stream page '{}' doesn not have an associated html file to display".format(group_name)
+        return render_template('/error.html', error=err)
 
     template_path = '/streams/{}'.format(file)
 
