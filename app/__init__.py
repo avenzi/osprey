@@ -5,6 +5,8 @@ import os
 
 from flask import Flask, send_from_directory
 from flask_session import Session
+from werkzeug.middleware.proxy_fix import ProxyFix
+
 from redis import from_url
 
 from lib.database import DatabaseController
@@ -20,6 +22,7 @@ def create_app():
     app.config['SESSION_REDIS'] = from_url('redis://localhost:6379')
     app.config['UPLOAD_FOLDER'] = 'local/pipelines'
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1000 * 1000  # 16 MB
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)  #
     Session(app)  # initialize server side session
 
     # interface to database connections
@@ -47,7 +50,7 @@ def create_app():
     app.add_url_rule('/', endpoint='index')
 
     from app.main import socketio
-    socketio.init_app(app, async_mode='eventlet', manage_session=False, cors_allowed_origins="https://signalstream.org")
+    socketio.init_app(app, async_mode='eventlet', manage_session=False)#, cors_allowed_origins="https://signalstream.org")
     # manage_sessions=False means that the socketIO and HTTP sessions will be the same
     # cors_allowed_origins allows socketio to work with SSL
     return app
