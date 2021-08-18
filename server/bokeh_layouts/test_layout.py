@@ -2,7 +2,7 @@ from bokeh.plotting import figure
 from bokeh.models import AjaxDataSource
 from bokeh.layouts import layout
 
-from server.bokeh_layouts import time_format, plot_sliding_js, plot_priority_js
+from server.bokeh_layouts.utils import time_format, plot_sliding_js, plot_priority_js
 
 
 def create_stream_layout(info):
