@@ -496,8 +496,7 @@ class Streamer(WorkerNode):
         """
         while not self.exit:
             try:
-                print("HERE: ", self.ip)
-                self.socket.connect('{}:{}'.format(self.ip, self.port))
+                self.socket.connect('https://{}:{}'.format(self.ip, self.port))
                 self.debug("Connected to server socketIO")
                 return True
             except Exception as e:
