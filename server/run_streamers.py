@@ -68,7 +68,7 @@ workers = [eegfilt, eegfour, eegfunc, ecgfilt, ecgfour, ecgfunc]
 
 client = Client(
     workers=worker_no_pi_test, name='AWS Local Client', debug=1,
-    server_ip='3.131.117.61', port=5000,
+    server_ip='3.131.117.61', port=80,
     db_port=5001, db_pass='thisisthepasswordtotheredisserver'
 )
 
