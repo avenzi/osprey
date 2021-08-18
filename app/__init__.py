@@ -22,8 +22,12 @@ def create_app():
     app.config['SESSION_REDIS'] = from_url('redis://localhost:6379')
     app.config['UPLOAD_FOLDER'] = 'local/pipelines'
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1000 * 1000  # 16 MB
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)  #
-    Session(app)  # initialize server side session
+
+    # fixes problems that occur when hosting behind proxy with SSL
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
+
+    # initialize server side session
+    Session(app)
 
     # interface to database connections
     app.database_controller = DatabaseController(live_path='data/live', saved_path='data/saved')
@@ -50,9 +54,9 @@ def create_app():
     app.add_url_rule('/', endpoint='index')
 
     from app.main import socketio
-    socketio.init_app(app, async_mode='eventlet', manage_session=False)#, cors_allowed_origins="https://signalstream.org")
+    socketio.init_app(app, async_mode='eventlet', manage_session=False)
     # manage_sessions=False means that the socketIO and HTTP sessions will be the same
-    # cors_allowed_origins allows socketio to work with SSL
+
     return app
 
 
