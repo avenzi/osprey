@@ -15,6 +15,6 @@ sudo pkill python3
 
 # activate virtual environment and run
 . venv/bin/activate
-python3 -m local.run_analysis
+python3 -m server.run_streamers
 
 
