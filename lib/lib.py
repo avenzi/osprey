@@ -425,7 +425,7 @@ class Streamer(WorkerNode):
         self.db_pass = None
 
         # connection with socketio
-        self.socket = socketio.Client(logger=True, engineio_logger=True)
+        self.socket = socketio.Client()#logger=True, engineio_logger=True)
         self.namespaces = ['/streamers', '/'+self.id]  # list of namespaces to connect to
 
         # connection to database
