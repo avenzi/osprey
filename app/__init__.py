@@ -33,28 +33,16 @@ def create_app():
     app.database_controller = DatabaseController(live_path='data/live', saved_path='data/saved')
     app.interface = interface  # allow the app to access to the customized interface object
 
-    '''
-    # add basic favicon
-    @app.route('/favicon.ico')
-    def favicon():
-        return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico', mimetype='image/vnd.microsoft.icon')
-
-    # serve static js files
-    @app.route('/js/<filename>')
-    def serve_js(filename):
-        return send_from_directory(os.path.join(app.root_path, 'static', 'js'), filename)
-    '''
-
     # register blueprints and sockets
     from app.main import auth
     app.register_blueprint(auth)
 
     from app.main import streams
     app.register_blueprint(streams)
-    app.add_url_rule('/', endpoint='index')
+    app.add_url_rule('/', endpoint='index')  # is this necessary? I have Nginx set up to do this already.
 
     from app.main import socketio
-    socketio.init_app(app, async_mode='eventlet', manage_session=False, debug=True)
+    socketio.init_app(app, async_mode='eventlet', manage_session=False)
     # manage_sessions=False means that the socketIO and HTTP sessions will be the same
 
     return app
