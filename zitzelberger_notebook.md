@@ -33,6 +33,16 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### August 16-18th, 2021:
+
+​	On Monday, Dr. Ghassemi instructed me to work on making the website more secure using SSL. The first step involved getting Nginx functioning as a reverse-proxy server for the Flask app. It took me a lot of documentation reading but I was able to get it working, serving static files directly and passing everything else to the Flask server, which is no longer hosted publicly but rather on localhost:5000. The site is now serving on the typical port 80 instead. A resource that really helped me is Miguel Grinberg's presentation at PyCon in 2016: https://www.youtube.com/watch?v=tdIIJuPh3SI
+
+​	The next step was to get it SSL encrypted, but I soon discovered that in order to do that we needed to purchase a domain name. After talking with Dr. Ghassemi, we ended up with "signalstream.org". I used CertBot to validate the SSL certificates and used the toy example that Miguel made for his presentation (https://github.com/miguelgrinberg/flack) as a template to create the Nginx config with SSL (although it was actually syntactically invalid so I had to debug it, which was a pain since I've never used it before this week). There were a couple of config options that seemed to break everything, so those are commented out for now and I'll ask Dr. Ghassemi about them later.
+
+ 	After that, I quickly ran into some issues with socketIO conflicting with the SSL connection. First, there was some modifications that I had to make to the Flask app initialization that I would have never known about if it had not been for this git thread: https://github.com/miguelgrinberg/Flask-SocketIO/issues/1047
+	I also had to go around to various places in my code to make sure that I was using the correct prefix for the site as well as the domain. Evidently socketIO can't connect using the IP address alone.
+	My current problem is that socketIO is throwing an error indicating that there are some mismatched version numbers, but it doesn't tell me where. Going to work on that tomorrow.
+
 ##### August 12th, 13th, 2021:
 
 ​	I have now implemented a file upload, however I am not yet convinced it is safe. I have disabled it for now until I can consult Dr. Ghassemi on Monday about it. I added a button on the index page that opens a dialogue with a file submission form. A file can be selected from the computer and uploaded to the server. Basic filename verification is in place.

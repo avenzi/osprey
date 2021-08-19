@@ -498,7 +498,7 @@ class Streamer(WorkerNode):
             try:
                 self.socket.connect('https://{}:{}'.format(self.ip, self.port))
                 self.debug("Connected to server socketIO")
-                return True
+                return Trues
             except Exception as e:
                 self.debug("Failed to connect to server socketIO: {}".format(e), 1)
                 pass
