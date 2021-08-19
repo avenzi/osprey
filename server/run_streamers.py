@@ -1,7 +1,6 @@
 from lib.lib import Client
 from server.analyzers import *
 from lib.raspi.streamers import *
-from server.interface import interface  # get access to custom interface object
 
 # Test analyzer, targeting 2 random streamers from 2 different groups
 ta = TestAnalyzer('Random Analyzer', 'Test Analyzer')

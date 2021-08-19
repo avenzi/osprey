@@ -1,10 +1,7 @@
 from threading import Condition
 from io import BytesIO
 import subprocess
-import json
 import os
-
-from lib.lib import Client
 
 
 def configure_port(dev_path):
