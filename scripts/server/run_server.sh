@@ -23,7 +23,7 @@ redis-server config/live_redis.conf
 # start redis server for Flask session store
 redis-server config/session_redis.conf
 
-# Run Nginx with custom config
+# Run Nginx with custom config (needs absolute path to config)
 sudo nginx -c ${script_dir}/../../config/nginx.conf
 
 # activate virtual environment

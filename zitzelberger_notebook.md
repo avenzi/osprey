@@ -33,9 +33,19 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### August 20th, 2021:
+
+​	I've been doing a lot of brainstorming on a way to rewrite the interactive display in such a way the reduces the amount of programming knowledge that would be required. Firstly, the necessity of writing a single python loop to read data from an external device is, at the moment, unavoidable. I have written various examples to help someone do this, but because one of our goals is to make this app compatible with anything that can interface with python, that step is necessary.
+​	However, the server-side of this has been giving me headaches because I keep getting the nagging feeling that it can be done without writing code, or even a config file. Because of this, I would like to start designing an interactive interface on the website that does this instead, and here's my idea:
+​	A section of the website dedicated to displaying all the data columns currently being streamed to the database will be displayed. Each data column should have the option to assign that column to a "display" (a separate webpage to view the data, like I we have now). When a "display" is created and named, it should appear in a dropdown menu for each data column to choose to be assigned to (or multiple displays too, that would be nice). Once a "display" is created, an html page should be selected to render it - this means either my pre-written page that displays Bokeh plots, or something custom made like my video stream html and associated JS code. Then, if the page was the bokeh template, an actual bokeh layout object needs to be specified in a similar way. Then, if the right data columns in the database are assigned to the page with their intended bokeh layout, one can view the page and see exactly what I have implemented now, which is the fully functional and interactive bokeh design of the live streams.
+​	I really like the idea of being able to dynamically change which bokeh plots each data column gets displayed in rather than writing everything in python before starting the server and hoping that you did it right. It also means that someone with no understanding of programming would be able to configure the data visualization component completely independently and intuitively.
+​	This is probably going to take a lot of work, and since I am going to be spending the next week moving to a new apartment I probably won't be able to make any progress just yet, but I want to get this idea written down so I can keep workshopping it.
+
 ##### August 19th, 2021:
 
 ​	I think I just needed some sleep - I found the problem. Even though the Nginx config redirects traffic from port 80 to port 443 for SSL, that redirect only works for browsers that know how to respond to redirects. SocketIO doesn't use redirects, so it has to start right off the bat by using port 443. That was the problem. It's a little frustrating that this wasn't the error that was thrown (the version number thing from yesterday), but I guess I can't expect it to be that easy.
+
+​	Another thing I've been working on is re-organizing the method by which streams are created. A couple days ago (forgot to mention) I rewrote the run_analyzers.py file and moved the customization section to the server directory. The interface is now constructed using an Interface() class object that defines the group pages that are to be used by the Flask app. This method is a bit clunky, I feel, as it relies on this file being in the location that it is and not imported from somewhere else. This is because the Flask app imports the interface object from that particular file. I tried to reduce this configuration down to a single file rather than separately between interface config and stream config, but ultimately I decided against it because the stream config technically could be for a completely different device. I intentionally made the streamers and analyzers for the server modular like this to allow for the future possibility of hosting the site and the analysis on separate machines.
 
 ##### August 16-18th, 2021:
 
@@ -43,9 +53,9 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ​	The next step was to get it SSL encrypted, but I soon discovered that in order to do that we needed to purchase a domain name. After talking with Dr. Ghassemi, we ended up with "signalstream.org". I used CertBot to validate the SSL certificates and used the toy example that Miguel made for his presentation (https://github.com/miguelgrinberg/flack) as a template to create the Nginx config with SSL (although it was actually syntactically invalid so I had to debug it, which was a pain since I've never used it before this week). There were a couple of config options that seemed to break everything, so those are commented out for now and I'll ask Dr. Ghassemi about them later.
 
- 	After that, I quickly ran into some issues with socketIO conflicting with the SSL connection. First, there was some modifications that I had to make to the Flask app initialization that I would have never known about if it had not been for this git thread: https://github.com/miguelgrinberg/Flask-SocketIO/issues/1047
- 	I also had to go around to various places in my code to make sure that I was using the correct prefix for the site as well as the domain. Evidently socketIO can't connect using the IP address alone.
- 	My current problem is that socketIO is throwing an error indicating that there are some mismatched version numbers, but it doesn't tell me where. Going to work on that tomorrow.
+​	After that, I quickly ran into some issues with socketIO conflicting with the SSL connection. First, there was some modifications that I had to make to the Flask app initialization that I would have never known about if it had not been for this git thread: https://github.com/miguelgrinberg/Flask-SocketIO/issues/1047
+I also had to go around to various places in my code to make sure that I was using the correct prefix for the site as well as the domain. Evidently socketIO can't connect using the IP address alone.
+My current problem is that socketIO is throwing an error indicating that there are some mismatched version numbers, but it doesn't tell me where. Going to work on that tomorrow.
 
 ##### August 12th, 13th, 2021:
 
