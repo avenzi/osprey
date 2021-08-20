@@ -41,6 +41,9 @@ By working on this project you are agreeing to abide by the following expectatio
 ​	I really like the idea of being able to dynamically change which bokeh plots each data column gets displayed in rather than writing everything in python before starting the server and hoping that you did it right. It also means that someone with no understanding of programming would be able to configure the data visualization component completely independently and intuitively.
 ​	This is probably going to take a lot of work, and since I am going to be spending the next week moving to a new apartment I probably won't be able to make any progress just yet, but I want to get this idea written down so I can keep workshopping it.
 
+​	I found a really cool online tool to write html/css/js and get live feedback without having to go through all the trouble of deploying the server each time: https://jsitor.com/
+It works really well and I have not had any problems with it so far - I'm using it to write the webpage that I described above. I'm making slow progress but it's turning out pretty well so far.
+
 ##### August 19th, 2021:
 
 ​	I think I just needed some sleep - I found the problem. Even though the Nginx config redirects traffic from port 80 to port 443 for SSL, that redirect only works for browsers that know how to respond to redirects. SocketIO doesn't use redirects, so it has to start right off the bat by using port 443. That was the problem. It's a little frustrating that this wasn't the error that was thrown (the version number thing from yesterday), but I guess I can't expect it to be that easy.
