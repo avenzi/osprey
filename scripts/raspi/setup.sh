@@ -10,8 +10,8 @@ cd ../../
 
 (
 # ensure python is installed
-#sudo apt-get -y install python3
-#sudo apt-get -y install python3-pip
+sudo apt-get -y install python3
+sudo apt-get -y install python3-pip
 python3 -m venv venv
 . venv/bin/activate
 pip3 install -r scripts/raspi/python_requirements.txt  # install requirements (don't use sudo in venv!)
