@@ -1,6 +1,6 @@
 import sounddevice as sd
 
-stream = sd.Stream(channels=1)
+stream = sd.Stream(samplerate=44100, channels=1)
 
 while True:
     frames = stream.read_available
