@@ -17,4 +17,4 @@ print("recording...............")
 
 recording = sd.rec(int(duration * fs), samplerate=fs, channels=1)
 sd.wait()
-print(len(recording))
+print(recording, sum(recording))
