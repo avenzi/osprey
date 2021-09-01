@@ -7,5 +7,4 @@ while True:
     frames = stream.read_available
     print(frames)
     out = stream.read(frames)
-    print(out)
     sleep(1)
