@@ -381,6 +381,7 @@ def custom_functions(group):
     # 'selected' is a list of function names that are currently selected
     data = {'available': [], 'selected': []}
 
+    print("here")
     # get list of all files in this path
     funcs_path = current_app.config['UPLOAD_FOLDER']
     for file in os.listdir(funcs_path):
@@ -390,11 +391,13 @@ def custom_functions(group):
             continue
         data['available'].append(file)
 
+    print('here 2')
     # read JSON encoded list of current selections from database
     json_string = database.get_info(ID, 'pipeline')
     if json_string:
         data['selected'] = json.loads(json_string)
 
+    print('here 3')
     # emit back to browser
     socketio.emit('custom_functions', data, namespace='/browser', room=request.sid)
 
