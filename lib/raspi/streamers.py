@@ -194,7 +194,20 @@ class AudioStreamer(Streamer):
 
         self.start_time = 0           # time of START
         self.sample_rate = 44100
-        self.stream = None  # sd.stream
+
+        import sounddevice as sd
+
+        def callback(indata, frames, time, status):
+            """ Callback function for the sd.stream object """
+            # temporary - just to make timestamp array same size as data array
+            t = [time.inputBufferAdcTime]*frames
+            data = {
+                'time': t,
+                'audio': indata,
+            }
+            self.database.write_data(self.id, data)
+
+        self.stream = sd.InputStream(channels=1, callback=callback, samplerate=self.sample_rate)
 
     def loop(self):
         """
@@ -208,20 +221,6 @@ class AudioStreamer(Streamer):
         Start Streaming continually
         Extended from base class in pi_lib.py
         """
-
-        def callback(indata, frames, time, status):
-            """ Callback function for the sd.stream object """
-            # temporary - just to make timestamp array same size as data array
-            t = [time.inputBufferAdcTime]*frames
-            data = {
-                'time': t,
-                'audio': indata,
-            }
-            self.database.write_data(self.id, data)
-            print(time.inputBufferAdcTime, time.currentTime)
-
-        import sounddevice as sd
-        self.stream = sd.InputStream(channels=1, callback=callback, samplerate=self.sample_rate)
         self.stream.start()
 
         # info to send to database
