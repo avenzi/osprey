@@ -188,6 +188,50 @@ class VideoStreamer(Streamer):
             pass
 
 
+class AudioStreamer(Streamer):
+    def __init__(self, *args):
+        super().__init__(*args)
+
+        self.start_time = 0           # time of START
+        self.sample_rate = 44100
+        self.stream = None  # sd.stream
+
+    def loop(self):
+        """
+        Main execution loop
+        """
+        sleep(1)
+
+    def start(self):
+        """
+        HTTPRequest method START
+        Start Streaming continually
+        Extended from base class in pi_lib.py
+        """
+
+        def callback(indata, frames, time, status):
+            """ Callback function for the sd.stream object """
+            print(len(indata))
+
+        import sounddevice as sd
+        self.stream = sd.InputStream(channels=1, callback=callback, samplerate=self.sample_rate)
+        self.stream.start()
+
+        # info to send to database
+        self.info['sample_rate'] = self.sample_rate
+
+    def stop(self):
+        """
+        HTTPRequest method STOP
+        Extended from the base class in pi_lib.py
+        """
+        try:
+            self.stream.stop()
+        except:
+            pass
+
+
+
 class SynthEEGStreamer(Streamer):
     """
     Synthetic EEG streamer class for testing
