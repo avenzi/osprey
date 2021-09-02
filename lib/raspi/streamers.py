@@ -194,9 +194,7 @@ class AudioStreamer(Streamer):
     def __init__(self, *args):
         super().__init__(*args)
 
-        #self.audio_buffer = BytesOutput2()  # buffer to hold images from the Picam
-        from io import BytesIO
-        self.audio_buffer = BytesIO()
+        self.audio_buffer = BytesOutput()  # buffer to hold images from the Picam
         self.sample_rate = 44100
 
         import sounddevice as sd
