@@ -2,13 +2,13 @@ import sounddevice as sd
 from time import sleep
 
 
-stream = sd.InputStream(device="USB Audio Device", channels=1)
-stream.start()
-while True:
-    frames = stream.read_available
-    print(frames)
-    out = stream.read(1)
-    sleep(1)
+def callback(indata, frames, time, status):
+    print(len(indata))
+
+stream = sd.InputStream(channels=1, callback=callback)
+
+with stream:
+    sd.sleep(20000)
 
 '''
 # working
