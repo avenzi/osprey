@@ -201,6 +201,7 @@ class AudioStreamer(Streamer):
         def callback(indata, frames, block_time, status):
             """ Callback function for the sd.stream object """
             # get real time from relative port_audio_time
+            print(block_time.inputBufferAdcTime - self.port_audio_start_time)
             abs_time = (block_time.inputBufferAdcTime - self.port_audio_start_time) + self.start_time
 
             # temporary - just to make timestamp array same size as data array
@@ -230,6 +231,7 @@ class AudioStreamer(Streamer):
             self.port_audio_start_time = self.stream.time
             print(self.port_audio_start_time)
         self.stream.start()
+        print(self.start_time, self.port_audio_start_time)
 
         # info to send to database
         self.info['sample_rate'] = self.sample_rate
