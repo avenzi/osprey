@@ -1,5 +1,5 @@
 from lib.lib import Base, Streamer
-from lib.raspi.pi_lib import configure_port, BytesOutput
+from lib.raspi.pi_lib import configure_port, BytesOutput, BytesOutput2
 
 import numpy as np
 from random import random
@@ -194,7 +194,7 @@ class AudioStreamer(Streamer):
     def __init__(self, *args):
         super().__init__(*args)
 
-        self.audio_buffer = BytesOutput()  # buffer to hold images from the Picam
+        self.audio_buffer = BytesOutput2()  # buffer to hold images from the Picam
         self.sample_rate = 44100
 
         import sounddevice as sd
@@ -208,7 +208,7 @@ class AudioStreamer(Streamer):
             # abs_time = time() - time_diff  # get epoch time
             # temporary - just to make timestamp array same size as data array
             # t = [abs_time] * frames
-            sf.write(self.audio_buffer, indata, self.sample_rate, format='WAV', mode='w')
+            sf.write(self.audio_buffer, indata, self.sample_rate, format='WAV')
 
         self.stream = sd.InputStream(channels=1, callback=callback, samplerate=self.sample_rate)
 
