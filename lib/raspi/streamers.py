@@ -1,9 +1,10 @@
 from lib.lib import Base, Streamer
-from lib.raspi.pi_lib import configure_port, PicamOutput
+from lib.raspi.pi_lib import configure_port, BytesOutput
 
 import numpy as np
 from random import random
 from time import time, sleep
+import functools
 
 
 class TestStreamer(Streamer):
@@ -135,7 +136,7 @@ class VideoStreamer(Streamer):
         super().__init__(*args)
         self.start_time = 0           # time of START
 
-        self.picam_buffer = PicamOutput()  # buffer to hold images from the Picam
+        self.picam_buffer = BytesOutput()  # buffer to hold images from the Picam
 
     def loop(self):
         """
@@ -188,29 +189,26 @@ class VideoStreamer(Streamer):
             pass
 
 
+
 class AudioStreamer(Streamer):
     def __init__(self, *args):
         super().__init__(*args)
 
+        self.audio_buffer = BytesOutput()  # buffer to hold images from the Picam
         self.sample_rate = 44100
 
         import sounddevice as sd
+        import soundfile as sf
 
         def callback(indata, frames, block_time, status):
             """ Callback function for the sd.stream object """
             # get real time from relative port_audio_time
-            time_diff = block_time.currentTime - block_time.inputBufferAdcTime
-            print(time_diff)
-            abs_time = time() - time_diff
-
+            # time since data was taken
+            # time_diff = block_time.currentTime - block_time.inputBufferAdcTime
+            # abs_time = time() - time_diff  # get epoch time
             # temporary - just to make timestamp array same size as data array
-            t = [abs_time]*frames
-            data = {
-                'time': t,
-                'audio': indata,
-            }
-            print(time(), abs_time, block_time.inputBufferAdcTime)
-            self.database.write_data(self.id, data)
+            # t = [abs_time] * frames
+            sf.write(self.audio_buffer, indata, self.sample_rate)
 
         self.stream = sd.InputStream(channels=1, callback=callback, samplerate=self.sample_rate)
 
@@ -218,6 +216,16 @@ class AudioStreamer(Streamer):
         """
         Main execution loop
         """
+        bytes_data = self.audio_buffer.read()
+        print(bytes_data)
+
+        # todo: this time is not the time the sample was taken, but rather the time that
+        #  the data was read out of the audio buffer, which can be up to a second behind.
+        data = {
+            'time': time()*1000,
+            'audio': bytes_data,
+        }
+        self.database.write_data(self.id, data)
         sleep(1)
 
     def start(self):
@@ -227,7 +235,6 @@ class AudioStreamer(Streamer):
         Extended from base class in pi_lib.py
         """
         self.stream.start()
-
 
         # info to send to database
         self.info['sample_rate'] = self.sample_rate

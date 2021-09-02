@@ -2,6 +2,7 @@ numpy>=1.19.0
 requests==2.24.0
 picamera>=1.13
 sounddevice>=0.4.2
+SoundFile>=0.10.3
 
 # RTIMULib is not listed a dependency of sense-hat. There is currently an issue open on this:
 # https://github.com/astro-pi/python-sense-hat/issues/58#issuecomment-624958208
