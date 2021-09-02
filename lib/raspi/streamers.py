@@ -197,14 +197,15 @@ class AudioStreamer(Streamer):
 
         import sounddevice as sd
 
-        def callback(indata, frames, time, status):
+        def callback(indata, frames, _time, status):
             """ Callback function for the sd.stream object """
             # temporary - just to make timestamp array same size as data array
-            t = [time.inputBufferAdcTime]*frames
+            t = [_time.inputBufferAdcTime]*frames
             data = {
                 'time': t,
                 'audio': indata,
             }
+            print(time(), _time)
             self.database.write_data(self.id, data)
 
         self.stream = sd.InputStream(channels=1, callback=callback, samplerate=self.sample_rate)
