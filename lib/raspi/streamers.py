@@ -211,7 +211,7 @@ class AudioStreamer(Streamer):
 
         def callback(indata, frames, time, status):
             """ Callback function for the sd.stream object """
-            print(len(indata))
+            print(len(indata), frames, time, status)
 
         import sounddevice as sd
         self.stream = sd.InputStream(channels=1, callback=callback, samplerate=self.sample_rate)
@@ -229,7 +229,6 @@ class AudioStreamer(Streamer):
             self.stream.stop()
         except:
             pass
-
 
 
 class SynthEEGStreamer(Streamer):
