@@ -46,12 +46,27 @@ class BytesOutput:
             self.buffer.truncate()  # erase buffer
             return data
 
-    def seek(self, offset, whence=0):
-        """ expose seek() method of buffer """
-        return self.buffer.seek(offset, whence)
 
-    def tell(self):
-        """ expose tell() method for buffer """
-        return self.buffer.tell()
+class BytesOutput2(BytesIO):
+    """ Data Buffer class to collect data from a Picam. """
+    def __init__(self):
+        super().__init__()
+        self.ready = Condition()  # lock for reading/writing frames
+
+    def write(self, data):
+        """ Write data to the buffer, adding the new frame when necessary """
+        with self.ready:
+            count = super().write(data)
+            self.ready.notify_all()  # TODO: Does notify_all cause exclusive access violation? Change to notify()?
+            return count
+
+    def read(self, size=-1):
+        """ Blocking operation to read the newest frame """
+        with self.ready:
+            self.ready.wait()  # wait for access to buffer
+            data = super().read(size)
+            self.seek(0)  # move to beginning
+            self.truncate()  # erase buffer
+            return data
 
 
