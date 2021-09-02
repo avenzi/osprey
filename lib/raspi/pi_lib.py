@@ -45,4 +45,12 @@ class BytesOutput:
             self.buffer.truncate()  # erase buffer
             return data
 
+    def seek(self, offset, whence=0):
+        """ expose seek() method of buffer """
+        return self.buffer.seek(offset, whence)
+
+    def tell(self):
+        """ expose tell() method for buffer """
+        return self.buffer.tell()
+
 
