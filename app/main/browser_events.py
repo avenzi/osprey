@@ -371,33 +371,32 @@ def custom_functions(group):
         print("Database not found")
         return
 
-    # id of Transform analyzer in this group
-    info = database.get_group(group, 'Transformed')
-    if not info:
-        return
-    ID = info['id']
-
     # 'available' is a list of function names that are available to be selected
     # 'selected' is a list of function names that are currently selected
     data = {'available': [], 'selected': []}
 
-    print("here")
-    # get list of all files in this path
-    funcs_path = current_app.config['UPLOAD_FOLDER']
-    for file in os.listdir(funcs_path):
-        if not os.path.isfile(os.path.join(funcs_path, file)):
-            continue
-        if not file.endswith('.py'):
-            continue
-        data['available'].append(file)
+    # id of Transform analyzer in this group
+    info = database.get_group(group, 'Transformed')
+    if info:
+        ID = info['id']
 
-    print('here 2')
-    # read JSON encoded list of current selections from database
-    json_string = database.get_info(ID, 'pipeline')
-    if json_string:
-        data['selected'] = json.loads(json_string)
+        # get list of all files in this path
+        funcs_path = current_app.config['UPLOAD_FOLDER']
+        for file in os.listdir(funcs_path):
+            if not os.path.isfile(os.path.join(funcs_path, file)):
+                continue
+            if not file.endswith('.py'):
+                continue
+            data['available'].append(file)
 
-    print('here 3')
+        # read JSON encoded list of current selections from database
+        json_string = database.get_info(ID, 'pipeline')
+        if json_string:
+            data['selected'] = json.loads(json_string)
+
+    else:  # no Transformed analyzer data column was found
+        data['error'] = "No 'Transformed' data column was found in the database. Most likely this means that a Transformed analyzer was not assigned to this stream."
+
     # emit back to browser
     socketio.emit('custom_functions', data, namespace='/browser', room=request.sid)
 
