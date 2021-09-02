@@ -24,7 +24,7 @@ def configure_port(dev_path):
         return False
 
 
-class PicamOutput:
+class BytesOutput:
     """ Data Buffer class to collect data from a Picam. """
     def __init__(self):
         self.buffer = BytesIO()
@@ -34,7 +34,7 @@ class PicamOutput:
         """ Write data to the buffer, adding the new frame when necessary """
         with self.ready:
             self.buffer.write(data)
-            self.ready.notify_all()  # TODO: Change to notify()? notify_all may cause exclusive access violation
+            self.ready.notify_all()  # TODO: Does notify_all cause exclusive access violation? Change to notify()?
 
     def read(self):
         """ Blocking operation to read the newest frame """
