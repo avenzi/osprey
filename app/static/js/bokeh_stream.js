@@ -146,6 +146,9 @@ $(document).ready(function() {
     socket.on('custom_functions', function(data) {  // receive this info
         // data.available is a list of function names that are available to select
         // data.selected is a list of function names that are currently selected
+        if (data.error != undefined) {
+             console.log(data.error)
+        }
         console.log("available funcs: " + data.available)
         functions = data.available
         $("div.custom_functions div.menus").empty()  // clear current selections
