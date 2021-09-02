@@ -33,8 +33,9 @@ class BytesOutput:
     def write(self, data):
         """ Write data to the buffer, adding the new frame when necessary """
         with self.ready:
-            self.buffer.write(data)
+            count = self.buffer.write(data)
             self.ready.notify_all()  # TODO: Does notify_all cause exclusive access violation? Change to notify()?
+            return count
 
     def read(self):
         """ Blocking operation to read the newest frame """
