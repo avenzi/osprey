@@ -211,7 +211,8 @@ class AudioStreamer(Streamer):
 
         def callback(indata, frames, time, status):
             """ Callback function for the sd.stream object """
-            t = time.inputBufferAdcTime
+            # temporary - just to make timestamp array same size as data array
+            t = [time.inputBufferAdcTime]*frames
             data = {
                 'time': t,
                 'audio': indata,
