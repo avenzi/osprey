@@ -33,6 +33,13 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### Sept 2nd, 2021:
+
+​	I haven't actually tested the Pi stream on my new Wifi network before, so I did that this morning. Worked perfectly! This is a great sign since I have previously only ever been able test on my wifi network in Ohio, so now I know I didn't just make everything work only for that network. I don't know how I could have done that in the first place, but there is a lot I don't understand so who knows.
+​	After testing the various streams (Video, Sense Hat, Synth EEG, Test Stream 1), I added some better error messages to the streams that don't have a Transformed analyzer assigned to them. This is because all Bokeh streams get the dropdown menus, but that doesn't mean there is a Transform analyzer running that can process the data. If this occurs, an error is shown in the console log of the browser and the dropdown menus are not populated with functions.
+
+​	I then wrote a new AudioStreamer class similar to the code I wrote yesterday.
+
 ##### September 1st 2021:
 
 ​	After speaking with Dr. Ghassemi this Monday, he wants me to get audio streaming working for the project because the ICASSP conference has a focus on audio processing. I have put this off in the past because I hate dealing with audio drivers. And sure enough, as soon as I started trying I ran into a plethora of issues. 
