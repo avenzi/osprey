@@ -192,8 +192,6 @@ class AudioStreamer(Streamer):
     def __init__(self, *args):
         super().__init__(*args)
 
-        self.start_time = 0           # time of START
-        self.port_audio_start_time = None  # start time according to PortAudio
         self.sample_rate = 44100
 
         import sounddevice as sd
@@ -201,8 +199,9 @@ class AudioStreamer(Streamer):
         def callback(indata, frames, block_time, status):
             """ Callback function for the sd.stream object """
             # get real time from relative port_audio_time
-            print(block_time.inputBufferAdcTime - self.port_audio_start_time)
-            abs_time = (block_time.inputBufferAdcTime - self.port_audio_start_time) + self.start_time
+            time_diff = block_time.currentTime - block_time.inputBufferAdcTime
+            print(time_diff)
+            abs_time = time() - time_diff
 
             # temporary - just to make timestamp array same size as data array
             t = [abs_time]*frames
@@ -227,11 +226,8 @@ class AudioStreamer(Streamer):
         Start Streaming continually
         Extended from base class in pi_lib.py
         """
-        if not self.port_audio_start_time:
-            self.port_audio_start_time = self.stream.time
-            print(self.port_audio_start_time)
         self.stream.start()
-        print(self.start_time, self.port_audio_start_time)
+
 
         # info to send to database
         self.info['sample_rate'] = self.sample_rate
