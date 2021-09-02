@@ -7,8 +7,6 @@ def callback(indata, frames, time, status):
 stream = sd.InputStream(channels=1, callback=callback, samplerate=44100)
 
 stream.start()
-#with stream:
-    #sd.sleep(20000)
 
 sleep(5)
 stream.stop()

@@ -19,4 +19,4 @@ cd ../../
 . venv/bin/activate
 # can't run with sudo, or it won't be run inside virtual environment.
 # This might mess up acessing certain files from with the program, though.
-python3 -m local.run_pi
+python3 -m raspi.run_pi
