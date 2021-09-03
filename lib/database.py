@@ -672,7 +672,7 @@ class Database:
         if <name> not specified, gives list of all dicts in that group.
             - Note that this only returns one dict for each 'info:' data column,
                 so any extra 'stream:' columns with the same but a different prefix
-                do not add another dict.
+                do not add another dict (in contrast to the get_streams() method).
         """
         if stream is not None:  # stream name specified
             stream_id = self.redis.hget('group:'+name, stream)  # get stream ID from group dict

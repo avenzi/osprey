@@ -163,7 +163,6 @@ class SignalFilter(SignalAnalyzer):
     def loop(self):
         """ Maine execution loop """
         data = self.database.read_data(self.raw_id)
-        print(data)
         if not data:
             sleep(0.5)
             return

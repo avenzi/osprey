@@ -223,7 +223,7 @@ class AudioStreamer(Streamer):
         #  the data was read out of the audio buffer, which can be up to a second behind.
         data = {
             'time': time()*1000,
-            'audio': bytes_data,
+            'data': bytes_data,
         }
         self.database.write_data(self.id, data)
         print(len(bytes_data))
