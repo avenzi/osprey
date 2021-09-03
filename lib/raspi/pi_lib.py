@@ -35,6 +35,7 @@ class BytesOutput:
         with self.ready:
             count = self.buffer.write(data)
             self.ready.notify_all()  # TODO: Does notify_all cause exclusive access violation? Change to notify()?
+            print('written')
             return count
 
     def read(self):
@@ -44,6 +45,7 @@ class BytesOutput:
             data = self.buffer.getvalue()  # get all frames in buffer
             self.buffer.seek(0)  # move to beginning
             self.buffer.truncate()  # erase buffer
+            print('read')
             return data
 
 
