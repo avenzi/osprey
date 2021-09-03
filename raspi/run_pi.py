@@ -8,9 +8,9 @@ t2 = TestStreamer("Random 2", "Test Group 1")
 # Synth EEG Stream #1
 synth1eeg = SynthEEGStreamer('Raw', 'Synth EEG 1')
 
-video = VideoStreamer('Raw', 'Video 1')
+video = VideoStreamer('Video', 'Video 1')
 
-audio = AudioStreamer('Raw', 'Audio 1')
+audio = AudioStreamer('Audio', 'Video 1')
 
 sense = SenseStreamer('Raw', 'Sense Hat 1')
 

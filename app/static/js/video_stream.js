@@ -17,29 +17,33 @@ function get_group() {
 }
 
 function start_stream(info) {
-    // given the stream info, start the video stream with that data
+    // start the video stream.
+    // info keys are names of streams, the value is an object with data for that stream.
     var video_socket = io('/video_stream');  // where to receive the video frames
+
+    var video_info = info['Video']
+    var audio_info = info['Audio']
 
     video_socket.on('connect', function() {
         console.log("Video streaming socketIO connected to server");
-        video_socket.emit('start', info.id);
+        video_socket.emit('start', {video: video_info.id, audio: audio_info.id});
     });
 
     // original width and height sent from stream
-    var stream_width = info.width;
-    var stream_height = info.height;
+    var stream_width = video_info.width;
+    var stream_height = video_info.height;
     var ratio = stream_width/stream_height
     var height = 600; // desired height in browser
     var width = Math.round(ratio*height)  // set width to maintain aspect ratio
 
-    var vid = document.getElementById("stream");
+    var vid = document.getElementById("video_stream");
     vid.setAttribute("width", width);
     vid.setAttribute("height", height);
     vid.onplay = skip  // call skip() on play
 
     info.speed += 0.1  // add 10% to playback speed to keep it updated
-    vid.playbackRate = info.speed;  // set playback speed
-    vid.defaultPlaybackRate = info.speed  // gotta set this too or it doesn't work
+    vid.playbackRate = video_info.speed;  // set playback speed
+    vid.defaultPlaybackRate = video_info.speed  // gotta set this too or it doesn't work
 
     $('button.skip').on('click', skip)
     function skip() {  // called onplay to skip to live
@@ -48,7 +52,7 @@ function start_stream(info) {
     }
 
     var jmuxer = new JMuxer({
-        node: 'stream',
+        node: 'video_stream',
         mode: 'video',
         flushingTime: 0,
         fps: info.framerate,
@@ -56,8 +60,9 @@ function start_stream(info) {
     });
 
     // feed received frame data into jmuxer
-    video_socket.on('data', (frame) => {
-        jmuxer.feed({video: new Uint8Array(frame)});
+    video_socket.on('data', (data) => {
+        console.log(data.video.length, data.audio.length)
+        jmuxer.feed({video: new Uint8Array(data.video)});
     });
 }
 
@@ -82,8 +87,14 @@ $(document).ready(function() {
         //error(msg)
     });
 
-    // request the meta data for the stream 'Raw' in this group
-    server_socket.emit('info', {group: group, stream:'Raw'})
+    // request the meta data for all streams in this group
+    server_socket.emit('info', group)
+    server_socket.on('info', function(data) {
+        // data is a list of object containing info for each stream
+        console.log("RECEIVED GROUP INFO:");
+        console.log(data);
+        start_stream(data);
+    });
 
     // request time update every second
     setInterval(function() {
@@ -94,9 +105,5 @@ $(document).ready(function() {
         $("div.stream_time").html(data);
     });
 
-    server_socket.on('info', function(data) {
-        console.log("RECEIVED INFO:");
-        console.log(data);
-        start_stream(data);
-    });
+
 });
