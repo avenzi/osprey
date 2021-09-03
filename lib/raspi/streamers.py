@@ -209,7 +209,7 @@ class AudioStreamer(Streamer):
             # abs_time = time() - time_diff  # get epoch time
             # temporary - just to make timestamp array same size as data array
             # t = [abs_time] * frames
-            sf.write(self.audio_buffer, indata, self.sample_rate, format='WAV')
+            self.file.write(indata)
 
         self.stream = sd.InputStream(channels=1, callback=callback, samplerate=self.sample_rate)
 
