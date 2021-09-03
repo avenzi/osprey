@@ -1,12 +1,26 @@
 import sounddevice as sd
+import soundfile as sf
+from lib.raspi.pi_lib import BytesOutput2
+from io import BytesIO
 from time import sleep
 
-def callback(indata, frames, time, status):
-    print(len(indata))
+buf = BytesOutput2()
+samplerate = 44100
+channels = 1
 
-stream = sd.InputStream(channels=1, callback=callback, samplerate=44100)
+file = sf.SoundFile(buf, mode='w', samplerate=samplerate, channels=channels, format='WAV')
+
+
+def callback(indata, frames, time, status):
+    """This is called (from a separate thread) for each audio block."""
+    file.write(indata)
+
+
+stream = sd.InputStream(samplerate=samplerate, channels=channels, callback=callback)
 
 stream.start()
-
+print('started')
 sleep(5)
 stream.stop()
+print('stopped')
+

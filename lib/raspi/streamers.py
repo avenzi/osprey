@@ -194,11 +194,13 @@ class AudioStreamer(Streamer):
     def __init__(self, *args):
         super().__init__(*args)
 
-        self.audio_buffer = BytesOutput()  # buffer to hold images from the Picam
-        self.sample_rate = 44100
-
         import sounddevice as sd
         import soundfile as sf
+
+        self.audio_buffer = BytesOutput2()  # buffer to hold images from the Picam
+        self.sample_rate = 44100
+
+        self.file = sf.SoundFile(self.audio_buffer, mode='w', samplerate=self.sample_rate, channels=1, format='WAV')
 
         def callback(indata, frames, block_time, status):
             """ Callback function for the sd.stream object """
