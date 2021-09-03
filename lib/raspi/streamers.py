@@ -150,6 +150,7 @@ class VideoStreamer(Streamer):
             'time': time()*1000,
             'frame': image
         }
+        print('video', len(image))
 
         self.database.write_data(self.id, data)
 
@@ -226,7 +227,7 @@ class AudioStreamer(Streamer):
             'data': bytes_data,
         }
         self.database.write_data(self.id, data)
-        print(len(bytes_data))
+        print('audio', len(bytes_data))
         sleep(1)
 
     def start(self):
