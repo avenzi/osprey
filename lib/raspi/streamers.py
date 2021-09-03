@@ -218,7 +218,6 @@ class AudioStreamer(Streamer):
         Main execution loop
         """
         bytes_data = self.audio_buffer.read()
-        print(bytes_data)
 
         # todo: this time is not the time the sample was taken, but rather the time that
         #  the data was read out of the audio buffer, which can be up to a second behind.
@@ -227,6 +226,7 @@ class AudioStreamer(Streamer):
             'audio': bytes_data,
         }
         self.database.write_data(self.id, data)
+        print(len(bytes_data))
         sleep(1)
 
     def start(self):
@@ -295,6 +295,7 @@ class SynthEEGStreamer(Streamer):
         for i, j in enumerate(self.eeg_channel_indexes):
             data[self.eeg_channel_names[i]] = list(raw_data[j])
 
+        print(data)
         self.database.write_data(self.id, data)
 
     def start(self):
