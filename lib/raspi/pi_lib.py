@@ -49,7 +49,7 @@ class BytesOutput:
             print('read')
             self.buffer.seek(0)  # move to beginning
             self.buffer.truncate()  # erase buffer
-            print('truncated')
+            print('truncate')
             return data
 
 
@@ -63,14 +63,16 @@ class BytesOutput2(BytesIO):
         """ Write data to the buffer, adding the new frame when necessary """
         with self.ready:
             count = super().write(data)
-            self.ready.notify_all()  # TODO: Does notify_all cause exclusive access violation? Change to notify()?
+            self.ready.notify_all()  # notify waiting read() calls
+            # TODO: Does notify_all cause exclusive access violation? Change to notify()?
             return count
 
     def read(self, size=-1):
         """ Blocking operation to read the newest frame """
         with self.ready:
             self.ready.wait()  # wait for access to buffer
-            data = super().read(size)
+            self.seek(0)  # move to beginning
+            data = super().read(size)  # read contents
             self.seek(0)  # move to beginning
             self.truncate()  # erase buffer
             return data

@@ -14,7 +14,6 @@ file = sf.SoundFile(buf, mode='w', samplerate=samplerate, channels=channels, for
 def callback(indata, frames, time, status):
     """This is called (from a separate thread) for each audio block."""
     file.write(indata)
-    print(indata)
 
 
 stream = sd.InputStream(samplerate=samplerate, channels=channels, callback=callback)
@@ -24,7 +23,7 @@ print('started')
 
 for i in range(10):
     data = buf.read()
-    print(data)
+    print(len(data))
     sleep(1)
 
 
