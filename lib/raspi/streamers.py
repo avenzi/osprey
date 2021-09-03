@@ -295,7 +295,6 @@ class SynthEEGStreamer(Streamer):
         for i, j in enumerate(self.eeg_channel_indexes):
             data[self.eeg_channel_names[i]] = list(raw_data[j])
 
-        print(data)
         self.database.write_data(self.id, data)
 
     def start(self):
