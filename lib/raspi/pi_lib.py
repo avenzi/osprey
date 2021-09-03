@@ -34,22 +34,17 @@ class BytesOutput:
         """ Write data to the buffer, adding the new frame when necessary """
         with self.ready:
             count = self.buffer.write(data)
-            print('written')
-            self.ready.notify_all()  # TODO: Does notify_all cause exclusive access violation? Change to notify()?
-            print('notified')
+            self.ready.notify_all()  # notify waiting read() calls
+            # TODO: Does notify_all cause exclusive access violation? Change to notify()?
             return count
 
     def read(self):
         """ Blocking operation to read the newest frame """
         with self.ready:
-            print('waiting to read')
             self.ready.wait()  # wait for access to buffer
-            print('reading')
             data = self.buffer.getvalue()  # get all frames in buffer
-            print('read')
             self.buffer.seek(0)  # move to beginning
             self.buffer.truncate()  # erase buffer
-            print('truncate')
             return data
 
 
