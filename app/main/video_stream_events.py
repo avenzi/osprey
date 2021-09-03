@@ -74,21 +74,32 @@ def run_video_stream(database, stream_ids, socket):
     while event.is_set():  # while event is set (while socket is connected)
         try:
             video_data_dict = database.read_data(video_id, decode=False, max_time=10)
-            audio_data_dict = database.read_data(audio_id, decode=False, max_time=10)
-            if not video_data_dict and not audio_data_dict:  # no data is returned
-                socketio.sleep(1)
-                continue
         except Exception as e:
             print("Video stream failed to read from database. {}".format(e))
             break
 
-        # get list of unread frames
-        video_frames = video_data_dict['frame']
-        audio_frames = audio_data_dict['data']
-        # concatenate all frames
-        video_data = b''.join(video_frames)
-        audio_data = b''.join(audio_frames)
+        try:
+            audio_data_dict = database.read_data(audio_id, decode=False, max_time=10)
+        except Exception as e:
+            print("Video stream failed to read from database. {}".format(e))
+            break
+
+        video_data = b''
+        if video_data_dict:
+            video_frames = video_data_dict['frame']  # get list of unread frames
+            video_data = b''.join(video_frames)  # concatenate all frames
+
+        audio_data = b''
+        if audio_data_dict:
+            audio_frames = audio_data_dict['data']
+            audio_data = b''.join(audio_frames)
+
+        if not video_data_dict and not audio_data_dict:  # no data is returned
+            socketio.sleep(1)
+            continue
+
         # package for browser
         data = {'video': video_data, 'audio': audio_data}
+
         socketio.emit('data', data, namespace='/video_stream', room=socket)  # send back to socket
         socketio.sleep(0.1)
