@@ -248,6 +248,7 @@ class AudioStreamer(Streamer):
         """
         try:
             self.stream.stop()
+            self.file.close()
         except:
             pass
 
