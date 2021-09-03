@@ -61,7 +61,6 @@ function start_stream(info) {
 
     // feed received frame data into jmuxer
     video_socket.on('data', (data) => {
-        console.log(data.video.length, data.audio.length)
         jmuxer.feed({video: new Uint8Array(data.video)});
     });
 }
@@ -89,11 +88,9 @@ $(document).ready(function() {
 
     // request the meta data for all streams in this group
     server_socket.emit('info', group)
-    server_socket.on('info', function(data) {
-        // data is a list of object containing info for each stream
-        console.log("RECEIVED GROUP INFO:");
-        console.log(data);
-        start_stream(data);
+    server_socket.on('info', function(info) {
+        // info keys are names of streams, the value is an object with data for that stream.
+        start_stream(info);
     });
 
     // request time update every second
