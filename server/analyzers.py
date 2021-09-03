@@ -181,7 +181,6 @@ class SignalFilter(SignalAnalyzer):
 
             for i, name in enumerate(self.channels):  # for all EEG data channels
                 # apply filter with initial conditions, and set new initial conditions
-                print(name, data[name])
                 data[name], self.pass_sos_init[i] = signal.sosfilt(self.pass_sos, data[name], zi=self.pass_sos_init[i])
 
         # notch filter
