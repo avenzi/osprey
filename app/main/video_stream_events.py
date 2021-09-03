@@ -83,7 +83,7 @@ def run_video_stream(database, stream_ids, socket):
         except Exception as e:
             print("Video stream failed to read from database. {}".format(e))
             break
-
+                                      
         video_data = b''
         if video_data_dict:
             video_frames = video_data_dict['frame']  # get list of unread frames
