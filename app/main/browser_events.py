@@ -222,7 +222,7 @@ def database_info(group_name):
         return
 
     # get list of info dicts for this group
-    group_info = database.get_streams(group_name)
+    group_info = database.get_group(group_name)
 
     # Send playback speed (multiplier).
     # Note that right now, only the video stream needs this information to set the HTML5 MediaElement playback speed.
