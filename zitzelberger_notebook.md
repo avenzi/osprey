@@ -33,6 +33,11 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### Sept 4, 2021:
+
+​	I'm having trouble getting the audio to work due to format issues. The algorithm to decode the video/audio data (jmuxer.js) accepts only h264 video and AAC audio (pretty standard), but I can't find a way to convert the raw audio data output by SoundFile into AAC format. Most python modules seem to convert to typical file formats like WAV or MP3, but AAC doesn't appear to be done. I'm still looking, but so far have found nothing.
+​	The other option would be to use a different decoder for the browser - one that supports something like WAV, MP3, OGG, or preferably FLAC. I've looked into HLS (https://github.com/video-dev/hls.js) though I'm not sure if this will allow real-time reading from a stream of bytes like Jmuxer is specifically designed to do. In fact, the author of Jmuxer created it specifically because they were having trouble using HLS for this use case. I think it might be my best bet, though, so I should give it a shot.
+
 ##### Sept 3rd, 2021:
 
 ​	Finally got it. I still don't know the cause of the error, but my guess is that it has something to do with the fact that SoundFile creates a new file object with each call to sf.write(), which may cause issues with opening it multiple times. Instead, the solution was to create a single SoundFile object first and then in the callback function use file.write() instead. This got rid of the error, but I still had to rewrite my OutputBytes object to include seek() and tell() to satisfy SoundFile's standards for what constitutes a valid file-like object. I just did this by extending the BytesIO object from the built-in io module. This came with a bug that took me awhile to locate where the read() operation wasn't returning anything - turns out I just had to add a seek(0) beforehand because I am now using BytesIO read() rather than getvalue().
