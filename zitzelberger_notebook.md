@@ -39,6 +39,8 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ​	The next step is to transmit this data to the browser to be played. First, I need the browser to have access to the database column with the audio data, then I will need a way to play it simultaneously with the video. I did this by having the video_stream socketIO handler read the audio data from the database and sent it along with the video data.
 
+​	There's also another problem that's come up with SoundFile - when manually terminating the pi-side program, the underlying C-extension throws an error about trying to read from a closed file, even though I explicitly close the file when it is terminated. The problem with this is that no amount of try-excepts will solve it. I have yet to find a solution.
+
 ##### Sept 2nd, 2021:
 
 ​	I haven't actually tested the Pi stream on my new Wifi network before, so I did that this morning. Worked perfectly! This is a great sign since I have previously only ever been able test on my wifi network in Ohio, so now I know I didn't just make everything work only for that network. I don't know how I could have done that in the first place, but there is a lot I don't understand so who knows.
