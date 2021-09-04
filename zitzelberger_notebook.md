@@ -36,7 +36,7 @@ By working on this project you are agreeing to abide by the following expectatio
 ##### Sept 4, 2021:
 
 ​	I'm having trouble getting the audio to work due to format issues. The algorithm to decode the video/audio data (jmuxer.js) accepts only h264 video and AAC audio (pretty standard), but I can't find a way to convert the raw audio data output by SoundFile into AAC format. Most python modules seem to convert to typical file formats like WAV or MP3, but AAC doesn't appear to be done. I'm still looking, but so far have found nothing.
-​	The other option would be to use a different decoder for the browser - one that supports something like WAV, MP3, OGG, or preferably FLAC. I've looked into HLS (https://github.com/video-dev/hls.js) though I'm not sure if this will allow real-time reading from a stream of bytes like Jmuxer is specifically designed to do. In fact, the author of Jmuxer created it specifically because they were having trouble using HLS for this use case. I think it might be my best bet, though, so I should give it a shot.
+​	The other option would be to use a different decoder for the browser - one that supports something like WAV, MP3, OGG, or preferably FLAC. I've looked into HLS.js (https://github.com/video-dev/hls.js) though I'm not sure if this will allow real-time reading from a stream of bytes like Jmuxer is specifically designed to do. In fact, the author of Jmuxer created it specifically because they were having trouble using HLS.js for this use case. I think it might be my best bet, though, so I should give it a shot.
 
 ##### Sept 3rd, 2021:
 
