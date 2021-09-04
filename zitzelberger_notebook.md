@@ -37,7 +37,7 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ​	Finally got it. I still don't know the cause of the error, but my guess is that it has something to do with the fact that SoundFile creates a new file object with each call to sf.write(), which may cause issues with opening it multiple times. Instead, the solution was to create a single SoundFile object first and then in the callback function use file.write() instead. This got rid of the error, but I still had to rewrite my OutputBytes object to include seek() and tell() to satisfy SoundFile's standards for what constitutes a valid file-like object. I just did this by extending the BytesIO object from the built-in io module. This came with a bug that took me awhile to locate where the read() operation wasn't returning anything - turns out I just had to add a seek(0) beforehand because I am now using BytesIO read() rather than getvalue().
 
-​	The next step is to transmit this data to the browser to be played. First, I need the browser to have access to the database column with the audio data, then I will need a way to play it simultaneously with the video.
+​	The next step is to transmit this data to the browser to be played. First, I need the browser to have access to the database column with the audio data, then I will need a way to play it simultaneously with the video. I did this by having the video_stream socketIO handler read the audio data from the database and sent it along with the video data.
 
 ##### Sept 2nd, 2021:
 
