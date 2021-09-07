@@ -251,6 +251,7 @@ class AudioStreamer(Streamer):
         try:
             t0 = time()
             self.stream.stop()
+            self.stream.close()
             print('time to stop', time()-t0)
             self.file.close()
             print('time to close', time()-t0)
