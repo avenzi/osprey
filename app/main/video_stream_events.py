@@ -79,20 +79,23 @@ def run_video_stream(database, stream_ids, socket):
             break
 
         try:
-            audio_data_dict = database.read_data(audio_id, decode=False, max_time=10)
+            #audio_data_dict = database.read_data(audio_id, decode=False, max_time=10)
+            pass
         except Exception as e:
             print("Video stream failed to read from database. {}".format(e))
             break
-                                      
+
         video_data = b''
         if video_data_dict:
             video_frames = video_data_dict['frame']  # get list of unread frames
             video_data = b''.join(video_frames)  # concatenate all frames
 
         audio_data = b''
+        '''
         if audio_data_dict:
             audio_frames = audio_data_dict['data']
             audio_data = b''.join(audio_frames)
+        '''
 
         if not video_data_dict and not audio_data_dict:  # no data is returned
             socketio.sleep(1)
