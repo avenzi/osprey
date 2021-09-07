@@ -146,7 +146,7 @@ def widget_update():
 
 
 
-@streams.route('stream/audio', methods=('GET', 'POST'))
+@streams.route('/stream/audio', methods=('GET', 'POST'))
 def audio():
     """ testing audio stream using flask"""
     audio_id = request.args.get('id')
