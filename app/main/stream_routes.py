@@ -1,4 +1,4 @@
-from flask import current_app, session, render_template, request, Response, redirect, url_for, flash
+from flask import current_app, session, render_template, request, Response, redirect, url_for, flash, stream_with_context
 
 from jinja2.exceptions import TemplateNotFound
 from bokeh.embed import json_item
@@ -169,5 +169,5 @@ def audio():
 
             yield(audio_data)
 
-    return Response(sound(audio_id))
+    return Response(stream_with_context(sound(audio_id)))
 
