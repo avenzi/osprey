@@ -3,7 +3,7 @@ from flask import current_app, session, render_template, request, Response, redi
 from jinja2.exceptions import TemplateNotFound
 from bokeh.embed import json_item
 from json import dumps, loads
-from time import time
+from time import time, sleep
 
 from lib.database import DatabaseError, DatabaseTimeoutError, DatabaseConnectionError
 
@@ -163,9 +163,13 @@ def audio():
                 return err, 500
 
             audio_data = b''
+            print('audio', len(audio_data))
             if audio_data_dict:
                 audio_frames = audio_data_dict['data']
                 audio_data = b''.join(audio_frames)
+            else:
+                sleep(1)
+                continue
 
             yield(audio_data)
 
