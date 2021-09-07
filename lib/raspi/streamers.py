@@ -200,6 +200,7 @@ class AudioStreamer(Streamer):
         self.audio_buffer = BytesOutput2()  # buffer to hold images from the Picam
         self.sample_rate = 44100
 
+        # WAV defaults to PCM-16
         self.file = sf.SoundFile(self.audio_buffer, mode='w', samplerate=self.sample_rate, channels=1, format='WAV')
 
         def callback(indata, frames, block_time, status):
