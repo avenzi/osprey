@@ -211,7 +211,8 @@ class AudioStreamer(Streamer):
             # abs_time = time() - time_diff  # get epoch time
             # temporary - just to make timestamp array same size as data array
             # t = [abs_time] * frames
-            self.file.write(indata)
+            if not self.file.closed():
+                self.file.write(indata)
 
         self.stream = sd.InputStream(channels=1, callback=callback, samplerate=self.sample_rate)
 
