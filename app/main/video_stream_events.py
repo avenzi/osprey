@@ -85,4 +85,3 @@ def run_video_stream(database, stream_ids, socket):
         data['video'] = b''.join(video_frames)  # concatenate all frames
 
         socketio.emit('data', data, namespace='/video_stream', room=socket)  # send back to socket
-        socketio.sleep(0.1)
