@@ -139,7 +139,7 @@ class VideoStreamer(Streamer):
         super().__init__(*args)
         self.start_time = 0           # time of START
 
-        self.picam_buffer = BytesOutput2()  # buffer to hold images from the Picam
+        self.picam_buffer = BytesOutput()  # buffer to hold images from the Picam
 
     def loop(self):
         """
