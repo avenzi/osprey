@@ -140,7 +140,6 @@ class VideoStreamer(Streamer):
         self.start_time = 0           # time of START
 
         self.picam_buffer = BytesOutput()  # buffer to hold images from the Picam
-        self.l = 0
 
     def loop(self):
         """
@@ -154,8 +153,6 @@ class VideoStreamer(Streamer):
             'time': time()*1000,
             'frame': images
         }
-        self.l += len(images)
-        print('video', self.l)
 
         self.database.write_data(self.id, data)
 
@@ -237,7 +234,6 @@ class AudioStreamer(Streamer):
             'data': bytes_data,
         }
         self.database.write_data(self.id, data)
-        print('audio', len(bytes_data))
         sleep(0.1)
 
     def start(self):
