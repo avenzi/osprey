@@ -140,6 +140,7 @@ class VideoStreamer(Streamer):
         self.start_time = 0           # time of START
 
         self.picam_buffer = BytesOutput()  # buffer to hold images from the Picam
+        self.l = 0
 
     def loop(self):
         """
@@ -147,13 +148,14 @@ class VideoStreamer(Streamer):
         """
         if not self.camera.frame.complete or self.camera.frame.frame_type == self.sps:
             return
-        image = self.picam_buffer.read()  # get most recent frame
+        images = self.picam_buffer.read()  # get most recent frames
 
         data = {
             'time': time()*1000,
-            'frame': image
+            'frame': images
         }
-        print('video', len(image))
+        self.l += len(images)
+        print('video', self.l)
 
         self.database.write_data(self.id, data)
 

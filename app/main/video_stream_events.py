@@ -70,6 +70,7 @@ def run_video_stream(database, stream_ids, socket):
     """
     event = events[socket]
     video_id = stream_ids['video']
+    l = 0
     while event.is_set():  # while event is set (while socket is connected)
         try:
             data_dict = database.read_data(video_id, decode=False, max_time=10)
@@ -83,5 +84,7 @@ def run_video_stream(database, stream_ids, socket):
         data = {'video': b'', 'audio': b''}
         video_frames = data_dict['frame']  # get list of unread frames
         data['video'] = b''.join(video_frames)  # concatenate all frames
+        l += len(data['video'])
+        print(l)
 
         socketio.emit('data', data, namespace='/video_stream', room=socket)  # send back to socket
