@@ -38,7 +38,7 @@ events = {}  # {socket_id: event}
 
 
 @socketio.on('start', namespace='/video_stream')
-def start_video_stream(stream_id):
+def start_video_stream(stream_ids):
     """ Starts a streaming thread for each video stream and each session """
     socket = request.sid  # socket ID
 
@@ -48,7 +48,7 @@ def start_video_stream(stream_id):
     events[socket].set()      # activate that event before the thread starts
 
     # run streaming thread
-    Thread(target=run_video_stream, args=(database, stream_id, socket), name='VIDEO', daemon=False).start()
+    Thread(target=run_video_stream, args=(database, stream_ids, socket), name='VIDEO', daemon=False).start()
 
 
 @socketio.on('disconnect', namespace='/video_stream')
@@ -59,7 +59,7 @@ def browser_disconnect():
     del events[socket]      # remove this event from the index of events
 
 
-def run_video_stream(database, stream_id, socket):
+def run_video_stream(database, stream_ids, socket):
     """
     Reads video stream data until stopped.
     Should be run on a separate thread.
@@ -69,9 +69,10 @@ def run_video_stream(database, stream_id, socket):
         (Can't use request.sid because this thread is out of the request context)
     """
     event = events[socket]
+    video_id = stream_ids['video']
     while event.is_set():  # while event is set (while socket is connected)
         try:
-            data_dict = database.read_data(stream_id, decode=False, max_time=10)
+            data_dict = database.read_data(video_id, decode=False, max_time=10)
             if not data_dict:  # no data is returned
                 socketio.sleep(1)
                 continue
