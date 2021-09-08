@@ -30,7 +30,7 @@ function start_stream(info) {
         if (video_info != undefined) {
             data.video = video_info.id;
         }
-        if (audio_indo != undefined) {
+        if (audio_info != undefined) {
             data.audio = audio_info.id;
         }
         video_socket.emit('start', data);
