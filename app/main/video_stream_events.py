@@ -74,12 +74,13 @@ def run_video_stream(database, stream_ids, socket):
     while event.is_set():  # while event is set (while socket is connected)
         try:
             data_dict = database.read_data(video_id, decode=False, max_time=10)
-            if not data_dict:  # no data is returned
-                socketio.sleep(0.1)
-                continue
         except Exception as e:
             print("Video stream failed to read from database. {}".format(e))
             break
+
+        if not data_dict:  # no data is returned
+            socketio.sleep(0.1)
+            continue
 
         data = {'video': b'', 'audio': b''}
         video_frames = data_dict['frame']  # get list of unread frames
