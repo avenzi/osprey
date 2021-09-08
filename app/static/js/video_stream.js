@@ -26,7 +26,14 @@ function start_stream(info) {
 
     video_socket.on('connect', function() {
         console.log("Video streaming socketIO connected to server");
-        video_socket.emit('start', {video: video_info.id, audio: audio_info.id});
+        data = {}
+        if (video_info != undefined) {
+            data.video = video_info.id;
+        }
+        if (audio_indo != undefined) {
+            data.audio = audio_info.id;
+        }
+        video_socket.emit('start', data);
     });
 
     // original width and height sent from stream

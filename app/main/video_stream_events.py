@@ -90,14 +90,7 @@ def run_video_stream(database, stream_ids, socket):
             video_frames = video_data_dict['frame']  # get list of unread frames
             video_data = b''.join(video_frames)  # concatenate all frames
 
-        audio_data = b''
-        '''
-        if audio_data_dict:
-            audio_frames = audio_data_dict['data']
-            audio_data = b''.join(audio_frames)
-        '''
-
-        if not video_data_dict and not audio_data_dict:  # no data is returned
+        if not video_data_dict:  # no data is returned
             socketio.sleep(1)
             continue
 

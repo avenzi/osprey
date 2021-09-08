@@ -8,16 +8,12 @@ source ../misc.sh  # import loading function
 # navigate to top level dir
 cd ../../
 
-(
 # ensure python is installed
 sudo apt-get -y install python3
 sudo apt-get -y install python3-pip
 python3 -m venv venv
 . venv/bin/activate
 pip3 install -r scripts/raspi/python_requirements.txt  # install requirements (don't use sudo in venv!)
-) #> /dev/null &
-#loading $! "Installing Python3 and dependent requirements.... \n\
-#Please wait until this is finished to provide configuration information\n"
 
 # Add crontab line to start the app on boot, targetting data-hub/main/run_all.sh
 echo "Writing Crontab line to start the application on boot..."
