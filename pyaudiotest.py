@@ -26,14 +26,14 @@ ffmpeg_process = (
     ffmpeg
     .input('pipe:', format='wav', ac='1')
     .output('pipe:', format='wav', ac=1, ar=44100)
-    #.global_args("-loglevel")
+    #.global_args("-loglevel", "quiet")
     .run_async(pipe_stdin=True, pipe_stdout=True)
 )
 
 # write to ffmpeg
 def write():
     while not signal:
-        in_data = in_buf.read()
+        in_data = in_buf.read(100)
         if not in_data:
             print('no data read from in_buf')
             sleep(1)
@@ -48,7 +48,6 @@ def write():
 
         sleep(1)
     print('ended write thread')
-Thread(target=write).start()
 
 
 # read from ffmpeg
@@ -65,11 +64,13 @@ def read():
         out_buf.write(out_data)
         sleep(1)
     print('ended read thread')
-Thread(target=read).start()
 
 
 stream.start()
 print('started')
+
+Thread(target=write).start()
+Thread(target=read).start()
 
 sleep(10)
 
