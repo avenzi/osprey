@@ -64,11 +64,8 @@ class BytesOutput2(BytesIO):
 
     def read(self, size=-1):
         """ Blocking operation to read the newest frame """
-        print('buffer gonna read')
         with self.ready:
-            print('waiting to read')
             self.ready.wait()  # wait for access to buffer
-            print('after read')
             if not super().getvalue():  # no data
                 print('no data in buff')
                 return super().getvalue()

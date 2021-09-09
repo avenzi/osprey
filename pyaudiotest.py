@@ -34,14 +34,13 @@ ffmpeg_process = (
 def write():
     while not signal:
         in_data = in_buf.read()
-        print('in buf data: ', len(in_data))
         if not in_data:
             print('no data read from in_buf')
             sleep(1)
             continue
 
         written_data = ffmpeg_process.stdin.write(in_data)
-        print('written data:', len(in_data))
+        print('written to ffmpeg:', len(in_data))
         if not written_data:
             print('no data written')
             sleep(1)
@@ -55,9 +54,8 @@ Thread(target=write).start()
 # read from ffmpeg
 def read():
     while not signal:
-        print('gonna read')
         out_data = ffmpeg_process.stdout.read()
-        print('ffmpeg out data:', len(out_data))
+        print('read from ffmpeg:', len(out_data))
         if not out_data:
             print('no data read back from ffmpeg')
             sleep(1)
