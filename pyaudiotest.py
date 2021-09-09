@@ -4,37 +4,49 @@ from lib.raspi.pi_lib import BytesOutput
 from io import BytesIO
 import ffmpeg
 from time import sleep
-from picamera import PiCamera, PiVideoFrameType
 
 
-camera = PiCamera(resolution='200x200', framerate=20)
-camera.rotation = 180
-sps = PiVideoFrameType.sps_header
-infile = BytesIO()
-outfile = BytesIO()
+import sounddevice as sd
+import soundfile as sf
+from lib.raspi.pi_lib import BytesOutput2
+from io import BytesIO
+from time import sleep
+
+in_buf = BytesIO()
+out_buf = BytesIO()
+samplerate = 44100
+channels = 1
+
+file = sf.SoundFile(in_buf, mode='w', samplerate=samplerate, channels=channels, format='WAV')
 
 
-# start recording
-camera.start_recording(infile,
-                            format='h264', quality=25, profile='constrained', level='4.2',
-                            intra_period=camera.framerate[0], intra_refresh='both', inline_headers=True, sps_timing=True
-                            )
-sleep(2)  # let camera warm up for a sec. Does weird stuff otherwise.
+def callback(indata, frames, time, status):
+    """This is called (from a separate thread) for each audio block."""
+    file.write(indata)
 
 
-in_file = ffmpeg.input(infile)
-out_file = ffmpeg.output(outfile)
+stream = sd.InputStream(samplerate=samplerate, channels=channels, callback=callback)
+
+stream.start()
+print('started')
+
+
+in_file = ffmpeg.input(in_buf)
+out_file = ffmpeg.output(out_buf)
 (
     ffmpeg
-    .drawbox(50, 50, 120, 120, color='red', thickness=5)
     .output(out_file)
     .run()
 )
 
 for i in range(10):
     sleep(1)
-    print(len(outfile.getvalue()))
+    print(len(out_buf.getvalue()))
 
-print('in:', len(infile.getvalue()))
-print('out:', len(outfile.getvalue()))
+print('in:', len(in_buf.getvalue()))
+print('out:', len(out_buf.getvalue()))
+
+
+stream.stop()
+print('stopped')
 
