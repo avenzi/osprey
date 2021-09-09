@@ -17,8 +17,7 @@ out_buf = BytesIO()
 samplerate = 44100
 channels = 1
 
-#file = sf.SoundFile(in_buf, mode='w', samplerate=samplerate, channels=channels, format='WAV')
-file = BytesIO
+file = sf.SoundFile(in_buf, mode='w', samplerate=samplerate, channels=channels, format='WAV')
 
 def callback(indata, frames, time, status):
     """This is called (from a separate thread) for each audio block."""
