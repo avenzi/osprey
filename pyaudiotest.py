@@ -60,8 +60,8 @@ for i in range(10):
         continue
     sleep(1)
 
-print('total in_buf:', in_buf.getvalue())
-print('total out_buf:', out_buf.getvalue())
+print('total in_buf:', len(in_buf.getvalue()))
+print('total out_buf:', len(out_buf.getvalue()))
 
 
 stream.stop()
