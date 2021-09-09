@@ -24,8 +24,8 @@ stream = sd.InputStream(samplerate=samplerate, channels=channels, callback=callb
 
 ffmpeg_process = (
     ffmpeg
-    .input('pipe:', format='wav', ac=1)
-    .output('pipe:', format='wav', ac=1, ar=44100, )
+    .input('pipe:', format='wav', ac='1')
+    .output('pipe:', format='wav', ac=1, ar=44100)
     #.global_args("-loglevel")
     .run_async(pipe_stdin=True, pipe_stdout=True)
 )
@@ -74,9 +74,6 @@ sleep(10)
 
 stream.stop()
 print('stopped')
-
-ffmpeg_process.wait()
-print('finished waiting')
 
 signal = True
 print('set signal')
