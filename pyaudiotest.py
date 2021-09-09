@@ -31,6 +31,7 @@ ffmpeg_process = (
 )
 
 for i in range(10):
+    print('start of loop')
     in_data = in_buf.read()
     print('in buf data: ', len(in_data))
     if not in_data:
@@ -38,6 +39,7 @@ for i in range(10):
         sleep(1)
         continue
 
+    print('gonna write')
     written_data = ffmpeg_process.stdin.write(in_data)
     print('written data:', len(in_data))
     if not written_data:
