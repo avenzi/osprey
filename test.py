@@ -12,8 +12,3 @@ from lib.raspi.pi_lib import BytesOutput2
 from io import BytesIO
 from time import sleep
 
-in_buf = BytesIO()
-out_buf = BytesIO()
-samplerate = 44100
-channels = 1
-
