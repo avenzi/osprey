@@ -54,6 +54,7 @@ Thread(target=write).start()
 # read from ffmpeg
 def read():
     while not signal:
+        print('gonna read from ffmpeg')
         out_data = ffmpeg_process.stdout.read()
         print('read from ffmpeg:', len(out_data))
         if not out_data:
