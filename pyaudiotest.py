@@ -62,6 +62,8 @@ def read():
             print('no data read back from ffmpeg')
             sleep(1)
             continue
+
+        out_buf.write(out_data)
         sleep(1)
     print('ended read thread')
 Thread(target=read).start()
@@ -78,7 +80,6 @@ print('stopped')
 signal = True
 print('set signal')
 
-print('total in_buf:', len(in_buf.getvalue()))
 print('total out_buf:', len(out_buf.getvalue()))
 
 
