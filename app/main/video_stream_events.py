@@ -98,7 +98,7 @@ def run_video_stream(database, stream_ids, socket):
         '''
 
         if not video_data_dict and not audio_data_dict:  # no data is returned
-            socketio.sleep(1)
+            socketio.sleep(0.1)
             continue
 
         # package for browser

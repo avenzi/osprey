@@ -33,6 +33,25 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### Sept 8, 2021:
+
+​	After a lot of research and reading through various open source projects (listen below), I have determined that my best bet is to use ffmpeg-python to convert the recorded audio data to AAC format on the Pi and just use that with my current Jmuxer. The reasons that these repositories don't work for what I want is that they either come as a monolith so I am unable to take out the part that I need, or they just don't support the audio codecs that I need to work with. Some options, however, like the sleep monitor (last item in the list), could be promising if I were to completely rework the streaming mechanism and database for the app, which I may never do given that I will most likely not be working on this project after I am officially hired into Ghamut.
+
+The repos that I've checked out (and deemed insufficient/too complex for my purposes) are:
+
+- https://github.com/video-dev/hls.js)
+- https://github.com/scivision/PyLivestream
+- https://github.com/scottstensland/websockets-streaming-audio
+- https://github.com/phanan/koel
+- https://github.com/TFToto/playjoom
+- https://github.com/StreamMachine/StreamMachine/
+- https://github.com/waveform80/pistreaming
+- https://github.com/phoboslab/jsmpeg
+- https://github.com/etianen/html5media
+- https://github.com/trygve-lie/widget-radio-player
+- https://github.com/devsnd/python-audiotranscode
+- https://github.com/srinathava/raspberry-pi-sleep-monitor
+
 ##### Sept 4, 2021:
 
 ​	I'm having trouble getting the audio to work due to format issues. The algorithm to decode the video/audio data (jmuxer.js) accepts only h264 video and AAC audio (pretty standard), but I can't find a way to convert the raw audio data output by SoundFile into AAC format. Most python modules seem to convert to typical file formats like WAV or MP3, but AAC doesn't appear to be done. I'm still looking, but so far have found nothing.

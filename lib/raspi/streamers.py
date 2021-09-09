@@ -40,8 +40,11 @@ class TestStreamer(Streamer):
 class SenseStreamer(Streamer):
     def __init__(self, *args):
         super().__init__(*args)
-        from sense_hat import SenseHat
-        self.sense = SenseHat()   # sense hat object
+        try:
+            from sense_hat import SenseHat
+            self.sense = SenseHat()  # sense hat object
+        except Exception as e:
+            print("Failed to create Sense Hat Streamer: {}".format(e))
 
         self.color_map = {'left': 'blue', 'right': 'green', 'up': 'red', 'down': 'yellow', 'middle': 'black'}
         self.button = 0
@@ -150,7 +153,6 @@ class VideoStreamer(Streamer):
             'time': time()*1000,
             'frame': image
         }
-        print('video', len(image))
 
         self.database.write_data(self.id, data)
 
@@ -162,7 +164,7 @@ class VideoStreamer(Streamer):
         """
         # for some reason if the PiCamera object is defined on a different thread, start_recording will hang.
         from picamera import PiCamera, PiVideoFrameType
-        self.camera = PiCamera(resolution='200x200', framerate=10)
+        self.camera = PiCamera(resolution='200x200', framerate=20)
         self.camera.rotation = 180
         self.sps = PiVideoFrameType.sps_header
 
@@ -200,8 +202,11 @@ class AudioStreamer(Streamer):
         self.audio_buffer = BytesOutput2()  # buffer to hold images from the Picam
         self.sample_rate = 44100
 
-        # WAV defaults to PCM-16
-        self.file = sf.SoundFile(self.audio_buffer, mode='w', samplerate=self.sample_rate, channels=1, format='WAV')
+        try:
+            # WAV defaults to PCM-16
+            self.file = sf.SoundFile(self.audio_buffer, mode='w', samplerate=self.sample_rate, channels=1, format='WAV')
+        except Exception as e:
+            print("Failed to create Audio Streamer: {}".format(e))
 
         def callback(indata, frames, block_time, status):
             """ Callback function for the sd.stream object """

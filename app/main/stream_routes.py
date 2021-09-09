@@ -163,10 +163,10 @@ def audio():
                 return err, 500
 
             audio_data = b''
-            print('audio', len(audio_data))
             if audio_data_dict:
                 audio_frames = audio_data_dict['data']
                 audio_data = b''.join(audio_frames)
+                print('audio', len(audio_data))
             else:
                 sleep(1)
                 continue
