@@ -24,8 +24,8 @@ stream = sd.InputStream(samplerate=samplerate, channels=channels, callback=callb
 
 ffmpeg_process = (
     ffmpeg
-    .input('pipe:')
-    .output('pipe:')
+    .input('pipe:0')
+    .output('pipe:1')
     .run_async(pipe_stdin=True, pipe_stdout=True)
 )
 
