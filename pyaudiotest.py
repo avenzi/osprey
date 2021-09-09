@@ -30,23 +30,43 @@ stream = sd.InputStream(samplerate=samplerate, channels=channels, callback=callb
 stream.start()
 print('started')
 
-
-in_file = ffmpeg.input(in_buf)
-out_file = ffmpeg.output(out_buf)
-(
+ffmpeg_process = (
     ffmpeg
-    .output(out_file)
-    .run()
+    .input('pipe:')
+    .output('pipe:')
+    .run_async(pipe_stdin=True, pipe_stdout=True)
 )
 
 for i in range(10):
-    sleep(1)
-    print(len(out_buf.getvalue()))
+    in_data = in_buf.read()
+    print('in buf data: ', len(in_data))
+    if not in_data:
+        print('no data read from in_buf')
+        sleep(1)
+        continue
 
-print('in:', len(in_buf.getvalue()))
-print('out:', len(out_buf.getvalue()))
+    written_data = ffmpeg_process.stdin.write(in_data)
+    print('written data:', len(in_data))
+    if not written_data:
+        print('no data written')
+        sleep(1)
+        continue
+
+    out_data = ffmpeg_process.stdout.read()
+    print('ffmpeg out data:', len(out_data))
+    if not out_data:
+        print('no data read back from ffmpeg')
+        sleep(1)
+        continue
+    sleep(1)
+
+print('total in_buf:', in_buf.getvalue())
+print('total out_buf:', out_buf.getvalue())
 
 
 stream.stop()
 print('stopped')
+
+ffmpeg_process.wait()
+print('finished waiting')
 
