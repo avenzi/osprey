@@ -66,6 +66,9 @@ class BytesOutput2(BytesIO):
         """ Blocking operation to read the newest frame """
         with self.ready:
             self.ready.wait()  # wait for access to buffer
+            if not super().getvalue():  # no data
+                print('no data in buff')
+                return super().getvalue()
             self.seek(0)  # move to beginning
             data = super().read(size)  # read contents
             self.seek(0)  # move to beginning
