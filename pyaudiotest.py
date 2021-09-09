@@ -39,7 +39,6 @@ for i in range(10):
         sleep(1)
         continue
 
-    print('gonna write')
     written_data = ffmpeg_process.stdin.write(in_data)
     print('written data:', len(in_data))
     if not written_data:
@@ -47,6 +46,7 @@ for i in range(10):
         sleep(1)
         continue
 
+    print('gonna read')
     out_data = ffmpeg_process.stdout.read()
     print('ffmpeg out data:', len(out_data))
     if not out_data:
