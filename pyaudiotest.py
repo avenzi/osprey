@@ -5,7 +5,7 @@ from lib.raspi.pi_lib import BytesOutput2
 from io import BytesIO
 from time import sleep
 
-in_buf = BytesIO()
+in_buf = BytesOutput2()
 out_buf = BytesIO()
 samplerate = 44100
 channels = 1
@@ -31,10 +31,7 @@ ffmpeg_process = (
 )
 
 for i in range(10):
-    in_buf.seek(0)
     in_data = in_buf.read()
-    in_buf.seek(0)
-    in_buf.truncate()
     print('in buf data: ', len(in_data))
     if not in_data:
         print('no data read from in_buf')
