@@ -12,6 +12,7 @@ channels = 1
 
 file = sf.SoundFile(in_buf, mode='w', samplerate=samplerate, channels=channels, format='WAV')
 
+
 def callback(indata, frames, time, status):
     """This is called (from a separate thread) for each audio block."""
     file.write(indata)
@@ -30,7 +31,10 @@ ffmpeg_process = (
 )
 
 for i in range(10):
+    in_buf.seek(0)
     in_data = in_buf.read()
+    in_buf.seek(0)
+    in_buf.truncate()
     print('in buf data: ', len(in_data))
     if not in_data:
         print('no data read from in_buf')
