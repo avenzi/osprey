@@ -47,7 +47,6 @@ for i in range(10):
         continue
 
     print('gonna read')
-    print(type(ffmpeg_process.stdout))
     out_data = ffmpeg_process.stdout.read()
     print('ffmpeg out data:', len(out_data))
     if not out_data:
