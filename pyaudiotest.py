@@ -26,7 +26,8 @@ stream = sd.InputStream(samplerate=samplerate, channels=channels, callback=callb
 ffmpeg_process = (
     ffmpeg
     .input('pipe:', format='wav', ac='1')
-    .output('pipe:', format='wav', ac=1, ar=44100)
+    #.output('pipe:', format='aac', ac=1, ar=44100)
+    .output('test.aac')
     #.global_args("-loglevel", "quiet")
     .run_async(pipe_stdin=True, pipe_stdout=True)
 )
