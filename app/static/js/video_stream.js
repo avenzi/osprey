@@ -63,7 +63,7 @@ function start_stream(info) {
         mode: 'both',
         flushingTime: 0,
         fps: info.framerate,
-        debug: false
+        debug: true
     });
 
     // feed received bytes data into jmuxer
