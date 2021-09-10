@@ -49,11 +49,10 @@ def write():
         sleep(1)
     print('ended write thread')
 
-
 # read from ffmpeg
 def read():
     while not signal:
-        out_data = ffmpeg_process.stdout.read()
+        out_data = ffmpeg_process.stdout.read(8*1024**3)
         print('read from ffmpeg:', len(out_data))
         if not out_data:
             print('no data read back from ffmpeg')
