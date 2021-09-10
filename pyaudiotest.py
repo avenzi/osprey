@@ -18,7 +18,7 @@ signal = False
 
 ffmpeg_process = (
     ffmpeg
-    .input('pipe:', format='f32be', ac='1')
+    .input('pipe:', format='f32le', ac='1')
     #.output('pipe:', format='adts')  # AAC format
     .output('test.aac')
     #.global_args("-loglevel", "quiet")
