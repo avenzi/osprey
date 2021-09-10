@@ -30,7 +30,6 @@ def callback(indata, frames, time, status):
     """This is called (from a separate thread) for each audio block."""
     #file.write(indata)
     written_data = ffmpeg_process.stdin.write(indata)
-    print('written: ', written_data)
 
 
 stream = sd.InputStream(samplerate=samplerate, channels=channels, callback=callback)
