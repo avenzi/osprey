@@ -196,8 +196,6 @@ class AudioStreamer(Streamer):
     def __init__(self, *args):
         super().__init__(*args)
 
-        self.total_bytes = 0
-
         from io import BytesIO
         import ffmpeg
 
@@ -231,7 +229,6 @@ class AudioStreamer(Streamer):
         }
         self.database.write_data(self.id, data)
         print('audio:', len(audio_data))
-        self.total_bytes += len(audio_data)
         sleep(0.01)
 
     def start(self):
@@ -266,8 +263,6 @@ class AudioStreamer(Streamer):
         HTTPRequest method STOP
         Extended from the base class in pi_lib.py
         """
-        total_time = time() - self.start_time
-        print("AVG AMT: {} bytes/s".format(self.total_bytes / total_time))
         try:
             t0 = time()
             self.stream.stop()
