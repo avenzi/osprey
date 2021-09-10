@@ -41,6 +41,7 @@ def write():
             continue
 
         written_data = ffmpeg_process.stdin.write(in_data)
+        ffmpeg_process.stdin.flush()
         print('written to ffmpeg:', len(in_data))
         if not written_data:
             print('no data written')
