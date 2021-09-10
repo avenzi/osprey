@@ -68,7 +68,7 @@ function start_stream(info) {
 
     // feed received bytes data into jmuxer
     video_socket.on('data', (data) => {
-        jmuxer.feed({video: new Uint8Array(data.video), audio: new Unit8Array(data.audio)});
+        jmuxer.feed({video: new Uint8Array(data.video), audio: new Uint8Array(data.audio)});
     });
 }
 
