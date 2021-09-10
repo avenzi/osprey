@@ -5,6 +5,7 @@ from lib.raspi.pi_lib import BytesOutput2
 from io import BytesIO
 from time import sleep
 from threading import Thread
+import os
 
 in_buf = BytesOutput2()
 out_buf = BytesIO()
@@ -52,9 +53,11 @@ def write():
 # read from ffmpeg
 def read():
     while not signal:
-        ffmpeg_process.stdout.tell()
+        size = os.fstat(ffmpeg_process.stdout.fileno()).st_size
+        print(size)
         out_data = ffmpeg_process.stdout.read(-1)
-        ffmpeg_process.stdout.tell()
+        size = os.fstat(ffmpeg_process.stdout.fileno()).st_size
+        print(size)
         print('read from ffmpeg:', len(out_data))
         if not out_data:
             print('no data read back from ffmpeg')
