@@ -178,8 +178,9 @@ def add_ADTS_header(data):
     if len(data) > max_size:
         raise Exception("Read ACC data greater than allowed frame size of {}".format(max_size))
     size = len(data) + 7
-    header = (ADTS_STRUCTURE | (size << 13)).to_bytes(7, 'big')  # output to string of 7 bytes
-    return header
+    # insert frame size and convert to byte string of size 7
+    header = (ADTS_STRUCTURE | (size << 13)).to_bytes(7, 'big')
+    return header + data  # prepend to input data
 
 
 
