@@ -233,7 +233,7 @@ class AudioStreamer(Streamer):
         """
         Main execution loop
         """
-        audio_data = self.ffmpeg_process.stdout.read(512)
+        audio_data = self.ffmpeg_process.stdout.read(2*1024)
         if not audio_data:
             print('no data read back from ffmpeg')
             sleep(1)
@@ -246,7 +246,7 @@ class AudioStreamer(Streamer):
         }
         self.database.write_data(self.id, data)
         print('audio:', len(audio_data))
-        sleep(0.1)
+        sleep(0.01)
 
     def start(self):
         """
