@@ -204,11 +204,14 @@ class AudioStreamer(Streamer):
         self.audio_buffer = BytesIO()
         self.sample_rate = 44100
 
-        try:
-            # WAV defaults to PCM-16
-            self.file = sf.SoundFile(self.audio_buffer, mode='w', samplerate=self.sample_rate, channels=1, format='WAV')
-        except Exception as e:
-            print("Failed to create Audio Streamer: {}".format(e))
+        # python subprocess running FFMPEG
+        self.ffmpeg_process = (
+            ffmpeg
+            .input('pipe:', format='f32le', ac='1')  # SoundDevice outputs Float-32, little endian by default.
+            .output('pipe:', format='adts')  # AAC format
+            #.global_args("-loglevel", "quiet")
+            .run_async(pipe_stdin=True, pipe_stdout=True)  # run asynchronously and pipe from/to stdin/stdout
+        )
 
         def callback(indata, frames, block_time, status):
             """ Callback function for the sd.stream object """
@@ -218,34 +221,28 @@ class AudioStreamer(Streamer):
             # abs_time = time() - time_diff  # get epoch time
             # temporary - just to make timestamp array same size as data array
             # t = [abs_time] * frames
-            if not self.file.closed:
-                self.file.write(indata)
+            self.ffmpeg_process.stdin.write(indata)  # write data to ffmpeg process
 
+        # SoundDevice stream
         self.stream = sd.InputStream(channels=1, callback=callback, samplerate=self.sample_rate)
-
-        # python subprocess running FFMPEG
-        self.ffmpeg_process = (
-            ffmpeg
-            .input('pipe:', format='wav', ac='1')
-            .output('pipe:', format='adts')  # AAC format
-            # .global_args("-loglevel", "quiet")
-            .run_async(pipe_stdin=True, pipe_stdout=True)  # pipe to stdin and stdout
-        )
 
     def loop(self):
         """
         Main execution loop
         """
-        bytes_data = self.audio_buffer.read()
+        audio_data = self.ffmpeg_process.stdout.read(8*8*1024)
+        if not audio_data:
+            print('no data read back from ffmpeg')
+            sleep(1)
 
         # todo: this time is not the time the sample was taken, but rather the time that
         #  the data was read out of the audio buffer, which can be up to a second behind.
         data = {
             'time': time()*1000,
-            'data': bytes_data,
+            'data': audio_data,
         }
         self.database.write_data(self.id, data)
-        print('audio', len(bytes_data))
+        print('audio:', len(audio_data))
         sleep(0.1)
 
     def start(self):
@@ -269,8 +266,6 @@ class AudioStreamer(Streamer):
             self.stream.stop()
             self.stream.close()
             print('time to stop', time()-t0)
-            self.file.close()
-            print('time to close', time()-t0)
         except:
             pass
 
