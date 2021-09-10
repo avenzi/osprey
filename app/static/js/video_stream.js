@@ -60,14 +60,15 @@ function start_stream(info) {
 
     var jmuxer = new JMuxer({
         node: 'video_stream',
-        mode: 'both',
-        flushingTime: 0,
+        mode: 'both',  // video and audio
+        //flushingTime: 0,
         fps: info.framerate,
         debug: true
     });
 
     // feed received bytes data into jmuxer
     video_socket.on('data', (data) => {
+        console.log(data.audio.length)
         jmuxer.feed({video: new Uint8Array(data.video), audio: new Uint8Array(data.audio)});
     });
 }
