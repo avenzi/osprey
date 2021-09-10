@@ -41,7 +41,7 @@ def write():
             continue
 
         written_data = ffmpeg_process.stdin.write(in_data)
-        ffmpeg_process.stdin.flush()
+        #ffmpeg_process.stdin.flush()
         print('written to ffmpeg:', len(in_data))
         if not written_data:
             print('no data written')
@@ -53,10 +53,12 @@ def write():
 
 # read from ffmpeg
 def read():
+    fileno = ffmpeg_process.stdout.fileno()
     while not signal:
         out_data = b''
         while True:
-            data = ffmpeg_process.stdout.read()
+            #data = os.read(fileno, n)
+            data = ffmpeg_process.stdout.read(8*8*1024)
             print('seg', len(data))
             if not data:
                 print('seg done')
