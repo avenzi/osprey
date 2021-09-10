@@ -172,17 +172,21 @@ def add_ADTS_header(data):
     """
     Adds ADTS packet headers to raw AAC audio data.
     ADTS byte structure from: https://wiki.multimedia.cx/index.php?title=ADTS
-    Use ADTS_HEADER_TEMPLATE and replace the frame length
+    Use ADTS_HEADER_TEMPLATE and replace the frame length.
+    If trim is True: instead of throwing an exception when the data length is too big, trim it down instead.
     """
+    if not data:  # if input is empty
+        return ADTS_STRUCTURE.to_bytes(7, 'big')  # base structure is the exact header for an empty frame
+    output = b''
     max_size = (2**13 - 1) - 7  # max byte size (13 bit int) minus 7 bytes for the header
-    if len(data) > max_size:
-        raise Exception("Read ACC data greater than allowed frame size of {}".format(max_size))
-    size = len(data) + 7
-    # insert frame size and convert to byte string of size 7
-    header = (ADTS_STRUCTURE | (size << 13)).to_bytes(7, 'big')
-    return header + data  # prepend to input data
-
-
+    while data:  # while more data left that needs packaging
+        segment = data[:max_size]  # slice to max size (or less)
+        size = len(segment) + 7    # total size of new packet
+        # insert frame size and convert to byte string of size 7
+        header = (ADTS_STRUCTURE | (size << 13)).to_bytes(7, 'big')
+        output += header + segment  # prepend to this segment
+        data = data[max_size:]  # chop off this segment
+    return output
 
 
 def request_update():
