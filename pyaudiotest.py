@@ -55,7 +55,7 @@ def read():
     while not signal:
         size = os.fstat(ffmpeg_process.stdout.fileno()).st_size
         print(size)
-        out_data = ffmpeg_process.stdout.read(-1)
+        out_data = ffmpeg_process.stdout.read(size)
         size = os.fstat(ffmpeg_process.stdout.fileno()).st_size
         print(size)
         print('read from ffmpeg:', len(out_data))
