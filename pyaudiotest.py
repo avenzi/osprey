@@ -15,6 +15,7 @@ signal = False
 
 file = sf.SoundFile(in_buf, mode='w', samplerate=samplerate, channels=channels, format='WAV')
 
+
 # write to buffer
 def callback(indata, frames, time, status):
     """This is called (from a separate thread) for each audio block."""
@@ -26,8 +27,7 @@ stream = sd.InputStream(samplerate=samplerate, channels=channels, callback=callb
 ffmpeg_process = (
     ffmpeg
     .input('pipe:', format='wav', ac='1')
-    #.output('pipe:', format='aac', ac=1, ar=44100)
-    .output('test.aac')
+    .output('pipe:', format='aac')
     #.global_args("-loglevel", "quiet")
     .run_async(pipe_stdin=True, pipe_stdout=True)
 )
@@ -54,9 +54,8 @@ def write():
 
 # read from ffmpeg
 def read():
-    fileno = ffmpeg_process.stdout.fileno()
+    outfile = open('test.aac', 'wb')
     while not signal:
-        #data = os.read(fileno, n)
         out_data = ffmpeg_process.stdout.read(8*8*1024)
         print('read from ffmpeg:', len(out_data))
         if not out_data:
@@ -64,8 +63,10 @@ def read():
             sleep(1)
             continue
         out_buf.write(out_data)
+        outfile.write(out_data)
         sleep(0.1)
     print('ended read thread')
+    outfile.close()
 
 
 stream.start()
