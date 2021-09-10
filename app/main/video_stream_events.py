@@ -1,6 +1,7 @@
 from flask import request, current_app, session
 from app.main import socketio
 from threading import Thread, Event
+from app.main.utils import add_ADTS_header
 
 events = {}  # {socket_id: event}
 
@@ -94,6 +95,7 @@ def run_video_stream(database, stream_ids, socket):
         if audio_data_dict:
             audio_frames = audio_data_dict['data']
             audio_data = b''.join(audio_frames)
+            audio_data = add_ADTS_header(audio_data)  # prepend ADTS header for Jmuxer
 
         if not video_data_dict and not audio_data_dict:  # no data is returned
             socketio.sleep(0.1)
