@@ -198,13 +198,12 @@ class AudioStreamer(Streamer):
 
         self.total_bytes = 0
 
-        import sounddevice as sd
-        import soundfile as sf
         from io import BytesIO
         import ffmpeg
 
         self.audio_buffer = BytesIO()
         self.sample_rate = 44100
+        self.stream = None  # SoundDevice Stream object created in start() and closed in stop()
 
         # python subprocess running FFMPEG
         self.ffmpeg_process = (
@@ -214,20 +213,6 @@ class AudioStreamer(Streamer):
             #.global_args("-loglevel", "quiet")
             .run_async(pipe_stdin=True, pipe_stdout=True)  # run asynchronously and pipe from/to stdin/stdout
         )
-
-        def callback(indata, frames, block_time, status):
-            """ Callback function for the sd.stream object """
-            # get real time from relative port_audio_time
-            # time since data was taken
-            # time_diff = block_time.currentTime - block_time.inputBufferAdcTime
-            # abs_time = time() - time_diff  # get epoch time
-            # temporary - just to make timestamp array same size as data array
-            # t = [abs_time] * frames
-            written = self.ffmpeg_process.stdin.write(indata)  # write data to ffmpeg process
-            self.total_bytes += written
-
-        # SoundDevice stream
-        self.stream = sd.InputStream(channels=1, callback=callback, samplerate=self.sample_rate)
 
     def loop(self):
         """
@@ -254,6 +239,22 @@ class AudioStreamer(Streamer):
         Start Streaming continually
         Extended from base class in pi_lib.py
         """
+
+        import sounddevice as sd
+
+        def callback(indata, frames, block_time, status):
+            """ Callback function for the sd.stream object """
+            # get real time from relative port_audio_time
+            # time since data was taken
+            # time_diff = block_time.currentTime - block_time.inputBufferAdcTime
+            # abs_time = time() - time_diff  # get epoch time
+            # temporary - just to make timestamp array same size as data array
+            # t = [abs_time] * frames
+            written = self.ffmpeg_process.stdin.write(indata)  # write data to ffmpeg process
+            self.total_bytes += written
+
+        # SoundDevice stream
+        self.stream = sd.InputStream(channels=1, callback=callback, samplerate=self.sample_rate)
         self.stream.start()
         self.start_time = time()
 
