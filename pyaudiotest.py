@@ -52,7 +52,9 @@ def write():
 # read from ffmpeg
 def read():
     while not signal:
-        out_data = ffmpeg_process.stdout.getvalue()
+        ffmpeg_process.stdout.tell()
+        out_data = ffmpeg_process.stdout.read(-1)
+        ffmpeg_process.stdout.tell()
         print('read from ffmpeg:', len(out_data))
         if not out_data:
             print('no data read back from ffmpeg')
