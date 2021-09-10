@@ -63,14 +63,13 @@ function start_stream(info) {
         mode: 'both',  // video and audio
         //flushingTime: 0,
         fps: info.framerate,
+
         debug: true
     });
 
     // feed received bytes data into jmuxer
     video_socket.on('data', (data) => {
-        console.log(data)
-        console.log(data.video.length)
-        console.log(data.audio.length)
+        console.log(data.video.byteLength, data.audio.byteLength)
         jmuxer.feed({video: new Uint8Array(data.video), audio: new Uint8Array(data.audio)});
     });
 }
