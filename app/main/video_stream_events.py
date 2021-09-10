@@ -71,8 +71,6 @@ def run_video_stream(database, stream_ids, socket):
     event = events[socket]
     video_id = stream_ids['video']
     audio_id = stream_ids['audio']
-    print('video', video_id)
-    print('audio', audio_id)
     while event.is_set():  # while event is set (while socket is connected)
         try:
             video_data_dict = database.read_data(video_id, decode=False, max_time=10)
@@ -93,11 +91,9 @@ def run_video_stream(database, stream_ids, socket):
             video_data = b''.join(video_frames)  # concatenate all frames
 
         audio_data = b''
-        '''
         if audio_data_dict:
             audio_frames = audio_data_dict['data']
             audio_data = b''.join(audio_frames)
-        '''
 
         if not video_data_dict and not audio_data_dict:  # no data is returned
             socketio.sleep(0.1)

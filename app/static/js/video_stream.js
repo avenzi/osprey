@@ -23,8 +23,6 @@ function start_stream(info) {
 
     var video_info = info['Video']
     var audio_info = info['Audio']
-    console.log('Video: '+video_info.id)
-    console.log('Audio: '+audio_info.id)
 
     video_socket.on('connect', function() {
         console.log("Video streaming socketIO connected to server");
@@ -62,15 +60,15 @@ function start_stream(info) {
 
     var jmuxer = new JMuxer({
         node: 'video_stream',
-        mode: 'video',
+        mode: 'both',
         flushingTime: 0,
         fps: info.framerate,
         debug: false
     });
 
-    // feed received frame data into jmuxer
+    // feed received bytes data into jmuxer
     video_socket.on('data', (data) => {
-        jmuxer.feed({video: new Uint8Array(data.video)});
+        jmuxer.feed({video: new Uint8Array(data.video), audio: new Unit8Array(data.audio)});
     });
 }
 
