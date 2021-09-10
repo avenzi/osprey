@@ -55,9 +55,10 @@ def read():
     while not signal:
         out_data = b''
         while True:
-            data = ffmpeg_process.stdout.read(100)
+            data = ffmpeg_process.stdout.read(1024)
             print('seg', len(data))
             if not data:
+                print('seg done')
                 break
             out_data += data
 
