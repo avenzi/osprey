@@ -56,23 +56,15 @@ def read():
     fileno = ffmpeg_process.stdout.fileno()
     while not signal:
         out_data = b''
-        while True:
-            #data = os.read(fileno, n)
-            data = ffmpeg_process.stdout.read(8*8*1024)
-            print('seg', len(data))
-            if not data:
-                print('seg done')
-                break
-            out_data += data
-
+        #data = os.read(fileno, n)
+        data = ffmpeg_process.stdout.read(8*8*1024)
         print('read from ffmpeg:', len(out_data))
         if not out_data:
             print('no data read back from ffmpeg')
             sleep(1)
             continue
-
         out_buf.write(out_data)
-        sleep(1)
+        sleep(0.1)
     print('ended read thread')
 
 
