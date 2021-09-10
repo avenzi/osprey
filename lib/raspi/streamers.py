@@ -198,8 +198,10 @@ class AudioStreamer(Streamer):
 
         import sounddevice as sd
         import soundfile as sf
+        from io import BytesIO
+        import ffmpeg
 
-        self.audio_buffer = BytesOutput2()  # buffer to hold images from the Picam
+        self.audio_buffer = BytesIO()
         self.sample_rate = 44100
 
         try:
@@ -220,6 +222,15 @@ class AudioStreamer(Streamer):
                 self.file.write(indata)
 
         self.stream = sd.InputStream(channels=1, callback=callback, samplerate=self.sample_rate)
+
+        # python subprocess running FFMPEG
+        self.ffmpeg_process = (
+            ffmpeg
+            .input('pipe:', format='wav', ac='1')
+            .output('pipe:', format='adts')  # AAC format
+            # .global_args("-loglevel", "quiet")
+            .run_async(pipe_stdin=True, pipe_stdout=True)  # pipe to stdin and stdout
+        )
 
     def loop(self):
         """
