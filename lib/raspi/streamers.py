@@ -233,7 +233,7 @@ class AudioStreamer(Streamer):
         """
         Main execution loop
         """
-        audio_data = self.ffmpeg_process.stdout.read(1024)
+        audio_data = self.ffmpeg_process.stdout.read(4*1024)
         if not audio_data:
             print('no data read back from ffmpeg')
             sleep(1)
