@@ -105,4 +105,4 @@ def run_video_stream(database, stream_ids, socket):
         data = {'video': video_data, 'audio': audio_data}
 
         socketio.emit('data', data, namespace='/video_stream', room=socket)  # send back to socket
-        socketio.sleep(0.1)
+        socketio.sleep(1)

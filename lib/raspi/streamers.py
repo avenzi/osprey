@@ -231,6 +231,7 @@ class AudioStreamer(Streamer):
         }
         self.database.write_data(self.id, data)
         print('audio:', len(audio_data))
+        self.total_bytes += len(audio_data)
         sleep(0.01)
 
     def start(self):
@@ -250,8 +251,7 @@ class AudioStreamer(Streamer):
             # abs_time = time() - time_diff  # get epoch time
             # temporary - just to make timestamp array same size as data array
             # t = [abs_time] * frames
-            written = self.ffmpeg_process.stdin.write(indata)  # write data to ffmpeg process
-            self.total_bytes += written
+            self.ffmpeg_process.stdin.write(indata)  # write data to ffmpeg process
 
         # SoundDevice stream
         self.stream = sd.InputStream(channels=1, callback=callback, samplerate=self.sample_rate)
