@@ -196,6 +196,8 @@ class AudioStreamer(Streamer):
     def __init__(self, *args):
         super().__init__(*args)
 
+        self.total_bytes = 0
+
         import sounddevice as sd
         import soundfile as sf
         from io import BytesIO
@@ -221,7 +223,8 @@ class AudioStreamer(Streamer):
             # abs_time = time() - time_diff  # get epoch time
             # temporary - just to make timestamp array same size as data array
             # t = [abs_time] * frames
-            self.ffmpeg_process.stdin.write(indata)  # write data to ffmpeg process
+            written = self.ffmpeg_process.stdin.write(indata)  # write data to ffmpeg process
+            self.total_bytes += written
 
         # SoundDevice stream
         self.stream = sd.InputStream(channels=1, callback=callback, samplerate=self.sample_rate)
@@ -252,6 +255,7 @@ class AudioStreamer(Streamer):
         Extended from base class in pi_lib.py
         """
         self.stream.start()
+        self.start_time = time()
 
         # info to send to database
         self.info['sample_rate'] = self.sample_rate
@@ -261,11 +265,12 @@ class AudioStreamer(Streamer):
         HTTPRequest method STOP
         Extended from the base class in pi_lib.py
         """
+        total_time = time() - self.start_time
+        print("AVG AMT: {} bytes/s".format(self.total_bytes / total_time))
         try:
             t0 = time()
             self.stream.stop()
             self.stream.close()
-            print('time to stop', time()-t0)
         except:
             pass
 

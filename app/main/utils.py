@@ -14,9 +14,7 @@ from app.main import socketio
 from lib.database import DatabaseError, DatabaseTimeoutError, DatabaseBusyLoadingError, DatabaseConnectionError
 
 # todo: make the logs in the browser reflect an actual log file on the server, and add the ability to download it.
-
 LOG_FILE = 'local/logs/server.log'
-
 
 def log(msg, level=0, everywhere=False):
     """
@@ -150,6 +148,40 @@ def bytes_to_human(size):
         return "{:.0f} {}".format(quotient, unit)
     else:
         return "{:.1f} {}".format(quotient, unit)
+
+
+"""
+ADTS byte structure from: https://wiki.multimedia.cx/index.php?title=ADTS
+7 bytes total:
+111111111111  # sync-word to identify start
+0     # MPEG-4
+00    # always 00
+1     # no CRC
+01    # MPEG-4 profile minus 1 (2 is AAC-LC)
+0100  # MPEG-4 sampling frequency (44.1kHz)
+0     # private bit, unused
+001   # number of channels (1)
+0000  # copyright stuff, ignore
+0000000000000  # frame length in bytes (including the header), to be replaced dynamically
+00000000000  # buffer fullness (ignored by most decoders)
+00  # number of ACC frames in this ADTS packet minus 1
+"""
+ADTS_STRUCTURE = 0b11111111111100010101000001000000000000000000000000000000
+
+def add_ADTS_header(data):
+    """
+    Adds ADTS packet headers to raw AAC audio data.
+    ADTS byte structure from: https://wiki.multimedia.cx/index.php?title=ADTS
+    Use ADTS_HEADER_TEMPLATE and replace the frame length
+    """
+    max_size = (2**13 - 1) - 7  # max byte size (13 bit int) minus 7 bytes for the header
+    if len(data) > max_size:
+        raise Exception("Read ACC data greater than allowed frame size of {}".format(max_size))
+    size = len(data) + 7
+    header = (ADTS_STRUCTURE | (size << 13)).to_bytes(7, 'big')  # output to string of 7 bytes
+    return header
+
+
 
 
 def request_update():
