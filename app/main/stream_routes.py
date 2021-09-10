@@ -145,33 +145,3 @@ def widget_update():
     return "", 200
 
 
-
-@streams.route('/stream/audio', methods=('GET', 'POST'))
-def audio():
-    """ testing audio stream using flask"""
-    audio_id = request.args.get('id')
-    def sound(audio_id):
-        while True:
-            try:
-                database = get_database()
-                if not database:
-                    return "Database not found for this session", 503
-                audio_data_dict = database.read_data(audio_id, decode=False, max_time=10)
-            except Exception as e:
-                err = "Audio stream failed to read from database. {}".format(e)
-                print(err)
-                return err, 500
-
-            audio_data = b''
-            print('audio', len(audio_data))
-            if audio_data_dict:
-                audio_frames = audio_data_dict['data']
-                audio_data = b''.join(audio_frames)
-            else:
-                sleep(1)
-                continue
-
-            yield(audio_data)
-
-    return Response(stream_with_context(sound(audio_id)))
-

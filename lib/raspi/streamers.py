@@ -40,8 +40,11 @@ class TestStreamer(Streamer):
 class SenseStreamer(Streamer):
     def __init__(self, *args):
         super().__init__(*args)
-        from sense_hat import SenseHat
-        self.sense = SenseHat()   # sense hat object
+        try:
+            from sense_hat import SenseHat
+            self.sense = SenseHat()  # sense hat object
+        except Exception as e:
+            print("Failed to create Sense Hat Streamer: {}".format(e))
 
         self.color_map = {'left': 'blue', 'right': 'green', 'up': 'red', 'down': 'yellow', 'middle': 'black'}
         self.button = 0
@@ -150,7 +153,6 @@ class VideoStreamer(Streamer):
             'time': time()*1000,
             'frame': image
         }
-        print('video', len(image))
 
         self.database.write_data(self.id, data)
 
@@ -162,7 +164,7 @@ class VideoStreamer(Streamer):
         """
         # for some reason if the PiCamera object is defined on a different thread, start_recording will hang.
         from picamera import PiCamera, PiVideoFrameType
-        self.camera = PiCamera(resolution='200x200', framerate=10)
+        self.camera = PiCamera(resolution='200x200', framerate=20)
         self.camera.rotation = 180
         self.sps = PiVideoFrameType.sps_header
 
@@ -196,12 +198,20 @@ class AudioStreamer(Streamer):
 
         import sounddevice as sd
         import soundfile as sf
+        from io import BytesIO
+        import ffmpeg
 
-        self.audio_buffer = BytesOutput2()  # buffer to hold images from the Picam
+        self.audio_buffer = BytesIO()
         self.sample_rate = 44100
 
-        # WAV defaults to PCM-16
-        self.file = sf.SoundFile(self.audio_buffer, mode='w', samplerate=self.sample_rate, channels=1, format='WAV')
+        # python subprocess running FFMPEG
+        self.ffmpeg_process = (
+            ffmpeg
+            .input('pipe:', format='f32le', ac=1)  # SoundDevice outputs Float-32, little endian by default.
+            .output('pipe:', format='adts')  # AAC format
+            #.global_args("-loglevel", "quiet")
+            .run_async(pipe_stdin=True, pipe_stdout=True)  # run asynchronously and pipe from/to stdin/stdout
+        )
 
         def callback(indata, frames, block_time, status):
             """ Callback function for the sd.stream object """
@@ -211,25 +221,28 @@ class AudioStreamer(Streamer):
             # abs_time = time() - time_diff  # get epoch time
             # temporary - just to make timestamp array same size as data array
             # t = [abs_time] * frames
-            if not self.file.closed:
-                self.file.write(indata)
+            self.ffmpeg_process.stdin.write(indata)  # write data to ffmpeg process
 
+        # SoundDevice stream
         self.stream = sd.InputStream(channels=1, callback=callback, samplerate=self.sample_rate)
 
     def loop(self):
         """
         Main execution loop
         """
-        bytes_data = self.audio_buffer.read()
+        audio_data = self.ffmpeg_process.stdout.read(8*1024)
+        if not audio_data:
+            print('no data read back from ffmpeg')
+            sleep(1)
 
         # todo: this time is not the time the sample was taken, but rather the time that
         #  the data was read out of the audio buffer, which can be up to a second behind.
         data = {
             'time': time()*1000,
-            'data': bytes_data,
+            'data': audio_data,
         }
         self.database.write_data(self.id, data)
-        print('audio', len(bytes_data))
+        print('audio:', len(audio_data))
         sleep(0.1)
 
     def start(self):
@@ -253,8 +266,6 @@ class AudioStreamer(Streamer):
             self.stream.stop()
             self.stream.close()
             print('time to stop', time()-t0)
-            self.file.close()
-            print('time to close', time()-t0)
         except:
             pass
 
