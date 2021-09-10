@@ -53,11 +53,14 @@ def write():
 # read from ffmpeg
 def read():
     while not signal:
-        size = os.fstat(ffmpeg_process.stdout.fileno()).st_size
-        print(size)
-        out_data = ffmpeg_process.stdout.read(size)
-        size = os.fstat(ffmpeg_process.stdout.fileno()).st_size
-        print(size)
+        out_data = b''
+        while True:
+            data = ffmpeg_process.stdout.read(100)
+            print('seg', len(data))
+            if not data:
+                break
+            out_data += data
+
         print('read from ffmpeg:', len(out_data))
         if not out_data:
             print('no data read back from ffmpeg')
