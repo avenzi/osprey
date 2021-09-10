@@ -55,9 +55,8 @@ def write():
 def read():
     fileno = ffmpeg_process.stdout.fileno()
     while not signal:
-        out_data = b''
         #data = os.read(fileno, n)
-        data = ffmpeg_process.stdout.read(8*8*1024)
+        out_data = ffmpeg_process.stdout.read(8*8*1024)
         print('read from ffmpeg:', len(out_data))
         if not out_data:
             print('no data read back from ffmpeg')
