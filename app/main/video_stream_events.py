@@ -93,9 +93,9 @@ def run_video_stream(database, stream_ids, socket):
 
         audio_data = b''
         if audio_data_dict:
-            audio_frames = audio_data_dict['data']
-            audio_data = b''.join(audio_frames)
-            audio_data = add_ADTS_header(audio_data)  # prepend ADTS header for Jmuxer
+            audio_frames = audio_data_dict['data']  # get list of unread audio data
+            audio_data = b''.join(audio_frames)  # concatenate all data
+        audio_data = add_ADTS_header(audio_data)  # prepend ADTS header for Jmuxer
 
         if not video_data_dict and not audio_data_dict:  # no data is returned
             socketio.sleep(0.1)
