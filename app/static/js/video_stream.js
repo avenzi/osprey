@@ -71,7 +71,7 @@ function start_stream(info) {
     video_socket.on('data', (data) => {
         console.log(data.video.byteLength, data.audio.byteLength)
         //jmuxer.feed({video: new Uint8Array(data.video), audio: new Uint8Array(data.audio)});
-        jmuxer.feed({audio: new Uint8Array(data.audio, duration: 1000});
+        jmuxer.feed({audio: new Uint8Array(data.audio), duration: 1000});
     });
 }
 
