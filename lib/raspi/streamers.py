@@ -229,7 +229,8 @@ class AudioStreamer(Streamer):
         }
         self.database.write_data(self.id, data)
         print('audio:', len(audio_data))
-        print(audio_data.find(b'\xff'))
+        idx = audio_data.find(b'\xff'
+        print(audio_data[idx:idx+10])
         sleep(0.01)
 
     def start(self):
