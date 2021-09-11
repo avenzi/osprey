@@ -15,8 +15,8 @@ signal = False
 ffmpeg_process = (
     ffmpeg
     .input('pipe:', format='f32le', ac='1')  # SoundDevice outputs Float-32, little endian by default.
-    #.output('pipe:', format='adts')  # AAC format
-    .output('test.aac')
+    .output('pipe:', format='adts')  # AAC format
+    #.output('test.aac')
     #.global_args("-loglevel", "quiet")
     .run_async(pipe_stdin=True, pipe_stdout=True)
 )
@@ -32,7 +32,7 @@ stream = sd.InputStream(samplerate=samplerate, channels=channels, callback=callb
 # read from ffmpeg
 def read():
     while not signal:
-        out_data = ffmpeg_process.stdout.read(8*8*1024)
+        out_data = ffmpeg_process.stdout.read(8*1024)
         print('read from ffmpeg:', len(out_data))
         if not out_data:
             print('no data read back from ffmpeg')
