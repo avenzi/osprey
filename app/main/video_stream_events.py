@@ -95,8 +95,7 @@ def run_video_stream(database, stream_ids, socket):
         if audio_data_dict:
             audio_frames = audio_data_dict['data']  # get list of unread audio data
             audio_data = b''.join(audio_frames)  # concatenate all data
-        print('video:', len(video_data))
-        print('audio:', len(audio_data), audio_data[:10])
+        print('video:', len(video_data), 'audio:', len(audio_data))
 
         if not video_data_dict and not audio_data_dict:  # no data is returned
             socketio.sleep(0.1)
@@ -106,4 +105,4 @@ def run_video_stream(database, stream_ids, socket):
         data = {'video': video_data, 'audio': audio_data}
 
         socketio.emit('data', data, namespace='/video_stream', room=socket)  # send back to socket
-        socketio.sleep(1)
+        socketio.sleep(0.1)
