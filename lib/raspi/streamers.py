@@ -228,7 +228,6 @@ class AudioStreamer(Streamer):
             'data': audio_data,
         }
         self.database.write_data(self.id, data)
-        print('audio:', len(audio_data))
         sleep(0.01)
 
     def start(self):
