@@ -41,6 +41,17 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ​	I think I figured it out - it was a missed edge case. Occasionally, the segment of data sent from the server splits an ADTS header. This is normally fine, but sometimes the header was split in such a way that made the Jmuxer read an incorrect frame length. That is also ok, but sometimes that incorrect frame length was equal to 0, which I did not account for. In that case, the index that kept track of the total length read would be incremented by 0, never breaking from the while clause and causing an infinite loop. To fix this I just made sure that the frame length read was greater than the ADTS header length. This should take care of all edge cases when the header is split between data packets. After implementing this, I have not experienced any browser freezes. Yay!
 
+​	I also added a line to my deploy.sh file that copies the jmuxer.min.js from jmuxer/dist/jmuxer.min.js directly to data-hub/app/static/js/jmuxer.min.js. This way all I have to do is run ```npm run build``` and then run desploy.sh and my modifications to the jmuxer are put onto the server.
+
+​	Next I thought about trying to optimize the AAC data to make it smaller, but I think that will require using HE_AAC, and ffmpeg needs an external library for that. It may not even help that much, so I will leave that option for another time. Information on this library is here: https://trac.ffmpeg.org/wiki/Encode/AAC
+Also some options for AAC encoding to play with are here: https://ffmpeg.org/ffmpeg-codecs.html#Options-8. To see the average bitrate being transcoded by ffmpeg, comment out the like ```.global_args("-loglevel", "quiet")``` in the ffmpeg process definition in the AudioStreamer init method. This enables verbose logging mode, which displays a continuous bitrate measurement.
+
+​	Also today I ran into that X11 issue again, even though I thought I had solved it by removing SoundFile from the project. After more searching, I found that PortAudio may be the cause, and it uses the DISPLAY environment variable to operate an X server. Simply unsetting this variable seemed to do the trick. Oh well.
+
+
+
+
+
 ##### Sept 9-11th, 2021:
 
 I've done it! (sort of). Earlier in the week I decided that my best shot would be to use FFMPEG to stream audio, and it took me a few days but I finally got things to work (mostly). The following log spans a few days, but I don't remember exactly what happened which day - it's all kind of a blur at this point. 

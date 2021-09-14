@@ -58,5 +58,8 @@ webroot="$(pwd -P)/app"  # get absolute path to website root
 echo ${webroot}
 (sudo crontab -l ; echo "0 12 * * * sudo certbot renew --webroot -w ${webroot}") 2>/dev/null | sort | uniq | sudo crontab -
 
+echo "Unsetting the DISPLAY environment variable to avoid X11 server connections when using PortAudio"
+unset DISPLAY
+
 echo "Done!"
 exit
