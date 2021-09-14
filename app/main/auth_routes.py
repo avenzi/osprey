@@ -13,7 +13,6 @@ from app.main.utils import (
 )
 
 
-@auth.route('/', methods=['GET', 'POST'])
 @auth.route('/login', methods=('GET', 'POST'))
 def login():
     """ Uses the Flask App SECRET_KEY to act as an authentication key """
