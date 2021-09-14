@@ -33,6 +33,12 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### Sept 14th, 2021:
+
+​	Today I'm trying to track down the problem of the browser freezing during video and audio streaming. It seems to happen very soon after viewing the stream, though sometimes it happens much later, so I think my original guess of a memory leak or full buffer is incorrect. 
+
+​	I also tried viewing it on a different browser (Edge) and discovered a different problem - the login page wasn't being retrieved. This just turned out to be an incorrect setting in the nginx.conf file - was an easy fix. After that, the same problem occurred. Again, all JavaScript logging suddenly stopped and I was unable to obtain any information - just a complete freeze.
+
 ##### Sept 9-11th, 2021:
 
 I've done it! (sort of). Earlier in the week I decided that my best shot would be to use FFMPEG to stream audio, and it took me a few days but I finally got things to work (mostly). The following log spans a few days, but I don't remember exactly what happened which day - it's all kind of a blur at this point. 
