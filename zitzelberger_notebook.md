@@ -39,6 +39,8 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ​	I also tried viewing it on a different browser (Edge) and discovered a different problem - the login page wasn't being retrieved. This just turned out to be an incorrect setting in the nginx.conf file - was an easy fix. After that, the same problem occurred. Again, all JavaScript logging suddenly stopped and I was unable to obtain any information - just a complete freeze.
 
+​	I think I figured it out - it was a missed edge case. Occasionally, the segment of data sent from the server splits an ADTS header. This is normally fine, but sometimes the header was split in such a way that made the Jmuxer read an incorrect frame length. That is also ok, but sometimes that incorrect frame length was equal to 0, which I did not account for. In that case, the index that kept track of the total length read would be incremented by 0, never breaking from the while clause and causing an infinite loop. To fix this I just made sure that the frame length read was greater than the ADTS header length. This should take care of all edge cases when the header is split between data packets. After implementing this, I have not experienced any browser freezes. Yay!
+
 ##### Sept 9-11th, 2021:
 
 I've done it! (sort of). Earlier in the week I decided that my best shot would be to use FFMPEG to stream audio, and it took me a few days but I finally got things to work (mostly). The following log spans a few days, but I don't remember exactly what happened which day - it's all kind of a blur at this point. 
