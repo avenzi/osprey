@@ -56,7 +56,6 @@ def auth_required(view):
     @wraps(view)
     def wrapped_view(**kwargs):
         if not session.get('authenticated'):
-            print(url_for('auth.login'))
             return redirect(url_for('auth.login'))
         return view(**kwargs)
     return wrapped_view
