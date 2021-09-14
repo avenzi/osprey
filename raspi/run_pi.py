@@ -15,7 +15,7 @@ audio = AudioStreamer('Audio', 'Video 1')
 sense = SenseStreamer('Raw', 'Sense Hat 1')
 
 # Pass all workers to client
-workers = [t1, t2, synth1eeg, video, sense]
+workers = [t1, t2, synth1eeg, video, sense, audio]
 
 client = Client(
     workers=workers, name='Raspi #1', debug=1,
