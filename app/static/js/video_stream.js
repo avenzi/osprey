@@ -60,7 +60,7 @@ function start_stream(info) {
 
     var jmuxer = new JMuxer({
         node: 'video_stream',
-        mode: 'video',  // video and audio
+        //mode: 'video',  // video and audio
         //flushingTime: 0,
         fps: info.framerate,
         debug: true
