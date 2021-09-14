@@ -27,10 +27,10 @@ function start_stream(info) {
     video_socket.on('connect', function() {
         console.log("Video streaming socketIO connected to server");
         data = {}
-        if (video_info.id != undefined) {
+        if (video_info != undefined && video_info.id != undefined) {
             data.video = video_info.id;
         }
-        if (audio_info.id != undefined) {
+        if (audio_info != undefined && audio_info.id != undefined) {
             data.audio = audio_info.id;
         }
         video_socket.emit('start', data);
