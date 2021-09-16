@@ -41,9 +41,6 @@ fi
 # for numpy to work properly with brainflow on Raspbian
 sudo apt-get -y install libatlas-base-dev
 
-echo "Unsetting the DISPLAY environment variable to avoid X11 server connections when using PortAudio"
-unset DISPLAY
-
 # make sure cmake is installed
 sudo apt-get install cmake -y
 
