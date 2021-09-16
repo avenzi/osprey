@@ -69,22 +69,36 @@ def run_video_stream(database, stream_ids, socket):
         (Can't use request.sid because this thread is out of the request context)
     """
     event = events[socket]
-    video_id = stream_ids['video']
+    video_id = stream_ids.get('video')
+    audio_id = stream_ids.get('audio')
+    video_data = b''
+    audio_data = b''
 
     while event.is_set():  # while event is set (while socket is connected)
-        try:
-            data_dict = database.read_data(video_id, decode=False, max_time=10)
-        except Exception as e:
-            print("Video stream failed to read from database. {}".format(e))
-            break
+        if video_id:
+            try:
+                video_data_dict = database.read_data(video_id, decode=False, max_time=10)
+                if video_data_dict:
+                    video_frames = video_data_dict['frame']  # get list of unread frames
+                    video_data = b''.join(video_frames)  # concatenate all frames
+            except Exception as e:
+                print("Video stream failed to read from database. {}".format(e))
+                break
 
-        if not data_dict:  # no data is returned
-            socketio.sleep(0.1)
-            continue
+        if audio_id:
+            try:
+                audio_data_dict = database.read_data(audio_id, decode=False, max_time=10)
+                if audio_data_dict:
+                    audio_frames = audio_data_dict['data']  # get list of unread audio data
+                    audio_data = b''.join(audio_frames)  # concatenate all data
+            except Exception as e:
+                print("Video stream failed to read from database. {}".format(e))
+                break
 
-        data = {'video': b'', 'audio': b''}
-        video_frames = data_dict['frame']  # get list of unread frames
-        data['video'] = b''.join(video_frames)  # concatenate all frames
+        #print('video:', len(video_data), 'audio:', len(audio_data))
+
+        # package for browser
+        data = {'video': video_data, 'audio': audio_data}
 
         socketio.emit('data', data, namespace='/video_stream', room=socket)  # send back to socket
-        socketio.sleep(0.1)
+        socketio.sleep(1)

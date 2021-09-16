@@ -1,10 +1,9 @@
 from lib.lib import Base, Streamer
 from lib.raspi.pi_lib import configure_port, BytesOutput, BytesOutput2
 
-import numpy as np
 from random import random
 from time import time, sleep
-import functools
+from os import environ
 
 
 class TestStreamer(Streamer):
@@ -42,7 +41,7 @@ class SenseStreamer(Streamer):
         super().__init__(*args)
         try:
             from sense_hat import SenseHat
-            self.sense = SenseHat()   # sense hat object
+            self.sense = SenseHat()  # sense hat object
         except Exception as e:
             print("Failed to create Sense Hat Streamer: {}".format(e))
 
@@ -196,17 +195,54 @@ class AudioStreamer(Streamer):
     def __init__(self, *args):
         super().__init__(*args)
 
-        import sounddevice as sd
-        import soundfile as sf
-
-        self.audio_buffer = BytesOutput2()  # buffer to hold images from the Picam
-        self.sample_rate = 44100
+        from io import BytesIO
+        import ffmpeg
 
         try:
-            # WAV defaults to PCM-16
-            self.file = sf.SoundFile(self.audio_buffer, mode='w', samplerate=self.sample_rate, channels=1, format='WAV')
-        except Exception as e:
-            print("Failed to create Audio Streamer: {}".format(e))
+            # unset the DISPLAY environment variable so that PortAudio doesn't try to
+            #  create an X11 connection when run from an SSH session
+            del environ['DISPLAY']
+        except:
+            pass
+
+        self.audio_buffer = BytesIO()
+        self.sample_rate = 44100
+        self.stream = None  # SoundDevice Stream object created in start() and closed in stop()
+
+        # python subprocess running FFMPEG
+        self.ffmpeg_process = (
+            ffmpeg
+            .input('pipe:', format='f32le', ac=1)  # SoundDevice outputs Float-32, little endian by default.
+            .output('pipe:', format='adts')  # AAC format
+            .global_args("-loglevel", "quiet")
+            .run_async(pipe_stdin=True, pipe_stdout=True)  # run asynchronously and pipe from/to stdin/stdout
+        )
+
+    def loop(self):
+        """
+        Main execution loop
+        """
+        audio_data = self.ffmpeg_process.stdout.read(1024)
+        if not audio_data:
+            sleep(1)
+
+        # todo: this time is not the time the sample was taken, but rather the time that
+        #  the data was read out of the audio buffer, which can be up to a second behind.
+        data = {
+            'time': time()*1000,
+            'data': audio_data,
+        }
+        self.database.write_data(self.id, data)
+        sleep(0.01)
+
+    def start(self):
+        """
+        HTTPRequest method START
+        Start Streaming continually
+        Extended from base class in pi_lib.py
+        """
+
+        import sounddevice as sd
 
         def callback(indata, frames, block_time, status):
             """ Callback function for the sd.stream object """
@@ -216,33 +252,12 @@ class AudioStreamer(Streamer):
             # abs_time = time() - time_diff  # get epoch time
             # temporary - just to make timestamp array same size as data array
             # t = [abs_time] * frames
-            if not self.file.closed:
-                self.file.write(indata)
+            self.ffmpeg_process.stdin.write(indata)  # write data to ffmpeg process
 
+        # SoundDevice stream
         self.stream = sd.InputStream(channels=1, callback=callback, samplerate=self.sample_rate)
-
-    def loop(self):
-        """
-        Main execution loop
-        """
-        bytes_data = self.audio_buffer.read()
-
-        # todo: this time is not the time the sample was taken, but rather the time that
-        #  the data was read out of the audio buffer, which can be up to a second behind.
-        data = {
-            'time': time()*1000,
-            'data': bytes_data,
-        }
-        self.database.write_data(self.id, data)
-        sleep(0.1)
-
-    def start(self):
-        """
-        HTTPRequest method START
-        Start Streaming continually
-        Extended from base class in pi_lib.py
-        """
         self.stream.start()
+        self.start_time = time()
 
         # info to send to database
         self.info['sample_rate'] = self.sample_rate
@@ -256,9 +271,6 @@ class AudioStreamer(Streamer):
             t0 = time()
             self.stream.stop()
             self.stream.close()
-            print('time to stop', time()-t0)
-            self.file.close()
-            print('time to close', time()-t0)
         except:
             pass
 

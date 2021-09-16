@@ -22,12 +22,16 @@ function start_stream(info) {
     var video_socket = io('/video_stream');  // where to receive the video frames
 
     var video_info = info['Video']
+    var audio_info = info['Audio']
 
     video_socket.on('connect', function() {
         console.log("Video streaming socketIO connected to server");
         data = {}
-        if (video_info != undefined) {
+        if (video_info != undefined && video_info.id != undefined) {
             data.video = video_info.id;
+        }
+        if (audio_info != undefined && audio_info.id != undefined) {
+            data.audio = audio_info.id;
         }
         video_socket.emit('start', data);
     });
@@ -56,15 +60,15 @@ function start_stream(info) {
 
     var jmuxer = new JMuxer({
         node: 'video_stream',
-        mode: 'video',
-        flushingTime: 0,
+        //mode: 'video',  // video and audio, default is both
+        //flushingTime: 0,
         fps: info.framerate,
         debug: false
     });
 
-    // feed received frame data into jmuxer
+    // feed received bytes data into jmuxer
     video_socket.on('data', (data) => {
-        jmuxer.feed({video: new Uint8Array(data.video)});
+        jmuxer.feed({video: new Uint8Array(data.video), audio: new Uint8Array(data.audio), duration: 1000});
     });
 }
 
