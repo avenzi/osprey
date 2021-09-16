@@ -96,7 +96,7 @@ def run_video_stream(database, stream_ids, socket):
                 print("Video stream failed to read from database. {}".format(e))
                 break
 
-        print('video:', len(video_data), 'audio:', len(audio_data))
+        #print('video:', len(video_data), 'audio:', len(audio_data))
 
         # package for browser
         data = {'video': video_data, 'audio': audio_data}
