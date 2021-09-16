@@ -198,9 +198,12 @@ class AudioStreamer(Streamer):
         from io import BytesIO
         import ffmpeg
 
-        # unset the DISPLAY environment variable so that PortAudio doesn't try to
-        #  create an X11 connection when run from an SSH session
-        del environ['DISPLAY']
+        try:
+            # unset the DISPLAY environment variable so that PortAudio doesn't try to
+            #  create an X11 connection when run from an SSH session
+            del environ['DISPLAY']
+        except:
+            pass
 
         self.audio_buffer = BytesIO()
         self.sample_rate = 44100
