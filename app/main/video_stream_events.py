@@ -97,6 +97,8 @@ def run_video_stream(database, stream_ids, socket):
 
         #print('video:', len(video_data), 'audio:', len(audio_data))
 
+        # TODO: calculate duration of data read and send to Jmuxer?
+
         # package for browser
         data = {'video': video_data, 'audio': audio_data}
 
