@@ -224,7 +224,6 @@ class AudioStreamer(Streamer):
         """
         audio_data = self.ffmpeg_process.stdout.read(1024)
         if not audio_data:
-            print('no data read back from ffmpeg')
             sleep(1)
 
         # todo: this time is not the time the sample was taken, but rather the time that
