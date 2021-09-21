@@ -138,7 +138,7 @@ class VideoStreamer(Streamer):
         super().__init__(*args)
         self.start_time = 0           # time of START
 
-        self.picam_buffer = BytesOutput2()  # buffer to hold images from the Picam
+        self.picam_buffer = BytesOutput()  # buffer to hold images from the Picam
 
     def loop(self):
         """
@@ -146,11 +146,11 @@ class VideoStreamer(Streamer):
         """
         if not self.camera.frame.complete or self.camera.frame.frame_type == self.sps:
             return
-        image = self.picam_buffer.read()  # get most recent frame
+        images = self.picam_buffer.read()  # get most recent frames
 
         data = {
             'time': time()*1000,
-            'frame': image
+            'frame': images
         }
 
         self.database.write_data(self.id, data)
@@ -163,7 +163,7 @@ class VideoStreamer(Streamer):
         """
         # for some reason if the PiCamera object is defined on a different thread, start_recording will hang.
         from picamera import PiCamera, PiVideoFrameType
-        self.camera = PiCamera(resolution='200x200', framerate=20)
+        self.camera = PiCamera(resolution='400x400', framerate=20)
         self.camera.rotation = 180
         self.sps = PiVideoFrameType.sps_header
 

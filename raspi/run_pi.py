@@ -5,7 +5,6 @@ from lib.raspi.streamers import *
 t1 = TestStreamer("Random 1", "Test Group 1")
 t2 = TestStreamer("Random 2", "Test Group 1")
 
-# Synth EEG Stream #1
 synth1eeg = SynthEEGStreamer('Raw', 'Synth EEG 1')
 
 video = VideoStreamer('Video', 'Video 1')
