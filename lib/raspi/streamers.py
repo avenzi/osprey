@@ -253,7 +253,6 @@ class AudioStreamer(Streamer):
             # temporary - just to make timestamp array same size as data array
             # t = [abs_time] * frames
             self.ffmpeg_process.stdin.write(indata)  # write data to ffmpeg process
-            print(frames)
 
         # SoundDevice stream
         self.stream = sd.InputStream(channels=1, callback=callback, samplerate=self.sample_rate)
