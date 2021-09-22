@@ -15,6 +15,7 @@ scipy>=1.5.2
 brainflow>=4.6.0
 requests==2.24.0
 msgpack==1.0.0
+ffmpeg-python
 
 
 
