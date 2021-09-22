@@ -91,11 +91,11 @@ def encode_audio(database, stream_ids, socket):
 
     while event.is_set():
         audio_data_dict = database.read_data(audio_id, max_time=10)
-        # put data in format able to be read by ffmpeg (each sample needs to be it's own array)
-        data = audio_data_dict['data']
-        for i in range(len(data)):
-            data[i] = [data[i]]
         if audio_data_dict:
+            # put data in format able to be read by ffmpeg (each sample needs to be it's own array)
+            data = audio_data_dict['data']
+            for i in range(len(data)):
+                data[i] = [data[i]]
             ffmpeg_process.stdin.write(data)  # feed raw data into ffmpeg
         socketio.sleep(0.1)
 
