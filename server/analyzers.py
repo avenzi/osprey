@@ -52,6 +52,24 @@ class TestAnalyzer(Analyzer):
         sleep(0.5)
 
 
+class AudioAnalyzer(Analyzer):
+    def start(self):
+        """ Get ID for audio stream"""
+        self.audio_id = self.targets['Video 1']['Audio']['id']
+
+    def loop(self):
+        """ Main execution loop """
+        data = self.database.read_data(self.audio_id)  # read raw audio data
+        if not data:
+            sleep(1)
+
+        audio_data = data['data']  # only data, no timestamps
+        print(len(audio_data))
+
+        self.database.write_data(self.id, audio_data)  # write to new data column
+        sleep(0.01)
+
+
 class FunctionAnalyzer(Analyzer):
     """ Analyzer for running data through arbitrary python functions stored in local/pipelines/ """
     def __init__(self, *args):

@@ -22,18 +22,18 @@ function start_stream(info) {
     var video_socket = io('/video_stream');  // where to receive the video frames
 
     var video_info = info['Video']
-    var audio_info = info['Audio']
+    var audio_info = info['Transformed Audio']
 
     video_socket.on('connect', function() {
         console.log("Video streaming socketIO connected to server");
-        data = {}
+        stream_ids = {}
         if (video_info != undefined && video_info.id != undefined) {
-            data.video = video_info.id;
+            stream_ids.video = video_info.id;
         }
         if (audio_info != undefined && audio_info.id != undefined) {
-            data.audio = audio_info.id;
+            stream_ids.audio = audio_info.id;
         }
-        video_socket.emit('start', data);
+        video_socket.emit('start', stream_ids);  // send stream ids to read from
     });
 
     // original width and height sent from stream
