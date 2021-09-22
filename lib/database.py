@@ -399,6 +399,7 @@ class Database:
                     d[key] = self.data_to_redis(data[key][i])
                 time_id = self.time_to_redis(data['time'][i])  # redis time stamp in which to insert
                 redis_id = self.validate_redis_time(time_id, stream)
+                print(d, redis_id)
                 pipe.xadd('stream:'+stream, d, id=redis_id)
 
             pipe.execute()
