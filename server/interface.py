@@ -27,13 +27,15 @@ expected = ['Raw', 'Filtered', 'Fourier']
 page = Page('ECG', expected, layout=ecg_layout.create_layout)
 interface.add_pages(page)
 
-# video stream page (not currently implemented - still using the pre-made video.html)
+# video stream page
 for name in ['Video 1', 'Video 2']:
     page = Page(name, ['Raw'], html='video.html')
     interface.add_pages(page)
 
-page = Page('Video 1', ['Audio'], layout=audio_layout.create_layout)
-interface.add_pages(page)
+
+for name in ['Audio 1', 'Audio 2']:
+    page = Page(name, ['Audio'], layout=audio_layout.create_layout)
+    interface.add_pages(page)
 
 
 
