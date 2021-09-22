@@ -73,7 +73,7 @@ synth1 = SynthEEGStreamer('Raw', 'Synth EEG 1')
 
 # Pass all workers to client
 worker_no_pi_test = [t1, t2, t0func, synth1, synth1filt, synth1four, synth1func]
-workers_test = [synth1filt, synth1four, t1func]
+workers_test = [synth1filt, synth1four, t1func, video1]
 workers = [eegfilt, eegfour, eegfunc, ecgfilt, ecgfour, ecgfunc]
 
 client = Client(
