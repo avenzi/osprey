@@ -99,7 +99,10 @@ def encode_audio(database, stream_ids, socket):
                 data[i] = np.array(data[i])
             data = np.array(data)
             ffmpeg_process.stdin.write(data)  # feed raw data into ffmpeg
-        socketio.sleep(0.1)
+            socketio.sleep(0.01)
+        else:
+            socketio.sleep(1)
+
 
 
 def run_stream(database, stream_ids, socket):
@@ -142,4 +145,4 @@ def run_stream(database, stream_ids, socket):
         data = {'video': video_data, 'audio': audio_data}
 
         socketio.emit('data', data, namespace='/video_stream', room=socket)  # send back to socket
-        socketio.sleep(0.01)
+        socketio.sleep(1)
