@@ -91,7 +91,7 @@ def encode_audio(database, stream_ids, socket):
         return
 
     while event.is_set():
-        audio_data_dict = database.read_data(audio_id, max_time=10)
+        audio_data_dict = database.read_data(audio_id)
         if audio_data_dict:
             # put data in format able to be read by ffmpeg (each sample needs to be it's own array)
             data = audio_data_dict['data']
