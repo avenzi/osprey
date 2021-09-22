@@ -391,6 +391,9 @@ class Database:
             pipe = self.redis.pipeline()  # pipeline queues a series of commands at once
             length = len(list(data.values())[0])  # length of data (all must be the same)
 
+            for key in data.keys():  # convert all to list type
+                data[key] = list(data[key])
+                
             # add data to the Redis database one data point at a time
             #  because there isn't a mass-insert-to-stream command
             for i in range(length):
