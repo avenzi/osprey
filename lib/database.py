@@ -391,10 +391,8 @@ class Database:
             pipe = self.redis.pipeline()  # pipeline queues a series of commands at once
             length = len(list(data.values())[0])  # length of data (all must be the same)
 
-            for key in data.keys():  # convert all to list type (or redis yells at me)
-                data[key] = list(data[key])
-                if key == 'data':
-                    print(type(data[key]))
+            #for key in data.keys():  # convert all to list type (or redis yells at me)
+                #data[key] = list(data[key])
 
             # add data to the Redis database one data point at a time
             #  because there isn't a mass-insert-to-stream command
@@ -404,6 +402,8 @@ class Database:
                     d[key] = self.data_to_redis(data[key][i])
                 time_id = self.time_to_redis(data['time'][i])  # redis time stamp in which to insert
                 redis_id = self.validate_redis_time(time_id, stream)
+                if data.get('data'):
+                    print(type(d), d)
                 pipe.xadd('stream:'+stream, d, id=redis_id)
 
             pipe.execute()
