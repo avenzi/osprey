@@ -62,6 +62,7 @@ class AudioAnalyzer(Analyzer):
         data = self.database.read_data(self.audio_id)  # read raw audio data
         if not data:
             sleep(1)
+            return
 
         audio_data = data['data']  # only data, no timestamps
         print('analyzer', len(audio_data))
