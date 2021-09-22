@@ -56,6 +56,8 @@ class AudioAnalyzer(Analyzer):
     def start(self):
         """ Get ID for audio stream"""
         self.audio_id = self.targets['Video 1']['Audio']['id']
+        print('analyzer id', self.id)
+        print('audio id', self.audio_id)
 
     def loop(self):
         """ Main execution loop """
@@ -64,7 +66,7 @@ class AudioAnalyzer(Analyzer):
             sleep(1)
             return
 
-        print('analyzer', len(data['data']))
+        #print('analyzer', len(data['data']))
 
         self.database.write_data(self.id, data)  # write to new data column
         sleep(0.01)
