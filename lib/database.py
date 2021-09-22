@@ -4,7 +4,7 @@ import functools
 import json
 from os import system, path
 from traceback import print_exc, print_stack
-from numpy import ndarray, float64
+from numpy import ndarray, float64, float32
 
 import redis
 #from redistimeseries.client import Client as RedisTS
@@ -319,7 +319,7 @@ class Database:
         Converts a float into an int to be stored in Redis.
         Convert back with redis_to_data using decompress=True
         """
-        if type(num) in [int, float, float64]:
+        if type(num) in [int, float, float64, float32]:
             return int(num * (10**self.decimal_cap))
         return num
 
