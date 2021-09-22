@@ -226,7 +226,7 @@ class AudioStreamer(Streamer):
             for channels in indata:
                 outdata.append(channels[0])
 
-            t = np.linspace(block_time.currentTime, block_time.inputBufferAdcTime, len(frames))
+            t = np.linspace(block_time.currentTime, block_time.inputBufferAdcTime, frames)
 
             data = {
                 'time': t,
