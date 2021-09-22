@@ -4,6 +4,7 @@ from lib.raspi.pi_lib import configure_port, BytesOutput, BytesOutput2
 from random import random
 from time import time, sleep
 from os import environ
+import numpy as np
 
 
 class TestStreamer(Streamer):
@@ -219,18 +220,13 @@ class AudioStreamer(Streamer):
 
         def callback(indata, frames, block_time, status):
             """ Callback function for the sd.stream object """
-            # get real time from relative port_audio_time
-            # time since data was taken
-            time_diff = block_time.currentTime - block_time.inputBufferAdcTime
-            abs_time = time() - time_diff  # get epoch time
-            # temporary - just to make timestamp array same size as data array
-            t = [abs_time] * frames
-
             # indata is an array of arrays, where the second level arrays have indexes for each channel.
             # To feed this into the database, we must get rid of those second level arrays. (theres only one channel)
             outdata = []
             for channels in indata:
                 outdata.append(channels[0])
+
+            t = np.linspace(block_time.currentTime, block_time.inputBufferAdcTime, len(frames))
 
             data = {
                 'time': t,
