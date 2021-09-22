@@ -22,7 +22,7 @@ function start_stream(info) {
     var video_socket = io('/video_stream');  // where to receive the video frames
 
     var video_info = info['Video']
-    var audio_info = info['TransformedAudio']
+    var audio_info = info['Audio']
 
     video_socket.on('connect', function() {
         console.log("Video streaming socketIO connected to server");
