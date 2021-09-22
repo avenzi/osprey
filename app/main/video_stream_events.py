@@ -86,6 +86,7 @@ def encode_audio(database, stream_ids, socket):
     event = events[socket]
     video_id = stream_ids.get('video')
     audio_id = stream_ids.get('audio')
+    print('audio_id', audio_id)
 
     if not audio_id:
         return
@@ -103,7 +104,6 @@ def encode_audio(database, stream_ids, socket):
             socketio.sleep(0.01)
         else:
             socketio.sleep(1)
-
 
 
 def run_stream(database, stream_ids, socket):
