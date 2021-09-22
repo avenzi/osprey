@@ -394,6 +394,9 @@ class Database:
             for key in data.keys():  # convert all to list type (or redis yells at me)
                 data[key] = list(data[key])
 
+            if data.get('data') is not None:
+                print(data, type(data['data'][0]))
+
             # add data to the Redis database one data point at a time
             #  because there isn't a mass-insert-to-stream command
             for i in range(length):
