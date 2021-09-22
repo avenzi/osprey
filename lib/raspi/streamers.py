@@ -229,9 +229,16 @@ class AudioStreamer(Streamer):
             abs_time = time() - time_diff  # get epoch time
             # temporary - just to make timestamp array same size as data array
             t = [abs_time] * frames
+
+            # indata is an array of arrays, where the second level arrays have indexes for each channel.
+            # To feed this into the database, we must get rid of those second level arrays. (theres only one channel)
+            outdata = []
+            for channels in indata:
+                outdata.append(channels[0])
+    
             data = {
                 'time': t,
-                'data': indata,
+                'data': outdata,
             }
             self.database.write_data(self.id, data)
 
