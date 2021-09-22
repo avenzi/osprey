@@ -3,6 +3,7 @@ from app.main import socketio
 from threading import Thread, Event
 
 import ffmpeg
+import numpy as np
 
 # ffmpeg process to encode raw audio data into AAC format
 ffmpeg_process = (
@@ -95,7 +96,8 @@ def encode_audio(database, stream_ids, socket):
             # put data in format able to be read by ffmpeg (each sample needs to be it's own array)
             data = audio_data_dict['data']
             for i in range(len(data)):
-                data[i] = [data[i]]
+                data[i] = np.array(data[i])
+            data = np.array(data)
             ffmpeg_process.stdin.write(data)  # feed raw data into ffmpeg
         socketio.sleep(0.1)
 
