@@ -8,7 +8,7 @@ import numpy as np
 # ffmpeg process to encode raw audio data into AAC format
 ffmpeg_process = (
     ffmpeg
-    .input('pipe:', format='f32be', ac=1)  # SoundDevice outputs Float-32, little endian by default.
+    .input('pipe:', format='f32le', ac=1)  # SoundDevice outputs Float-32, little endian by default.
     .output('pipe:', format='adts')  # AAC format
     .global_args("-loglevel", "quiet")
     .run_async(pipe_stdin=True, pipe_stdout=True)  # run asynchronously and pipe from/to stdin/stdout
@@ -95,6 +95,7 @@ def encode_audio(database, stream_ids, socket):
         if audio_data_dict:
             # put data in format able to be read by ffmpeg (each sample needs to be it's own array)
             data = audio_data_dict['data']
+            print(data)
             for i in range(len(data)):
                 data[i] = np.array(data[i], dtype='float32')
             data = np.array(data)
