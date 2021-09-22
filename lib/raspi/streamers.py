@@ -195,8 +195,6 @@ class AudioStreamer(Streamer):
     def __init__(self, *args):
         super().__init__(*args)
 
-        from io import BytesIO
-
         try:
             # unset the DISPLAY environment variable so that PortAudio doesn't try to
             #  create an X11 connection when run from an SSH session
@@ -208,9 +206,7 @@ class AudioStreamer(Streamer):
         self.stream = None  # SoundDevice Stream object created in start() and closed in stop()
 
     def loop(self):
-        # todo: this time is not the time the sample was taken, but rather the time that
-        #  the data was read out of the audio buffer, which can be up to a second behind.
-        sleep(10)
+        sleep(1)
 
     def start(self):
         """
