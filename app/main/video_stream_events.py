@@ -98,6 +98,7 @@ def encode_audio(database, stream_ids, socket):
             for i in range(len(data)):
                 data[i] = np.array(data[i])
             data = np.array(data)
+            print('stream:', len(data), len(audio_data_dict['data']))
             ffmpeg_process.stdin.write(data)  # feed raw data into ffmpeg
             socketio.sleep(0.01)
         else:

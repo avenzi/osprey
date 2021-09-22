@@ -64,7 +64,7 @@ class AudioAnalyzer(Analyzer):
             sleep(1)
 
         audio_data = data['data']  # only data, no timestamps
-        print(len(audio_data))
+        print('analyzer', len(audio_data))
 
         self.database.write_data(self.id, audio_data)  # write to new data column
         sleep(0.01)
