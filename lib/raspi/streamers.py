@@ -228,7 +228,6 @@ class AudioStreamer(Streamer):
 
             # indata is an array of arrays, where the second level arrays have indexes for each channel.
             # To feed this into the database, we must get rid of those second level arrays. (theres only one channel)
-            print(indata)
             outdata = []
             for channels in indata:
                 outdata.append(channels[0])
