@@ -395,7 +395,8 @@ class Database:
                 data[key] = list(data[key])
 
             if data.get('data') is not None:
-                print(data, type(data['data'][0]))
+                print('full data:', data, type(data['data'][0]))
+                print('type:', type(data['data']))
 
             # add data to the Redis database one data point at a time
             #  because there isn't a mass-insert-to-stream command
@@ -406,7 +407,7 @@ class Database:
                 time_id = self.time_to_redis(data['time'][i])  # redis time stamp in which to insert
                 redis_id = self.validate_redis_time(time_id, stream)
                 if data.get('data') is not None:
-                    print(type(d), d)
+                    print('segment', d)
                 pipe.xadd('stream:'+stream, d, id=redis_id)
 
             pipe.execute()

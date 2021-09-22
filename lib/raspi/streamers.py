@@ -233,9 +233,7 @@ class AudioStreamer(Streamer):
                 'time': t,
                 'data': indata,
             }
-            print(len(indata), type(indata))
             self.database.write_data(self.id, data)
-            print(len(indata))
 
         # SoundDevice stream
         self.stream = sd.InputStream(channels=1, callback=callback, samplerate=self.sample_rate)
