@@ -233,7 +233,7 @@ class AudioStreamer(Streamer):
                 'time': t,
                 'data': indata,
             }
-            print(len(data['data']), type(data['data']))
+            print(len(indata), type(indata))
             self.database.write_data(self.id, data)
             print(len(indata))
 
