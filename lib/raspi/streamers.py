@@ -235,7 +235,7 @@ class AudioStreamer(Streamer):
             outdata = []
             for channels in indata:
                 outdata.append(channels[0])
-    
+
             data = {
                 'time': t,
                 'data': outdata,
