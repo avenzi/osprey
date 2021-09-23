@@ -243,6 +243,7 @@ class AudioStreamer(Streamer):
             print(block_time.inputBufferAdcTime, block_time.outputBufferDacTime, block_time.currentTime)
             print('time diff', time_diff)
             print('frame time', frame_time)
+            print('calc diff', frames * frame_time)
             #print(len(t), t[:10], t[-10:])
             print()
 
