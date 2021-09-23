@@ -23,6 +23,7 @@ function start_stream(info) {
 
     var video_info = info['Video']
     var audio_info = info['Encoded Audio']
+    console.log(info)
 
     video_socket.on('connect', function() {
         console.log("Video streaming socketIO connected to server");

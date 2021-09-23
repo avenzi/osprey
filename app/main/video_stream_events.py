@@ -77,6 +77,7 @@ def run_stream(database, stream_ids, socket):
     event = events[socket]
     video_id = stream_ids.get('video')
     audio_id = stream_ids.get('audio')
+    print('stream', audio_id)
     video_data = b''
     audio_data = b''
 
