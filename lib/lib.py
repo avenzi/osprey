@@ -588,7 +588,7 @@ class Streamer(WorkerNode):
         try:
             self.start()  # call subclassed start method
         except Exception as e:
-            err = "Failed to start [{}] ({})".format(self, e)
+            err = "Failed to start [{}] {}: {}".format(self, e.__class__.__name__, e)
             self.log(err)
             self.socket.emit('error', err, namespace='/streamers')
             return
