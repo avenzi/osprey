@@ -228,21 +228,19 @@ class AudioStreamer(Streamer):
                 outdata.append(channels[0])
 
             # calculate time since last block (in seconds)
-            if self.last_block_time:
-                time_diff = time() - self.last_block_time
-                fps = frames / time_diff
-                spf = 1 / fps
-                self.last_block_time = time()
-            else:
+            if not self.last_block_time:
                 self.last_block_time = time()
                 return
 
             t = np.linspace(self.last_block_time*1000, time()*1000, frames)
-            print(frames, len(indata))
-            print('latency', self.stream.latency)
+            time_diff = time() - self.last_block_time
+            #fps = frames / time_diff
+            #spf = 1 / fps
+            self.last_block_time = time()
+
+            #print('latency', self.stream.latency)
             #print(block_time.inputBufferAdcTime, block_time.outputBufferDacTime, block_time.currentTime)
-            print(len(t), t[:4], t[-4:])
-            print()
+            print(time_diff, t[-1]-t[0])
 
             data = {
                 'time': t,
