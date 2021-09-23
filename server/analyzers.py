@@ -55,7 +55,7 @@ class TestAnalyzer(Analyzer):
 class AudioAnalyzer(Analyzer):
     def start(self):
         """ Get ID for audio stream"""
-        self.audio_id = self.targets['Video 1']['Audio']['id']
+        self.audio_id = self.targets['Audio 1']['Audio']['id']
 
     def loop(self):
         """ Main execution loop """
