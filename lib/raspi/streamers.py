@@ -250,7 +250,7 @@ class AudioStreamer(Streamer):
             self.database.write_data(self.id, data)
 
         # SoundDevice stream
-        self.stream = sd.InputStream(channels=1, callback=callback, samplerate=self.sample_rate, blocksize=1000)
+        self.stream = sd.InputStream(channels=1, callback=callback, samplerate=self.sample_rate, blocksize=10000)
         self.stream.start()
         self.start_time = time()
 
