@@ -94,9 +94,11 @@ class AudioEncoder(Analyzer):
             data = data_dict['data']
             data = np.expand_dims(np.array(data, dtype='float32'), axis=1)
             self.ffmpeg_process.stdin.write(data)
+            print('write to ffmpeg', len(data))
 
         # read from ffmpeg
         encoded_audio = self.ffmpeg_process.stdout.read(1024)
+        print('received encoded', len(encoded_audio))
         data = {
             'time': time(),  # just so redis is happt
             'data': encoded_audio
@@ -104,6 +106,7 @@ class AudioEncoder(Analyzer):
 
         if encoded_audio:
             self.database.write_data(self.id, data)
+            print('written encoded', len(data))
         else:
             sleep(0.1)
             return
