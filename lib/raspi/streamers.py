@@ -244,7 +244,8 @@ class AudioStreamer(Streamer):
             print(block_time.inputBufferAdcTime, block_time.outputBufferDacTime, block_time.currentTime)
             print('time diff', time_diff)
             print('samp frame time', frames / self.sample_rate)
-            print('actu fps', frames / time_diff)
+            if time_diff:
+                print('actu fps', frames / time_diff)
             print(len(t), t[:4], t[-4:])
             print()
 
