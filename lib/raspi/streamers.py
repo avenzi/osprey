@@ -227,13 +227,20 @@ class AudioStreamer(Streamer):
             for channels in indata:
                 outdata.append(channels[0])
 
-            # calculate timestamps for each audio sample
-            time_diff = block_time.currentTime - block_time.inputBufferAdcTime
-            end = time()
-            begin = end - time_diff
+            # calculate time since last block (in seconds)
+            if self.last_block_time:
+                time_diff = time() - self.last_block_time
+            else:
+                self.last_block_time = time()
+                time_diff = None
 
-            t = np.linspace(begin*1000, end*1000, frames)
+            frame_time = frames / self.sample_rate
+
+            t = np.linspace(self.last_block_time*1000, time(), frames)
+            print('lat', self.stream.latency)
             print(block_time.inputBufferAdcTime, block_time.outputBufferDacTime, block_time.currentTime)
+            print('time diff', time_diff)
+            print('frame time', frame_time)
             #print(len(t), t[:10], t[-10:])
 
             data = {
