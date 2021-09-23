@@ -105,7 +105,7 @@ class AudioEncoder(Analyzer):
         while not self.exit:
             encoded_audio = self.ffmpeg_process.stdout.read(1024)
             if not encoded_audio:
-                sleep(1)
+                sleep(0.1)
                 continue
             data = {
                 'time': time(),  # just so redis is happy

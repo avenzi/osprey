@@ -250,10 +250,11 @@ class AudioStreamer(Streamer):
                 'data': outdata,
             }
             t3 = time()
-            print(num_frames, t1-t0, t2-t1, t3-t2)
             if status.input_overflow or status.input_underflow:
                 print('overflow:', status.input_overflow, 'underflow:', status.input_underflow)
             self.database.write_data(self.id, data)
+            t4 = time()
+            print(num_frames, t1-t0, t2-t1, t3-t2, t4-t3)
 
         # SoundDevice stream
         self.stream = sd.InputStream(channels=1, callback=callback, samplerate=self.sample_rate, blocksize=self.blocksize)
