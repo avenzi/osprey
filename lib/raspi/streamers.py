@@ -203,7 +203,7 @@ class AudioStreamer(Streamer):
         except:
             pass
 
-        self.sample_rate = 44100
+        self.sample_rate = 10000
         self.stream = None  # SoundDevice Stream object created in start() and closed in stop()
         self.last_block_time = None  # timestamp of last recorded audio block
 
