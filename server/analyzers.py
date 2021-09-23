@@ -97,12 +97,14 @@ class AudioEncoder(Analyzer):
             data = data_dict['data']
             data = np.expand_dims(np.array(data, dtype='float32'), axis=1)
             self.ffmpeg_process.stdin.write(data)
+            print('written to ffmpeg', len(data))
             sleep(0.01)
         else:
             sleep(0.2)
 
     def read_from_ffmpeg(self):
         """ Meant to be run on a seaprate thread. Write encoded audio to the database """
+        print('gonna read from ffmpeg')
         encoded_audio = self.ffmpeg_process.stdout.read(256)
         if not encoded_audio:
             sleep(1)
