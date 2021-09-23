@@ -90,6 +90,7 @@ class AudioEncoder(Analyzer):
         """ Main execution loop """
         print('gonna read from database', self.audio_id)
         data_dict = self.database.read_data(self.audio_id)
+        print('read from database')
         if data_dict:  # feed to ffmpeg
             # put data in format able to be read by ffmpeg (2d numpy array)
             data = data_dict['data']
