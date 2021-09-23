@@ -75,20 +75,20 @@ class AudioAnalyzer(Analyzer):
 class AudioEncoder(Analyzer):
     def start(self):
         """ Get ID for audio stream"""
-        print('STARTED AUDIO ENCODER')
         self.audio_id = self.targets['Audio 1']['Audio']['id']
 
         # ffmpeg process to encode raw audio data into AAC format
         self.ffmpeg_process = (
             ffmpeg
-                .input('pipe:', format='f32le', ac=1)  # SoundDevice outputs Float-32, little endian by default.
-                .output('pipe:', format='adts')  # AAC format
-                .global_args("-loglevel", "quiet")
-                .run_async(pipe_stdin=True, pipe_stdout=True)  # run asynchronously and pipe from/to stdin/stdout
+            .input('pipe:', format='f32le', ac=1)  # SoundDevice outputs Float-32, little endian by default.
+            .output('pipe:', format='adts')  # AAC format
+            .global_args("-loglevel", "quiet")
+            .run_async(pipe_stdin=True, pipe_stdout=True)  # run asynchronously and pipe from/to stdin/stdout
         )
 
     def loop(self):
         """ Main execution loop """
+        print('gonna read from database', self.audio_id)
         data_dict = self.database.read_data(self.audio_id)
         if data_dict:  # feed to ffmpeg
             # put data in format able to be read by ffmpeg (2d numpy array)
