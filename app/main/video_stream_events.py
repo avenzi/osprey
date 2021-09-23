@@ -2,17 +2,7 @@ from flask import request, current_app, session
 from app.main import socketio
 from threading import Thread, Event
 
-import ffmpeg
 import numpy as np
-
-# ffmpeg process to encode raw audio data into AAC format
-ffmpeg_process = (
-    ffmpeg
-    .input('pipe:', format='f32le', ac=1)  # SoundDevice outputs Float-32, little endian by default.
-    .output('pipe:', format='adts')  # AAC format
-    .global_args("-loglevel", "quiet")
-    .run_async(pipe_stdin=True, pipe_stdout=True)  # run asynchronously and pipe from/to stdin/stdout
-)
 
 events = {}  # {socket_id: event}
 
@@ -63,8 +53,6 @@ def start_video_stream(stream_ids):
     events[socket] = Event()  # create event
     events[socket].set()      # activate that event before the thread starts
 
-    # run audio encoding thread
-    Thread(target=encode_audio, args=(database, stream_ids, socket), name='AUDIO_ENCODE', daemon=False).start()
     # run streaming thread
     Thread(target=run_stream, args=(database, stream_ids, socket), name='VIDEO', daemon=False).start()
 
@@ -75,31 +63,6 @@ def browser_disconnect():
     socket = request.sid
     events[socket].clear()  # stop stream (unset threading event to stop loop)
     del events[socket]      # remove this event from the index of events
-
-
-def encode_audio(database, stream_ids, socket):
-    """
-    Reads audio data from the database and encodes it,
-    ready to be sent to a browser.
-    Same arguments as run_video_stream
-    """
-    event = events[socket]
-    video_id = stream_ids.get('video')
-    audio_id = stream_ids.get('audio')
-
-    if not audio_id:
-        return
-
-    while event.is_set():
-        audio_data_dict = database.read_data(audio_id, max_time=10)
-        if audio_data_dict:
-            # put data in format able to be read by ffmpeg (2d numpy array)
-            data = audio_data_dict['data']
-            data = np.expand_dims(np.array(data, dtype='float32'), axis=1)
-            ffmpeg_process.stdin.write(data)  # feed raw data into ffmpeg
-            socketio.sleep(0.01)
-        else:
-            socketio.sleep(1)
 
 
 def run_stream(database, stream_ids, socket):
@@ -129,9 +92,14 @@ def run_stream(database, stream_ids, socket):
                 break
 
         if audio_id:
-            audio_data = ffmpeg_process.stdout.read(1024)
-            if not audio_data:
-                print("no encoded audio read from ffmpeg")
+            try:
+                audio_data_dict = database.read_data(audio_id, decode=False, max_time=10)
+                if audio_data_dict:
+                    audio_chunks = audio_data_dict['data']  # get list of unread data
+                    audio_data = b''.join(audio_chunks)  # concatenate all frames
+            except Exception as e:
+                print("Audio stream failed to read from database. {}".format(e))
+                break
 
         print('video:', len(video_data), 'audio:', len(audio_data))
 

@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import signal
-from time import sleep
+from time import sleep, time
 import json
 import inspect
 
@@ -10,6 +10,8 @@ from server.bokeh_layouts.eeg_layout import default_filter_widgets as EEG_FILTER
 from server.bokeh_layouts.eeg_layout import default_fourier_widgets as EEG_FOURIER_WIDGETS
 from server.bokeh_layouts.ecg_layout import default_filter_widgets as ECG_FILTER_WIDGETS
 from server.bokeh_layouts.ecg_layout import default_fourier_widgets as ECG_FOURIER_WIDGETS
+
+import ffmpeg
 
 
 class TestAnalyzer(Analyzer):
@@ -68,6 +70,43 @@ class AudioAnalyzer(Analyzer):
 
         self.database.write_data(self.id, data)  # write to new data column
         sleep(0.01)
+
+
+class AudioEncoder(Analyzer):
+    def start(self):
+        """ Get ID for audio stream"""
+        self.audio_id = self.targets['Audio 1']['Audio']['id']
+
+        # ffmpeg process to encode raw audio data into AAC format
+        self.ffmpeg_process = (
+            ffmpeg
+                .input('pipe:', format='f32le', ac=1)  # SoundDevice outputs Float-32, little endian by default.
+                .output('pipe:', format='adts')  # AAC format
+                .global_args("-loglevel", "quiet")
+                .run_async(pipe_stdin=True, pipe_stdout=True)  # run asynchronously and pipe from/to stdin/stdout
+        )
+
+    def loop(self):
+        """ Main execution loop """
+        data_dict = self.database.read_data(self.audio_id)
+        if data_dict:  # feed to ffmpeg
+            # put data in format able to be read by ffmpeg (2d numpy array)
+            data = data_dict['data']
+            data = np.expand_dims(np.array(data, dtype='float32'), axis=1)
+            self.ffmpeg_process.stdin.write(data)
+
+        # read from ffmpeg
+        encoded_audio = self.ffmpeg_process.stdout.read(1024)
+        data = {
+            'time': time(),  # just so redis is happt
+            'data': encoded_audio
+        }
+
+        if encoded_audio:
+            self.database.write_data(self.id, data)
+        else:
+            sleep(0.1)
+            return
 
 
 class FunctionAnalyzer(Analyzer):
