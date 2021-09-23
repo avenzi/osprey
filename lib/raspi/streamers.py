@@ -245,7 +245,7 @@ class AudioStreamer(Streamer):
                 'time': t,
                 'data': outdata,
             }
-            print(status)
+            print(status.input_overflow, status.input_underflow)
             self.database.write_data(self.id, data)
 
         # SoundDevice stream
