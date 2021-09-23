@@ -87,7 +87,7 @@ class AudioEncoder(Analyzer):
             .global_args("-loglevel", "quiet")
             .run_async(pipe_stdin=True, pipe_stdout=True)  # run asynchronously and pipe from/to stdin/stdout
         )
-        Thread(target=self.read_from_ffmpeg, args=(self,), daemon=False, name="FFMPEG READ").start()
+        Thread(target=self.read_from_ffmpeg, daemon=False, name="FFMPEG READ").start()
 
     def loop(self):
         """ Main execution loop """
@@ -97,7 +97,6 @@ class AudioEncoder(Analyzer):
             data = data_dict['data']
             data = np.expand_dims(np.array(data, dtype='float32'), axis=1)
             self.ffmpeg_process.stdin.write(data)
-            print('write to ffmpeg', len(data))
             sleep(0.01)
         else:
             sleep(0.2)
