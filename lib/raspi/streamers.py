@@ -245,6 +245,7 @@ class AudioStreamer(Streamer):
                 'time': t,
                 'data': outdata,
             }
+            print(num_frames)
             if status.input_overflow or status.input_underflow:
                 print('overflow:', status.input_overflow, 'underflow:', status.input_underflow)
             self.database.write_data(self.id, data)
