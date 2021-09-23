@@ -245,7 +245,7 @@ class AudioStreamer(Streamer):
                 'time': t,
                 'data': outdata,
             }
-            print(len(indata))
+            print(status)
             self.database.write_data(self.id, data)
 
         # SoundDevice stream
