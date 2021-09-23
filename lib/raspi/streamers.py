@@ -203,7 +203,7 @@ class AudioStreamer(Streamer):
         except:
             pass
 
-        self.sample_rate = 44100
+        self.sample_rate = 1000
         self.stream = None  # SoundDevice Stream object created in start() and closed in stop()
         self.last_block_time = None  # timestamp of last recorded audio block
 
@@ -250,7 +250,7 @@ class AudioStreamer(Streamer):
             self.database.write_data(self.id, data)
 
         # SoundDevice stream
-        self.stream = sd.InputStream(channels=1, callback=callback, samplerate=self.sample_rate, blocksize=10000)
+        self.stream = sd.InputStream(channels=1, callback=callback, samplerate=self.sample_rate, blocksize=1000)
         self.stream.start()
         self.start_time = time()
 
