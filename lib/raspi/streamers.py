@@ -224,7 +224,6 @@ class AudioStreamer(Streamer):
             """ Callback function for the sd.stream object """
             # indata is an array of arrays, where the second level arrays have indexes for each channel.
             # To feed this into the database, we must get rid of those second level arrays. (theres only one channel)
-            t0 = time()
             outdata = []
             for channels in indata:
                 outdata.append(channels[0])
@@ -232,12 +231,10 @@ class AudioStreamer(Streamer):
             if not self.last_block_time:
                 self.last_block_time = time()
                 return
-            t1 = time()
 
             # assign timestamps to all frames since last frame block time
             t = np.linspace(self.last_block_time*1000, time()*1000, num_frames)
             self.last_block_time = time()
-            t2 = time()
 
             # recording latency
             #print('latency', self.stream.latency)
@@ -249,12 +246,12 @@ class AudioStreamer(Streamer):
                 'time': t,
                 'data': outdata,
             }
-            t3 = time()
             if status.input_overflow or status.input_underflow:
                 print('overflow:', status.input_overflow, 'underflow:', status.input_underflow)
+            t3 = time()
             self.database.write_data(self.id, data)
             t4 = time()
-            print(num_frames, t1-t0, t2-t1, t3-t2, t4-t3)
+            print(num_frames, t4-t3)
 
         # SoundDevice stream
         self.stream = sd.InputStream(channels=1, callback=callback, samplerate=self.sample_rate, blocksize=self.blocksize)
