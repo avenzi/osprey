@@ -226,6 +226,7 @@ class AudioStreamer(Streamer):
             outdata = []
             for channels in indata:
                 outdata.append(channels[0])
+            print(len(indata), len(outdata))
 
             if not self.last_block_time:
                 self.last_block_time = time()
@@ -261,7 +262,6 @@ class AudioStreamer(Streamer):
         Extended from the base class in pi_lib.py
         """
         try:
-            t0 = time()
             self.stream.stop()
             self.stream.close()
         except:
