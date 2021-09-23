@@ -225,8 +225,8 @@ class AudioStreamer(Streamer):
             # To feed this into the database, we must get rid of those second level arrays. (theres only one channel)
             outdata = []
             for channels in indata:
+                print(len(channels))
                 outdata.append(channels[0])
-            print(len(indata), len(outdata))
 
             if not self.last_block_time:
                 self.last_block_time = time()
