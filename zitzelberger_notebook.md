@@ -33,6 +33,14 @@ By working on this project you are agreeing to abide by the following expectatio
 
 ### Daily Updates
 
+##### Sept 22nd, 2021:
+
+​	On Monday, Dr. Ghassemi instructed me to try and get a demonstration of allowing data transformation on the transmitted audio data. This has proven difficult, but not for any of the reasons I was expecting. First, I need to transmit the raw audio data instead of the encoded audio data. I can do this at a significantly downsampled rate to reduce the amount of data transmitted. Then, I need to use ffmpeg on the server side to encode it before sending it to the browser. In theory, this shouldn't change anything at all about the current streaming setup, it just puts me in a position to write a single Analyzer class that reads the raw audio data, transforms it in some way, then writes it back.
+
+​	The problem is that, for some reason, the audio is either corrupted or not being read correctly from the database. I can only hear fragments of noise, and what I hear is definitely not the sound I am making. I have been trying in vain for the last two days to figure this out but the problem is eluding me. I am most worried that it may be something to do with the fact that ffmpeg is now running on a different flavor of Linux (the ubuntu rather than Raspbian) and that it has some slight difference that I do not know about.
+
+I have created a bokeh visualization tool for the audio as well, in hopes that I could try to discern what is happening to the raw data. It didn't help much, but at least when I get this figured out I will have something to show for it that can be put into the paper, hopefully.
+
 ##### Sept 14th, 2021:
 
 ​	Today I'm trying to track down the problem of the browser freezing during video and audio streaming. It seems to happen very soon after viewing the stream, though sometimes it happens much later, so I think my original guess of a memory leak or full buffer is incorrect. 
@@ -47,10 +55,6 @@ By working on this project you are agreeing to abide by the following expectatio
 Also some options for AAC encoding to play with are here: https://ffmpeg.org/ffmpeg-codecs.html#Options-8. To see the average bitrate being transcoded by ffmpeg, comment out the like ```.global_args("-loglevel", "quiet")``` in the ffmpeg process definition in the AudioStreamer init method. This enables verbose logging mode, which displays a continuous bitrate measurement.
 
 ​	Also today I ran into that X11 issue again, even though I thought I had solved it by removing SoundFile from the project. After more searching, I found that PortAudio may be the cause, and it uses the DISPLAY environment variable to operate an X server. Simply unsetting this variable seemed to do the trick. Oh well.
-
-
-
-
 
 ##### Sept 9-11th, 2021:
 
