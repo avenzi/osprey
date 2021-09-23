@@ -219,7 +219,7 @@ class AudioStreamer(Streamer):
 
         import sounddevice as sd
 
-        def callback(indata, frames, block_time, status):
+        def callback(indata, num_frames, block_time, status):
             """ Callback function for the sd.stream object """
             # indata is an array of arrays, where the second level arrays have indexes for each channel.
             # To feed this into the database, we must get rid of those second level arrays. (theres only one channel)
@@ -227,20 +227,21 @@ class AudioStreamer(Streamer):
             for channels in indata:
                 outdata.append(channels[0])
 
-            # calculate time since last block (in seconds)
             if not self.last_block_time:
                 self.last_block_time = time()
                 return
 
-            t = np.linspace(self.last_block_time*1000, time()*1000, frames)
+            # assign timestamps to all frames since last frame block time
+            t = np.linspace(self.last_block_time*1000, time()*1000, num_frames)
             time_diff = time() - self.last_block_time
-            #fps = frames / time_diff
-            #spf = 1 / fps
             self.last_block_time = time()
 
+            # recording latency
             #print('latency', self.stream.latency)
+
+            # for some reason these metrics are broken
             #print(block_time.inputBufferAdcTime, block_time.outputBufferDacTime, block_time.currentTime)
-            print(time_diff, t[-1]-t[0])
+            print(time_diff*1000, t[-1]-t[0])
 
             data = {
                 'time': t,
