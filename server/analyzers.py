@@ -82,8 +82,8 @@ class AudioEncoder(Analyzer):
         # ffmpeg process to encode raw audio data into AAC format
         self.ffmpeg_process = (
             ffmpeg
-            .input('pipe:', format='f32le', ac=1)  # SoundDevice outputs Float-32, little endian by default.
-            .output('pipe:', format='adts')  # AAC format
+            .input('pipe:', format='f32le', ar=8000, ac=1)  # SoundDevice outputs Float-32, little endian by default.
+            .output('pipe:', format='adts', ar=8000)  # AAC format
             #.global_args("-loglevel", "quiet")
             .run_async(pipe_stdin=True, pipe_stdout=True)  # run asynchronously and pipe from/to stdin/stdout
         )
