@@ -132,8 +132,6 @@ def run_stream(database, stream_ids, socket):
             audio_data = ffmpeg_process.stdout.read(1024)
             if not audio_data:
                 print("no encoded audio read from ffmpeg")
-                socketio.sleep(1)
-                return
 
         print('video:', len(video_data), 'audio:', len(audio_data))
 
