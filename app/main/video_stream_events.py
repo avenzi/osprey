@@ -77,10 +77,9 @@ def run_stream(database, stream_ids, socket):
     event = events[socket]
     video_id = stream_ids.get('video')
     audio_id = stream_ids.get('audio')
-    video_data = b''
-    audio_data = b''
 
     while event.is_set():  # while event is set (while socket is connected)
+        video_data = b''
         if video_id:
             try:
                 video_data_dict = database.read_data(video_id, decode=False, max_time=10)
@@ -91,6 +90,7 @@ def run_stream(database, stream_ids, socket):
                 print("Video stream failed to read from database. {}".format(e))
                 break
 
+        audio_data = b''
         if audio_id:
             try:
                 audio_data_dict = database.read_data(audio_id, decode=False, max_time=10)
