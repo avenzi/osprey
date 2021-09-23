@@ -205,6 +205,7 @@ class AudioStreamer(Streamer):
 
         self.sample_rate = 10000
         self.stream = None  # SoundDevice Stream object created in start() and closed in stop()
+        self.last_block_time = None  # timestamp of last recorded audio block
 
     def loop(self):
         sleep(1)
@@ -232,7 +233,8 @@ class AudioStreamer(Streamer):
             begin = end - time_diff
 
             t = np.linspace(begin*1000, end*1000, frames)
-            print(len(t), t[:10], t[-10:])
+            print(block_time.inputBufferAdcTime, block_time.outputBufferDacTime, block_time.currentTime)
+            #print(len(t), t[:10], t[-10:])
 
             data = {
                 'time': t,
