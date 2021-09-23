@@ -75,6 +75,7 @@ class AudioAnalyzer(Analyzer):
 class AudioEncoder(Analyzer):
     def start(self):
         """ Get ID for audio stream"""
+        print('STARTED AUDIO ENCODER')
         self.audio_id = self.targets['Audio 1']['Audio']['id']
 
         # ffmpeg process to encode raw audio data into AAC format
