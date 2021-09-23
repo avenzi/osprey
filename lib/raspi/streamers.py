@@ -234,14 +234,17 @@ class AudioStreamer(Streamer):
                 self.last_block_time = time()
                 time_diff = None
 
+            self.last_block_time = time()
+
             frame_time = frames / self.sample_rate
 
-            t = np.linspace(self.last_block_time*1000, time(), frames)
-            print('lat', self.stream.latency)
+            t = np.linspace(self.last_block_time*1000, time()*1000, frames)
+            print('latency', self.stream.latency)
             print(block_time.inputBufferAdcTime, block_time.outputBufferDacTime, block_time.currentTime)
             print('time diff', time_diff)
             print('frame time', frame_time)
             #print(len(t), t[:10], t[-10:])
+            print()
 
             data = {
                 'time': t,
