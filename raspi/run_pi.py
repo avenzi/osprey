@@ -9,7 +9,7 @@ synth1eeg = SynthEEGStreamer('Raw', 'Synth EEG 1')
 
 video = VideoStreamer('Video', 'Video 1')
 
-audio = AudioStreamer('Audio', 'Audio 1')
+audio = AudioStreamer('Audio', 'Video 1')
 
 sense = SenseStreamer('Raw', 'Sense Hat 1')
 

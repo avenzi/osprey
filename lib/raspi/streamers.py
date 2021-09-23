@@ -233,7 +233,6 @@ class AudioStreamer(Streamer):
 
             # assign timestamps to all frames since last frame block time
             t = np.linspace(self.last_block_time*1000, time()*1000, num_frames)
-            time_diff = time() - self.last_block_time
             self.last_block_time = time()
 
             # recording latency
@@ -241,7 +240,6 @@ class AudioStreamer(Streamer):
 
             # for some reason these metrics are broken
             #print(block_time.inputBufferAdcTime, block_time.outputBufferDacTime, block_time.currentTime)
-            print(time_diff*1000, t[-1]-t[0])
 
             data = {
                 'time': t,
