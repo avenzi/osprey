@@ -228,10 +228,10 @@ class AudioStreamer(Streamer):
 
             # calculate timestamps for each audio sample
             time_diff = block_time.currentTime - block_time.inputBufferAdcTime
-            end = time()*1000
+            end = time()
             begin = end - time_diff
 
-            t = np.linspace(begin, end, frames)
+            t = np.linspace(begin*1000, end*1000, frames)
 
             data = {
                 'time': t,
