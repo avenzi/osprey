@@ -4,6 +4,8 @@ from time import sleep, time
 import json
 import inspect
 
+from threading import Thread
+
 from lib.lib import Analyzer
 from lib.utils import MovingAverage
 from server.bokeh_layouts.eeg_layout import default_filter_widgets as EEG_FILTER_WIDGETS
@@ -85,33 +87,36 @@ class AudioEncoder(Analyzer):
             .global_args("-loglevel", "quiet")
             .run_async(pipe_stdin=True, pipe_stdout=True)  # run asynchronously and pipe from/to stdin/stdout
         )
+        Thread(target=self.read_from_ffmpeg, args=(self,), daemon=False, name="FFMPEG READ").start()
 
     def loop(self):
         """ Main execution loop """
-        print('gonna read from database', self.audio_id)
         data_dict = self.database.read_data(self.audio_id)
-        print('read from database')
         if data_dict:  # feed to ffmpeg
             # put data in format able to be read by ffmpeg (2d numpy array)
             data = data_dict['data']
             data = np.expand_dims(np.array(data, dtype='float32'), axis=1)
             self.ffmpeg_process.stdin.write(data)
             print('write to ffmpeg', len(data))
+            sleep(0.01)
+        else:
+            sleep(0.2)
 
-        # read from ffmpeg
-        encoded_audio = self.ffmpeg_process.stdout.read(1024)
+    def read_from_ffmpeg(self):
+        """ Meant to be run on a seaprate thread. Write encoded audio to the database """
+        encoded_audio = self.ffmpeg_process.stdout.read(256)
+        if not encoded_audio:
+            sleep(1)
+            return
+
         print('received encoded', len(encoded_audio))
         data = {
-            'time': time(),  # just so redis is happt
+            'time': time(),  # just so redis is happy
             'data': encoded_audio
         }
 
-        if encoded_audio:
-            self.database.write_data(self.id, data)
-            print('written encoded', len(data))
-        else:
-            sleep(0.1)
-            return
+        self.database.write_data(self.id, data)
+        print('written encoded', len(data))
 
 
 class FunctionAnalyzer(Analyzer):
