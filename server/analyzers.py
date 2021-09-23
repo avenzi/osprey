@@ -103,7 +103,7 @@ class AudioEncoder(Analyzer):
     def read_from_ffmpeg(self):
         """ Meant to be run on a seaprate thread. Write encoded audio to the database """
         while not self.exit:
-            encoded_audio = self.ffmpeg_process.stdout.read(256)
+            encoded_audio = self.ffmpeg_process.stdout.read(1024)
             if not encoded_audio:
                 sleep(1)
                 continue
