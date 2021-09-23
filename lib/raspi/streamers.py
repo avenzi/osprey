@@ -203,7 +203,7 @@ class AudioStreamer(Streamer):
         except:
             pass
 
-        self.sample_rate = 10000
+        self.sample_rate = 44100
         self.stream = None  # SoundDevice Stream object created in start() and closed in stop()
         self.last_block_time = None  # timestamp of last recorded audio block
 
@@ -243,10 +243,9 @@ class AudioStreamer(Streamer):
             print('latency', self.stream.latency)
             print(block_time.inputBufferAdcTime, block_time.outputBufferDacTime, block_time.currentTime)
             print('time diff', time_diff)
-            print('frame time', frame_time)
-            print('calc diff', frames * frame_time)
-            print('calc fps', 1/(frames * frame_time))
-            #print(len(t), t[:10], t[-10:])
+            print('samp frame time', frames / self.sample_rate)
+            print('actu fps', frames / time_diff)
+            print(len(t), t[:4], t[-4:])
             print()
 
             data = {
