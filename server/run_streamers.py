@@ -22,7 +22,7 @@ t2func.target('Random 2')
 t2func.target('Random 1')
 
 video1 = AudioAnalyzer('Transformed Audio', 'Audio 1')
-video1.target('Audio', 'Video 1')
+video1.target('Audio')
 
 # Synthetic EEG stream #1
 synth1filt = EEGFilter('Filtered', 'Synth EEG 1')

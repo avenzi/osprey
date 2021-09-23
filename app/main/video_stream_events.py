@@ -91,8 +91,9 @@ def encode_audio(database, stream_ids, socket):
         return
 
     while event.is_set():
-        audio_data_dict = database.read_data(audio_id)
+        audio_data_dict = database.read_data(audio_id, max_time=10)
         if audio_data_dict:
+            print(audio_data_dict['time'][:10])
             # put data in format able to be read by ffmpeg (2d numpy array)
             data = audio_data_dict['data']
             data = np.expand_dims(np.array(data, dtype='float32'), axis=1)

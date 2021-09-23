@@ -232,6 +232,7 @@ class AudioStreamer(Streamer):
             begin = end - time_diff
 
             t = np.linspace(begin*1000, end*1000, frames)
+            print(len(t), t[:10], t[-10:])
 
             data = {
                 'time': t,
