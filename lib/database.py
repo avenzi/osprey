@@ -628,6 +628,39 @@ class Database:
         return result
 
     @catch_database_errors
+    def _downsample(self, stream, last_id, max_id):
+        """
+        Returns the raw redis response from <last_id> to <max_id> (not including last_id),
+            but downsampled to a maximum of 100Hz
+        Not meant to be called directly. Used by other read_data() methods.
+        Assumes that the bookmark for this stream already exists and it's lock has been acquired.
+        Assumes that normal redis is being used (not bytes_redis).
+        """
+        # integer milliseconds of the given redis IDs
+        last_id_time = self.redis_to_time(last_id)
+        max_id_time = self.redis_to_time(max_id)
+
+        # for 100Hz, each data chunk is 10ms
+        bucket_size = 10
+
+        pipe = self.redis.pipeline()  # pipeline queues a series of commands at once
+        while last_id_time < max_id_time:
+            start_id = self.time_to_redis(last_id_time)  # start of bucket range
+            last_id_time += bucket_size  # increment by bucket size
+            end_id = self.time_to_redis(last_id_time)  # end of bucket range
+            pipe.xrevrange('stream:'+stream, min='('+start_id, max=end_id, count=1)  # read last item in range
+
+        # list of lists of tuples
+        raw_response = pipe.execute()
+        response = []
+        for lst in raw_response:
+            if lst:  # pick out only results with data
+                response.append(lst[0])  # put the single data point into the response list
+
+        # response is now in same format as if read by a single XRANGE command
+        return response
+
+    @catch_database_errors
     def set_info(self, key, data):
         """
         Writes <data> to info:<key>
@@ -1177,13 +1210,8 @@ class PlaybackDatabase(ServerDatabase):
         If no 'sample_rate' key is found for this stream, assumes 100Hz.
             - This will over-downsample streams over 100Hz,
                 under-downsample streams between 100Hz/playback_speed and 100Hz,
-                and streams under 100Hz/playbackspeed will be unaffected.
+                and streams under 100Hz/playbackspeed will be unaffected (I think).
         """
-        # TODO: implement downsampling even for live reading. This would require setting some
-        #  kind of frequency cap that downsamples anything above like 10x that cap down to that cap.
-        #  (because downsampling something only 2x the cap is inefficient since I would then be
-        #  manually reading every other data point). This is simple, you just gotta know the sample rate
-        #  to make that decision.
         bookmark = self.bookmarks[stream]
         if not bookmark.sample_rate:  # if no sample rate, find it
             bookmark.sample_rate = self.get_info(stream, 'sample_rate')

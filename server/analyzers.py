@@ -139,7 +139,7 @@ class AudioDecoder(Analyzer):
             ffmpeg
             .input('pipe:', format='aac')  # AAC format
             .output('pipe:', format='f32le', ar=8000, ac=1)  # output Float-32, little endian
-            #.global_args("-loglevel", "quiet")
+            .global_args("-loglevel", "quiet")
             .run_async(pipe_stdin=True, pipe_stdout=True)  # run asynchronously and pipe from/to stdin/stdout
         )
         Thread(target=self.read_from_ffmpeg, daemon=False, name="FFMPEG DECODE").start()
@@ -192,7 +192,8 @@ class AudioAnalyzer(Analyzer):
             sleep(1)
             return
 
-        #print('analyzer', len(data['data']))
+        audio = np.array(data['data'])
+        data['data'] = audio*5
 
         self.database.write_data(self.id, data)  # write to new data column
         sleep(0.01)

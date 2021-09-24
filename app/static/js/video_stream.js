@@ -63,7 +63,7 @@ function start_stream(info) {
         //mode: 'video',  // video and audio, default is both
         //flushingTime: 0,
         fps: info.framerate,
-        debug: true
+        debug: false
     });
 
     // feed received bytes data into jmuxer
