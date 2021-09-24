@@ -454,7 +454,16 @@ class Database:
                     new_last_time = self.redis_to_time(last_read_id) + (time_since_last-max_time*1000)
                     last_read_id = self.time_to_redis(new_last_time)  # convert back to redis timestamp
 
-                response = red.xread({'stream:' + stream: last_read_id})
+                if downsample:  # get downsampled response
+                    # calculate max ID by how much real time has passed between now and beginning (ms)
+                    first_read_id = bookmark.first_id  # first read ID
+                    first_read_time = bookmark.first_time  # first read real time
+                    time_since_first = self.time() - first_read_time  # time diff until now
+                    max_timestamp = self.redis_to_time(first_read_id) + time_since_first  # redis timestamp max time
+                    max_read_id = self.time_to_redis(max_timestamp)  # redis timestamp max ID
+                    response = self._downsample(stream, last_read_id, max_read_id)
+                else:
+                    response = red.xread({'stream:' + stream: last_read_id})
             else:  # no last read spot exists.
                 response = red.xread({'stream:' + stream: '$'}, block=1000)  # read new data only
 

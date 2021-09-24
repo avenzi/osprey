@@ -214,7 +214,7 @@ class AudioStreamer(Streamer):
             ffmpeg
             .input('pipe:', format='f32le', ar=8000, ac=1)  # SoundDevice outputs Float-32, little endian by default.
             .output('pipe:', format='adts', ar=8000)  # AAC format
-            #.global_args("-loglevel", "quiet")
+            .global_args("-loglevel", "quiet")
             .run_async(pipe_stdin=True, pipe_stdout=True)  # run asynchronously and pipe from/to stdin/stdout
         )
 
