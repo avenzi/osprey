@@ -423,7 +423,6 @@ class Database:
             If False, only values will remain as bytes. Keys will still be decoded.
         <to_json> whether to convert to json string. if False, uses dictionary of lists.
         """
-        # TODO: downsampling for live data (see downsampling implemented for playback data)
         if stream is None:
             return
 
@@ -481,7 +480,7 @@ class Database:
             return None
 
         # If count is given (or downsampled) XRANGE is used, which gives a list of data points
-        #   this means that the data is stored in response.
+        #   this means that the expected data format is stored in response.
         # If no count is given and not downsampled, XREAD is used, which gives a list of tuples
         #   (one for each stream read from), each of which contains a list of data points. But since
         #   we are only reading from one stream, the data is stored in response[0][1].
@@ -659,7 +658,7 @@ class Database:
         max_id_time = self.redis_to_time(max_id)
 
         # for 100Hz, each data chunk is 10ms
-        bucket_size = 10
+        bucket_size = 10  # bucket size in ms
 
         pipe = self.redis.pipeline()  # pipeline queues a series of commands at once
         while last_id_time < max_id_time:
