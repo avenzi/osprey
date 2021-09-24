@@ -7,7 +7,7 @@ from server.bokeh_layouts.utils import time_format, plot_sliding_js, plot_priori
 
 def create_layout(info):
     source = AjaxDataSource(
-        data_url='/stream/update?id={}'.format(info['Audio']['id']),
+        data_url='/stream/update?id={}'.format(info['Decoded Audio']['id']),
         method='GET',
         polling_interval=1000,  # in milliseconds
         mode='append',  # append to existing data

@@ -86,7 +86,6 @@ class FunctionAnalyzer(Analyzer):
         for name, target in self.targets[self.group].items():
             data = self.database.read_data(target['id'])
             if not data:  # if no data read, wait half a sec to loop again
-                print('no data from rand fun analyzer')
                 sleep(1)
                 return
 
