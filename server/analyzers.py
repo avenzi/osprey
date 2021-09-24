@@ -166,7 +166,6 @@ class AudioDecoder(Analyzer):
 
             # data still in bytes - convert to float32 numpy array
             audio_array = np.frombuffer(decoded_audio, np.float32)
-            print(len(audio_array), type(audio_array[0]))
 
             if not self.last_block_time:
                 self.last_block_time = time()
@@ -181,7 +180,6 @@ class AudioDecoder(Analyzer):
                 'data': audio_array,
             }
             self.database.write_data(self.id, data)
-            print('wrote decoded audio to database')
 
 
 class AudioAnalyzer(Analyzer):
