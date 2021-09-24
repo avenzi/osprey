@@ -153,7 +153,7 @@ class AudioDecoder(Analyzer):
             self.ffmpeg_process.stdin.write(audio_data)
             print('received encoded audio', len(audio_data))
         else:
-            sleep(0.2)
+            sleep(0.1)
 
     def read_from_ffmpeg(self):
         """ Meant to be run on a seaprate thread. Write decoded audio to the database """
@@ -166,11 +166,11 @@ class AudioDecoder(Analyzer):
 
             # data still in bytes - convert to float32 numpy array
             audio_array = np.frombuffer(decoded_audio, np.float32)
-            print(len(decoded_audio), type(decoded_audio[0]))
+            print(len(audio_array), type(audio_array[0]))
 
             if not self.last_block_time:
                 self.last_block_time = time()
-                return
+                continue
 
             # assign timestamps to all frames since last frame block time
             t = np.linspace(self.last_block_time*1000, time()*1000, len(audio_array))
