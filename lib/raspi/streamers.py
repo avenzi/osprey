@@ -208,6 +208,16 @@ class AudioStreamer(Streamer):
         self.stream = None  # SoundDevice Stream object created in start() and closed in stop()
         self.last_block_time = None  # timestamp of last recorded audio block
 
+        import ffmpeg
+
+        self.ffmpeg_process = (
+            ffmpeg
+            .input('pipe:', format='f32le', ar=8000, ac=1)  # SoundDevice outputs Float-32, little endian by default.
+            .output('pipe:', format='adts', ar=8000)  # AAC format
+            #.global_args("-loglevel", "quiet")
+            .run_async(pipe_stdin=True, pipe_stdout=True)  # run asynchronously and pipe from/to stdin/stdout
+        )
+
     def loop(self):
         sleep(1)
 
@@ -220,7 +230,7 @@ class AudioStreamer(Streamer):
 
         import sounddevice as sd
 
-        def callback(indata, num_frames, block_time, status):
+        def asdasd(indata, num_frames, block_time, status):
             """ Callback function for the sd.stream object """
             # indata is an array of arrays, where the second level arrays have indexes for each channel.
             # To feed this into the database, we must get rid of those second level arrays. (theres only one channel)
@@ -253,13 +263,24 @@ class AudioStreamer(Streamer):
             t4 = time()
             print(num_frames, t4-t3)
 
+        def callback(indata, frames, block_time, status):
+            """ Callback function for the sd.stream object """
+            # get real time from relative port_audio_time
+            # time since data was taken
+            # time_diff = block_time.currentTime - block_time.inputBufferAdcTime
+            # abs_time = time() - time_diff  # get epoch time
+            # temporary - just to make timestamp array same size as data array
+            # t = [abs_time] * frames
+            self.ffmpeg_process.stdin.write(indata)  # write data to ffmpeg process
+
         # SoundDevice stream
-        self.stream = sd.InputStream(channels=1, callback=callback, samplerate=self.sample_rate, blocksize=self.blocksize)
+        self.stream = sd.InputStream(channels=1, callback=callback, samplerate=self.sample_rate)
         self.stream.start()
         self.start_time = time()
 
         # info to send to database
         self.info['sample_rate'] = self.sample_rate
+
 
     def stop(self):
         """
