@@ -11,7 +11,7 @@ def create_layout(info):
         method='GET',
         polling_interval=1000,  # in milliseconds
         mode='append',  # append to existing data
-        max_size=10000,  # Keep last 1000 data points
+        max_size=500,  # Keep last 1000 data points
         if_modified=True)  # if_modified ignores responses sent with code 304 and not cached.
 
     transformed_source = AjaxDataSource(
@@ -19,7 +19,7 @@ def create_layout(info):
         method='GET',
         polling_interval=1000,  # in milliseconds
         mode='append',  # append to existing data
-        max_size=10000,  # Keep last 1000 data points
+        max_size=500,  # Keep last 1000 data points
         if_modified=True)  # if_modified ignores responses sent with code 304 and not cached.
 
     fig = figure(title='Audio Waveform', x_axis_label='time', y_axis_label='value', toolbar_location=None, plot_width=1200, plot_height=300)
