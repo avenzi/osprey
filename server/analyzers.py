@@ -146,7 +146,7 @@ class AudioDecoder(Analyzer):
 
     def loop(self):
         """ Main execution loop """
-        data_dict = self.database.read_data(self.audio_id)
+        data_dict = self.database.read_data(self.audio_id, decode=False)
         if data_dict:  # feed encoded audio to ffmpeg
             self.ffmpeg_process.stdin.write(data_dict['data'])
         else:

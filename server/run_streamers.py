@@ -27,7 +27,7 @@ decoder1 = AudioDecoder('Decoded Audio', 'Audio 1')
 decoder1.target('Audio')
 
 audio1 = AudioAnalyzer('Transformed Audio', 'Audio 1')
-audio1.target('Audio')
+audio1.target('Decoded Audio')
 
 encoder1 = AudioEncoder('Encoded Audio', 'Video 1')
 encoder1.target('Transformed Audio', 'Audio 1')
