@@ -219,7 +219,19 @@ class AudioStreamer(Streamer):
         )
 
     def loop(self):
-        sleep(1)
+        """ Main execution loop """
+        audio_data = self.ffmpeg_process.stdout.read(1024)
+        if not audio_data:
+            sleep(1)
+
+        # todo: this time is not the time the sample was taken, but rather the time that
+        #  the data was read out of the audio buffer, which can be up to a second behind.
+        data = {
+            'time': time() * 1000,
+            'data': audio_data,
+        }
+        self.database.write_data(self.id, data)
+        sleep(0.01)
 
     def start(self):
         """
@@ -230,39 +242,6 @@ class AudioStreamer(Streamer):
 
         import sounddevice as sd
 
-        def asdasd(indata, num_frames, block_time, status):
-            """ Callback function for the sd.stream object """
-            # indata is an array of arrays, where the second level arrays have indexes for each channel.
-            # To feed this into the database, we must get rid of those second level arrays. (theres only one channel)
-            outdata = []
-            for channels in indata:
-                outdata.append(channels[0])
-
-            if not self.last_block_time:
-                self.last_block_time = time()
-                return
-
-            # assign timestamps to all frames since last frame block time
-            t = np.linspace(self.last_block_time*1000, time()*1000, num_frames)
-            self.last_block_time = time()
-
-            # recording latency
-            #print('latency', self.stream.latency)
-
-            # for some reason these metrics are broken
-            #print(block_time.inputBufferAdcTime, block_time.outputBufferDacTime, block_time.currentTime)
-
-            data = {
-                'time': t,
-                'data': outdata,
-            }
-            if status.input_overflow or status.input_underflow:
-                print('overflow:', status.input_overflow, 'underflow:', status.input_underflow)
-            t3 = time()
-            self.database.write_data(self.id, data)
-            t4 = time()
-            print(num_frames, t4-t3)
-
         def callback(indata, frames, block_time, status):
             """ Callback function for the sd.stream object """
             # get real time from relative port_audio_time
@@ -271,6 +250,8 @@ class AudioStreamer(Streamer):
             # abs_time = time() - time_diff  # get epoch time
             # temporary - just to make timestamp array same size as data array
             # t = [abs_time] * frames
+            if status.input_overflow or status.input_underflow:
+                print('overflow:', status.input_overflow, 'underflow:', status.input_underflow)
             self.ffmpeg_process.stdin.write(indata)  # write data to ffmpeg process
 
         # SoundDevice stream
@@ -280,7 +261,6 @@ class AudioStreamer(Streamer):
 
         # info to send to database
         self.info['sample_rate'] = self.sample_rate
-
 
     def stop(self):
         """

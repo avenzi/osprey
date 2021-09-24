@@ -55,65 +55,6 @@ class TestAnalyzer(Analyzer):
 
         sleep(0.5)
 
-
-class AudioAnalyzer(Analyzer):
-    def start(self):
-        """ Get ID for audio stream"""
-        self.audio_id = self.targets['Audio 1']['Audio']['id']
-
-    def loop(self):
-        """ Main execution loop """
-        data = self.database.read_data(self.audio_id)  # read raw audio data
-        if not data:
-            sleep(1)
-            return
-
-        #print('analyzer', len(data['data']))
-
-        self.database.write_data(self.id, data)  # write to new data column
-        sleep(0.01)
-
-
-class AudioEncoder(Analyzer):
-    def start(self):
-        """ Get ID for audio stream"""
-        self.audio_id = self.targets['Audio 1']['Audio']['id']
-
-        # ffmpeg process to encode raw audio data into AAC format
-        self.ffmpeg_process = (
-            ffmpeg
-            .input('pipe:', format='f32le', ar=8000, ac=1)  # SoundDevice outputs Float-32, little endian by default.
-            .output('pipe:', format='adts', ar=8000)  # AAC format
-            #.global_args("-loglevel", "quiet")
-            .run_async(pipe_stdin=True, pipe_stdout=True)  # run asynchronously and pipe from/to stdin/stdout
-        )
-        Thread(target=self.read_from_ffmpeg, daemon=False, name="FFMPEG READ").start()
-
-    def loop(self):
-        """ Main execution loop """
-        data_dict = self.database.read_data(self.audio_id)
-        if data_dict:  # feed to ffmpeg
-            # put data in format able to be read by ffmpeg (2d numpy array)
-            data = data_dict['data']
-            data = np.expand_dims(np.array(data, dtype='float32'), axis=1)
-            self.ffmpeg_process.stdin.write(data)
-        else:
-            sleep(0.2)
-
-    def read_from_ffmpeg(self):
-        """ Meant to be run on a seaprate thread. Write encoded audio to the database """
-        while not self.exit:
-            encoded_audio = self.ffmpeg_process.stdout.read(1024)
-            if not encoded_audio:
-                sleep(0.1)
-                continue
-            data = {
-                'time': time(),  # just so redis is happy
-                'data': encoded_audio
-            }
-            self.database.write_data(self.id, data)
-
-
 class FunctionAnalyzer(Analyzer):
     """ Analyzer for running data through arbitrary python functions stored in local/pipelines/ """
     def __init__(self, *args):
@@ -182,6 +123,119 @@ class FunctionAnalyzer(Analyzer):
 
         function_names = [func[0] for func in self.functions]
         self.database.set_info(self.id, {'pipeline': json.dumps(function_names)})  # save in database
+
+
+#############
+# Audio stuff
+
+class AudioDecoder(Analyzer):
+    def start(self):
+        """ Get ID for audio stream"""
+        self.audio_id = self.targets['Audio 1']['Audio']['id']
+        self.last_block_time = None
+
+        # ffmpeg process to encode raw audio data into AAC format
+        self.ffmpeg_process = (
+            ffmpeg
+            .input('pipe:', format='adts', ar=8000)  # AAC format
+            .output('pipe:', format='f32le', ar=8000, ac=1)  # output Float-32, little endian
+            #.global_args("-loglevel", "quiet")
+            .run_async(pipe_stdin=True, pipe_stdout=True)  # run asynchronously and pipe from/to stdin/stdout
+        )
+        Thread(target=self.read_from_ffmpeg, daemon=False, name="FFMPEG DECODE").start()
+
+    def loop(self):
+        """ Main execution loop """
+        data_dict = self.database.read_data(self.audio_id)
+        if data_dict:  # feed encoded audio to ffmpeg
+            self.ffmpeg_process.stdin.write(data_dict['data'])
+        else:
+            sleep(0.2)
+
+    def read_from_ffmpeg(self):
+        """ Meant to be run on a seaprate thread. Write decoded audio to the database """
+        while not self.exit:
+            decoded_audio = self.ffmpeg_process.stdout.read(1024)
+            if not decoded_audio:
+                sleep(0.1)
+                continue
+
+            print(decoded_audio)
+            outdata = []
+            for channels in decoded_audio:
+                outdata.append(channels[0])
+
+            if not self.last_block_time:
+                self.last_block_time = time()
+                return
+
+            # assign timestamps to all frames since last frame block time
+            t = np.linspace(self.last_block_time * 1000, time() * 1000, len(outdata))
+            self.last_block_time = time()
+
+            data = {
+                'time': t,
+                'data': outdata,
+            }
+            self.database.write_data(self.id, data)
+
+
+class AudioAnalyzer(Analyzer):
+    def start(self):
+        """ Get ID for audio stream"""
+        self.audio_id = self.targets['Audio 1']['Decoded Audio']['id']
+
+    def loop(self):
+        """ Main execution loop """
+        data = self.database.read_data(self.audio_id)  # read raw audio data
+        if not data:
+            sleep(1)
+            return
+
+        #print('analyzer', len(data['data']))
+
+        self.database.write_data(self.id, data)  # write to new data column
+        sleep(0.01)
+
+
+class AudioEncoder(Analyzer):
+    def start(self):
+        """ Get ID for audio stream"""
+        self.audio_id = self.targets['Audio 1']['Transformed Audio']['id']
+
+        # ffmpeg process to encode raw audio data into AAC format
+        self.ffmpeg_process = (
+            ffmpeg
+            .input('pipe:', format='f32le', ar=8000, ac=1)  # SoundDevice outputs Float-32, little endian by default.
+            .output('pipe:', format='adts', ar=8000)  # AAC format
+            .global_args("-loglevel", "quiet")
+            .run_async(pipe_stdin=True, pipe_stdout=True)  # run asynchronously and pipe from/to stdin/stdout
+        )
+        Thread(target=self.read_from_ffmpeg, daemon=False, name="FFMPEG ENCODE").start()
+
+    def loop(self):
+        """ Main execution loop """
+        data_dict = self.database.read_data(self.audio_id)
+        if data_dict:  # feed to ffmpeg
+            # put data in format able to be read by ffmpeg (2d numpy array)
+            data = data_dict['data']
+            data = np.expand_dims(np.array(data, dtype='float32'), axis=1)
+            self.ffmpeg_process.stdin.write(data)
+        else:
+            sleep(0.2)
+
+    def read_from_ffmpeg(self):
+        """ Meant to be run on a seaprate thread. Write encoded audio to the database """
+        while not self.exit:
+            encoded_audio = self.ffmpeg_process.stdout.read(1024)
+            if not encoded_audio:
+                sleep(0.1)
+                continue
+            data = {
+                'time': time(),  # just so redis is happy
+                'data': encoded_audio
+            }
+            self.database.write_data(self.id, data)
 
 
 ########################
