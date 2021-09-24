@@ -146,14 +146,12 @@ class AudioDecoder(Analyzer):
 
     def loop(self):
         """ Main execution loop """
-        print('gonna receive encoded from pi')
         data_dict = self.database.read_data(self.audio_id, decode=False)
-        print('read received audio from database')
         if data_dict:  # feed encoded audio to ffmpeg
             audio_chunks = data_dict['data']  # get list of unread data
             audio_data = b''.join(audio_chunks)  # concatenate all frames
             self.ffmpeg_process.stdin.write(audio_data)
-            print('wrote received encoded audio', len(audio_data))
+            print('received encoded audio', len(audio_data))
         else:
             sleep(0.2)
 
@@ -166,9 +164,9 @@ class AudioDecoder(Analyzer):
                 sleep(0.1)
                 continue
 
-            print(len(decoded_audio), type(decoded_audio[9]))
             # data still in bytes - convert to float32 numpy array
             audio_array = np.frombuffer(decoded_audio, np.float32)
+            print(len(decoded_audio), type(decoded_audio[0]))
 
             if not self.last_block_time:
                 self.last_block_time = time()
