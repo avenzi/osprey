@@ -447,6 +447,7 @@ class Database:
                 # set first-read info
                 first_read = red.xrange('stream:' + stream, count=1)  # read first data point
                 if not first_read:
+                    bookmark.release()  # release lock
                     print('nothing from first read', stream)
                     return
                 bookmark.first_time = self.start_time  # set first time to start of stream
@@ -1103,6 +1104,7 @@ class PlaybackDatabase(ServerDatabase):
         if not bookmark.last_id or not bookmark.last_time:  # no last read spot exists
             first_read = red.xrange('stream:' + stream, count=1)  # read first data point
             if not first_read:
+                bookmark.release()  # release lock
                 return
             # set first-read info
             bookmark.first_time = self.start_time  # set first time to start of stream

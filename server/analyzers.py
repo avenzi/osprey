@@ -55,6 +55,7 @@ class TestAnalyzer(Analyzer):
 
         sleep(0.5)
 
+
 class FunctionAnalyzer(Analyzer):
     """ Analyzer for running data through arbitrary python functions stored in local/pipelines/ """
     def __init__(self, *args):
@@ -85,6 +86,8 @@ class FunctionAnalyzer(Analyzer):
         for name, target in self.targets[self.group].items():
             data = self.database.read_data(target['id'])
             if not data:  # if no data read, wait half a sec to loop again
+                print('no data from rand fun analyzer')
+                sleep(1)
                 return
 
             for func in self.functions:  # for each pipeline function
