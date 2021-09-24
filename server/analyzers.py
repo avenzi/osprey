@@ -163,7 +163,9 @@ class AudioDecoder(Analyzer):
                 continue
 
             print(len(decoded_audio))
+            # data still in bytes - convert to float32 numpy array
             audio_array = np.frombuffer(decoded_audio, np.float32)
+            print(audio_array)
 
             if not self.last_block_time:
                 self.last_block_time = time()
