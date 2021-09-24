@@ -480,12 +480,12 @@ class Database:
             bookmark.release()  # release lock
             return None
 
-        # If count is given XRANGE is used, which gives a list of data points
+        # If count is given (or downsampled) XRANGE is used, which gives a list of data points
         #   this means that the data is stored in response.
-        # If no count is given, XREAD is used, which gives a a list of tuples
+        # If no count is given and not downsampled, XREAD is used, which gives a list of tuples
         #   (one for each stream read from), each of which contains a list of data points. But since
         #   we are only reading from one stream, the data is stored in response[0][1].
-        if not count:
+        if not count and not downsample:
             response = response[0][1]
 
         # set last-read info
