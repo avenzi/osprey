@@ -151,14 +151,12 @@ class AudioDecoder(Analyzer):
             audio_chunks = data_dict['data']  # get list of unread data
             audio_data = b''.join(audio_chunks)  # concatenate all frames
             self.ffmpeg_process.stdin.write(audio_data)
-            print('received encoded audio', len(audio_data))
         else:
             sleep(0.1)
 
     def read_from_ffmpeg(self):
         """ Meant to be run on a seaprate thread. Write decoded audio to the database """
         while not self.exit:
-            print('gonna read from ffmpeg decoder')
             decoded_audio = self.ffmpeg_process.stdout.read(1024)
             if not decoded_audio:
                 sleep(0.1)
