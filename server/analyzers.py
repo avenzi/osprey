@@ -148,7 +148,9 @@ class AudioDecoder(Analyzer):
         """ Main execution loop """
         data_dict = self.database.read_data(self.audio_id, decode=False)
         if data_dict:  # feed encoded audio to ffmpeg
-            self.ffmpeg_process.stdin.write(data_dict['data'])
+            audio_chunks = data_dict['data']  # get list of unread data
+            audio_data = b''.join(audio_chunks)  # concatenate all frames
+            self.ffmpeg_process.stdin.write(audio_data)
         else:
             sleep(0.2)
 
