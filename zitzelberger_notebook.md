@@ -31,7 +31,11 @@ By working on this project you are agreeing to abide by the following expectatio
     3. making regular code commits with meaningful commit messages and,
     4. organizing the contents of the project into a logical directory structure.
 
-### Daily Updates
+### Daily Updates3
+
+##### Sept 24th, 2021:
+
+I have implemented exactly what I sought out to yesterday, and it has completely solved the issue. Throughput is now entirely manageable, and it seems that Redis can even handle the raw data reads and writes just fine as long as it's on the local network of the same machine. I was able to implement live data downsampling as well, though it does cap every time series data set at 100Hz for now. There is also some lag on the audio part of the video, which could be caused by the re-encoding process, but it seems like too much lag for that to be the only factor. I'm going to keep looking into it tomorrow.
 
 ##### Sept 23rd, 2021:
 
