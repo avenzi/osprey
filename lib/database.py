@@ -452,6 +452,7 @@ class Database:
                 bookmark.last_time_id = bookmark.first_time
                 bookmark.first_id = self.decode(first_read[-1][0])  # set first ID
                 bookmark.last_id = bookmark.first_id
+                bookmark.last_time = self.time()
                 #response = red.xread({'stream:' + stream: '$'}, block=1000)  # read new data only
 
             last_read_id = bookmark.last_id  # last read id
