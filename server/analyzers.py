@@ -146,26 +146,29 @@ class AudioDecoder(Analyzer):
 
     def loop(self):
         """ Main execution loop """
+        print('gonna receive encoded from pi')
         data_dict = self.database.read_data(self.audio_id, decode=False)
+        print('read received audio from database')
         if data_dict:  # feed encoded audio to ffmpeg
             audio_chunks = data_dict['data']  # get list of unread data
             audio_data = b''.join(audio_chunks)  # concatenate all frames
             self.ffmpeg_process.stdin.write(audio_data)
+            print('wrote received encoded audio', len(audio_data))
         else:
             sleep(0.2)
 
     def read_from_ffmpeg(self):
         """ Meant to be run on a seaprate thread. Write decoded audio to the database """
         while not self.exit:
+            print('gonna read from ffmpeg decoder')
             decoded_audio = self.ffmpeg_process.stdout.read(1024)
             if not decoded_audio:
                 sleep(0.1)
                 continue
 
-            print(len(decoded_audio))
+            print(len(decoded_audio), type(decoded_audio[9]))
             # data still in bytes - convert to float32 numpy array
             audio_array = np.frombuffer(decoded_audio, np.float32)
-            print(audio_array)
 
             if not self.last_block_time:
                 self.last_block_time = time()
@@ -180,6 +183,7 @@ class AudioDecoder(Analyzer):
                 'data': audio_array,
             }
             self.database.write_data(self.id, data)
+            print('wrote decoded audio to database')
 
 
 class AudioAnalyzer(Analyzer):
