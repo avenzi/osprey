@@ -252,7 +252,6 @@ class AudioStreamer(Streamer):
             # abs_time = time() - time_diff  # get epoch time
             # temporary - just to make timestamp array same size as data array
             # t = [abs_time] * frames
-            print(len(indata))
             self.ffmpeg_process.stdin.write(indata)  # write data to ffmpeg process
 
         # SoundDevice stream
@@ -269,7 +268,6 @@ class AudioStreamer(Streamer):
         Extended from the base class in pi_lib.py
         """
         try:
-            t0 = time()
             self.stream.stop()
             self.stream.close()
         except:
