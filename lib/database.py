@@ -443,29 +443,37 @@ class Database:
                 response.reverse()  # revrange gives a reversed list
 
         else:
-            if bookmark.last_id and bookmark.last_time:  # last read spot exists
-                last_read_id = bookmark.last_id  # last read id
+            if not bookmark.last_id or not bookmark.last_time:  # no last read spot exists
+                # set first-read info
+                first_read = red.xrange('stream:' + stream, count=1)  # read first data point
+                if not first_read:
+                    return
+                bookmark.first_time = self.start_time  # set first time to start of stream
+                bookmark.last_time_id = bookmark.first_time
+                bookmark.first_id = self.decode(first_read[-1][0])  # set first ID
+                bookmark.last_id = bookmark.first_id
+                #response = red.xread({'stream:' + stream: '$'}, block=1000)  # read new data only
 
-                # calculate real time diff since last read (ms)
-                time_since_last = self.time() - bookmark.last_time
+            last_read_id = bookmark.last_id  # last read id
 
-                # if time diff since last read is greater than maximum, increment last read ID by the difference
-                if max_time and time_since_last > max_time*1000:  # max_time is in seconds
-                    new_last_time = self.redis_to_time(last_read_id) + (time_since_last-max_time*1000)
-                    last_read_id = self.time_to_redis(new_last_time)  # convert back to redis timestamp
+            # calculate real time diff since last read (ms)
+            time_since_last = self.time() - bookmark.last_time
 
-                if downsample:  # get downsampled response
-                    # calculate max ID by how much real time has passed between now and beginning (ms)
-                    first_read_id = bookmark.first_id  # first read ID
-                    first_read_time = bookmark.first_time  # first read real time
-                    time_since_first = self.time() - first_read_time  # time diff until now
-                    max_timestamp = self.redis_to_time(first_read_id) + time_since_first  # redis timestamp max time
-                    max_read_id = self.time_to_redis(max_timestamp)  # redis timestamp max ID
-                    response = self._downsample(stream, last_read_id, max_read_id)
-                else:
-                    response = red.xread({'stream:' + stream: last_read_id})
-            else:  # no last read spot exists.
-                response = red.xread({'stream:' + stream: '$'}, block=1000)  # read new data only
+            # if time diff since last read is greater than maximum, increment last read ID by the difference
+            if max_time and time_since_last > max_time*1000:  # max_time is in seconds
+                new_last_time = self.redis_to_time(last_read_id) + (time_since_last-max_time*1000)
+                last_read_id = self.time_to_redis(new_last_time)  # convert back to redis timestamp
+
+            if downsample:  # get downsampled response
+                # calculate max ID by how much real time has passed between now and beginning (ms)
+                first_read_id = bookmark.first_id  # first read ID
+                first_read_time = bookmark.first_time  # first read real time
+                time_since_first = self.time() - first_read_time  # time diff until now
+                max_timestamp = self.redis_to_time(first_read_id) + time_since_first  # redis timestamp max time
+                max_read_id = self.time_to_redis(max_timestamp)  # redis timestamp max ID
+                response = self._downsample(stream, last_read_id, max_read_id)
+            else:
+                response = red.xread({'stream:' + stream: last_read_id})
 
         if not response:
             bookmark.release()  # release lock
