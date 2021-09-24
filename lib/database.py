@@ -443,12 +443,10 @@ class Database:
 
         else:
             if not bookmark.last_id or not bookmark.last_time:  # no last read spot exists
-                print('first read', stream)
                 # set first-read info
                 first_read = red.xrange('stream:' + stream, count=1)  # read first data point
                 if not first_read:
                     bookmark.release()  # release lock
-                    print('nothing from first read', stream)
                     return
                 bookmark.first_time = self.start_time  # set first time to start of stream
                 bookmark.last_time_id = bookmark.first_time
@@ -456,7 +454,6 @@ class Database:
                 bookmark.last_id = bookmark.first_id
                 bookmark.last_time = self.time()
                 #response = red.xread({'stream:' + stream: '$'}, block=1000)  # read new data only
-                print('set bookmarks from first read', stream)
 
             last_read_id = bookmark.last_id  # last read id
 
@@ -480,10 +477,8 @@ class Database:
                 response = red.xread({'stream:' + stream: last_read_id})
 
         if not response:
-            print('no response', stream)
             bookmark.release()  # release lock
             return None
-        print('full response', stream)
 
         # If count is given (or downsampled) XRANGE is used, which gives a list of data points
         #   this means that the expected data format is stored in response.
