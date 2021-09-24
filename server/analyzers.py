@@ -162,22 +162,20 @@ class AudioDecoder(Analyzer):
                 sleep(0.1)
                 continue
 
-            print(decoded_audio)
-            outdata = []
-            for channels in decoded_audio:
-                outdata.append(channels[0])
+            print(len(decoded_audio))
+            audio_array = np.frombuffer(decoded_audio, np.float32)
 
             if not self.last_block_time:
                 self.last_block_time = time()
                 return
 
             # assign timestamps to all frames since last frame block time
-            t = np.linspace(self.last_block_time * 1000, time() * 1000, len(outdata))
+            t = np.linspace(self.last_block_time*1000, time()*1000, len(audio_array))
             self.last_block_time = time()
 
             data = {
                 'time': t,
-                'data': outdata,
+                'data': audio_array,
             }
             self.database.write_data(self.id, data)
 
