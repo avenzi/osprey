@@ -34,6 +34,7 @@ audiofilt1.target('Audio')
 
 audiofour1 = AudioFourier('Fourier', 'Audio 1')
 audiofour1.target('Filtered')
+audiofour1.target('Decoded Audio')
 
 encoder1 = AudioEncoder('Encoded Audio', 'Video 1')
 encoder1.target('Transformed Audio', 'Audio 1')
