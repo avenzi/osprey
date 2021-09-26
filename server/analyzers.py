@@ -147,8 +147,8 @@ class SignalAnalyzer(Analyzer):
         """ streamer start method before loop is executed """
         try:
             self.get_info()
-        except:
-            raise Exception("Missing info.".format(self))
+        except Exception as e:
+            raise Exception("Missing info. {}".format(e.__class__.__name__, e))
 
     def get_info(self):
         pass
@@ -644,7 +644,7 @@ class AudioFourier(SignalFourier):
         self.widgets = AUDIO_FOURIER_WIDGETS  # all widget parameters for fourier and filtering
 
     def get_info(self):
-        raw = self.targets[self.group]['Audio']
+        raw = self.targets[self.group]['Decoded Audio']
         filtered = self.targets[self.group]['Filtered']
         self.raw_id = raw['id']
         self.filtered_id = filtered['id']
