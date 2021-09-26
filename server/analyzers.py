@@ -148,7 +148,7 @@ class SignalAnalyzer(Analyzer):
         try:
             self.get_info()
         except Exception as e:
-            raise Exception("Missing info. {}".format(e.__class__.__name__, e))
+            raise Exception("Missing info. {}: {}".format(e.__class__.__name__, e))
 
     def get_info(self):
         pass
