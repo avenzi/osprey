@@ -64,7 +64,7 @@ def create_layout(info):
     ##########################
     # create row of widgets that send data to the analyzer streams
     # Fourier Window sliders
-    fourier_window = Spinner(title="FFT Window (s)", low=1, high=10, step=1, width=90, value=fourier_widgets['fourier_window'])
+    fourier_window = Spinner(title="FFT Window (s)", low=0.1, high=5, step=0.1, width=90, value=fourier_widgets['fourier_window'])
     fourier_window.js_on_change("value", CustomJS(code=js_request(fourier_id, 'fourier_window')))
 
     # Toggle buttons
@@ -131,7 +131,7 @@ def create_layout(info):
     audio = figure(
         title='Audio Waveform',
         x_axis_label='Time (s)', y_axis_label='Magnitude',
-        plot_width=1200, plot_height=300,
+        plot_width=1200, plot_height=200,
         toolbar_location=None,
         output_backend=BACKEND
     )
@@ -150,7 +150,7 @@ def create_layout(info):
     fourier = figure(
         title="Audio Fourier",
         x_axis_label='Frequency (Hz)', y_axis_label='Magnitude (log)', y_axis_type="log",
-        plot_width=1200, plot_height=400,
+        plot_width=1200, plot_height=300,
         tools='xpan,xwheel_zoom,reset', toolbar_location='above',
         output_backend=BACKEND
     )
