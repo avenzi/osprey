@@ -11,10 +11,10 @@ BACKEND = 'canvas'  # 'webgl' appears to be broken - makes page unresponsive.
 
 # default values of all widgets and figure attributes
 default_filter_widgets = {
-    'pass_toggle': True,
+    'pass_toggle': False,
     'pass_type': 'bandpass',
     'pass_style': 'Butterworth',
-    'pass_range': (1000, 7000),
+    'pass_range': (1000, 2000),
     'pass_order': 3,
     'pass_ripple': (1, 50),
 
