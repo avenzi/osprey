@@ -14,7 +14,7 @@ default_filter_widgets = {
     'pass_toggle': False,
     'pass_type': 'bandpass',
     'pass_style': 'Butterworth',
-    'pass_range': (1000, 2000),
+    'pass_range': (100, 4000),
     'pass_order': 3,
     'pass_ripple': (1, 50),
 
@@ -27,7 +27,7 @@ default_filter_widgets = {
 }
 
 default_fourier_widgets = {
-    'fourier_window': 2,
+    'fourier_window': 0.2,
     'spectrogram_range': (-3.0, 1.0),  # color scale range (log)
     'spectrogram_size': 30,
 }
@@ -40,7 +40,7 @@ def create_layout(info):
     """
 
     # get channel names
-    sample_rate = 500  # downsampled to 500Hz
+    sample_rate = 2000  # downsampled to 2000Hz
 
     decoded_id = info['Decoded Audio']['id']
     filtered_id = info['Filtered']['id']
