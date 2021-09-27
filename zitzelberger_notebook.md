@@ -37,6 +37,8 @@ By working on this project you are agreeing to abide by the following expectatio
 
 I was able to slightly reduce the audio lag, but did not manage to get it in sync. There is still about a second of audio lag after a few seconds of video lag. I set up a fourier transform Analyzer for the audio data for some nice visuals, and added a background transparant image of the original audio data before filtering to demonstrate applying an algorithm to the audio data. Hopefully this will be good enough to put into the ICASSP paper.
 
+However, I also noticed some strange behavior in the audio data plot. What happens is that a periodic change in the signal shape happens that makes it look like a much much lower frequency than is actually being transmitted. I believe it is a result of the downsampling, but I can't be sure since I am not even going to try streaming 8000Hz to a browser plot. 
+
 ##### Sept 24th, 2021:
 
 I have implemented exactly what I sought out to yesterday, and it has completely solved the issue. Throughput is now entirely manageable, and it seems that Redis can even handle the raw data reads and writes just fine as long as it's on the local network of the same machine. I was able to implement live data downsampling as well, though it does cap every time series data set at 100Hz for now. There is also some lag on the audio part of the video, which could be caused by the re-encoding process, but it seems like too much lag for that to be the only factor. I'm going to keep looking into it tomorrow.
