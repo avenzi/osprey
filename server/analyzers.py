@@ -644,7 +644,7 @@ class AudioFourier(SignalFourier):
         self.widgets = AUDIO_FOURIER_WIDGETS  # all widget parameters for fourier and filtering
 
     def get_info(self):
-        raw = self.targets[self.group]['Decoded Audio']
+        raw = self.targets[self.group]['Audio']
         filtered = self.targets[self.group]['Filtered']
         self.raw_id = raw['id']
         self.filtered_id = filtered['id']
