@@ -218,6 +218,9 @@ class AudioStreamer(Streamer):
             .run_async(pipe_stdin=True, pipe_stdout=True)  # run asynchronously and pipe from/to stdin/stdout
         )
 
+        # add info
+        self.info['sample_rate'] = self.sample_rate
+
     def loop(self):
         """ Main execution loop """
         audio_data = self.ffmpeg_process.stdout.read(1024)
