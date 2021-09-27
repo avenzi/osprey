@@ -658,8 +658,8 @@ class Database:
         last_id_time = self.redis_to_time(last_id)
         max_id_time = self.redis_to_time(max_id)
 
-        # for 100Hz, each data chunk is 10ms
-        bucket_size = 10  # bucket size in ms
+        # for 500Hz, each data chunk is 2ms
+        bucket_size = 2  # bucket size in ms
 
         pipe = self.redis.pipeline()  # pipeline queues a series of commands at once
         while last_id_time < max_id_time:

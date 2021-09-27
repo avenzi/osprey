@@ -14,11 +14,11 @@ default_filter_widgets = {
     'pass_toggle': True,
     'pass_type': 'bandpass',
     'pass_style': 'Butterworth',
-    'pass_range': (1, 20),
+    'pass_range': (1000, 7000),
     'pass_order': 3,
     'pass_ripple': (1, 50),
 
-    'stop_toggle': True,
+    'stop_toggle': False,
     'stop_type': 'bandstop',
     'stop_style': 'Butterworth',
     'stop_range': (58, 61),
@@ -40,7 +40,7 @@ def create_layout(info):
     """
 
     # get channel names
-    sample_rate = 100  # downsampled to 100Hz
+    sample_rate = 500  # downsampled to 500Hz
 
     decoded_id = info['Decoded Audio']['id']
     filtered_id = info['Filtered']['id']
@@ -75,10 +75,10 @@ def create_layout(info):
     stop_toggle.js_on_click(CustomJS(code=js_request(filtered_id, 'stop_toggle', 'active')))
 
     # Range sliders. "value_throttled" only takes the slider value once sliding has stopped
-    pass_range = RangeSlider(title="Range", start=0.1, end=100, step=0.1, value=filter_widgets['pass_range'])
+    pass_range = RangeSlider(title="Range", start=0, end=8000, step=100, value=filter_widgets['pass_range'])
     pass_range.js_on_change("value_throttled", CustomJS(code=js_request(filtered_id, 'pass_range')))
 
-    stop_range = RangeSlider(title="Range", start=40, end=70, step=0.5, value=filter_widgets['stop_range'])
+    stop_range = RangeSlider(title="Range", start=0, end=8000, step=100, value=filter_widgets['stop_range'])
     stop_range.js_on_change("value_throttled", CustomJS(code=js_request(filtered_id, 'stop_range')))
 
     # filter style selectors
@@ -120,7 +120,7 @@ def create_layout(info):
     fourier_source = AjaxDataSource(
         data_url='/stream/update?id={}&format=snapshot'.format(fourier_id),
         method='GET',
-        polling_interval=500,
+        polling_interval=1000,
         mode='replace',  # all FFT lines are replaced each update
         if_modified=True)
 
