@@ -511,11 +511,8 @@ class PulseAnalyzer(Analyzer):
 # Audio stuff
 
 class AudioDecoder(Analyzer):
-    def start(self):
-        """ Get ID for audio stream"""
-        self.audio_id = self.targets['Audio 1']['Audio']['id']
-        self.last_block_time = None
-
+    def __init__(self, *args):
+        super().__init__(*args)
         # ffmpeg process to encode raw audio data into AAC format
         self.ffmpeg_process = (
             ffmpeg
@@ -524,7 +521,16 @@ class AudioDecoder(Analyzer):
             .global_args("-loglevel", "quiet")
             .run_async(pipe_stdin=True, pipe_stdout=True)  # run asynchronously and pipe from/to stdin/stdout
         )
-        Thread(target=self.read_from_ffmpeg, daemon=False, name="FFMPEG DECODE").start()
+        self.thread = Thread(target=self.read_from_ffmpeg, daemon=True, name="FFMPEG DECODE")
+
+    def start(self):
+        """ Get ID for audio stream"""
+        self.audio_id = self.targets['Audio 1']['Audio']['id']
+        self.last_block_time = None
+        self.thread.start()
+
+    def stop(self):
+        pass
 
     def loop(self):
         """ Main execution loop """
@@ -563,9 +569,8 @@ class AudioDecoder(Analyzer):
 
 
 class AudioEncoder(Analyzer):
-    def start(self):
-        """ Get ID for audio stream"""
-        self.audio_id = self.targets['Audio 1']['Transformed Audio']['id']
+    def __init__(self, *args):
+        super().__init__(*args)
 
         # ffmpeg process to encode raw audio data into AAC format
         self.ffmpeg_process = (
@@ -575,7 +580,15 @@ class AudioEncoder(Analyzer):
             .global_args("-loglevel", "quiet")
             .run_async(pipe_stdin=True, pipe_stdout=True)  # run asynchronously and pipe from/to stdin/stdout
         )
-        Thread(target=self.read_from_ffmpeg, daemon=False, name="FFMPEG ENCODE").start()
+        self.thread = Thread(target=self.read_from_ffmpeg, daemon=True, name="FFMPEG ENCODE")
+
+    def start(self):
+        """ Get ID for audio stream"""
+        self.audio_id = self.targets['Audio 1']['Transformed Audio']['id']
+        self.thread.start()
+
+    def stop(self):
+        pass
 
     def loop(self):
         """ Main execution loop """
