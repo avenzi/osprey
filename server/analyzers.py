@@ -631,9 +631,8 @@ class AudioFilter(SignalFilter):
     def get_info(self):
         # Make sure that the derived SignalFilter targets streams in its own group with the name 'Audio'.
         # Get info from database
-        raw = self.targets[self.group]['Audio']
-        self.raw_id = raw['id']
-        self.sample_rate = raw['sample_rate']
+        self.raw_id = self.targets[self.group]['Decoded Audio']['id']
+        self.sample_rate = self.targets[self.group]['Audio']['sample_rate']
         self.channels = ['data']  # only one channel
 
 

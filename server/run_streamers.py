@@ -30,6 +30,7 @@ audio1 = AudioAnalyzer('Transformed Audio', 'Audio 1')
 audio1.target('Decoded Audio')
 
 audiofilt1 = AudioFilter('Filtered', 'Audio 1')
+audiofilt1.target('Decoded Audio')
 audiofilt1.target('Audio')
 
 audiofour1 = AudioFourier('Fourier', 'Audio 1')
