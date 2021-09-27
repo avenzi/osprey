@@ -40,7 +40,7 @@ def create_layout(info):
     """
 
     # get channel names
-    sample_rate = 2000  # downsampled to 2000Hz
+    sample_rate = 500  # downsampled to 500Hz
 
     decoded_id = info['Decoded Audio']['id']
     filtered_id = info['Filtered']['id']

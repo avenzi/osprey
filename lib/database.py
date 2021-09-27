@@ -649,7 +649,7 @@ class Database:
     def _downsample(self, stream, last_id, max_id):
         """
         Returns the raw redis response from <last_id> to <max_id> (not including last_id),
-            but downsampled to a maximum of 100Hz
+            but downsampled to a maximum of 500Hz
         Not meant to be called directly. Used by other read_data() methods.
         Assumes that the bookmark for this stream already exists and it's lock has been acquired.
         Assumes that normal redis is being used (not bytes_redis).
@@ -658,8 +658,8 @@ class Database:
         last_id_time = self.redis_to_time(last_id)
         max_id_time = self.redis_to_time(max_id)
 
-        # for 2000Hz, each data chunk is 0.5ms
-        bucket_size = 0.5  # bucket size in ms
+        # for 500Hz, each data chunk is 2ms
+        bucket_size = 2  # bucket size in ms
 
         pipe = self.redis.pipeline()  # pipeline queues a series of commands at once
         while last_id_time < max_id_time:
