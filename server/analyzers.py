@@ -527,7 +527,10 @@ class AudioDecoder(Analyzer):
         """ Get ID for audio stream"""
         self.audio_id = self.targets['Audio 1']['Audio']['id']
         self.last_block_time = None
-        self.thread.start()
+        try:
+            self.thread.start()
+        except:
+            pass
 
     def stop(self):
         pass
@@ -585,7 +588,10 @@ class AudioEncoder(Analyzer):
     def start(self):
         """ Get ID for audio stream"""
         self.audio_id = self.targets['Audio 1']['Transformed Audio']['id']
-        self.thread.start()
+        try:
+            self.thread.start()
+        except:
+            pass
 
     def stop(self):
         pass
