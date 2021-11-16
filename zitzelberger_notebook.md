@@ -1,37 +1,4 @@
-## Aven Zitzelberger's Lab Notebook
-
-### Project Description:
-You will work to develop and run experiments within a Psychophysics Lab. The lab is a sensor embedded room (many cameras, microphones, temperature sensors, etc.) where individual activity is characterized and streamed to a centralized server for research and analysis. For this project specifically, you will build (or aquire) an Electroencephalograph (EEG) headset and extend this repository to live stream EEG data to the sensor data hub. You will then develop machine learning models that use the EEG data stream to predict human activities as measured by the other sensors.
-
-### Contact Information
-* Mohammad Ghassemi, ghassem3@msu.edu, 617-599-6010
-* Aven Zitzelberger, zitzelbe@msu.edu, 248-404-5522, 919 East Shaw Ln. (East Holmes Hall)
-
-
-### Specific Tasks:
-
-1. [Due June 1st] Student will review and familiarize himself with the existing Ghassemi lab data-hub codebase. Student will ensure they can launch the data hub, stream data to the database, and visualize data in the front end.
-2. [Due July 1st] Stream EEG data from the Open BCI device to the datahub, and visualize data from EEG and other sensors concurrently.
-3. [Due August 1st] Collect data on proof of concept visual stimulus task (TBD), and train machine learning model to reverse engineer visual stimulus from the raw EEG data.
-
-
-Additional tasks will be added at a future date.
-
-### Project Expectations:
-By working on this project you are agreeing to abide by the following expectations:
-
-1. You will keep a daily log of your activities in this notebook. Your update should be 1-2 sentences that outlines what has been accomplished that day, and must be commited by the end of the day. 
-2. You will provide a weekly email update, every Monday, to Dr. Ghassemi detailing 
-    * What was accomplished the previous week,
-    * Any issues you faced, 
-    * What you plan to accomplish in the coming week.
-3. You will keep all code, data and any other project-related items within this repository in neat and professional condition; this includes: 
-    1. keeping the code commented, 
-    2. naming scripts in a way that reflects their functionality, 
-    3. making regular code commits with meaningful commit messages and,
-    4. organizing the contents of the project into a logical directory structure.
-
-### Daily Updates3
+### Daily Updates
 
 ##### Sept 26th, 2021:
 
