@@ -1,6 +1,6 @@
 from lib.server.server_lib import Interface, Page
 
-from server.bokeh_layouts import eeg_layout, ecg_layout, test_layout, sense_layout
+from server.bokeh_layouts import eeg_layout, ecg_layout, test_layout, sense_layout, audio_layout
 
 # instantiate an interface object to be used by the Flask app
 interface = Interface()
@@ -30,6 +30,11 @@ interface.add_pages(page)
 # video stream page
 for name in ['Video 1', 'Video 2']:
     page = Page(name, ['Raw'], html='video.html')
+    interface.add_pages(page)
+
+
+for name in ['Audio 1', 'Audio 2']:
+    page = Page(name, ['Audio'], layout=audio_layout.create_layout)
     interface.add_pages(page)
 
 

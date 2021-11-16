@@ -4,7 +4,7 @@ import functools
 import json
 from os import system, path
 from traceback import print_exc, print_stack
-from numpy import ndarray, float64
+from numpy import ndarray, float64, float32
 
 import redis
 #from redistimeseries.client import Client as RedisTS
@@ -319,7 +319,7 @@ class Database:
         Converts a float into an int to be stored in Redis.
         Convert back with redis_to_data using decompress=True
         """
-        if type(num) in [int, float, float64]:
+        if type(num) in [int, float, float64, float32]:
             return int(num * (10**self.decimal_cap))
         return num
 
@@ -423,7 +423,6 @@ class Database:
             If False, only values will remain as bytes. Keys will still be decoded.
         <to_json> whether to convert to json string. if False, uses dictionary of lists.
         """
-        # TODO: downsampling for live data (see downsampling implemented for playback data)
         if stream is None:
             return
 
@@ -443,31 +442,50 @@ class Database:
                 response.reverse()  # revrange gives a reversed list
 
         else:
-            if bookmark.last_id and bookmark.last_time:  # last read spot exists
-                last_read_id = bookmark.last_id  # last read id
+            if not bookmark.last_id or not bookmark.last_time:  # no last read spot exists
+                # set first-read info
+                first_read = red.xrange('stream:' + stream, count=1)  # read first data point
+                if not first_read:
+                    bookmark.release()  # release lock
+                    return
+                bookmark.first_time = self.start_time  # set first time to start of stream
+                bookmark.last_time_id = bookmark.first_time
+                bookmark.first_id = self.decode(first_read[-1][0])  # set first ID
+                bookmark.last_id = bookmark.first_id
+                bookmark.last_time = self.time()
+                #response = red.xread({'stream:' + stream: '$'}, block=1000)  # read new data only
 
-                # calculate real time diff since last read (ms)
-                time_since_last = self.time() - bookmark.last_time
+            last_read_id = bookmark.last_id  # last read id
 
-                # if time diff since last read is greater than maximum, increment last read ID by the difference
-                if max_time and time_since_last > max_time*1000:  # max_time is in seconds
-                    new_last_time = self.redis_to_time(last_read_id) + (time_since_last-max_time*1000)
-                    last_read_id = self.time_to_redis(new_last_time)  # convert back to redis timestamp
+            # calculate real time diff since last read (ms)
+            time_since_last = self.time() - bookmark.last_time
 
+            # if time diff since last read is greater than maximum, increment last read ID by the difference
+            if max_time and time_since_last > max_time*1000:  # max_time is in seconds
+                new_last_time = self.redis_to_time(last_read_id) + (time_since_last-max_time*1000)
+                last_read_id = self.time_to_redis(new_last_time)  # convert back to redis timestamp
+
+            if downsample:  # get downsampled response
+                # calculate max ID by how much real time has passed between now and beginning (ms)
+                first_read_id = bookmark.first_id  # first read ID
+                first_read_time = bookmark.first_time  # first read real time
+                time_since_first = self.time() - first_read_time  # time diff until now
+                max_timestamp = self.redis_to_time(first_read_id) + time_since_first  # redis timestamp max time
+                max_read_id = self.time_to_redis(max_timestamp)  # redis timestamp max ID
+                response = self._downsample(stream, last_read_id, max_read_id)
+            else:
                 response = red.xread({'stream:' + stream: last_read_id})
-            else:  # no last read spot exists.
-                response = red.xread({'stream:' + stream: '$'}, block=1000)  # read new data only
 
         if not response:
             bookmark.release()  # release lock
             return None
 
-        # If count is given XRANGE is used, which gives a list of data points
-        #   this means that the data is stored in response.
-        # If no count is given, XREAD is used, which gives a a list of tuples
+        # If count is given (or downsampled) XRANGE is used, which gives a list of data points
+        #   this means that the expected data format is stored in response.
+        # If no count is given and not downsampled, XREAD is used, which gives a list of tuples
         #   (one for each stream read from), each of which contains a list of data points. But since
         #   we are only reading from one stream, the data is stored in response[0][1].
-        if not count:
+        if not count and not downsample:
             response = response[0][1]
 
         # set last-read info
@@ -626,6 +644,39 @@ class Database:
             result = output
         bookmark.release()  # release lock
         return result
+
+    @catch_database_errors
+    def _downsample(self, stream, last_id, max_id):
+        """
+        Returns the raw redis response from <last_id> to <max_id> (not including last_id),
+            but downsampled to a maximum of 500Hz
+        Not meant to be called directly. Used by other read_data() methods.
+        Assumes that the bookmark for this stream already exists and it's lock has been acquired.
+        Assumes that normal redis is being used (not bytes_redis).
+        """
+        # integer milliseconds of the given redis IDs
+        last_id_time = self.redis_to_time(last_id)
+        max_id_time = self.redis_to_time(max_id)
+
+        # for 500Hz, each data chunk is 2ms
+        bucket_size = 2  # bucket size in ms
+
+        pipe = self.redis.pipeline()  # pipeline queues a series of commands at once
+        while last_id_time < max_id_time:
+            start_id = self.time_to_redis(last_id_time)  # start of bucket range
+            last_id_time += bucket_size  # increment by bucket size
+            end_id = self.time_to_redis(last_id_time)  # end of bucket range
+            pipe.xrevrange('stream:'+stream, min='('+start_id, max=end_id, count=1)  # read last item in range
+
+        # list of lists of tuples
+        raw_response = pipe.execute()
+        response = []
+        for lst in raw_response:
+            if lst:  # pick out only results with data
+                response.append(lst[0])  # put the single data point into the response list
+
+        # response is now in same format as if read by a single XRANGE command
+        return response
 
     @catch_database_errors
     def set_info(self, key, data):
@@ -1048,6 +1099,7 @@ class PlaybackDatabase(ServerDatabase):
         if not bookmark.last_id or not bookmark.last_time:  # no last read spot exists
             first_read = red.xrange('stream:' + stream, count=1)  # read first data point
             if not first_read:
+                bookmark.release()  # release lock
                 return
             # set first-read info
             bookmark.first_time = self.start_time  # set first time to start of stream
@@ -1177,13 +1229,8 @@ class PlaybackDatabase(ServerDatabase):
         If no 'sample_rate' key is found for this stream, assumes 100Hz.
             - This will over-downsample streams over 100Hz,
                 under-downsample streams between 100Hz/playback_speed and 100Hz,
-                and streams under 100Hz/playbackspeed will be unaffected.
+                and streams under 100Hz/playbackspeed will be unaffected (I think).
         """
-        # TODO: implement downsampling even for live reading. This would require setting some
-        #  kind of frequency cap that downsamples anything above like 10x that cap down to that cap.
-        #  (because downsampling something only 2x the cap is inefficient since I would then be
-        #  manually reading every other data point). This is simple, you just gotta know the sample rate
-        #  to make that decision.
         bookmark = self.bookmarks[stream]
         if not bookmark.sample_rate:  # if no sample rate, find it
             bookmark.sample_rate = self.get_info(stream, 'sample_rate')

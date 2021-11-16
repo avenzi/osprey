@@ -53,6 +53,9 @@ sudo add-apt-repository ppa:certbot/certbot -y
 sudo apt-get update
 sudo apt-get install python-certbot-nginx -y
 
+# ffmpeg
+sudo apt-get install ffmpeg -y
+
 echo "Writing Crontab line to renew SSl certification..."
 webroot="$(pwd -P)/app"  # get absolute path to website root
 echo ${webroot}

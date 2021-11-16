@@ -22,6 +22,25 @@ t2func.target('Random 2')
 t2func.target('Random 1')
 
 
+# Audio analyzers
+decoder1 = AudioDecoder('Decoded Audio', 'Audio 1')
+decoder1.target('Audio')
+
+audio1 = AudioAnalyzer('Transformed Audio', 'Audio 1')
+audio1.target('Decoded Audio')
+
+audiofilt1 = AudioFilter('Filtered', 'Audio 1')
+audiofilt1.target('Decoded Audio')
+audiofilt1.target('Audio')
+
+audiofour1 = AudioFourier('Fourier', 'Audio 1')
+audiofour1.target('Filtered')
+audiofour1.target('Audio')
+
+encoder1 = AudioEncoder('Encoded Audio', 'Video 1')
+encoder1.target('Transformed Audio', 'Audio 1')
+
+
 # Synthetic EEG stream #1
 synth1filt = EEGFilter('Filtered', 'Synth EEG 1')
 synth1filt.target('Raw')
@@ -71,7 +90,7 @@ synth1 = SynthEEGStreamer('Raw', 'Synth EEG 1')
 
 # Pass all workers to client
 worker_no_pi_test = [t1, t2, t0func, synth1, synth1filt, synth1four, synth1func]
-workers_test = [synth1filt, synth1four, t1func]
+workers_test = [synth1filt, synth1four, t1func, decoder1, audio1, encoder1, audiofilt1, audiofour1]
 workers = [eegfilt, eegfour, eegfunc, ecgfilt, ecgfour, ecgfunc]
 
 client = Client(

@@ -4,6 +4,7 @@ from lib.raspi.pi_lib import configure_port, BytesOutput, BytesOutput2
 from random import random
 from time import time, sleep
 from os import environ
+import numpy as np
 
 
 class TestStreamer(Streamer):
@@ -195,9 +196,6 @@ class AudioStreamer(Streamer):
     def __init__(self, *args):
         super().__init__(*args)
 
-        from io import BytesIO
-        import ffmpeg
-
         try:
             # unset the DISPLAY environment variable so that PortAudio doesn't try to
             #  create an X11 connection when run from an SSH session
@@ -205,23 +203,26 @@ class AudioStreamer(Streamer):
         except:
             pass
 
-        self.audio_buffer = BytesIO()
-        self.sample_rate = 44100
+        self.sample_rate = 8000
+        self.blocksize = 1000
         self.stream = None  # SoundDevice Stream object created in start() and closed in stop()
+        self.last_block_time = None  # timestamp of last recorded audio block
 
-        # python subprocess running FFMPEG
+        import ffmpeg
+
         self.ffmpeg_process = (
             ffmpeg
-            .input('pipe:', format='f32le', ac=1)  # SoundDevice outputs Float-32, little endian by default.
-            .output('pipe:', format='adts')  # AAC format
+            .input('pipe:', format='f32le', ar=8000, ac=1)  # SoundDevice outputs Float-32, little endian by default.
+            .output('pipe:', format='adts', ar=8000)  # AAC format
             .global_args("-loglevel", "quiet")
             .run_async(pipe_stdin=True, pipe_stdout=True)  # run asynchronously and pipe from/to stdin/stdout
         )
 
+        # add info
+        self.info['sample_rate'] = self.sample_rate
+
     def loop(self):
-        """
-        Main execution loop
-        """
+        """ Main execution loop """
         audio_data = self.ffmpeg_process.stdout.read(1024)
         if not audio_data:
             sleep(1)
@@ -229,7 +230,7 @@ class AudioStreamer(Streamer):
         # todo: this time is not the time the sample was taken, but rather the time that
         #  the data was read out of the audio buffer, which can be up to a second behind.
         data = {
-            'time': time()*1000,
+            'time': time() * 1000,
             'data': audio_data,
         }
         self.database.write_data(self.id, data)
@@ -252,6 +253,8 @@ class AudioStreamer(Streamer):
             # abs_time = time() - time_diff  # get epoch time
             # temporary - just to make timestamp array same size as data array
             # t = [abs_time] * frames
+            if status.input_overflow or status.input_underflow:
+                print('overflow:', status.input_overflow, 'underflow:', status.input_underflow)
             self.ffmpeg_process.stdin.write(indata)  # write data to ffmpeg process
 
         # SoundDevice stream

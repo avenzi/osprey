@@ -1,8 +1,10 @@
 import numpy as np
 from scipy import signal
-from time import sleep
+from time import sleep, time
 import json
 import inspect
+
+from threading import Thread
 
 from lib.lib import Analyzer
 from lib.utils import MovingAverage
@@ -10,6 +12,10 @@ from server.bokeh_layouts.eeg_layout import default_filter_widgets as EEG_FILTER
 from server.bokeh_layouts.eeg_layout import default_fourier_widgets as EEG_FOURIER_WIDGETS
 from server.bokeh_layouts.ecg_layout import default_filter_widgets as ECG_FILTER_WIDGETS
 from server.bokeh_layouts.ecg_layout import default_fourier_widgets as ECG_FOURIER_WIDGETS
+from server.bokeh_layouts.audio_layout import default_filter_widgets as AUDIO_FILTER_WIDGETS
+from server.bokeh_layouts.audio_layout import default_fourier_widgets as AUDIO_FOURIER_WIDGETS
+
+import ffmpeg
 
 
 class TestAnalyzer(Analyzer):
@@ -82,6 +88,7 @@ class FunctionAnalyzer(Analyzer):
         for name, target in self.targets[self.group].items():
             data = self.database.read_data(target['id'])
             if not data:  # if no data read, wait half a sec to loop again
+                sleep(1)
                 return
 
             for func in self.functions:  # for each pipeline function
@@ -140,8 +147,8 @@ class SignalAnalyzer(Analyzer):
         """ streamer start method before loop is executed """
         try:
             self.get_info()
-        except:
-            raise Exception("Missing info.".format(self))
+        except Exception as e:
+            raise Exception("Missing info. {}: {}".format(e.__class__.__name__, e))
 
     def get_info(self):
         pass
@@ -347,7 +354,6 @@ class EEGFilter(SignalFilter):
 
 class ECGFilter(SignalFilter):
     """ Analyzes the raw ECG data for filtering """
-
     def __init__(self, *args):
         super().__init__(*args)
         self.widgets = ECG_FILTER_WIDGETS  # all widget parameters for fourier and filtering
@@ -499,6 +505,171 @@ class PulseAnalyzer(Analyzer):
 
         #self.debug("Window: {}, peaks: {}".format(window, len(peaks)))
         return heart_rate
+
+
+#############
+# Audio stuff
+
+class AudioDecoder(Analyzer):
+    def __init__(self, *args):
+        super().__init__(*args)
+        # ffmpeg process to encode raw audio data into AAC format
+        self.ffmpeg_process = (
+            ffmpeg
+            .input('pipe:', format='aac')  # AAC format
+            .output('pipe:', format='f32le', ar=8000, ac=1)  # output Float-32, little endian
+            .global_args("-loglevel", "quiet")
+            .run_async(pipe_stdin=True, pipe_stdout=True)  # run asynchronously and pipe from/to stdin/stdout
+        )
+        self.thread = Thread(target=self.read_from_ffmpeg, daemon=True, name="FFMPEG DECODE")
+
+    def start(self):
+        """ Get ID for audio stream"""
+        self.audio_id = self.targets['Audio 1']['Audio']['id']
+        self.last_block_time = None
+        try:
+            self.thread.start()
+        except:
+            pass
+
+    def stop(self):
+        pass
+
+    def loop(self):
+        """ Main execution loop """
+        data_dict = self.database.read_data(self.audio_id, decode=False)
+        if data_dict:  # feed encoded audio to ffmpeg
+            audio_chunks = data_dict['data']  # get list of unread data
+            audio_data = b''.join(audio_chunks)  # concatenate all frames
+            self.ffmpeg_process.stdin.write(audio_data)
+        else:
+            sleep(0.1)
+
+    def read_from_ffmpeg(self):
+        """ Meant to be run on a seaprate thread. Write decoded audio to the database """
+        while not self.exit:
+            decoded_audio = self.ffmpeg_process.stdout.read(1024)
+            if not decoded_audio:
+                sleep(0.1)
+                continue
+
+            # data still in bytes - convert to float32 numpy array
+            audio_array = np.frombuffer(decoded_audio, np.float32)
+
+            if not self.last_block_time:
+                self.last_block_time = time()
+                continue
+
+            # assign timestamps to all frames since last frame block time
+            t = np.linspace(self.last_block_time*1000, time()*1000, len(audio_array))
+            self.last_block_time = time()
+
+            data = {
+                'time': t,
+                'data': audio_array,
+            }
+            self.database.write_data(self.id, data)
+
+
+class AudioEncoder(Analyzer):
+    def __init__(self, *args):
+        super().__init__(*args)
+
+        # ffmpeg process to encode raw audio data into AAC format
+        self.ffmpeg_process = (
+            ffmpeg
+            .input('pipe:', format='f32le', ar=8000, ac=1)  # SoundDevice outputs Float-32, little endian by default.
+            .output('pipe:', format='adts', ar=8000)  # AAC format
+            .global_args("-loglevel", "quiet")
+            .run_async(pipe_stdin=True, pipe_stdout=True)  # run asynchronously and pipe from/to stdin/stdout
+        )
+        self.thread = Thread(target=self.read_from_ffmpeg, daemon=True, name="FFMPEG ENCODE")
+
+    def start(self):
+        """ Get ID for audio stream"""
+        self.audio_id = self.targets['Audio 1']['Transformed Audio']['id']
+        try:
+            self.thread.start()
+        except:
+            pass
+
+    def stop(self):
+        pass
+
+    def loop(self):
+        """ Main execution loop """
+        data_dict = self.database.read_data(self.audio_id)
+        if data_dict:  # feed to ffmpeg
+            # put data in format able to be read by ffmpeg (2d numpy array)
+            data = data_dict['data']
+            data = np.expand_dims(np.array(data, dtype='float32'), axis=1)
+            self.ffmpeg_process.stdin.write(data)
+        else:
+            sleep(0.2)
+
+    def read_from_ffmpeg(self):
+        """ Meant to be run on a seaprate thread. Write encoded audio to the database """
+        while not self.exit:
+            encoded_audio = self.ffmpeg_process.stdout.read(1024)
+            if not encoded_audio:
+                sleep(0.1)
+                continue
+            data = {
+                'time': time(),  # just so redis is happy
+                'data': encoded_audio
+            }
+            self.database.write_data(self.id, data)
+
+
+class AudioAnalyzer(Analyzer):
+    def start(self):
+        """ Get ID for audio stream"""
+        self.audio_id = self.targets['Audio 1']['Decoded Audio']['id']
+
+    def loop(self):
+        """ Main execution loop """
+        data = self.database.read_data(self.audio_id)  # read raw audio data
+        if not data:
+            sleep(1)
+            return
+
+        audio = np.array(data['data'])
+        data['data'] = audio*5
+
+        self.database.write_data(self.id, data)  # write to new data column
+        sleep(0.01)
+
+
+class AudioFilter(SignalFilter):
+    """ Analyzes the raw Audio data for filtering """
+
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.widgets = AUDIO_FILTER_WIDGETS  # all widget parameters for fourier and filtering
+
+    def get_info(self):
+        # Make sure that the derived SignalFilter targets streams in its own group with the name 'Audio'.
+        # Get info from database
+        self.raw_id = self.targets[self.group]['Decoded Audio']['id']
+        self.sample_rate = self.targets[self.group]['Audio']['sample_rate']
+        self.channels = ['data']  # only one channel
+
+
+class AudioFourier(SignalFourier):
+    """ Analyzes the filtered data from AudioFilter """
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.widgets = AUDIO_FOURIER_WIDGETS  # all widget parameters for fourier and filtering
+
+    def get_info(self):
+        raw = self.targets[self.group]['Audio']
+        filtered = self.targets[self.group]['Filtered']
+        self.raw_id = raw['id']
+        self.filtered_id = filtered['id']
+        self.sample_rate = raw['sample_rate']
+        self.channels = ['data']
+
+
 
 
 

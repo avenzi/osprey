@@ -1,37 +1,30 @@
-## Aven Zitzelberger's Lab Notebook
-
-### Project Description:
-You will work to develop and run experiments within a Psychophysics Lab. The lab is a sensor embedded room (many cameras, microphones, temperature sensors, etc.) where individual activity is characterized and streamed to a centralized server for research and analysis. For this project specifically, you will build (or aquire) an Electroencephalograph (EEG) headset and extend this repository to live stream EEG data to the sensor data hub. You will then develop machine learning models that use the EEG data stream to predict human activities as measured by the other sensors.
-
-### Contact Information
-* Mohammad Ghassemi, ghassem3@msu.edu, 617-599-6010
-* Aven Zitzelberger, zitzelbe@msu.edu, 248-404-5522, 919 East Shaw Ln. (East Holmes Hall)
-
-
-### Specific Tasks:
-
-1. [Due June 1st] Student will review and familiarize himself with the existing Ghassemi lab data-hub codebase. Student will ensure they can launch the data hub, stream data to the database, and visualize data in the front end.
-2. [Due July 1st] Stream EEG data from the Open BCI device to the datahub, and visualize data from EEG and other sensors concurrently.
-3. [Due August 1st] Collect data on proof of concept visual stimulus task (TBD), and train machine learning model to reverse engineer visual stimulus from the raw EEG data.
-
-
-Additional tasks will be added at a future date.
-
-### Project Expectations:
-By working on this project you are agreeing to abide by the following expectations:
-
-1. You will keep a daily log of your activities in this notebook. Your update should be 1-2 sentences that outlines what has been accomplished that day, and must be commited by the end of the day. 
-2. You will provide a weekly email update, every Monday, to Dr. Ghassemi detailing 
-    * What was accomplished the previous week,
-    * Any issues you faced, 
-    * What you plan to accomplish in the coming week.
-3. You will keep all code, data and any other project-related items within this repository in neat and professional condition; this includes: 
-    1. keeping the code commented, 
-    2. naming scripts in a way that reflects their functionality, 
-    3. making regular code commits with meaningful commit messages and,
-    4. organizing the contents of the project into a logical directory structure.
-
 ### Daily Updates
+
+##### Sept 26th, 2021:
+
+I was able to slightly reduce the audio lag, but did not manage to get it in sync. There is still about a second of audio lag after a few seconds of video lag. I set up a fourier transform Analyzer for the audio data for some nice visuals, and added a background transparant image of the original audio data before filtering to demonstrate applying an algorithm to the audio data. Hopefully this will be good enough to put into the ICASSP paper.
+
+However, I also noticed some strange behavior in the audio data plot. What happens is that a periodic change in the signal shape happens that makes it look like a much much lower frequency than is actually being transmitted. I believe it is a result of the downsampling, but I can't be sure since I am not even going to try streaming 8000Hz to a browser plot. 
+
+##### Sept 24th, 2021:
+
+I have implemented exactly what I sought out to yesterday, and it has completely solved the issue. Throughput is now entirely manageable, and it seems that Redis can even handle the raw data reads and writes just fine as long as it's on the local network of the same machine. I was able to implement live data downsampling as well, though it does cap every time series data set at 100Hz for now. There is also some lag on the audio part of the video, which could be caused by the re-encoding process, but it seems like too much lag for that to be the only factor. I'm going to keep looking into it tomorrow.
+
+##### Sept 23rd, 2021:
+
+I think I found the issues, or at least some of them. When I switched to decoding the audio data on the server, I changed the SoundDevice stream callback function to write to the database instead of ffmpeg. However, I believe that this database write was taking too long and clogging up time during the callback. SoundDevice uses PortAudio, which has an internal buffer that sends it's data periodically to that callback function. If this callback function takes too long, PortAudio can actually drop the data in it's buffer to compensate (http://www.portaudio.com/docs/proposals/001-UnderflowOverflowHandling.html). I believe this is what was happening (in part, at least) because I was receiving only periodic segments of data on the server. My solution to this was to increase the PortAudio buffer size, and this significantly increased the amount of data received.
+
+Once I started receiving more of the actual audio data on the server, however, I started having other problems - the database read and writes were taking significantly longer. For example, writing 10,000 frames took upwards of 4 full seconds from the raspberry pi. I reduced the audio sampling rate to the minimum that the AAC codec supports (8000Hz), that that did help significantly but there was still too much data being transferred. When looking at the debug log of ffmpeg on the server, I see that the audio is being encoded at an extremely slow rate, indicating that it still isn't receiving raw data fast enough. This makes me suspect that there are still throughput issues that I haven't accounted for. The raw audio data is just too massive.
+
+I spoke with Dr. Ghassemi about the issue, and he suggested I try my other idea of keeping the data encoding for the Raspberry pi, but then de-encoding and re-encoding on the server as well. This should solve the network issues by sending only encoded data to the server, and also allow me to put the raw audio data through any arbitrary algorithm. However I realized that I will still need to implement downsampling for the browser graph because Bokeh definitely cannot handle that much data. This is what I will start with tomorrow.
+
+##### Sept 22nd, 2021:
+
+​	On Monday, Dr. Ghassemi instructed me to try and get a demonstration of allowing data transformation on the transmitted audio data. This has proven difficult, but not for any of the reasons I was expecting. First, I need to transmit the raw audio data instead of the encoded audio data. I can do this at a significantly downsampled rate to reduce the amount of data transmitted. Then, I need to use ffmpeg on the server side to encode it before sending it to the browser. In theory, this shouldn't change anything at all about the current streaming setup, it just puts me in a position to write a single Analyzer class that reads the raw audio data, transforms it in some way, then writes it back.
+
+​	The problem is that, for some reason, the audio is either corrupted or not being read correctly from the database. I can only hear fragments of noise, and what I hear is definitely not the sound I am making. I have been trying in vain for the last two days to figure this out but the problem is eluding me. I am most worried that it may be something to do with the fact that ffmpeg is now running on a different flavor of Linux (the ubuntu rather than Raspbian) and that it has some slight difference that I do not know about.
+
+I have created a bokeh visualization tool for the audio as well, in hopes that I could try to discern what is happening to the raw data. It didn't help much, but at least when I get this figured out I will have something to show for it that can be put into the paper, hopefully.
 
 ##### Sept 14th, 2021:
 
@@ -47,10 +40,6 @@ By working on this project you are agreeing to abide by the following expectatio
 Also some options for AAC encoding to play with are here: https://ffmpeg.org/ffmpeg-codecs.html#Options-8. To see the average bitrate being transcoded by ffmpeg, comment out the like ```.global_args("-loglevel", "quiet")``` in the ffmpeg process definition in the AudioStreamer init method. This enables verbose logging mode, which displays a continuous bitrate measurement.
 
 ​	Also today I ran into that X11 issue again, even though I thought I had solved it by removing SoundFile from the project. After more searching, I found that PortAudio may be the cause, and it uses the DISPLAY environment variable to operate an X server. Simply unsetting this variable seemed to do the trick. Oh well.
-
-
-
-
 
 ##### Sept 9-11th, 2021:
 
