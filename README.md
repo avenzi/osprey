@@ -11,6 +11,6 @@ On the pi, run `$bash scripts/raspi/run.sh`.
 
 For the server, make sure that the port you wish to use is open on the network the server is connected to.
 
-Start the server by running `$bash scripts/server/run.sh`
+Start the server by running `$bash scripts/server/run_all.sh`
 
 Use a browser to navigate to your domain name.
