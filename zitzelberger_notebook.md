@@ -1,5 +1,5 @@
 ### Daily Updates
-
+### Hello
 ##### Sept 26th, 2021:
 
 I was able to slightly reduce the audio lag, but did not manage to get it in sync. There is still about a second of audio lag after a few seconds of video lag. I set up a fourier transform Analyzer for the audio data for some nice visuals, and added a background transparant image of the original audio data before filtering to demonstrate applying an algorithm to the audio data. Hopefully this will be good enough to put into the ICASSP paper.
