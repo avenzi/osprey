@@ -89,7 +89,7 @@ t2 = TestStreamer("Random 2", "Test Group 0")
 synth1 = SynthEEGStreamer('Raw', 'Synth EEG 1')
 
 # Pass all workers to client
-worker_no_pi_test = [t1, t2, t0func, synth1, synth1filt, synth1four, synth1func]
+worker_no_pi_test = [t1, t2, t0func]
 workers_test = [synth1filt, synth1four, t1func, decoder1, audio1, encoder1, audiofilt1, audiofour1]
 workers = [eegfilt, eegfour, eegfunc, ecgfilt, ecgfour, ecgfunc]
 
