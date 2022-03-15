@@ -11,10 +11,9 @@ cd ../../
 #git pull
 
 # kill any remaining python processes
-sudo pkill python3
+pkill python3
 
-# activate virtual environment and run
-. venv/bin/activate
+# run
 python3 -m server.run_streamers
 
 

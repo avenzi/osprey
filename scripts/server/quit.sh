@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
-sudo pkill python
-sudo pkill python3
-sudo pkill gunicorn
-sudo pkill redis-server
-sudo fuser -k 80/tcp    # Nginx
-sudo fuser -k 5000/tcp  # Flask server
-sudo fuser -k 5001/tcp  # Redis database server
-sudo fuser -k 5002/tcp
-sudo fuser -k 6379/tcp  # Redis session server
+pkill python
+pkill python3
+pkill gunicorn
+pkill redis-server
+fuser -k 80/tcp    # Nginx
+fuser -k 5000/tcp  # Flask server
+fuser -k 5001/tcp  # Redis database server
+fuser -k 5002/tcp
+fuser -k 6379/tcp  # Redis session server

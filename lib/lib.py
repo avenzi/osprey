@@ -439,7 +439,7 @@ class Streamer(WorkerNode):
         return "{}:{}".format(self.group, self.name)
 
     def set_info(self, parent):
-        """ Takes some parameters from the parent CLient class and sets the worker's info dict """
+        """ Takes some parameters from the parent Client class and sets the worker's info dict """
         self.client = parent.name
         self.ip = parent.ip
         self.port = parent.port
@@ -496,7 +496,8 @@ class Streamer(WorkerNode):
         """
         while not self.exit:
             try:
-                self.socket.connect('https://{}:{}'.format(self.ip, self.port))
+                protocol = 'http' if self.ip == 'localhost' else 'https'
+                self.socket.connect(f'{protocol}://{self.ip}:{self.port}')
                 self.debug("Connected to server socketIO")
                 return True
             except Exception as e:

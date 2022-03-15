@@ -94,8 +94,8 @@ workers_test = [synth1filt, synth1four, t1func, decoder1, audio1, encoder1, audi
 workers = [eegfilt, eegfour, eegfunc, ecgfilt, ecgfour, ecgfunc]
 
 client = Client(
-    workers=workers_test, name='AWS Local Client', debug=1,
-    server_ip='signalstream.org', port=443,
+    workers=worker_no_pi_test, name='Local Client', debug=1,
+    server_ip='localhost', port=80,  #server_ip='signalstream.org', port=443,
     db_port=5001, db_pass='thisisthepasswordtotheredisserver'
 )
 

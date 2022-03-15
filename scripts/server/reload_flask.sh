@@ -6,5 +6,5 @@ cd $script_dir
 # navigate to top level dir
 cd ../../
 
-sudo pkill -HUP -f gunicorn
+pkill -HUP -f gunicorn
 

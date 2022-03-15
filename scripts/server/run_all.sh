@@ -8,9 +8,6 @@ cd $script_dir
 #echo "Updating From Git..."
 #git pull
 
-# kill any remaining processed
-bash quit.sh
-
 bash run_stream.sh &
 
 bash run_server.sh

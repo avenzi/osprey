@@ -7,15 +7,8 @@ cd $script_dir
 cd ../../
 
 # kill any remaining processed
-sudo pkill gunicorn
-sudo pkill redis-server
-
-# clear port activity
-sudo fuser -k 80/tcp  # Nginx
-sudo fuser -k 5000/tcp  # flask app
-sudo fuser -k 5001/tcp  # redis database
-sudo fuser -k 5002/tcp
-sudo fuser -k 6379/tcp  # Redis session server
+pkill gunicorn
+pkill redis-server
 
 # start redis server for streaming
 redis-server config/live_redis.conf
@@ -24,10 +17,7 @@ redis-server config/live_redis.conf
 redis-server config/session_redis.conf
 
 # Run Nginx with custom config (needs absolute path to config)
-sudo nginx -c ${script_dir}/../../config/nginx.conf
-
-# activate virtual environment
-. venv/bin/activate
+nginx -c ${script_dir}/../../config/nginx.conf
 
 # call gunicorn with appropriate config file
 gunicorn -c config/gunicorn.conf.py "app:create_app()"

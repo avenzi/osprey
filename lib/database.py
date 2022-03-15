@@ -7,7 +7,6 @@ from traceback import print_exc, print_stack
 from numpy import ndarray, float64, float32
 
 import redis
-#from redistimeseries.client import Client as RedisTS
 
 from datetime import timedelta
 
@@ -71,12 +70,12 @@ def catch_database_errors(method):
 
 class DatabaseController:
     """ Handles connections to multiple different Database instances """
-    def __init__(self, live_path, saved_path):
+    def __init__(self, live_path, saved_path, public_ip):
         # index of Database objects
         # keys are ID numbers for each database
         self.sessions = {}
 
-        self.live_ip = '3.131.117.61'
+        self.live_ip = public_ip
         self.live_port = 5001
         self.live_path = live_path  # directory of live database dump files
         self.live_file = 'live.rdb'
@@ -227,12 +226,6 @@ class Database:
         # Redis connection client
         self.redis = redis.Redis(connection_pool=pool)
         self.bytes_redis = redis.Redis(connection_pool=bytes_pool)
-
-        # Create RedisTimeSeries Client instances as well
-        # (wrapper around Redis instance to implement RedisTimeSeries commands)
-        #self.redis_ts = RedisTS(conn=self.redis)
-        #self.bytes_redis_ts = RedisTS(conn=self.bytes_redis)
-        # todo: figure out how to convert to using RedisTimeSeries?
 
         self.exit = False  # flag to determine when to stop running if looping
         self.start_time = time()*1000  # real time that streaming is started (ms)

@@ -4,7 +4,7 @@ from werkzeug.utils import secure_filename
 from re import match
 import math
 from functools import wraps
-from traceback import print_exc
+from traceback import print_exc, format_exception
 from time import sleep, time, strftime, localtime
 
 from os import listdir, system
@@ -83,8 +83,7 @@ def catch_errors(handler):
         except DatabaseError as e:
             error("Database operation failed: {}".format(e))
         except Exception as e:
-            error("Server error in {}(): {}: {}".format(handler.__name__, e.__class__.__name__, e))
-            print_exc()
+            error("Server error in {}(): {}: {}\n{}".format(handler.__name__, e.__class__.__name__, e, ''.join(format_exception(e))))
     return wrapped_handler
 
 
